@@ -1,0 +1,61 @@
+.tooltipWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltipBubble {
+  position: absolute;
+  z-index: 1000;
+  max-width: 280px;
+  min-width: 140px;
+  padding: 8px 12px;
+  font-family: var(--gt-font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--gt-text-primary);
+  background-color: var(--gt-bg-card);
+  border: 1px solid var(--gt-border-default);
+  border-radius: var(--gt-radius-md);
+  box-shadow: var(--gt-shadow-elevated);
+  pointer-events: none;
+  white-space: normal;
+  text-align: left;
+  animation: tooltipFade 0.15s ease-out;
+}
+
+@keyframes tooltipFade {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.top {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+}
+
+.bottom {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+}
+
+.left {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%) translateX(-8px);
+}
+
+.right {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%) translateX(8px);
+}

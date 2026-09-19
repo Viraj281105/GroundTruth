@@ -1,0 +1,95 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gt-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.helpIcon {
+  color: var(--gt-text-subtle);
+  cursor: help;
+  transition: color var(--gt-transition-fast);
+}
+
+.helpIcon:hover {
+  color: var(--gt-text-primary);
+}
+
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.value {
+  font-family: var(--gt-font-mono);
+  font-weight: 600;
+  color: var(--gt-text-primary);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.unit {
+  font-family: var(--gt-font-mono);
+  font-size: 0.85em;
+  font-weight: 500;
+  color: var(--gt-accent-cyan);
+}
+
+.confidenceRow {
+  margin-top: 4px;
+}
+
+.deltaRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 11px;
+}
+
+.delta {
+  font-family: var(--gt-font-mono);
+  font-weight: 600;
+}
+
+.positive {
+  color: var(--gt-verdict-consistent-text);
+}
+
+.caution {
+  color: var(--gt-verdict-divergent-text);
+}
+
+.deltaLabel {
+  color: var(--gt-text-subtle);
+}
+
+/* Sizes */
+.sm .value {
+  font-size: 16px;
+}
+.sm .label {
+  font-size: 11px;
+}
+
+.md .value {
+  font-size: 22px;
+}
+
+.lg .value {
+  font-size: 32px;
+}

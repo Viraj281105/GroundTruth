@@ -92,6 +92,24 @@ export interface CaseDetail extends CaseSummary {
   notes: string;
 }
 
+export interface VerificationRequest {
+  synthetic?: boolean;
+  true_effect?: number;
+  min_donors?: number;
+  include_report?: boolean;
+}
+
+export interface HealthResponse {
+  status: string;
+  version: string;
+  engine_version: string;
+  contract_version: string;
+  engine_capabilities: Record<string, boolean>;
+  earth_observation_implemented: boolean;
+  genai_narration_implemented: boolean;
+  cases_available: number;
+}
+
 export interface VerificationResponse {
   case_id: string;
   /** "simulated" or "observed". Drives the banner. */

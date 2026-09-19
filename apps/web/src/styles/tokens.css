@@ -1,0 +1,99 @@
+/* GroundTruth Visual Design System Tokens
+ * Orbital Causal Intelligence Console
+ * Synthesizing Orbital Intelligence, Scientific Observatory, and Evidence Command Center.
+ */
+
+:root {
+  /* Canvas Base & Void Backgrounds */
+  --gt-bg-root: #06090e;              /* Abyssal void baseline */
+  --gt-bg-surface: #0b111a;           /* Tier 0 sub-canvas */
+  --gt-bg-card: rgba(15, 23, 36, 0.85);/* Tier 1 slate glass (85% opacity) */
+  --gt-bg-card-hover: rgba(19, 29, 46, 0.90);
+  --gt-bg-subtle: #101726;            /* Recessed telemetry inputs/rows */
+  --gt-bg-overlay: rgba(6, 9, 14, 0.88);/* Backdrop blur overlay */
+
+  /* Hair-Thin Optical Borders */
+  --gt-border-subtle: rgba(30, 41, 59, 0.5);     /* 1px structural container divider */
+  --gt-border-default: rgba(148, 163, 184, 0.14); /* 1px glass card perimeter */
+  --gt-border-strong: rgba(148, 163, 184, 0.25);  /* 1px highlighted container */
+  --gt-border-cyan-trace: rgba(6, 182, 212, 0.25);/* 1px telemetry highlight */
+  --gt-border-focus: #06b6d4;                     /* Cyan focus ring */
+
+  /* Typography Colors */
+  --gt-text-primary: #f1f5f9;           /* Pure optical white for headers */
+  --gt-text-secondary: #cbd5e1;         /* Silver-gray for analytical body */
+  --gt-text-muted: #94a3b8;             /* Dim telemetry labels */
+  --gt-text-subtle: #64748b;             /* Subdued structural text */
+  --gt-text-mono: #94a3b8;              /* Telemetry numbers & coordinates */
+  --gt-text-inverse: #06090e;
+
+  /* Scientific Accents & Domain Colors */
+  --gt-accent-cyan: #06b6d4;            /* Primary telemetry vector */
+  --gt-accent-cyan-glow: #22d3ee;       /* Active observed satellite line */
+  --gt-accent-cyan-dim: #083344;
+  --gt-accent-cyan-alpha: rgba(34, 211, 238, 0.12);
+
+  --gt-accent-forest: #10b981;          /* Biomass, counterfactual, verified */
+  --gt-accent-forest-dim: #064e3b;
+  --gt-accent-forest-glow: rgba(16, 185, 129, 0.22);
+
+  /* Series Colors (Load-bearing: clearly distinguish observed vs counterfactual) */
+  --gt-series-observed: #22d3ee;        /* Cyan: Observed real-world satellite line */
+  --gt-series-synthetic: #34d399;       /* Emerald: Synthetic counterfactual spline */
+  --gt-series-envelope: rgba(52, 211, 153, 0.12); /* Shaded 95% sensitivity envelope polygon */
+  --gt-series-gap: rgba(245, 158, 11, 0.14);      /* Shaded post-period divergence (amber) */
+  --gt-series-pre-bg: rgba(6, 182, 212, 0.025);   /* Pre-intervention calibration zone */
+  --gt-series-post-bg: rgba(52, 211, 153, 0.035); /* Post-intervention causal divergence zone */
+
+  /* Verdict & Status Tones
+   * RULE: INCONCLUSIVE is neutral (slate/cyan-tinted).
+   * RULE: DIVERGENT is amber (warrants review, NEVER alarm red).
+   * RULE: Red is reserved solely for system errors.
+   */
+  --gt-verdict-consistent-bg: rgba(16, 185, 129, 0.10);
+  --gt-verdict-consistent-border: rgba(52, 211, 153, 0.4);
+  --gt-verdict-consistent-text: #34d399;
+
+  --gt-verdict-divergent-bg: rgba(245, 158, 11, 0.10);
+  --gt-verdict-divergent-border: rgba(245, 158, 11, 0.4);
+  --gt-verdict-divergent-text: #fbbf24;
+
+  --gt-verdict-inconclusive-bg: rgba(148, 163, 184, 0.10);
+  --gt-verdict-inconclusive-border: rgba(148, 163, 184, 0.4);
+  --gt-verdict-inconclusive-text: #cbd5e1;
+
+  /* Simulated Banner (Unmissable warning) */
+  --gt-banner-simulated-bg: rgba(69, 26, 3, 0.85);
+  --gt-banner-simulated-border: #f59e0b;
+  --gt-banner-simulated-text: #fef3c7;
+  --gt-banner-simulated-badge: #d97706;
+
+  /* System Error (Malfunction only) */
+  --gt-error-bg: rgba(239, 68, 68, 0.12);
+  --gt-error-border: rgba(239, 68, 68, 0.4);
+  --gt-error-text: #f87171;
+
+  /* Typography Stacks */
+  --gt-font-display: 'Space Grotesk', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --gt-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --gt-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace;
+
+  /* Sizing & Radius (Soft-Rectilinear Level 1) */
+  --gt-radius-xs: 2px;
+  --gt-radius-sm: 4px;
+  --gt-radius-md: 6px;
+  --gt-radius-lg: 8px;
+  --gt-radius-xl: 12px;
+  --gt-radius-full: 9999px;
+
+  /* Shadows & Highlights */
+  --gt-shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--gt-border-default);
+  --gt-shadow-elevated: 0 16px 40px -4px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--gt-border-strong);
+  --gt-shadow-glow-cyan: 0 0 16px rgba(6, 182, 212, 0.25);
+  --gt-shadow-glow-amber: 0 0 16px rgba(245, 158, 11, 0.25);
+
+  /* Transitions */
+  --gt-transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --gt-transition-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  --gt-transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}

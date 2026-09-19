@@ -1,0 +1,91 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--gt-font-sans);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--gt-radius-full);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.sm {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.md {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
+}
+
+/* Tones - Subtle (default) */
+.subtle.neutral {
+  background-color: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.subtle.positive {
+  background-color: var(--gt-verdict-consistent-bg);
+  color: var(--gt-verdict-consistent-text);
+  border-color: var(--gt-verdict-consistent-border);
+}
+
+.subtle.caution {
+  background-color: var(--gt-verdict-divergent-bg);
+  color: var(--gt-verdict-divergent-text);
+  border-color: var(--gt-verdict-divergent-border);
+}
+
+.subtle.info {
+  background-color: rgba(6, 182, 212, 0.12);
+  color: #38bdf8;
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+.subtle.inconclusive {
+  background-color: var(--gt-verdict-inconclusive-bg);
+  color: var(--gt-verdict-inconclusive-text);
+  border-color: var(--gt-verdict-inconclusive-border);
+}
+
+.subtle.simulated {
+  background-color: rgba(245, 158, 11, 0.18);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.45);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.subtle.error {
+  background-color: var(--gt-error-bg);
+  color: var(--gt-error-text);
+  border-color: var(--gt-error-border);
+}
+
+/* Outline variants */
+.outline {
+  background-color: transparent;
+}
+.outline.neutral { color: var(--gt-text-muted); border-color: var(--gt-border-default); }
+.outline.positive { color: var(--gt-verdict-consistent-text); border-color: var(--gt-verdict-consistent-text); }
+.outline.caution { color: var(--gt-verdict-divergent-text); border-color: var(--gt-verdict-divergent-text); }
+.outline.info { color: #38bdf8; border-color: #38bdf8; }
+.outline.inconclusive { color: var(--gt-verdict-inconclusive-text); border-color: var(--gt-verdict-inconclusive-text); }
+.outline.simulated { color: #fbbf24; border-color: #f59e0b; }
+
+/* Solid variants */
+.solid.neutral { background-color: var(--gt-bg-subtle); color: var(--gt-text-primary); }
+.solid.positive { background-color: var(--gt-accent-forest); color: var(--gt-text-inverse); }
+.solid.caution { background-color: #f59e0b; color: #1e1b4b; }
+.solid.simulated { background-color: #d97706; color: #ffffff; font-weight: 600; }

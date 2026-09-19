@@ -1,0 +1,122 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--gt-font-sans);
+  font-weight: 500;
+  border-radius: var(--gt-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--gt-transition-fast);
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--gt-border-focus);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Sizes */
+.sm {
+  font-size: 12px;
+  padding: 6px 12px;
+  gap: 6px;
+}
+
+.md {
+  font-size: 14px;
+  padding: 8px 16px;
+  gap: 8px;
+}
+
+.lg {
+  font-size: 15px;
+  padding: 12px 24px;
+  gap: 10px;
+}
+
+/* Variants */
+.primary {
+  background-color: var(--gt-accent-forest);
+  color: var(--gt-text-inverse);
+  font-weight: 600;
+}
+
+.primary:hover:not(:disabled) {
+  background-color: #059669;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.35);
+}
+
+.secondary {
+  background-color: var(--gt-bg-subtle);
+  color: var(--gt-text-primary);
+  border-color: var(--gt-border-default);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: var(--gt-bg-card-hover);
+  border-color: var(--gt-border-strong);
+}
+
+.outline {
+  background-color: transparent;
+  color: var(--gt-text-secondary);
+  border-color: var(--gt-border-default);
+}
+
+.outline:hover:not(:disabled) {
+  color: var(--gt-text-primary);
+  border-color: var(--gt-text-muted);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.ghost {
+  background-color: transparent;
+  color: var(--gt-text-muted);
+}
+
+.ghost:hover:not(:disabled) {
+  color: var(--gt-text-primary);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.danger {
+  background-color: var(--gt-error-bg);
+  color: var(--gt-error-text);
+  border-color: var(--gt-error-border);
+}
+
+.danger:hover:not(:disabled) {
+  background-color: rgba(239, 68, 68, 0.2);
+}
+
+/* Icons */
+.iconLeft, .iconRight {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Spinner */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

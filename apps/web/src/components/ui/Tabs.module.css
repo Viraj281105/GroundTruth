@@ -1,0 +1,77 @@
+.tabsContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.tabsList {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  background-color: var(--gt-bg-surface);
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-lg);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabsList::-webkit-scrollbar {
+  display: none;
+}
+
+.tabTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-family: var(--gt-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gt-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--gt-radius-md);
+  cursor: pointer;
+  transition: all var(--gt-transition-fast);
+  white-space: nowrap;
+}
+
+.tabTrigger:hover {
+  color: var(--gt-text-primary);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.tabTrigger.active {
+  color: var(--gt-text-primary);
+  background-color: var(--gt-bg-card);
+  border-color: var(--gt-border-default);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.tabIcon {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  font-size: 15px;
+}
+
+.tabBadge {
+  display: inline-flex;
+  font-size: 11px;
+}
+
+.tabContent {
+  margin-top: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
