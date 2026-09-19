@@ -7,7 +7,7 @@ git clone https://github.com/Viraj281105/GroundTruth.git
 cd GroundTruth
 python -m venv .venv
 .venv/Scripts/activate        # Windows; use source .venv/bin/activate elsewhere
-pip install -e ".[api,genai,dev]"
+pip install -e "packages/groundtruth[api,genai,dev]"
 cp .env.example .env
 ```
 
@@ -21,8 +21,8 @@ pytest
 ## Before you open a pull request
 
 ```bash
-ruff format src tests
-ruff check src tests
+ruff format packages tests
+ruff check packages tests
 mypy
 pytest
 ```
@@ -37,7 +37,7 @@ a pull request that breaks one will be rejected regardless of how well it works.
 **1. Never convert a spectral index into carbon.**
 NDVI, EVI and NBR are reflectance ratios. Carbon is a mass stock. Any mapping
 between them requires an allometric or biomass model with its own error budget
-and its own provenance record. `groundtruth.core.units` enforces this; do not
+and its own provenance record. `groundtruth.contracts.units` enforces this; do not
 route around it.
 
 **2. Never state or imply fraud.**
@@ -85,15 +85,15 @@ estimators or the grounding rules.
 
 | Path | Contents |
 | --- | --- |
-| `src/groundtruth/core/` | Domain model, provenance, evidence, units |
-| `src/groundtruth/ingestion/` | Provider interfaces and Earth-observation backends |
-| `src/groundtruth/geospatial/` | Indices, cloud masking, zonal statistics |
-| `src/groundtruth/matching/` | Donor-pool construction |
-| `src/groundtruth/causal/` | Synthetic control, difference-in-differences |
-| `src/groundtruth/uncertainty/` | Placebo inference, robustness |
-| `src/groundtruth/evidence/` | Evidence assembly and the verdict gate chain |
-| `src/groundtruth/reporting/` | Deterministic renderer, grounding, providers |
-| `src/groundtruth/api/` | FastAPI surface |
+| `apps/api`, `apps/worker`, `apps/web` | Deployable entrypoints |
+| `packages/groundtruth/src/groundtruth/contracts/` | The shared, versioned boundary |
+| `packages/groundtruth/src/groundtruth/engine/` | Analytical engine (Viraj) |
+| `packages/groundtruth/src/groundtruth/platform/` | The application (Bhumi) |
 | `cases/` | Case definitions |
 | `experiments/` | Validation and evaluation harnesses |
-| `docs/` | Methodology and design documentation |
+| `docs/` | The documentation system |
+| `tests/` | The suite, including boundary enforcement |
+
+Where new code goes is answered in [`AGENTS.md`](AGENTS.md) §4. Read
+[`DEVELOPMENT.md`](DEVELOPMENT.md) for setup and [`OWNERSHIP.md`](OWNERSHIP.md)
+for who owns what.

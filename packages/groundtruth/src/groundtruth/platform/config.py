@@ -14,8 +14,26 @@ from typing import Literal
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[1]  # src/groundtruth
-REPO_ROOT = PACKAGE_ROOT.parents[1]  # repository root
+PACKAGE_ROOT = Path(__file__).resolve().parents[1]  # .../src/groundtruth
+
+
+def find_repo_root(start: Path | None = None) -> Path:
+    """Locate the repository root by walking up for a marker directory.
+
+    Counting ``parents[n]`` is brittle: it broke silently when the package moved
+    into ``packages/groundtruth/`` during the monorepo restructure. Searching for
+    a marker survives that kind of move, and falls back to the current working
+    directory when the package is installed non-editable (a wheel has no
+    repository around it).
+    """
+    candidate = (start or PACKAGE_ROOT).resolve()
+    for directory in (candidate, *candidate.parents):
+        if (directory / "cases").is_dir() and (directory / "docs").is_dir():
+            return directory
+    return Path.cwd()
+
+
+REPO_ROOT = find_repo_root()
 
 
 class Settings(BaseSettings):

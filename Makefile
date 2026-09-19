@@ -17,14 +17,14 @@ help:
 setup:
 	$(PY) -m venv $(VENV)
 	$(BIN)/python -m pip install --upgrade pip
-	$(BIN)/python -m pip install -e ".[api,genai,dev]"
+	$(BIN)/python -m pip install -e "packages/groundtruth[api,genai,dev]"
 
 lint:
-	ruff check src tests
+	ruff check packages tests
 
 format:
-	ruff format src tests
-	ruff check --fix src tests
+	ruff format packages tests
+	ruff check --fix packages tests
 
 typecheck:
 	mypy
@@ -38,7 +38,7 @@ test-cov:
 check: lint typecheck test
 
 api:
-	uvicorn groundtruth.api.app:app --reload --port 8000
+	uvicorn apps.api.main:app --reload --port 8000
 
 cli:
 	groundtruth verify kariba-redd --synthetic

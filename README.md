@@ -85,7 +85,7 @@ and its invented figure discarded.
 ## Three rules the system will not break
 
 **1. NDVI is not carbon.** A spectral index is a reflectance ratio; carbon is a
-mass. `core.units.assert_not_index_to_carbon` raises on any implicit conversion,
+mass. `contracts.units.assert_not_index_to_carbon` raises on any implicit conversion,
 and a parametrised test asserts it for every index/carbon pair.
 
 **2. Observed change is not causal effect.** Every estimate carries its donor
@@ -105,7 +105,7 @@ supply one.
 git clone https://github.com/Viraj281105/GroundTruth.git
 cd GroundTruth
 python -m venv .venv && .venv/Scripts/activate   # or source .venv/bin/activate
-pip install -e ".[api,genai,dev]"
+pip install -e "packages/groundtruth[api,genai,dev]"
 ```
 
 No credentials and no network needed — the full pipeline runs offline.
@@ -120,15 +120,15 @@ groundtruth verify kariba-redd --synthetic
 Run the API:
 
 ```bash
-uvicorn groundtruth.api.app:app --reload --port 8000
+uvicorn apps.api.main:app --reload --port 8000
 # http://localhost:8000/docs
 ```
 
 Run the checks:
 
 ```bash
-pytest          # 163 tests
-ruff check src tests
+pytest          # 194 tests
+ruff check packages tests
 mypy
 ```
 
@@ -169,17 +169,27 @@ easier to demo. It is also wrong.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-| Module | Contents |
-| --- | --- |
-| `core/` | Domain model, provenance, evidence bundle, unit guards |
-| `ingestion/` | Provider protocols; synthetic fixture; Earth Engine backend |
-| `geospatial/` | NDVI/EVI/NBR/SAVI, SCL cloud masking, zonal statistics |
-| `matching/` | Donor-pool construction with every exclusion recorded |
-| `causal/` | Simplex-constrained synthetic control; DiD cross-check |
-| `uncertainty/` | Placebo permutation inference, leave-one-out, spec curve |
-| `evidence/` | Bundle assembly and the verdict gate chain |
-| `reporting/` | Deterministic renderer, grounding verifier, provider stubs |
-| `api/`, `cli.py` | FastAPI surface and command line |
+```
+apps/
+  api/            thin ASGI entrypoint                    Bhumi  [implemented]
+  worker/         background job runner                   Bhumi  [not built]
+  web/            Next.js frontend                        Viraj  [types only]
+
+packages/groundtruth/src/groundtruth/
+  contracts/      the shared, versioned boundary          shared [implemented]
+  engine/         observation, matching, causal,          Viraj  [implemented]
+                  uncertainty, evidence assembly
+  platform/       api, cases, datasets, jobs, store,      Bhumi  [partial]
+                  storage, reports, config
+
+cases/  data/  docs/  experiments/  infrastructure/  tests/
+```
+
+Two people own this, ~60/40. The split is enforced architecturally, not by
+convention: `tests/test_contract_boundary.py` parses the AST of every module and
+fails the build if the platform reaches into the engine, if the engine performs
+I/O, or if the contract depends on either side. See
+[`OWNERSHIP.md`](OWNERSHIP.md).
 
 ## Scientific method
 
@@ -205,7 +215,7 @@ short-circuits to `INCONCLUSIVE`.** There is no weak-positive path.
 due-diligence team is better served by "we cannot tell" than by an estimate
 built on six donors.
 
-Full detail: [docs/05-causal-inference.md](docs/05-causal-inference.md).
+Full detail: [docs/science/causal-inference.md](docs/science/causal-inference.md).
 
 ## Cases
 
@@ -248,7 +258,7 @@ numbers under a real-data label.
 
 ## Tests and CI
 
-163 tests. CI runs ruff, `ruff format --check`, mypy and pytest on Python 3.11,
+194 tests. CI runs ruff, `ruff format --check`, mypy and pytest on Python 3.11,
 3.12 and 3.13.
 
 A second CI job asserts the claims this README makes: no spectral index is
@@ -259,19 +269,25 @@ README quietly becoming a lie.
 
 ## Documentation
 
-| | |
+| Start here | |
 | --- | --- |
-| [1. Problem](docs/01-problem.md) | Why unverified climate claims are a measurable problem |
-| [2. Methodology](docs/02-methodology.md) | Counterfactual construction, stage by stage |
-| [3. Architecture](docs/03-architecture.md) | Code organisation and boundary decisions |
-| [4. Data sources](docs/04-data-sources.md) | Products, assets, and what each cannot tell you |
-| [5. Causal inference](docs/05-causal-inference.md) | The estimator, its assumptions, and why NDVI is not carbon |
-| [6. Validation](docs/06-validation.md) | Pre-registered criteria for the Kariba benchmark |
-| [7. GenAI grounding](docs/07-genai-grounding.md) | How the narration boundary is enforced |
-| [8. Limitations](docs/08-limitations.md) | What is not built and where this could be wrong |
-| [9. Competition strategy](docs/09-competition-strategy.md) | PCCOE IGC 2026 positioning |
-| [10. Roadmap](docs/10-roadmap.md) | Milestones with checkable exit criteria |
-| [11. Demo flow](docs/11-demo-flow.md) | A seven-minute demo that runs today |
+| [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) | Why this exists, who it is for, what it must never claim |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | The load-bearing decision and the system map |
+| [`AGENTS.md`](AGENTS.md) | Operating instructions for developers and AI agents |
+| [`DEVELOPMENT.md`](DEVELOPMENT.md) | Setup, commands, testing, troubleshooting |
+| [`ROADMAP.md`](ROADMAP.md) | NOW to MVP to Stage 2 to Stage 3 to long term |
+| [`OWNERSHIP.md`](OWNERSHIP.md) | Who owns what, and the definition of done |
+| [`GLOSSARY.md`](GLOSSARY.md) | Terms that mean something specific here |
+
+| Deeper | |
+| --- | --- |
+| [docs/architecture/contract.md](docs/architecture/contract.md) | The engine/platform contract, in full |
+| [docs/science/causal-inference.md](docs/science/causal-inference.md) | The estimator, its assumptions, why NDVI is not carbon |
+| [docs/architecture/genai.md](docs/architecture/genai.md) | How the narration boundary is enforced |
+| [docs/science/limitations.md](docs/science/limitations.md) | What is not built and where this could be wrong |
+| [docs/product/capability-matrix.md](docs/product/capability-matrix.md) | Implemented / planned / future, per capability |
+| [docs/decisions/](docs/decisions/) | Ten ADRs on why the architecture is the way it is |
+| [docs/](docs/) | Full index |
 
 ## What this is not
 
