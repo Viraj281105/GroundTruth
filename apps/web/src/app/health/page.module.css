@@ -1,0 +1,161 @@
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--gt-text-muted);
+  font-size: 13px;
+  margin-bottom: 20px;
+  text-decoration: none;
+  transition: color var(--gt-transition-fast);
+}
+
+.backLink:hover {
+  color: var(--gt-text-primary);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.badgeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--gt-text-primary);
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--gt-text-muted);
+  max-width: 680px;
+}
+
+.manifestoBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 24px;
+  background-color: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--gt-radius-lg);
+  margin-bottom: 32px;
+}
+
+.manifestoIcon {
+  color: #f59e0b;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.manifestoContent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.manifestoTitle {
+  font-size: 14px;
+  color: #fbbf24;
+}
+
+.manifestoList {
+  list-style-type: disc;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #fef3c7;
+  line-height: 1.5;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .cardsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.metaList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.metaKey {
+  color: var(--gt-text-muted);
+}
+
+.metaVal {
+  color: var(--gt-text-primary);
+  font-weight: 500;
+}
+
+.metaValMono {
+  font-family: var(--gt-font-mono);
+  font-size: 12px;
+  color: var(--gt-accent-cyan);
+}
+
+.cardNote {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--gt-text-subtle);
+  border-top: 1px solid var(--gt-border-subtle);
+  padding-top: 10px;
+  line-height: 1.4;
+}
+
+.capabilitiesTableWrapper {
+  overflow-x: auto;
+}
+
+.capabilitiesTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.capabilitiesTable th {
+  padding: 10px 14px;
+  font-family: var(--gt-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gt-text-muted);
+  border-bottom: 1px solid var(--gt-border-subtle);
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.capabilitiesTable td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--gt-border-subtle);
+  color: var(--gt-text-secondary);
+}
+
+.capabilitiesTable tbody tr:hover {
+  background-color: var(--gt-bg-card-hover);
+}
