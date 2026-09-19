@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  quality:
+    name: Lint, types and tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[api,genai,dev]"
+
+      - name: Lint
+        run: ruff check src tests
+
+      - name: Check formatting
+        run: ruff format --check src tests
+
+      - name: Type check
+        # numpy's bundled stubs use 3.12+ syntax, so the checker targets 3.12
+        # while the package itself still supports 3.11 at runtime.
+        if: matrix.python-version != '3.11'
+        run: mypy
+
+      - name: Test
+        run: pytest --cov --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+          if-no-files-found: warn
+
+  scientific-guards:
+    name: Scientific integrity guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[api,genai,dev]"
+
+      # These are the claims the project makes about itself. If any of them
+      # stops being true, the build should fail loudly rather than the README
+      # quietly becoming a lie.
+      - name: No spectral index is reported as carbon
+        run: pytest -q tests/test_core.py::TestUnits tests/test_pipeline.py::TestEndToEnd
+
+      - name: The GenAI layer cannot invent numbers or allege wrongdoing
+        run: pytest -q tests/test_grounding.py
+
+      - name: No case claims an analysed status without a reviewed run
+        run: pytest -q "tests/test_pipeline.py::TestCaseRegistry::test_no_case_claims_to_be_analysed"
+
+      - name: The pipeline runs end to end on the synthetic fixture
+        run: |
+          groundtruth doctor
+          groundtruth cases
+          groundtruth verify kariba-redd --synthetic --json > /dev/null
