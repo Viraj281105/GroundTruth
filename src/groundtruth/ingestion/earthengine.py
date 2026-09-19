@@ -111,7 +111,7 @@ class EarthEngineProvider:
         """Fetch a real indicator series. NOT IMPLEMENTED."""
         raise DataUnavailableError(
             f"EarthEngineProvider.fetch({request.indicator.value}) is not implemented yet. "
-            "See docs/10-roadmap.md, milestone M2."
+            "See docs/10-roadmap.md, milestone M1."
         )
 
     def index_expression(self, indicator: Indicator) -> str:
