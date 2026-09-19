@@ -1,0 +1,188 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--gt-bg-card);
+  border: 1px solid var(--gt-border-default);
+  border-radius: var(--gt-radius-lg);
+  padding: 20px;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title {
+  font-family: var(--gt-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--gt-text-primary);
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--gt-text-muted);
+}
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filterIcon {
+  color: var(--gt-text-subtle);
+}
+
+.filterPill {
+  background: transparent;
+  border: 1px solid var(--gt-border-subtle);
+  color: var(--gt-text-muted);
+  font-family: var(--gt-font-mono);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: var(--gt-radius-full);
+  cursor: pointer;
+  transition: all var(--gt-transition-fast);
+}
+
+.filterPill:hover {
+  color: var(--gt-text-primary);
+  border-color: var(--gt-border-default);
+}
+
+.filterPillActive {
+  background-color: var(--gt-accent-cyan);
+  border-color: var(--gt-accent-cyan);
+  color: #070a11;
+  font-weight: 600;
+}
+
+.methodologyNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: rgba(6, 182, 212, 0.06);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  border-radius: var(--gt-radius-md);
+}
+
+.noteIcon {
+  color: var(--gt-accent-cyan);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.noteText {
+  font-size: 12px;
+  color: var(--gt-text-secondary);
+  line-height: 1.5;
+}
+
+.noteText strong {
+  color: #38bdf8;
+}
+
+.timelineList {
+  display: flex;
+  flex-direction: column;
+}
+
+.timelineItem {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  position: relative;
+}
+
+.yearCol {
+  width: 50px;
+  text-align: right;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.yearText {
+  font-family: var(--gt-font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gt-text-secondary);
+}
+
+.spineCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 32px;
+  flex-shrink: 0;
+}
+
+.node {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--gt-bg-surface);
+  border: 2px solid var(--gt-border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.node.baseline { color: var(--gt-text-muted); border-color: var(--gt-text-subtle); }
+.node.crediting { color: var(--gt-accent-forest); border-color: var(--gt-accent-forest); box-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+.node.sensor { color: var(--gt-accent-cyan); border-color: var(--gt-accent-cyan); }
+.node.disturbance { color: #f59e0b; border-color: #f59e0b; }
+
+.spineLine {
+  width: 2px;
+  flex: 1;
+  background-color: var(--gt-border-subtle);
+  margin: 4px 0;
+}
+
+.contentCol {
+  flex: 1;
+  padding-bottom: 24px;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.cardTitle {
+  font-family: var(--gt-font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gt-text-primary);
+}
+
+.cardDesc {
+  font-size: 13px;
+  color: var(--gt-text-muted);
+  line-height: 1.5;
+}
+
+.treatmentItem .cardTitle {
+  color: var(--gt-verdict-consistent-text);
+}

@@ -1,0 +1,446 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--gt-bg-card);
+  border: 1px solid var(--gt-border-default);
+  border-radius: var(--gt-radius-lg);
+  padding: 20px;
+  gap: 16px;
+  position: relative;
+  outline: none;
+}
+
+.container:focus-visible {
+  border-color: var(--gt-border-focus);
+  box-shadow: 0 0 0 2px var(--gt-accent-forest-glow);
+}
+
+.empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--gt-text-muted);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-family: var(--gt-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--gt-text-primary);
+}
+
+.keyboardHint {
+  font-family: var(--gt-font-mono);
+  font-size: 11px;
+  color: var(--gt-text-subtle);
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--gt-text-muted);
+}
+
+.controlRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filterControlsGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.timeFilterGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--gt-bg-surface);
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-md);
+  padding: 3px 6px;
+}
+
+.filterLabel {
+  font-family: var(--gt-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gt-text-subtle);
+  margin-right: 4px;
+}
+
+.filterBtn {
+  background: transparent;
+  border: none;
+  font-family: var(--gt-font-mono);
+  font-size: 11px;
+  color: var(--gt-text-muted);
+  padding: 4px 8px;
+  border-radius: var(--gt-radius-sm);
+  cursor: pointer;
+  transition: all var(--gt-transition-fast);
+}
+
+.filterBtn:hover {
+  color: var(--gt-text-primary);
+}
+
+.filterBtnActive {
+  background-color: var(--gt-bg-subtle);
+  color: var(--gt-text-primary);
+  font-weight: 600;
+}
+
+.sensorSelectorGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--gt-bg-surface);
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-md);
+  padding: 3px 8px;
+}
+
+.sensorActivePill {
+  font-family: var(--gt-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gt-accent-cyan-glow);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 6px 12px;
+  background-color: var(--gt-bg-surface);
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-md);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendObservedLine {
+  width: 16px;
+  height: 3px;
+  background-color: var(--gt-series-observed);
+  border-radius: 2px;
+}
+
+.legendSyntheticLine {
+  width: 16px;
+  height: 2px;
+  background-color: var(--gt-series-synthetic);
+  border-top: 2px dashed var(--gt-series-synthetic);
+}
+
+.legendGapBox {
+  width: 12px;
+  height: 12px;
+  background-color: var(--gt-series-gap);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 2px;
+}
+
+.legendEnvelopeBox {
+  width: 12px;
+  height: 12px;
+  background-color: var(--gt-series-envelope);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  border-radius: 2px;
+}
+
+.legendTreatmentLine {
+  width: 14px;
+  height: 2px;
+  background-color: #f59e0b;
+}
+
+.legendText {
+  font-size: 11px;
+  color: var(--gt-text-secondary);
+}
+
+/* SVG Chart */
+.svgWrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--gt-radius-md);
+  background-color: #06090e;
+  border: 1px solid var(--gt-border-subtle);
+}
+
+.svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.preBg {
+  fill: var(--gt-series-pre-bg);
+}
+
+.postBg {
+  fill: var(--gt-series-post-bg);
+}
+
+.phaseLabel {
+  font-family: var(--gt-font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  fill: var(--gt-text-subtle);
+  letter-spacing: 0.08em;
+}
+
+.gridLine {
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-dasharray: 4 4;
+}
+
+.gridLineV {
+  stroke: rgba(255, 255, 255, 0.04);
+  stroke-dasharray: 2 4;
+}
+
+.treatmentGrid {
+  stroke: rgba(245, 158, 11, 0.35);
+  stroke-dasharray: 3 3;
+}
+
+.tickLabelY {
+  font-family: var(--gt-font-mono);
+  font-size: 11px;
+  fill: var(--gt-text-subtle);
+  text-anchor: end;
+}
+
+.tickLabelX {
+  font-family: var(--gt-font-mono);
+  font-size: 11px;
+  fill: var(--gt-text-subtle);
+  text-anchor: middle;
+}
+
+.treatmentTick {
+  fill: #f59e0b;
+  font-weight: 600;
+}
+
+.gapPolygon {
+  fill: var(--gt-series-gap);
+  stroke: none;
+}
+
+.envelopePolygon {
+  fill: var(--gt-series-envelope);
+  stroke: rgba(52, 211, 153, 0.35);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.syntheticLine {
+  fill: none;
+  stroke: var(--gt-series-synthetic);
+  stroke-width: 2.2;
+  stroke-dasharray: 6 4;
+}
+
+.observedLine {
+  fill: none;
+  stroke: var(--gt-series-observed);
+  stroke-width: 2.6;
+  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.35));
+}
+
+.hitArea {
+  cursor: pointer;
+}
+
+.syntheticDot {
+  fill: var(--gt-series-synthetic);
+  transition: r 0.15s ease;
+}
+
+.observedDot {
+  fill: var(--gt-series-observed);
+  transition: r 0.15s ease;
+}
+
+.dotHover {
+  filter: drop-shadow(0 0 8px #fff);
+}
+
+.treatmentBoundaryGroup {
+  pointer-events: none;
+}
+
+.treatmentLine {
+  stroke: #f59e0b;
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+.treatmentBadgeBg {
+  fill: rgba(245, 158, 11, 0.15);
+  stroke: rgba(245, 158, 11, 0.5);
+  stroke-width: 1;
+}
+
+.treatmentBadgeText {
+  font-family: var(--gt-font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  fill: #fbbf24;
+  letter-spacing: 0.06em;
+}
+
+.crosshairLine {
+  stroke: rgba(255, 255, 255, 0.4);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+/* Tooltip */
+.hoverTooltip {
+  position: absolute;
+  transform: translate(-50%, -120%);
+  background-color: rgba(11, 17, 26, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--gt-border-default);
+  border-radius: var(--gt-radius-md);
+  padding: 10px 14px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 190px;
+}
+
+.tooltipHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--gt-border-subtle);
+  padding-bottom: 4px;
+}
+
+.tooltipYear {
+  font-family: var(--gt-font-mono);
+  font-size: 13px;
+  color: var(--gt-text-primary);
+}
+
+.tooltipPhase {
+  font-size: 10px;
+  color: var(--gt-text-muted);
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.tooltipKey {
+  color: var(--gt-text-muted);
+}
+
+.tooltipValObs {
+  font-family: var(--gt-font-mono);
+  font-weight: 600;
+  color: var(--gt-series-observed);
+}
+
+.tooltipValSyn {
+  font-family: var(--gt-font-mono);
+  font-weight: 600;
+  color: var(--gt-series-synthetic);
+}
+
+.tooltipValGap {
+  font-family: var(--gt-font-mono);
+  font-weight: 600;
+  color: #fbbf24;
+}
+
+.tooltipEnvelope {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  border-top: 1px dashed var(--gt-border-subtle);
+  padding-top: 4px;
+  margin-top: 2px;
+}
+
+.tooltipValEnv {
+  font-family: var(--gt-font-mono);
+  color: var(--gt-series-synthetic);
+}
+
+/* Diagnostics Bar */
+.diagnosticsBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 10px 16px;
+  background-color: var(--gt-bg-surface);
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-md);
+}
+
+.diagItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.diagLabel {
+  font-family: var(--gt-font-mono);
+  font-size: 10px;
+  color: var(--gt-text-subtle);
+  letter-spacing: 0.04em;
+}
+
+.diagVal {
+  font-family: var(--gt-font-mono);
+  font-weight: 600;
+  color: var(--gt-text-secondary);
+}

@@ -1,0 +1,132 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--gt-bg-card);
+  border: 1px solid var(--gt-border-default);
+  border-radius: var(--gt-radius-lg);
+  padding: 20px;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gt-text-primary);
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--gt-text-muted);
+}
+
+.svgWrapper {
+  width: 100%;
+  background-color: #070c17;
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-md);
+  padding: 8px 4px 4px 4px;
+}
+
+.svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.gridLine {
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-dasharray: 4 4;
+}
+
+.tickY {
+  font-family: var(--gt-font-mono);
+  font-size: 10px;
+  fill: var(--gt-text-subtle);
+  text-anchor: end;
+}
+
+.tickX {
+  font-family: var(--gt-font-mono);
+  font-size: 10px;
+  fill: var(--gt-text-subtle);
+  text-anchor: middle;
+}
+
+.bar {
+  fill: rgba(129, 140, 248, 0.35);
+  stroke: rgba(129, 140, 248, 0.6);
+  stroke-width: 1;
+  rx: 2;
+  transition: fill 0.2s ease;
+}
+
+.bar:hover {
+  fill: rgba(129, 140, 248, 0.6);
+}
+
+.barWithProject {
+  fill: rgba(245, 158, 11, 0.25);
+  stroke: rgba(245, 158, 11, 0.5);
+}
+
+.projectLine {
+  stroke: #f59e0b;
+  stroke-width: 2.5;
+  stroke-dasharray: 4 2;
+}
+
+.projectPin {
+  fill: #f59e0b;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
+}
+
+.projectLabel {
+  font-family: var(--gt-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  fill: #fbbf24;
+  letter-spacing: 0.04em;
+}
+
+.interpretationBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: var(--gt-bg-surface);
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-md);
+}
+
+.infoIcon {
+  color: var(--gt-accent-cyan);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.interpretationText {
+  font-size: 13px;
+  color: var(--gt-text-secondary);
+  line-height: 1.5;
+}
+
+.interpretationText strong {
+  color: var(--gt-text-primary);
+}
+
+.interpretationText em {
+  color: var(--gt-text-muted);
+}

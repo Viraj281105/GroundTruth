@@ -1,0 +1,460 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--gt-bg-card);
+  border: 1px solid var(--gt-border-default);
+  border-radius: var(--gt-radius-lg);
+  padding: 20px;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.titleCol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.compassIcon {
+  color: var(--gt-accent-cyan);
+}
+
+.title {
+  font-family: var(--gt-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--gt-text-primary);
+}
+
+.subtitle {
+  font-size: 12px;
+  color: var(--gt-text-muted);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--gt-text-secondary);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dotProject {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--gt-accent-forest);
+  box-shadow: 0 0 8px var(--gt-accent-forest);
+}
+
+.dotAdmitted {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--gt-accent-cyan);
+}
+
+.dotExcluded {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #475569;
+  border: 1px solid #94a3b8;
+}
+
+.mainArea {
+  display: grid;
+  grid-template-columns: 1fr 310px;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .mainArea {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mapWrapper {
+  background-color: #060a14;
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-md);
+  overflow: hidden;
+  position: relative;
+}
+
+.mapSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.mapBg {
+  fill: #060a14;
+}
+
+.coordLine {
+  stroke: rgba(255, 255, 255, 0.03);
+  stroke-dasharray: 2 4;
+}
+
+.caliperRings {
+  pointer-events: none;
+}
+
+.caliperRing {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-dasharray: 2 4;
+}
+
+.caliperLabel {
+  font-family: var(--gt-font-mono);
+  font-size: 9px;
+  fill: var(--gt-text-subtle);
+}
+
+.leakageBelt {
+  fill: rgba(245, 158, 11, 0.05);
+  stroke: rgba(245, 158, 11, 0.3);
+  stroke-dasharray: 4 4;
+}
+
+.connectionLine {
+  stroke: rgba(6, 182, 212, 0.35);
+  stroke-dasharray: 3 3;
+}
+
+.unitMarker {
+  cursor: pointer;
+  outline: none;
+}
+
+.unitMarker:focus-visible circle {
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+.selectionRing {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+  animation: rotateRing 8s linear infinite;
+}
+
+@keyframes rotateRing {
+  to { transform: rotate(360deg); }
+}
+
+.markerDot.project {
+  fill: var(--gt-accent-forest);
+  stroke: #ffffff;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.9));
+}
+
+.markerDot.admitted {
+  fill: var(--gt-accent-cyan);
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 1;
+}
+
+.markerDot.excluded {
+  fill: #334155;
+  stroke: #64748b;
+  stroke-width: 1;
+}
+
+.weightLabel {
+  font-family: var(--gt-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  fill: var(--gt-accent-cyan);
+}
+
+/* Inspector Panel */
+.inspectorPanel {
+  background-color: var(--gt-bg-surface);
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.inspectorNav {
+  display: flex;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--gt-border-subtle);
+}
+
+.inspectorTab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--gt-text-muted);
+  font-family: var(--gt-font-mono);
+  font-size: 11px;
+  padding: 10px 8px;
+  cursor: pointer;
+  transition: all var(--gt-transition-fast);
+  border-bottom: 2px solid transparent;
+}
+
+.inspectorTab:hover {
+  color: var(--gt-text-primary);
+}
+
+.inspectorTabActive {
+  color: var(--gt-text-primary);
+  border-bottom-color: var(--gt-accent-forest);
+  background-color: rgba(255, 255, 255, 0.02);
+  font-weight: 600;
+}
+
+.inspectorBody {
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 340px;
+}
+
+.unitCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.unitCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--gt-border-subtle);
+  padding-bottom: 10px;
+}
+
+.projectIcon { color: var(--gt-accent-forest); }
+.admittedIcon { color: var(--gt-accent-cyan); }
+.excludedIcon { color: #f59e0b; }
+
+.unitTitleCol {
+  display: flex;
+  flex-direction: column;
+}
+
+.unitStatusTag {
+  font-family: var(--gt-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gt-text-subtle);
+}
+
+.unitName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gt-text-primary);
+}
+
+.unitMetaList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.unitMetaRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.metaKey {
+  color: var(--gt-text-muted);
+}
+
+.metaVal {
+  color: var(--gt-text-primary);
+}
+
+.metaValMono {
+  font-family: var(--gt-font-mono);
+  font-size: 11px;
+  color: var(--gt-text-secondary);
+}
+
+.metaValWeight {
+  font-family: var(--gt-font-mono);
+  font-weight: 700;
+  color: var(--gt-accent-cyan);
+}
+
+.exclusionBox {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background-color: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--gt-radius-sm);
+}
+
+.exclusionLabel {
+  font-family: var(--gt-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: #fbbf24;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.exclusionReason {
+  font-size: 12px;
+  color: #fef3c7;
+  line-height: 1.4;
+}
+
+/* Balance Tab */
+.balanceTab {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.balanceDesc {
+  font-size: 12px;
+  color: var(--gt-text-muted);
+  line-height: 1.4;
+}
+
+.balanceTable {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.balanceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background-color: var(--gt-bg-card);
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-sm);
+}
+
+.balanceCovCol {
+  display: flex;
+  flex-direction: column;
+}
+
+.covName {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gt-text-primary);
+}
+
+.covUnit {
+  font-size: 10px;
+  color: var(--gt-text-subtle);
+}
+
+.balanceSmdCol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.balanceTrack {
+  width: 42px;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.balanceFill {
+  height: 100%;
+  background-color: var(--gt-accent-forest);
+  border-radius: 2px;
+}
+
+.smdVal {
+  font-family: var(--gt-font-mono);
+  font-size: 11px;
+  color: var(--gt-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Exclusions Tab */
+.exclusionsTab {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.exclusionsIntro {
+  font-size: 12px;
+  color: var(--gt-text-muted);
+  line-height: 1.4;
+}
+
+.exclusionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.exclusionItem {
+  padding: 8px 10px;
+  background-color: var(--gt-bg-card);
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-sm);
+  cursor: pointer;
+  transition: all var(--gt-transition-fast);
+}
+
+.exclusionItem:hover {
+  border-color: var(--gt-border-default);
+  background-color: var(--gt-bg-card-hover);
+}
+
+.exItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.exName {
+  font-size: 12px;
+  color: var(--gt-text-primary);
+}
+
+.exDist {
+  font-family: var(--gt-font-mono);
+  font-size: 10px;
+  color: var(--gt-text-subtle);
+}
+
+.exReason {
+  font-size: 11px;
+  color: #f59e0b;
+}
