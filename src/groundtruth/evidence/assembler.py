@@ -98,9 +98,7 @@ def decide_verdict(
         )
 
     if inputs.leave_one_out is not None and not inputs.leave_one_out.sign_is_stable:
-        failures.append(
-            "the estimate changes sign when a single contributing donor is removed"
-        )
+        failures.append("the estimate changes sign when a single contributing donor is removed")
 
     if not inputs.donor_pool.is_balanced:
         failures.append(
@@ -203,10 +201,13 @@ def assemble_evidence(
     )
 
     builder.add(
-        "claim.case_id", "Case identifier", inputs.claim.case_id, provenance=Provenance.external(
+        "claim.case_id",
+        "Case identifier",
+        inputs.claim.case_id,
+        provenance=Provenance.external(
             source=inputs.claim.claim_source_uri or "case definition",
             source_uri=inputs.claim.claim_source_uri,
-        )
+        ),
     )
     if inputs.claim.claimed_credits_tco2e is not None:
         builder.add(
@@ -235,6 +236,12 @@ def assemble_evidence(
         provenance=matching_prov,
     )
     builder.add(
+        "matching.n_candidates_excluded",
+        "Candidate regions excluded by an eligibility rule",
+        len(inputs.donor_pool.excluded),
+        provenance=matching_prov,
+    )
+    builder.add(
         "matching.worst_covariate_smd",
         "Worst post-match standardised mean difference across covariates",
         float(inputs.donor_pool.worst_balance),
@@ -247,9 +254,7 @@ def assemble_evidence(
         f"Estimated incremental effect on {inputs.indicator.value} (mean post-treatment gap)",
         float(inputs.fit.average_effect),
         unit=inputs.indicator_unit,
-        confidence=(
-            inputs.leave_one_out.envelope() if inputs.leave_one_out is not None else None
-        ),
+        confidence=(inputs.leave_one_out.envelope() if inputs.leave_one_out is not None else None),
         provenance=scm_prov,
         qualifiers={
             "observed_not_causal_without_assumptions": True,
@@ -283,6 +288,21 @@ def assemble_evidence(
         bool(inputs.fit.converged),
         provenance=scm_prov,
     )
+
+    builder.add(
+        "fit.weights_identified",
+        "Donor weights are uniquely determined by the pre-treatment fit",
+        bool(inputs.fit.weights_are_identified),
+        provenance=scm_prov,
+    )
+    if not inputs.fit.weights_are_identified:
+        builder.warn(
+            "There are more donors than pre-treatment periods, so the individual donor weights "
+            "are not uniquely identified. The counterfactual path and the effect estimate are "
+            "still well determined, but the listed contributing regions are one of several "
+            "equally good weightings, and should be read as an illustration of the comparison "
+            "set rather than as the only one consistent with the data."
+        )
 
     for rank, (donor_id, weight) in enumerate(inputs.fit.contributing_donors().items(), start=1):
         if rank > 5:
@@ -383,7 +403,5 @@ def assemble_evidence(
             "pool; see the donor-pool table for per-unit reasons."
         )
 
-    verdict = decide_verdict(
-        inputs, divergence_ratio=divergence_ratio, min_donors=min_donors
-    )
+    verdict = decide_verdict(inputs, divergence_ratio=divergence_ratio, min_donors=min_donors)
     return builder.build(verdict)

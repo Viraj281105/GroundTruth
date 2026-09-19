@@ -35,18 +35,27 @@ class DiDResult:
     Large values invalidate the parallel-trends assumption and therefore the
     estimate; they are reported, never suppressed.
     """
+    implied_pre_trend_bias: float = 0.0
+    """The level difference the pre-period slope divergence alone would produce.
+
+    The slope is a per-period quantity and the estimate is a level difference,
+    so the two cannot be compared directly. Projecting the slope across the gap
+    between the pre-period and post-period midpoints puts them in the same
+    units, which is what makes the screen below meaningful.
+    """
     standard_error: float | None = None
 
     @property
     def parallel_trends_plausible(self) -> bool:
-        """Heuristic screen: pre-trend divergence small relative to the estimate.
+        """Heuristic screen: could the pre-period drift explain the estimate alone?
 
-        This is a screening aid, not a hypothesis test. It answers "is the
-        pre-period drift big enough to explain the post-period gap on its own?"
+        This is a screening aid, not a hypothesis test. It compares the estimate
+        against the level bias the observed pre-trend divergence would produce
+        on its own if it simply continued.
         """
         if abs(self.estimate) < 1e-12:
-            return abs(self.pre_trend_divergence) < 1e-12
-        return abs(self.pre_trend_divergence) < 0.25 * abs(self.estimate)
+            return abs(self.implied_pre_trend_bias) < 1e-12
+        return abs(self.implied_pre_trend_bias) < 0.25 * abs(self.estimate)
 
 
 def _slope(values: np.ndarray) -> float:
@@ -106,6 +115,11 @@ def estimate_did(
     estimate = (treated_post - treated_pre) - (control_post - control_pre)
     divergence = _slope(treated[:n_pre_periods]) - _slope(control_mean[:n_pre_periods])
 
+    n_periods = treated.shape[0]
+    pre_midpoint = (n_pre_periods - 1) / 2.0
+    post_midpoint = (n_pre_periods + n_periods - 1) / 2.0
+    implied_bias = divergence * (post_midpoint - pre_midpoint)
+
     # Standard error across control units, treating each as an independent draw
     # of the control-side change. Cluster-robust inference is a P1 improvement.
     per_unit_change = controls[n_pre_periods:].mean(axis=0) - controls[:n_pre_periods].mean(axis=0)
@@ -123,5 +137,6 @@ def estimate_did(
         control_post_mean=control_post,
         n_control_units=int(controls.shape[1]),
         pre_trend_divergence=float(divergence),
+        implied_pre_trend_bias=float(implied_bias),
         standard_error=standard_error,
     )

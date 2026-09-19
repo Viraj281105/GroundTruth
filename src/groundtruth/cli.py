@@ -30,10 +30,9 @@ from groundtruth.logging import configure_logging
 from groundtruth.pipeline import PipelineConfig, run_verification
 
 SYNTHETIC_BANNER = (
-    "=" * 78
-    + "\nSIMULATED DATA RUN\nThis run uses the synthetic fixture provider. The numbers below describe a\n"
-    "test fixture and say nothing about any real project.\n"
-    + "=" * 78
+    "=" * 78 + "\nSIMULATED DATA RUN\n"
+    "This run uses the synthetic fixture provider. The numbers below describe a\n"
+    "test fixture and say nothing about any real project.\n" + "=" * 78
 )
 
 

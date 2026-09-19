@@ -12,6 +12,8 @@ wired up.
 
 from __future__ import annotations
 
+import hashlib
+
 import numpy as np
 
 from groundtruth.core.provenance import Provenance
@@ -19,6 +21,17 @@ from groundtruth.core.types import Indicator, TimeSeries
 from groundtruth.ingestion.base import AreaOfInterest, ObservationRequest
 
 SYNTHETIC_MARKER = "synthetic-simulation"
+
+
+def stable_seed(*parts: object) -> int:
+    """Derive a reproducible 32-bit seed from arbitrary parts.
+
+    Python hashes strings with a per-process random salt, so ``hash()`` would
+    make every run of the fixture different. Reproducibility is a requirement
+    of the system, not a convenience, so the seed comes from a fixed digest.
+    """
+    payload = "|".join(str(p) for p in parts).encode("utf-8")
+    return int.from_bytes(hashlib.blake2b(payload, digest_size=4).digest(), "big")
 
 
 class SyntheticObservationProvider:
@@ -68,7 +81,7 @@ class SyntheticObservationProvider:
         )
 
     def _factor_loadings(self, unit_id: str) -> np.ndarray:
-        rng = np.random.default_rng(abs(hash((self.seed, unit_id))) % (2**32))
+        rng = np.random.default_rng(stable_seed(self.seed, unit_id))
         return rng.dirichlet(np.ones(self.n_factors))
 
     def _common_factors(self, periods: np.ndarray) -> np.ndarray:
@@ -88,7 +101,7 @@ class SyntheticObservationProvider:
         loadings = self._factor_loadings(request.area.unit_id)
         values = loadings @ self._common_factors(periods)
 
-        rng = np.random.default_rng(abs(hash((self.seed, request.area.unit_id, "noise"))) % (2**32))
+        rng = np.random.default_rng(stable_seed(self.seed, request.area.unit_id, "noise"))
         values = values + rng.normal(0.0, self.noise_sd, size=values.shape)
 
         if (
@@ -157,7 +170,7 @@ class SyntheticCovariateProvider:
             draws = dict(self.CENTRES)
             draws.update(area.attributes)
             return draws
-        rng = np.random.default_rng(abs(hash((self.seed, area.unit_id, "cov"))) % (2**32))
+        rng = np.random.default_rng(stable_seed(self.seed, area.unit_id, "cov"))
         draws = {
             key: float(centre + self.SPREADS[key] * rng.normal())
             for key, centre in self.CENTRES.items()

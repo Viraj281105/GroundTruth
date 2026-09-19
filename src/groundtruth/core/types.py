@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from datetime import date
-from enum import Enum
+from enum import StrEnum
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-class Indicator(str, Enum):
+class Indicator(StrEnum):
     """Observable indicators the pipeline can track through time.
 
     These are *observations*, not carbon. See :mod:`groundtruth.core.units`.
@@ -41,7 +41,7 @@ STANDARD_CAVEATS: tuple[str, ...] = (
 )
 
 
-class MethodologyStandard(str, Enum):
+class MethodologyStandard(StrEnum):
     """Crediting standard a project is registered under."""
 
     VCS = "VCS"
@@ -193,7 +193,7 @@ class CausalEffect(BaseModel):
         return self.placebo_p_value is not None and self.placebo_p_value < 0.10
 
 
-class VerdictLabel(str, Enum):
+class VerdictLabel(StrEnum):
     """Screening outcomes. None of these is a finding of fraud."""
 
     CONSISTENT_WITH_CLAIM = "consistent_with_claim"

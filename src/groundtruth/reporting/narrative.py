@@ -82,8 +82,7 @@ def render_deterministic(bundle: EvidenceBundle) -> str:
     lines.append("| --- | --- | --- | --- | --- | --- |")
     for item in bundle.items:
         interval = (
-            f"[{item.confidence.lower:.4g}, {item.confidence.upper:.4g}] "
-            f"({item.confidence.kind})"
+            f"[{item.confidence.lower:.4g}, {item.confidence.upper:.4g}] ({item.confidence.kind})"
             if item.confidence is not None
             else "—"
         )
@@ -108,7 +107,7 @@ def render_deterministic(bundle: EvidenceBundle) -> str:
         if item.provenance.inputs:
             parts.append(f"derived from {', '.join(item.provenance.inputs)}")
         parts.append(f"fingerprint `{item.provenance.fingerprint()}`")
-        lines.append(f"- " + " — ".join(parts))
+        lines.append("- " + " — ".join(parts))
     lines.append("")
     return "\n".join(lines)
 
@@ -167,16 +166,14 @@ def generate_report(
     """
     deterministic = render_deterministic(bundle)
     if narrator is None:
-        return Report(
-            case_id=bundle.case_id, markdown=deterministic, generator="deterministic"
-        )
+        return Report(case_id=bundle.case_id, markdown=deterministic, generator="deterministic")
 
     policy = policy_for_bundle(bundle)
     try:
         completion = narrator.complete(  # type: ignore[attr-defined]
             NARRATION_SYSTEM_PROMPT, build_narration_prompt(bundle, deterministic)
         )
-    except Exception as exc:  # noqa: BLE001 - any provider failure must degrade safely
+    except Exception as exc:
         logger.warning("narration provider failed, using deterministic report: %s", exc)
         return Report(
             case_id=bundle.case_id,

@@ -83,7 +83,5 @@ class Provenance(BaseModel):
 
     def fingerprint(self) -> str:
         """Stable short hash of the provenance record, for audit trails."""
-        payload = json.dumps(
-            self.model_dump(mode="json", exclude={"retrieved_at"}), sort_keys=True
-        )
+        payload = json.dumps(self.model_dump(mode="json", exclude={"retrieved_at"}), sort_keys=True)
         return hashlib.sha256(payload.encode()).hexdigest()[:16]

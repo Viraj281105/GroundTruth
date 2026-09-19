@@ -10,8 +10,8 @@ constraint is what makes the method defensible: it forbids extrapolation outside
 the convex hull of observed donors, so the counterfactual is always a real,
 attainable combination of places that actually exist.
 
-The solver is a projected-gradient / Frank-Wolfe hybrid implemented on numpy
-alone, deliberately avoiding a SciPy or CVXPY dependency in the core package.
+The solver is FISTA (accelerated projected gradient) implemented on numpy alone,
+deliberately avoiding a SciPy or CVXPY dependency in the core package.
 """
 
 from __future__ import annotations
@@ -37,6 +37,21 @@ class SyntheticControlFit:
     synthetic_post: np.ndarray
     n_iterations: int
     converged: bool
+    n_pre_periods: int = 0
+
+    @property
+    def weights_are_identified(self) -> bool:
+        """True if the donor weights are uniquely determined by the pre-period fit.
+
+        With more donors than pre-treatment periods the fitting problem is
+        rank-deficient: many different weight vectors reproduce the treated
+        unit's pre-period path exactly as well. The *counterfactual path* is
+        still well determined, and so is the effect estimate, but the
+        attribution of weight to individual donors is not. Reports must not
+        present an unidentified weight vector as if it named the comparison
+        regions definitively.
+        """
+        return self.n_pre_periods >= len(self.donor_ids)
 
     @property
     def gap_post(self) -> np.ndarray:
@@ -108,16 +123,22 @@ def solve_simplex_least_squares(
     donors: np.ndarray,
     treated: np.ndarray,
     *,
-    max_iterations: int = 20000,
+    max_iterations: int = 5000,
     tolerance: float = 1e-9,
     ridge: float = 0.0,
 ) -> tuple[np.ndarray, int, bool]:
     """Minimise ``||treated - donors @ w||^2`` subject to ``w >= 0, sum(w) == 1``.
 
+    Uses FISTA: projected gradient descent with Nesterov momentum. Plain
+    projected gradient converges too slowly here because the donor matrix is
+    strongly rank-deficient (far more donors than pre-treatment periods), which
+    makes the objective almost flat along many directions. Acceleration turns
+    that from thousands of iterations into tens.
+
     Args:
         donors: ``(n_periods, n_donors)`` pre-treatment donor outcomes.
         treated: ``(n_periods,)`` pre-treatment treated outcomes.
-        max_iterations: Iteration cap for the projected-gradient loop.
+        max_iterations: Iteration cap for the optimisation loop.
         tolerance: Convergence threshold on the weight update norm.
         ridge: Optional L2 penalty that spreads weight across similar donors,
             reducing the variance of a sparse solution.
@@ -137,17 +158,40 @@ def solve_simplex_least_squares(
     lipschitz = float(np.linalg.eigvalsh(gram).max())
     step = 1.0 / lipschitz if lipschitz > 1e-12 else 1.0
 
+    def objective(w: np.ndarray) -> float:
+        return float(0.5 * w @ gram @ w - cross @ w)
+
     weights = np.full(n_donors, 1.0 / n_donors)
+    momentum = weights.copy()
+    t_k = 1.0
+    previous_objective = objective(weights)
     converged = False
     iteration = 0
-    for iteration in range(1, max_iterations + 1):
-        gradient = gram @ weights - cross
-        candidate = _project_to_simplex(weights - step * gradient)
-        delta = float(np.linalg.norm(candidate - weights))
-        weights = candidate
-        if delta < tolerance:
+
+    for iteration in range(1, max_iterations + 1):  # noqa: B007 - reported as n_iterations
+        gradient = gram @ momentum - cross
+        candidate = _project_to_simplex(momentum - step * gradient)
+
+        t_next = 0.5 * (1.0 + np.sqrt(1.0 + 4.0 * t_k * t_k))
+        extrapolated = candidate + ((t_k - 1.0) / t_next) * (candidate - weights)
+        # The extrapolated point may leave the simplex; project it back so the
+        # gradient is always evaluated at a feasible point.
+        momentum = _project_to_simplex(extrapolated)
+        weights, t_k = candidate, t_next
+
+        # Convergence is assessed on the objective, not on the weights. When
+        # there are more donors than pre-treatment periods the objective has a
+        # flat valley of exactly-equivalent weight vectors, so the weights can
+        # keep drifting after the fit has stopped improving. The fit is what
+        # the estimate depends on; see `weights_are_identified`.
+        current_objective = objective(weights)
+        if abs(previous_objective - current_objective) < tolerance * max(
+            abs(previous_objective), 1.0
+        ):
             converged = True
             break
+        previous_objective = current_objective
+
     return weights, iteration, converged
 
 
@@ -220,4 +264,5 @@ def fit_synthetic_control(
         synthetic_post=synthetic_post,
         n_iterations=iterations,
         converged=converged,
+        n_pre_periods=n_pre_periods,
     )

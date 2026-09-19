@@ -49,6 +49,4 @@ def nbr(nir: np.ndarray, swir: np.ndarray) -> np.ndarray:
 def savi(nir: np.ndarray, red: np.ndarray, *, soil_factor: float = 0.5) -> np.ndarray:
     """Soil-Adjusted Vegetation Index, for sparse-canopy dryland projects."""
     nir_a, red_a = np.asarray(nir, dtype=float), np.asarray(red, dtype=float)
-    return _safe_ratio(
-        (nir_a - red_a) * (1.0 + soil_factor), nir_a + red_a + soil_factor
-    )
+    return _safe_ratio((nir_a - red_a) * (1.0 + soil_factor), nir_a + red_a + soil_factor)

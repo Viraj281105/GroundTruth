@@ -153,9 +153,7 @@ def match_donors(
         raise DonorPoolError(f"project is missing covariates: {missing}")
 
     usable_ids = [
-        uid
-        for uid, cov in candidate_covariates.items()
-        if all(c in cov for c in cfg.covariates)
+        uid for uid, cov in candidate_covariates.items() if all(c in cov for c in cfg.covariates)
     ]
     if not usable_ids:
         raise DonorPoolError("no candidate has the full covariate set required for matching")

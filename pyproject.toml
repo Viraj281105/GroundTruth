@@ -71,7 +71,7 @@ ignore = ["B008", "RUF012"]
 quote-style = "double"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"  # numpy stubs require 3.12+ syntax; runtime floor stays 3.11
 packages = ["groundtruth"]
 mypy_path = "src"
 warn_unused_configs = true

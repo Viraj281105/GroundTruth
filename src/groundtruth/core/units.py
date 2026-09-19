@@ -8,10 +8,10 @@ declared explicitly and carry their own provenance.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class UnitFamily(str, Enum):
+class UnitFamily(StrEnum):
     """Families of quantities that must never be silently interchanged."""
 
     INDEX = "index"

@@ -99,7 +99,9 @@ def run_verification(
 
     candidates = donor_pool_provider.candidates(project_area, case.donor_pool_size)
     if not candidates:
-        raise InsufficientDataError(f"donor pool provider returned no candidates for {case.case_id}")
+        raise InsufficientDataError(
+            f"donor pool provider returned no candidates for {case.case_id}"
+        )
 
     donor_series_by_id: dict[str, TimeSeries] = {}
     candidate_covariates: dict[str, dict[str, float]] = {}

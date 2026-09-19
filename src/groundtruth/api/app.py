@@ -6,6 +6,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from groundtruth import __version__
+from groundtruth.api.schemas import (
+    CaseDetail,
+    CaseSummary,
+    HealthResponse,
+    VerificationRequest,
+    VerificationResponse,
+)
 from groundtruth.cases.registry import get_case, load_all_cases
 from groundtruth.config import get_settings
 from groundtruth.core.errors import (
@@ -13,13 +20,6 @@ from groundtruth.core.errors import (
     DonorPoolError,
     GroundTruthError,
     InsufficientDataError,
-)
-from groundtruth.api.schemas import (
-    CaseDetail,
-    CaseSummary,
-    HealthResponse,
-    VerificationRequest,
-    VerificationResponse,
 )
 from groundtruth.ingestion.synthetic import (
     SyntheticCovariateProvider,

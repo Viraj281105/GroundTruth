@@ -26,7 +26,28 @@ from dataclasses import dataclass, field
 from groundtruth.core.errors import GroundingViolationError
 from groundtruth.core.evidence import EvidenceBundle
 
-NUMBER_PATTERN = re.compile(r"-?\d[\d,]*(?:\.\d+)?(?:[eE][-+]?\d+)?")
+# A leading '-' counts as a minus sign only when it does not follow a word
+# character, so identifiers like 'donor-031' are not read as the value -31.
+NUMBER_PATTERN = re.compile(r"(?<![\w-])-?\d[\d,]*(?:\.\d+)?(?:[eE][-+]?\d+)?")
+
+URL_PATTERN = re.compile(r"https?://\S+|<[^>\s]+>")
+
+NEGATED_ASSERTION_PATTERNS: tuple[str, ...] = (
+    r"not evidence of (?:fraud|wrongdoing|deception)",
+    r"not a finding of (?:fraud|wrongdoing|deception)",
+    r"(?:is|are|does|do) not (?:prove|proves|imply|implies|mean|means|establish)",
+    r"never (?:a finding of|evidence of|proof of)",
+    r"is not a probability (?:of|that)",
+    r"(?:must|should) not be (?:presented|read|reported) as (?:the |a )?"
+    r"(?:definitive|conclusive|certain)?",
+)
+"""Phrasings that *disclaim* a prohibited assertion rather than making it.
+
+The standard caveats say "not evidence of fraud", which contains the word the
+fraud filter looks for. Without this exemption the system would reject its own
+mandatory disclaimer, which would be both wrong and quietly catastrophic: the
+safe fallback would fire on every correctly-caveated report.
+"""
 
 PROHIBITED_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bfraud(?:ulent|ulently)?\b", "alleges fraud"),
@@ -49,6 +70,23 @@ PROHIBITED_PATTERNS: tuple[tuple[str, str], ...] = (
 STRUCTURAL_NUMBER_CONTEXT = re.compile(
     r"(?:19|20)\d{2}|\bsection\b|\bfigure\b|\btable\b", re.IGNORECASE
 )
+
+CODE_SPAN = re.compile(r"`([^`]*)`")
+PLAIN_NUMBER = re.compile(r"^\s*-?\d[\d,]*(?:\.\d+)?\s*$")
+
+
+def mask_identifiers(text: str) -> str:
+    """Blank out backticked identifiers so their digits are not read as claims.
+
+    Evidence ids (``effect.point_estimate``), provenance fingerprints
+    (``268506aa5d746a33``) and source URLs (``.../VCS/902``) are tokens that
+    contain digit runs but assert nothing. Scanning them as narrated figures
+    produces false violations. A backticked span holding nothing but a plain
+    number is still scanned, so a figure cannot be smuggled past the check by
+    wrapping it in backticks.
+    """
+    masked = CODE_SPAN.sub(lambda m: m.group(0) if PLAIN_NUMBER.match(m.group(1)) else " ", text)
+    return URL_PATTERN.sub(" ", masked)
 
 
 @dataclass
@@ -151,13 +189,14 @@ def verify_grounding(
     checked = 0
     matched = 0
 
-    for match in NUMBER_PATTERN.finditer(text):
+    scannable_numbers = mask_identifiers(text)
+    for match in NUMBER_PATTERN.finditer(scannable_numbers):
         token = match.group(0)
         value = _parse_number(token)
         if value is None:
             continue
 
-        window = text[max(0, match.start() - 30) : match.end() + 30]
+        window = scannable_numbers[max(0, match.start() - 30) : match.end() + 30]
         if (
             pol.allow_years
             and float(value).is_integer()
@@ -174,10 +213,17 @@ def verify_grounding(
         else:
             ungrounded.append(token)
 
-    prohibited: list[str] = []
     lowered = text.lower()
+
+    # Scan for prohibited assertions with disclaimers masked out, so a caveat
+    # that *denies* an allegation is not mistaken for making one.
+    scannable = lowered
+    for pattern in NEGATED_ASSERTION_PATTERNS:
+        scannable = re.sub(pattern, " ", scannable)
+
+    prohibited: list[str] = []
     for pattern, description in pol.prohibited_patterns:
-        if re.search(pattern, lowered, re.IGNORECASE):
+        if re.search(pattern, scannable, re.IGNORECASE):
             prohibited.append(description)
 
     missing = tuple(p for p in pol.required_phrases if p.lower() not in lowered)

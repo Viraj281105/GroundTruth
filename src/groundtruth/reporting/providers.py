@@ -56,7 +56,12 @@ class _HttpNarrator:
     name = "http"
 
     def __init__(
-        self, api_key: str | None, model: str, base_url: str, *, temperature: float = 0.0,
+        self,
+        api_key: str | None,
+        model: str,
+        base_url: str,
+        *,
+        temperature: float = 0.0,
         max_tokens: int = 1200,
     ) -> None:
         self.api_key = api_key

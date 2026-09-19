@@ -125,7 +125,7 @@ class EvidenceBundle(BaseModel):
 
     def with_warning(self, warning: str) -> EvidenceBundle:
         """Return a new bundle with an additional analyst-facing warning."""
-        return self.model_copy(update={"warnings": self.warnings + (warning,)})
+        return self.model_copy(update={"warnings": (*self.warnings, warning)})
 
     def to_json(self, indent: int = 2) -> str:
         """Serialise the bundle to JSON for archiving or diffing."""
