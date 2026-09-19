@@ -2,7 +2,7 @@
 
 Deployment and runtime infrastructure. **Owner: Bhumi.**
 
-| Directory | Contents | Status |
+| Planned contents | | Status |
 | --- | --- | --- |
 | `docker/` | Container images for the API and worker | Planned |
 | `deploy/` | Environment manifests and deployment configuration | Planned |

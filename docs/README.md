@@ -82,6 +82,13 @@ a question has one obvious place to be answered.
 | [testing.md](engineering/testing.md) | Testing strategy and what a good test looks like here |
 | [configuration.md](engineering/configuration.md) | Settings, secrets, environments |
 
+## Security
+
+| Document | Contents |
+| --- | --- |
+| [security/architecture.md](security/architecture.md) | Trust boundaries, secrets, the GenAI boundary as a control, planned controls |
+| [`SECURITY.md`](../SECURITY.md) | Threat model, reporting, what is not secured yet |
+
 ## Decisions
 
 [decisions/](decisions/) — ten ADRs covering the monorepo, the engine/platform
