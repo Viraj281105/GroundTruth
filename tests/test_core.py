@@ -5,10 +5,10 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from groundtruth.core.errors import ProvenanceError
-from groundtruth.core.evidence import Evidence, EvidenceBuilder, EvidenceBundle
-from groundtruth.core.provenance import Provenance
-from groundtruth.core.types import (
+from groundtruth.contracts.errors import ProvenanceError
+from groundtruth.contracts.evidence import Evidence, EvidenceBuilder, EvidenceBundle
+from groundtruth.contracts.provenance import Provenance
+from groundtruth.contracts.types import (
     STANDARD_CAVEATS,
     Confidence,
     Indicator,
@@ -16,7 +16,7 @@ from groundtruth.core.types import (
     VerdictLabel,
     VerificationVerdict,
 )
-from groundtruth.core.units import UnitFamily, assert_not_index_to_carbon, unit_family
+from groundtruth.contracts.units import UnitFamily, assert_not_index_to_carbon, unit_family
 
 
 class TestUnits:

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from groundtruth.core.errors import DonorPoolError
-from groundtruth.matching.donors import MatchingConfig, match_donors
+from groundtruth.contracts.errors import DonorPoolError
+from groundtruth.engine.matching.donors import MatchingConfig, match_donors
 
 COVARIATES = ("rainfall_mm", "elevation_m", "slope_deg", "road_distance_km", "population_density")
 PROJECT = {

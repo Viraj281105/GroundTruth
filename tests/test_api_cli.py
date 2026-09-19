@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from groundtruth.api.app import app
 from groundtruth.cli import main
+from groundtruth.platform.api.app import app
 
 
 @pytest.fixture
@@ -90,22 +90,26 @@ class TestCli:
         assert "SIMULATED DATA RUN" in captured.err
         assert "Verification screening report" in captured.out
 
-    def test_verify_json_emits_a_parseable_bundle(self, capsys):
-        from groundtruth.core.evidence import EvidenceBundle
+    def test_verify_json_emits_a_parseable_analysis_result(self, capsys):
+        from groundtruth.contracts.result import AnalysisResult
 
         assert main(["verify", "kariba-redd", "--synthetic", "--json"]) == 0
-        bundle = EvidenceBundle.from_json(capsys.readouterr().out)
-        assert bundle.case_id == "kariba-redd"
+        result = AnalysisResult.model_validate_json(capsys.readouterr().out)
+        assert result.case_id == "kariba-redd"
+        assert result.spec_hash
+        assert result.is_simulated
 
     def test_verify_writes_report_and_bundle_to_disk(self, tmp_path, capsys):
         out = tmp_path / "report.md"
         assert main(["verify", "kariba-redd", "--synthetic", "--out", str(out)]) == 0
         capsys.readouterr()
         assert out.exists()
-        assert out.with_suffix(".bundle.json").exists()
+        assert out.with_suffix(".result.json").exists()
 
     def test_doctor_does_not_overstate_what_is_implemented(self, capsys):
         assert main(["doctor"]) == 0
         output = capsys.readouterr().out
-        assert "earth observation implemented : no" in output
-        assert "genai narration implemented   : no" in output
+        assert "earth observation implemented" in output
+        assert "no - see docs/10-roadmap.md M1" in output
+        assert "no - deterministic renderer is used" in output
+        assert "engine: biomass carbon conversion" in output

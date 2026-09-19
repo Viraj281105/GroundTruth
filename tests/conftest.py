@@ -5,10 +5,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from groundtruth.cases.registry import get_case
-from groundtruth.core.evidence import Evidence, EvidenceBundle
-from groundtruth.core.provenance import Provenance
-from groundtruth.core.types import STANDARD_CAVEATS, VerdictLabel, VerificationVerdict
+from groundtruth.contracts.evidence import Evidence, EvidenceBundle
+from groundtruth.contracts.provenance import Provenance
+from groundtruth.contracts.types import STANDARD_CAVEATS, VerdictLabel, VerificationVerdict
+from groundtruth.platform.cases.registry import get_case
 
 
 @pytest.fixture

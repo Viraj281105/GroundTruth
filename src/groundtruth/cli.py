@@ -18,16 +18,14 @@ import sys
 from pathlib import Path
 
 from groundtruth import __version__
-from groundtruth.cases.registry import get_case, load_all_cases
-from groundtruth.config import get_settings
-from groundtruth.core.errors import GroundTruthError
-from groundtruth.ingestion.synthetic import (
-    SyntheticCovariateProvider,
-    SyntheticDonorPoolProvider,
-    SyntheticObservationProvider,
-)
+from groundtruth.contracts.errors import GroundTruthError
+from groundtruth.contracts.result import EngineStatus
+from groundtruth.engine import ENGINE_VERSION, describe_engine, run_analysis
 from groundtruth.logging import configure_logging
-from groundtruth.pipeline import PipelineConfig, run_verification
+from groundtruth.platform.cases.registry import get_case, load_all_cases
+from groundtruth.platform.config import get_settings
+from groundtruth.platform.datasets.access import synthetic_access
+from groundtruth.platform.reports.narrative import generate_report
 
 SYNTHETIC_BANNER = (
     "=" * 78 + "\nSIMULATED DATA RUN\n"
@@ -104,40 +102,55 @@ def _cmd_verify(args: argparse.Namespace) -> int:
         return 2
 
     print(SYNTHETIC_BANNER, file=sys.stderr)
-    observation = SyntheticObservationProvider(
-        seed=settings.random_seed,
-        treated_unit_id=case.case_id,
-        true_effect=args.true_effect,
-        treatment_period=case.window.post_start,
+    request = case.to_request(
+        data_mode="simulated", seed=settings.random_seed, min_donors=args.min_donors
     )
-    result = run_verification(
-        case,
-        observation,
-        SyntheticCovariateProvider(seed=settings.random_seed, project_unit_id=case.case_id),
-        SyntheticDonorPoolProvider(),
-        config=PipelineConfig(min_donors=args.min_donors),
-    )
+    result = run_analysis(request, synthetic_access(request, true_effect=args.true_effect))
+
+    if result.status is not EngineStatus.COMPLETED:
+        assert result.error is not None
+        kind = "refused" if result.error.is_refusal else "error"
+        print(
+            f"analysis {kind} [{result.error.code.value}]: {result.error.message}",
+            file=sys.stderr,
+        )
+        if result.error.remediation:
+            print(f"  -> {result.error.remediation}", file=sys.stderr)
+        return 0 if result.error.is_refusal else 1
+
+    bundle = result.bundle
+    assert bundle is not None
+    report = generate_report(bundle)
 
     if args.json:
-        print(result.bundle.to_json())
+        print(result.model_dump_json(indent=2))
     else:
-        print(result.report.markdown)
+        print(report.markdown)
+
+    print(
+        f"\nrun_id={result.run_id} spec_hash={result.spec_hash} "
+        f"engine={result.engine.engine_version} duration={result.metrics.duration_ms:.0f}ms",
+        file=sys.stderr,
+    )
 
     if args.out:
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(result.report.markdown, encoding="utf-8")
-        bundle_path = out.with_suffix(".bundle.json")
-        bundle_path.write_text(result.bundle.to_json(), encoding="utf-8")
-        print(f"\nwrote {out} and {bundle_path}", file=sys.stderr)
+        out.write_text(report.markdown, encoding="utf-8")
+        result_path = out.with_suffix(".result.json")
+        result_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+        print(f"wrote {out} and {result_path}", file=sys.stderr)
 
     return 0
 
 
 def _cmd_doctor(_: argparse.Namespace) -> int:
     settings = get_settings()
+    capabilities = describe_engine()
     rows = [
         ("version", __version__),
+        ("engine version", ENGINE_VERSION),
+        ("contract version", capabilities["contract_version"]),
         ("environment", settings.app_env),
         ("cases found", str(len(load_all_cases()))),
         ("earth observation configured", str(settings.earth_observation_configured)),
@@ -146,6 +159,10 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
         ("genai configured", str(settings.genai_configured)),
         ("genai narration implemented", "no - deterministic renderer is used"),
         ("synthetic pipeline", "yes"),
+    ]
+    rows += [
+        (f"engine: {name.replace('_', ' ')}", "yes" if ok else "no")
+        for name, ok in capabilities["implemented"].items()
     ]
     width = max(len(k) for k, _ in rows)
     for key, value in rows:
@@ -185,7 +202,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Effect injected into the simulated treated unit, for testing recovery.",
     )
     verify.add_argument("--min-donors", type=int, default=10)
-    verify.add_argument("--json", action="store_true", help="Emit the evidence bundle as JSON.")
+    verify.add_argument("--json", action="store_true", help="Emit the full AnalysisResult as JSON.")
     verify.add_argument("--out", help="Write the report and bundle to this path.")
     verify.set_defaults(func=_cmd_verify)
 

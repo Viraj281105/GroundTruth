@@ -1,29 +1,26 @@
-"""End-to-end pipeline, case registry, evidence assembly and geospatial tests."""
+"""End-to-end engine runs, case registry, and observation methodology."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from groundtruth.cases.registry import AnalysisWindow, get_case, list_cases, load_all_cases
-from groundtruth.core.errors import CaseDefinitionError
-from groundtruth.core.types import VerdictLabel
-from groundtruth.geospatial.indices import evi, nbr, ndvi
-from groundtruth.geospatial.masking import (
+from groundtruth.contracts.errors import CaseDefinitionError
+from groundtruth.contracts.request import AnalysisWindow
+from groundtruth.contracts.result import EngineStatus
+from groundtruth.contracts.types import Indicator, VerdictLabel
+from groundtruth.engine import run_analysis
+from groundtruth.engine.observation.indices import evi, nbr, ndvi
+from groundtruth.engine.observation.masking import (
     SCL_INVALID_CLASSES,
     audit_masking,
     composite_median,
     scl_cloud_mask,
 )
-from groundtruth.geospatial.zonal import zonal_stats
-from groundtruth.ingestion.base import AreaOfInterest, ObservationRequest
-from groundtruth.ingestion.synthetic import (
-    SyntheticCovariateProvider,
-    SyntheticDonorPoolProvider,
-    SyntheticObservationProvider,
-    is_synthetic,
-)
-from groundtruth.pipeline import PipelineConfig, run_verification
+from groundtruth.engine.observation.zonal import zonal_stats
+from groundtruth.platform.cases.registry import get_case, list_cases, load_all_cases
+from groundtruth.platform.datasets.access import synthetic_access
+from groundtruth.platform.datasets.synthetic import SyntheticObservationProvider, is_synthetic
 
 
 class TestCaseRegistry:
@@ -58,58 +55,74 @@ class TestCaseRegistry:
         assert "GroundTruth" in reference["caveat"]
 
     def test_invalid_window_is_rejected(self):
-        with pytest.raises(CaseDefinitionError):
+        with pytest.raises(ValueError, match="invalid analysis window"):
             AnalysisWindow(pre_start=2010, pre_end=2005, post_start=2011, post_end=2020)
+
+
+class TestCaseToRequestTranslation:
+    """The platform translates a stored case into the engine input."""
+
+    def test_a_case_converts_to_a_contract_request(self, kariba_case):
+        request = kariba_case.to_request()
+        assert request.case_id == kariba_case.case_id
+        assert request.indicator is kariba_case.indicator
+        assert request.window.n_pre_periods == kariba_case.window.n_pre_periods
+        assert request.claim.name == kariba_case.claim.name
+
+    def test_the_request_never_carries_the_known_reference(self, kariba_case):
+        """Feeding a published third-party figure forward would destroy independence."""
+        payload = kariba_case.to_request().model_dump_json()
+        assert "known_reference" not in payload
+        assert "0.57" not in payload
+        assert "Verra investigation" not in payload
+
+    def test_translation_is_stable(self, kariba_case):
+        assert kariba_case.to_request().spec_hash == kariba_case.to_request().spec_hash
+
+    def test_every_case_produces_a_valid_request(self):
+        for case in load_all_cases().values():
+            assert case.to_request().spec_hash
 
 
 class TestSyntheticProvider:
     def test_provenance_marks_data_as_simulated(self):
-        provider = SyntheticObservationProvider()
-        request = ObservationRequest(
-            area=AreaOfInterest(unit_id="u"),
-            indicator=get_case("kariba-redd").indicator,
-            start_period=2001,
-            end_period=2010,
-        )
-        assert is_synthetic(provider.provenance(request))
+        assert is_synthetic(SyntheticObservationProvider().provenance_for(Indicator.NDVI))
 
     def test_output_is_deterministic_for_a_given_seed(self):
-        request = ObservationRequest(
-            area=AreaOfInterest(unit_id="u"),
-            indicator=get_case("kariba-redd").indicator,
-            start_period=2001,
-            end_period=2012,
-        )
-        a = SyntheticObservationProvider(seed=42).fetch(request)
-        b = SyntheticObservationProvider(seed=42).fetch(request)
+        kwargs = {
+            "unit_id": "u",
+            "indicator": Indicator.NDVI,
+            "start_period": 2001,
+            "end_period": 2012,
+        }
+        a = SyntheticObservationProvider(seed=42).fetch_series(**kwargs)
+        b = SyntheticObservationProvider(seed=42).fetch_series(**kwargs)
         assert a.values == b.values
 
     def test_injected_effect_appears_only_after_the_treatment_period(self):
-        indicator = get_case("kariba-redd").indicator
-        area = AreaOfInterest(unit_id="treated")
-        request = ObservationRequest(
-            area=area, indicator=indicator, start_period=2001, end_period=2020
-        )
-        control = SyntheticObservationProvider(seed=1).fetch(request)
+        kwargs = {
+            "unit_id": "treated",
+            "indicator": Indicator.NDVI,
+            "start_period": 2001,
+            "end_period": 2020,
+        }
+        control = SyntheticObservationProvider(seed=1).fetch_series(**kwargs)
         treated = SyntheticObservationProvider(
             seed=1, treated_unit_id="treated", true_effect=0.1, treatment_period=2011
-        ).fetch(request)
+        ).fetch_series(**kwargs)
         pre = np.array(treated.values[:10]) - np.array(control.values[:10])
         post = np.array(treated.values[10:]) - np.array(control.values[10:])
         assert np.allclose(pre, 0.0, atol=1e-12)
         assert post.mean() > 0.05
 
-    def test_observation_request_rejects_an_inverted_window(self):
+    def test_an_inverted_window_is_rejected(self):
         with pytest.raises(ValueError, match="end_period must be after"):
-            ObservationRequest(
-                area=AreaOfInterest(unit_id="u"),
-                indicator=get_case("kariba-redd").indicator,
-                start_period=2012,
-                end_period=2001,
+            SyntheticObservationProvider().fetch_series(
+                unit_id="u", indicator=Indicator.NDVI, start_period=2012, end_period=2001
             )
 
 
-class TestGeospatial:
+class TestObservationMethodology:
     def test_ndvi_matches_the_published_formula(self):
         assert ndvi(np.array([0.4]), np.array([0.1]))[0] == pytest.approx(0.6)
 
@@ -127,15 +140,13 @@ class TestGeospatial:
         assert np.isfinite(nbr(nir, swir)).all()
 
     def test_scl_mask_rejects_every_invalid_class(self):
-        scl = np.array(SCL_INVALID_CLASSES)
-        assert not scl_cloud_mask(scl).any()
+        assert not scl_cloud_mask(np.array(SCL_INVALID_CLASSES)).any()
 
     def test_scl_mask_keeps_vegetation_and_bare_soil(self):
         assert scl_cloud_mask(np.array([4, 5, 6])).all()
 
     def test_median_composite_ignores_nan(self):
-        stack = np.array([[1.0], [np.nan], [3.0]])
-        assert composite_median(stack)[0] == pytest.approx(2.0)
+        assert composite_median(np.array([[1.0], [np.nan], [3.0]]))[0] == pytest.approx(2.0)
 
     def test_masking_audit_flags_sparse_periods(self):
         report = audit_masking((2001, 2002, 2003), (10, 2, 8), min_observations=4)
@@ -154,79 +165,104 @@ class TestGeospatial:
 
 
 def _run(case_id: str, *, true_effect: float = 0.06, min_donors: int = 10):
+    """Run one case through the contract, exactly as the platform does."""
     case = get_case(case_id)
-    observation = SyntheticObservationProvider(
-        seed=20260101,
-        treated_unit_id=case.case_id,
-        true_effect=true_effect,
-        treatment_period=case.window.post_start,
-    )
-    return run_verification(
-        case,
-        observation,
-        SyntheticCovariateProvider(seed=20260101, project_unit_id=case.case_id),
-        SyntheticDonorPoolProvider(),
-        config=PipelineConfig(min_donors=min_donors),
-    )
+    request = case.to_request(seed=20260101, min_donors=min_donors)
+    return run_analysis(request, synthetic_access(request, true_effect=true_effect))
 
 
 class TestEndToEnd:
-    def test_pipeline_runs_and_produces_a_verdict(self):
+    def test_engine_returns_a_completed_result_with_a_verdict(self):
         result = _run("kariba-redd")
-        assert result.bundle.verdict is not None
+        assert result.status is EngineStatus.COMPLETED
+        assert result.bundle is not None and result.bundle.verdict is not None
         assert len(result.bundle) > 5
+
+    def test_the_result_carries_reproducibility_identifiers(self):
+        result = _run("kariba-redd")
+        assert result.run_id.startswith("run_")
+        assert result.spec_hash
+        assert result.engine.engine_version
+        assert result.contract_version
+
+    def test_the_same_request_produces_the_same_estimate(self):
+        """Reproducibility is a requirement, not a convenience."""
+        first, second = _run("kariba-redd"), _run("kariba-redd")
+        assert first.spec_hash == second.spec_hash
+        assert first.bundle is not None and second.bundle is not None
+        assert first.bundle.numeric_values() == second.bundle.numeric_values()
+
+    def test_simulated_runs_are_flagged_on_the_result(self):
+        result = _run("kariba-redd")
+        assert result.is_simulated
+        assert result.data_mode == "simulated"
 
     def test_simulated_runs_are_flagged_in_the_warnings(self):
         result = _run("kariba-redd")
+        assert result.bundle is not None
         assert any("SIMULATED DATA" in w for w in result.bundle.warnings)
 
     def test_simulated_runs_are_flagged_in_the_verdict_caveats(self):
         result = _run("kariba-redd")
-        assert result.bundle.verdict is not None
+        assert result.bundle is not None and result.bundle.verdict is not None
         assert any("SIMULATED DATA" in c for c in result.bundle.verdict.caveats)
 
     def test_no_evidence_item_carries_a_carbon_unit_for_an_index_effect(self):
         """NDVI in, no tCO2e out. The core scientific guard, at the system level."""
         result = _run("kariba-redd")
+        assert result.bundle is not None
         effect = result.bundle.require("effect.point_estimate")
         assert effect.unit == "ndvi"
         assert effect.qualifiers["is_carbon_quantity"] is False
 
     def test_the_verdict_refuses_to_compare_an_index_against_a_tco2e_claim(self):
         result = _run("kariba-redd")
-        assert result.bundle.verdict is not None
+        assert result.bundle is not None and result.bundle.verdict is not None
         assert result.bundle.verdict.label is VerdictLabel.INCONCLUSIVE
         assert "commensurable units" in result.bundle.verdict.rationale
 
     def test_every_evidence_item_has_complete_provenance(self):
         result = _run("kariba-redd")
+        assert result.bundle is not None
         for item in result.bundle.items:
             assert item.provenance.source
             assert item.provenance.method
             assert item.provenance.fingerprint()
 
     def test_the_report_is_grounded_in_its_own_bundle(self):
-        from groundtruth.reporting.grounding import policy_for_bundle, verify_grounding
+        from groundtruth.contracts.grounding import policy_for_bundle, verify_grounding
+        from groundtruth.platform.reports.narrative import generate_report
 
         result = _run("kariba-redd")
-        report = verify_grounding(
-            result.report.markdown, result.bundle, policy_for_bundle(result.bundle)
+        assert result.bundle is not None
+        report = generate_report(result.bundle)
+        grounding = verify_grounding(
+            report.markdown, result.bundle, policy_for_bundle(result.bundle)
         )
-        assert report.grounded, report.summary()
+        assert grounding.grounded, grounding.summary()
 
-    def test_the_bundle_round_trips_through_json(self):
-        from groundtruth.core.evidence import EvidenceBundle
+    def test_the_result_round_trips_through_json(self):
+        from groundtruth.contracts.result import AnalysisResult
 
         result = _run("kariba-redd")
-        restored = EvidenceBundle.from_json(result.bundle.to_json())
-        assert restored.numeric_values() == result.bundle.numeric_values()
+        restored = AnalysisResult.model_validate_json(result.model_dump_json())
+        assert restored.bundle is not None and result.bundle is not None
+        assert restored.bundle.numeric_values() == result.bundle.numeric_values()
 
-    def test_an_underpowered_donor_pool_is_refused(self):
-        from groundtruth.core.errors import DonorPoolError
+    def test_an_underpowered_donor_pool_is_refused_not_raised(self):
+        """A domain failure is a typed result the platform can persist and show."""
+        result = _run("kariba-redd", min_donors=500)
+        assert result.status is EngineStatus.REFUSED
+        assert result.error is not None
+        assert result.error.code.is_refusal
+        assert result.error.remediation
 
-        with pytest.raises(DonorPoolError):
-            _run("kariba-redd", min_donors=500)
+    def test_metrics_are_recorded_for_monitoring(self):
+        result = _run("kariba-redd")
+        assert result.metrics.duration_ms > 0
+        assert result.metrics.n_donors_admitted > 0
+        assert result.metrics.stage_durations_ms
 
-    def test_all_three_cases_run_without_error(self):
+    def test_all_three_cases_run_without_raising(self):
         for case_id in ("kariba-redd", "southern-cardamom-redd", "mikoko-pamoja"):
-            assert _run(case_id).bundle.verdict is not None
+            assert _run(case_id).status is EngineStatus.COMPLETED

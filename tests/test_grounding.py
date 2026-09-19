@@ -9,15 +9,15 @@ from __future__ import annotations
 
 import pytest
 
-from groundtruth.core.errors import GroundingViolationError
-from groundtruth.reporting.grounding import (
+from groundtruth.contracts.errors import GroundingViolationError
+from groundtruth.contracts.grounding import (
     GroundingPolicy,
     enforce_grounding,
     policy_for_bundle,
     verify_grounding,
 )
-from groundtruth.reporting.narrative import generate_report, render_deterministic
-from groundtruth.reporting.providers import EchoNarrator
+from groundtruth.platform.reports.narrative import generate_report, render_deterministic
+from groundtruth.platform.reports.providers import EchoNarrator
 
 
 class TestNumericGrounding:

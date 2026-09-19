@@ -11,13 +11,13 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from groundtruth.causal.did import estimate_did
-from groundtruth.causal.synthetic_control import (
+from groundtruth.contracts.errors import EstimationError, InsufficientDataError
+from groundtruth.engine.causal.did import estimate_did
+from groundtruth.engine.causal.synthetic_control import (
     _project_to_simplex,
     fit_synthetic_control,
     solve_simplex_least_squares,
 )
-from groundtruth.core.errors import EstimationError, InsufficientDataError
 
 
 class TestSimplexProjection:

@@ -5,10 +5,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from groundtruth.causal.synthetic_control import fit_synthetic_control
-from groundtruth.core.errors import EstimationError, InsufficientDataError
-from groundtruth.uncertainty.placebo import in_space_placebo, in_time_placebo
-from groundtruth.uncertainty.robustness import (
+from groundtruth.contracts.errors import EstimationError, InsufficientDataError
+from groundtruth.engine.causal.synthetic_control import fit_synthetic_control
+from groundtruth.engine.uncertainty.placebo import in_space_placebo, in_time_placebo
+from groundtruth.engine.uncertainty.robustness import (
     SpecificationCurve,
     leave_one_out,
     permutation_interval,
