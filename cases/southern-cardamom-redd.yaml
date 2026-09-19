@@ -1,0 +1,62 @@
+# Southern Cardamom REDD+ (VCS 1748) - supporting case.
+#
+# Chosen because it stresses a different part of the method than Kariba: dense
+# evergreen tropical forest where NDVI saturates, persistent cloud cover that
+# strains compositing, and a documented leakage question. If the pipeline
+# behaves sensibly here it is not simply exploiting dryland seasonality.
+#
+# No GroundTruth analysis of this project has been run.
+
+case_id: southern-cardamom-redd
+status: scaffolded
+
+project:
+  name: Southern Cardamom REDD+ Project
+  country: Cambodia
+  ecosystem: lowland and montane evergreen tropical forest
+  standard: VCS
+  registry_id: VCS 1748
+  area_ha: 497000
+  crediting_period_start: 2015-01-01
+  crediting_period_end: 2045-12-31
+  claimed_credits_tco2e: null  # populate from the Verra registry serial records
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/1748
+  boundary_path: cases/boundaries/southern-cardamom-redd.geojson  # NOT YET OBTAINED
+
+analysis_window:
+  pre_start: 2005
+  pre_end: 2014
+  post_start: 2015
+  post_end: 2022
+
+analysis:
+  # EVI rather than NDVI: NDVI saturates over closed evergreen canopy, so it
+  # loses sensitivity exactly where the signal for this project would be.
+  indicator: evi
+  donor_search_region: >-
+    Cambodian and adjacent Thai lowland evergreen forest outside registered
+    concessions, protected areas and REDD+ project boundaries
+  donor_pool_size: 60
+  excluded_donor_ids: []
+  covariates:
+    - rainfall_mm
+    - elevation_m
+    - slope_deg
+    - road_distance_km
+    - population_density
+
+known_reference:
+  description: >-
+    The project has been the subject of published journalistic and academic
+    scrutiny regarding its baseline and its social safeguards. No registry
+    correction comparable to the Kariba case has been issued.
+  source: public reporting; no official credit correction on record as of this case definition
+  caveat: >-
+    Unlike Kariba there is no official corrected figure to benchmark against, so
+    this case tests method behaviour and cloud robustness, not accuracy against
+    a known answer.
+
+notes: >-
+  Persistent cloud cover means annual composites here will have low clear-scene
+  counts in several years. Those years must be surfaced by the masking audit and
+  either excluded or explicitly down-weighted, never silently interpolated.

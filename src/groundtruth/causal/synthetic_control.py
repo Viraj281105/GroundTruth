@@ -108,8 +108,8 @@ def solve_simplex_least_squares(
     donors: np.ndarray,
     treated: np.ndarray,
     *,
-    max_iterations: int = 5000,
-    tolerance: float = 1e-10,
+    max_iterations: int = 20000,
+    tolerance: float = 1e-9,
     ridge: float = 0.0,
 ) -> tuple[np.ndarray, int, bool]:
     """Minimise ``||treated - donors @ w||^2`` subject to ``w >= 0, sum(w) == 1``.

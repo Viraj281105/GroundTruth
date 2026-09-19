@@ -1,0 +1,67 @@
+# Mikoko Pamoja - supporting case, deliberately chosen as a negative control
+# for the limits of the method itself.
+#
+# This is a small community mangrove project widely regarded as one of the more
+# credible blue-carbon projects. Two things make it valuable here:
+#
+# 1. Scale. At ~117 ha it is far below the effective resolution at which a
+#    30 m synthetic control on annual composites can resolve an effect. We
+#    expect the pipeline to return INCONCLUSIVE, and that is the correct
+#    answer. A method that returns a confident number for this project is
+#    broken.
+# 2. Ecosystem. Mangrove spectral response is confounded by tidal state at
+#    acquisition, which breaks the assumption that an annual composite measures
+#    a comparable quantity across units.
+#
+# No GroundTruth analysis of this project has been run.
+
+case_id: mikoko-pamoja
+status: scaffolded
+
+project:
+  name: Mikoko Pamoja
+  country: Kenya
+  ecosystem: mangrove (blue carbon)
+  standard: PlanVivo
+  registry_id: PlanVivo 1000
+  area_ha: 117
+  crediting_period_start: 2013-01-01
+  crediting_period_end: 2033-12-31
+  claimed_credits_tco2e: null  # populate from the Plan Vivo registry
+  source_uri: https://www.planvivo.org/mikoko-pamoja
+  boundary_path: cases/boundaries/mikoko-pamoja.geojson  # NOT YET OBTAINED
+
+analysis_window:
+  pre_start: 2003
+  pre_end: 2012
+  post_start: 2013
+  post_end: 2022
+
+analysis:
+  indicator: ndvi
+  donor_search_region: >-
+    Kenyan and Tanzanian coastal mangrove stands outside any registered carbon
+    project
+  donor_pool_size: 40
+  excluded_donor_ids: []
+  covariates:
+    - rainfall_mm
+    - elevation_m
+    - slope_deg
+    - road_distance_km
+    - population_density
+
+known_reference:
+  description: >-
+    Mikoko Pamoja is a small, community-run mangrove project generally regarded
+    as methodologically careful. It is used here as a control on the method, not
+    as a project under suspicion.
+  source: Plan Vivo registry and published project documentation
+  caveat: >-
+    The expected outcome for this case is INCONCLUSIVE on grounds of scale. That
+    is a statement about the resolution of the method, not about the project.
+
+notes: >-
+  Mangrove NDVI depends on tidal state at acquisition. Composites must be
+  restricted to a consistent tidal window before this case can be run at all;
+  until that is implemented, this case should not be attempted on real data.

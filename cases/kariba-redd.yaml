@@ -1,0 +1,70 @@
+# Kariba REDD+ (VCS 902) - primary validation case.
+#
+# This case is the benchmark for the whole method. It is the largest confirmed
+# over-crediting correction in voluntary carbon market history, which means an
+# independent estimate here can be compared against a published, third-party
+# correction rather than against nothing.
+#
+# IMPORTANT: `known_reference` below is a published third-party finding. It is
+# NOT an input to the estimate, and the pipeline never reads it. It exists so
+# the validation harness can compare our independent result against it AFTER
+# the fact. No GroundTruth analysis of this project has been run yet.
+
+case_id: kariba-redd
+status: scaffolded
+
+project:
+  name: Kariba REDD+ Project
+  country: Zimbabwe
+  ecosystem: miombo woodland / dry forest
+  standard: VCS
+  registry_id: VCS 902
+  area_ha: 785000
+  crediting_period_start: 2011-07-01
+  crediting_period_end: 2041-06-30
+  claimed_credits_tco2e: null  # populate from the Verra registry serial records
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/902
+  boundary_path: cases/boundaries/kariba-redd.geojson  # NOT YET OBTAINED
+
+analysis_window:
+  # Pre-period ends the year before crediting begins. A long pre-period is what
+  # makes the synthetic control fit checkable.
+  pre_start: 2001
+  pre_end: 2010
+  post_start: 2011
+  post_end: 2022
+
+analysis:
+  indicator: ndvi
+  donor_search_region: >-
+    Zimbabwe, Zambia and Mozambique miombo woodland outside any registered
+    REDD+ or protected-area boundary
+  donor_pool_size: 80
+  excluded_donor_ids: []  # populate with districts inside the 10 km leakage belt
+  covariates:
+    - rainfall_mm
+    - elevation_m
+    - slope_deg
+    - road_distance_km
+    - population_density
+
+known_reference:
+  # Published third-party finding, used only for post-hoc validation.
+  description: >-
+    An investigation by Verra into the Kariba REDD+ project concluded in 2025
+    that a majority of credits issued by the project were in excess of the
+    emission reductions the project actually achieved.
+  reported_excess_share: 0.57
+  reported_credits_issued_approx: 27000000
+  source: Verra investigation findings, as reported by Carbon Herald and Climate Home News
+  source_date: 2025-09
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/902
+  caveat: >-
+    This figure belongs to Verra, not to GroundTruth. It is recorded here as a
+    validation target. Reproducing it is not guaranteed, and a mismatch would be
+    a finding about our method, not about the project.
+
+notes: >-
+  Miombo woodland has strong rainfall-driven interannual NDVI variability, so
+  rainfall matching is load-bearing for this case and a rainfall-only placebo
+  specification must be reported alongside the main estimate.

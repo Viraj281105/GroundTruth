@@ -121,18 +121,46 @@ class SyntheticCovariateProvider:
     name = "synthetic"
     KEYS = ("rainfall_mm", "elevation_m", "slope_deg", "road_distance_km", "population_density")
 
-    def __init__(self, seed: int = 20260101) -> None:
+    def __init__(self, seed: int = 20260101, project_unit_id: str | None = None) -> None:
         self.seed = seed
+        self.project_unit_id = project_unit_id
+
+    CENTRES: dict[str, float] = {
+        "rainfall_mm": 850.0,
+        "elevation_m": 750.0,
+        "slope_deg": 8.0,
+        "road_distance_km": 20.0,
+        "population_density": 30.0,
+    }
+    SPREADS: dict[str, float] = {
+        "rainfall_mm": 120.0,
+        "elevation_m": 180.0,
+        "slope_deg": 2.5,
+        "road_distance_km": 7.0,
+        "population_density": 10.0,
+    }
 
     def covariates(self, area: AreaOfInterest) -> dict[str, float]:
-        """Return simulated covariates, reusing any real attributes already set."""
+        """Return simulated covariates, reusing any real attributes already set.
+
+        Candidates are drawn around a common ecoregion centre rather than
+        uniformly at random, which is what a real donor search restricted to a
+        matched ecoregion produces. A uniform draw would make every pool fail
+        its balance check for reasons that have nothing to do with the method.
+
+        The designated project unit sits exactly at the centre. This is a
+        fixture convenience, not a claim about real projects: it gives the
+        balance gate a pool it can actually pass, so tests can exercise the
+        path where every gate succeeds as well as the paths where one fails.
+        """
+        if self.project_unit_id is not None and area.unit_id == self.project_unit_id:
+            draws = dict(self.CENTRES)
+            draws.update(area.attributes)
+            return draws
         rng = np.random.default_rng(abs(hash((self.seed, area.unit_id, "cov"))) % (2**32))
         draws = {
-            "rainfall_mm": float(600 + 500 * rng.random()),
-            "elevation_m": float(300 + 900 * rng.random()),
-            "slope_deg": float(1 + 14 * rng.random()),
-            "road_distance_km": float(0.5 + 40 * rng.random()),
-            "population_density": float(1 + 60 * rng.random()),
+            key: float(centre + self.SPREADS[key] * rng.normal())
+            for key, centre in self.CENTRES.items()
         }
         draws.update(area.attributes)
         return draws
