@@ -34,3 +34,12 @@ Thumbs.db
 # Secrets
 *.pem
 *.key
+
+# Build artifacts
+*.egg-info/
+build/
+dist/
+artifacts/
+htmlcov/
+.coverage
+.coverage.*
