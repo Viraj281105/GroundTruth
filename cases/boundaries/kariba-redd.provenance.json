@@ -1,0 +1,197 @@
+{
+  "artifact": "cases/boundaries/kariba-redd.geojson",
+  "case_id": "kariba-redd",
+  "obtained_for_issue": 2,
+  "status": "obtained",
+  "source": {
+    "registry": "Verra Registry (VCS)",
+    "project_page": "https://registry.verra.org/app/projectDetail/VCS/902",
+    "document_type": "Project Boundary (KML File)",
+    "document_name": "_KML_902.kml",
+    "document_id": 110200000383455,
+    "document_state": "APPROVED",
+    "content_type": "application/vnd.google-earth.kml+xml",
+    "endpoint": "POST https://prod-us.api.platts.com/ci-raas-prod/br-reg/rest/document-manager/public/downloadDocumentById {\"id\": 110200000383455}",
+    "retrieved_at": "2026-09-20T12:33:45Z",
+    "retrieved_twice_byte_identical": true,
+    "bytes": 57469,
+    "sha256": "3e9ea0510d8bc8ff6f768b37ef3066128d7d616402b1aebb864dab91f9d5fde4",
+    "committed_copy": "cases/boundaries/kariba-redd.source.kml",
+    "note": "The registry's own approved boundary document. Not redrawn, not approximated, not sourced from any third party."
+  },
+  "registry_metadata_snapshot": {
+    "captured_at": "2026-09-20T12:20Z",
+    "project_name": "Kariba REDD+ Project",
+    "registry_id": "VCS 902",
+    "status": "Withdrawn",
+    "proponent": "Carbon Green Investments (Guernsey)",
+    "methodology": "VM0009 (Version NA)",
+    "afolu_activities": "ARR, REDD",
+    "validator": "Aster Global Environmental Solutions Inc.",
+    "country": "Zimbabwe",
+    "states_provinces": "Matabeleland North, Midlands, Mashonaland West, Mashonaland Central",
+    "districts_listed_by_registry": [
+      "Binga",
+      "Nyaminyami",
+      "Hurungwe",
+      "Mbire"
+    ],
+    "registered_area_ha": 747801,
+    "estimated_project_start_date": "2011-07-01",
+    "project_registration_date": "2020-06-04",
+    "crediting_period": [
+      "2011-07-01",
+      "2041-06-30"
+    ],
+    "issued_vcus": 26822953,
+    "retired_vcus": 21956707
+  },
+  "artifact_facts": {
+    "format": "GeoJSON FeatureCollection, one Feature, MultiPolygon",
+    "crs": "OGC:CRS84 / EPSG:4326 (WGS84 longitude, latitude) — the KML default; no reprojection performed",
+    "parts": 5,
+    "total_vertices": 1378,
+    "holes": 0,
+    "bytes": 101191,
+    "sha256": "0dc35787f44d725d127d129a303ce9bf525e451a07fc99a0f49c811638e3566d",
+    "part_detail": [
+      {
+        "part": 1,
+        "source_objectid": "2",
+        "vertices": 417,
+        "holes": 0,
+        "source_area_attribute_m2": 2110406375.793457,
+        "source_perimeter_attribute_m": 329102.187,
+        "geodesic_area_ha": 210674.1,
+        "bbox_wgs84": [
+          27.625762,
+          -17.712875,
+          28.255905,
+          -17.036725
+        ]
+      },
+      {
+        "part": 2,
+        "source_objectid": "12",
+        "vertices": 172,
+        "holes": 0,
+        "source_area_attribute_m2": 1500179192.019043,
+        "source_perimeter_attribute_m": 341905.729,
+        "geodesic_area_ha": 151344.5,
+        "bbox_wgs84": [
+          29.351463,
+          -16.845867,
+          30.04103,
+          -16.246576
+        ]
+      },
+      {
+        "part": 3,
+        "source_objectid": "1",
+        "vertices": 41,
+        "holes": 0,
+        "source_area_attribute_m2": 307075789.265625,
+        "source_perimeter_attribute_m": 85019.9336,
+        "geodesic_area_ha": 28622.9,
+        "bbox_wgs84": [
+          30.256673,
+          -15.853539,
+          30.422388,
+          -15.625254
+        ]
+      },
+      {
+        "part": 4,
+        "source_objectid": "1",
+        "vertices": 376,
+        "holes": 0,
+        "source_area_attribute_m2": 3162332073.4902344,
+        "source_perimeter_attribute_m": 407858.828,
+        "geodesic_area_ha": 320054.0,
+        "bbox_wgs84": [
+          30.050677,
+          -16.39791,
+          31.145102,
+          -15.990159
+        ]
+      },
+      {
+        "part": 5,
+        "source_objectid": "16",
+        "vertices": 372,
+        "holes": 0,
+        "source_area_attribute_m2": 3699308927.3706055,
+        "source_perimeter_attribute_m": 531752.93,
+        "geodesic_area_ha": 361971.5,
+        "bbox_wgs84": [
+          28.035404,
+          -17.406887,
+          29.13166,
+          -16.723408
+        ]
+      }
+    ]
+  },
+  "transformations_applied": [
+    {
+      "change": "Altitude dropped from each coordinate",
+      "detail": "Every KML coordinate carried a third value of exactly 0. The GeoJSON is 2D.",
+      "affects_geometry": false
+    },
+    {
+      "change": "Exterior ring order reversed",
+      "detail": "All five KML rings are clockwise; RFC 7946 exterior rings are counter-clockwise, and Earth Engine interprets winding on geodesic polygons. The point set of every ring is unchanged and the reversal is verified by round-trip comparison against the KML.",
+      "affects_geometry": false
+    }
+  ],
+  "transformations_deliberately_not_applied": [
+    "No coordinate rounding, simplification or densification.",
+    "No repair of the part 1 / part 5 overlap described below.",
+    "No dissolve or union of the five parts.",
+    "No inward buffer — that is an analysis-time operation per ADR-011 and docs/data/conventions.md."
+  ],
+  "validation": {
+    "geometry_validity": {
+      "all_rings_closed": true,
+      "self_intersections": 0,
+      "duplicate_consecutive_vertices_checked": true,
+      "coordinates_within_wgs84_range": true,
+      "method": "pure-python ring closure, pairwise segment intersection, range checks"
+    },
+    "part_overlap": {
+      "finding": "parts 1 and 5 overlap",
+      "estimated_overlap_area_km2": 0.29,
+      "share_of_total": "0.003%",
+      "detail": "29 vertices of part 1 fall inside part 5 and 12 of part 5 inside part 1, with no shared vertices — a digitising sliver along a common edge, not a duplicated polygon.",
+      "consequence": "Area must be computed on the union, not by summing parts. Left as delivered by the registry."
+    },
+    "area_cross_check": {
+      "geodesic_area_ha": 1072667.0,
+      "method": "Chamberlain & Duquette spherical-excess area on the WGS84 ellipsoid, summed over parts (union differs by ~0.003%)",
+      "kml_embedded_area_attribute_ha": 1077930.0,
+      "agreement_between_the_two": "0.5%",
+      "registered_area_ha": 747801,
+      "case_yaml_area_ha": 785000,
+      "difference_vs_registered_pct": 43.4,
+      "difference_vs_case_yaml_pct": 36.6,
+      "verdict": "FAILS the ~10% plausibility threshold in issue #2",
+      "unresolved": "The registry's boundary document describes substantially more land than the registry's own area field and than the case YAML. The most likely explanation is a project-area versus project-zone distinction, but that is a hypothesis: it has not been confirmed against the project description, and no figure here has been adjusted to fit it."
+    }
+  },
+  "adr_011_compatibility": {
+    "storage_crs_matches_convention": true,
+    "usable_as_registry_boundary_term": true,
+    "notes": [
+      "ADR-011 builds the treated unit as registry_boundary ∩ mask ⊖ inward_buffer(300 m). A MultiPolygon with five parts is admissible: the mask and buffer apply to the masked geometry as a whole.",
+      "The inward buffer must be applied after masking, per ADR-011, so it is not baked into this artifact.",
+      "The part 1 / part 5 overlap must be dissolved before any area or zonal computation, or the sliver is counted twice.",
+      "The registry names four districts (Binga, Nyaminyami, Hurungwe, Mbire). Whether the GAUL 2015 level-2 units of those names contain these parts is unverified here and belongs to #23, which pins the GAUL asset.",
+      "The unresolved area question changes what the treated unit is, and therefore the [1/3x, 3x] eligible-area band that ADR-011 derives from it. It must be settled before the donor pool is generated (#3)."
+    ]
+  },
+  "not_verified_here": [
+    "Whether the geometry lies entirely within Zimbabwe (needs an administrative boundary dataset; #23).",
+    "Whether the boundary corresponds to the accounting area used for issuance, or to a wider project zone (needs the project description PDF, PROJ_DESC_902_16AUG2013.pdf, document id 110200000335895).",
+    "Any comparison against monitoring-report maps or the CCB project description."
+  ]
+}
