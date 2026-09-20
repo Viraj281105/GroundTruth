@@ -1,7 +1,7 @@
 # 12. The engine/platform contract
 
 The contract is the boundary between the analytical engine (Viraj) and the
-platform (Bhumi). It lives in `src/groundtruth/contracts/` and is the only
+platform (Bhumi). It lives in `packages/groundtruth/src/groundtruth/contracts/` and is the only
 thing both sides depend on.
 
 ```
@@ -401,4 +401,4 @@ is reliable, not that it is optimal.
 
 ---
 
-Previous: [11. Demo flow](11-demo-flow.md) · Next: [13. Implementation plan](13-implementation-plan.md)
+Previous: [11. Demo flow](../competition/demo-flow.md) · Next: [13. Implementation plan](../product/implementation-plan.md)

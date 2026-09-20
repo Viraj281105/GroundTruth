@@ -58,7 +58,7 @@ Suppressing it would make every other claim in this repository worthless.
 
 The Verra figure is expressed in tCO2e. Our estimate is on a spectral index.
 Comparing them requires the biomass conversion layer described in
-[5. Causal inference](05-causal-inference.md), with its error propagated. Until
+[5. Causal inference](causal-inference.md), with its error propagated. Until
 that exists, the Kariba comparison can only be made on **direction and relative
 magnitude on the observed indicator**, not on a credit count. The design already
 enforces this: the verdict returns INCONCLUSIVE rather than manufacturing a
@@ -121,4 +121,4 @@ Anything missing an item on that list is not a result. It is a work in progress.
 
 ---
 
-Previous: [5. Causal inference](05-causal-inference.md) · Next: [7. GenAI grounding](07-genai-grounding.md)
+Previous: [5. Causal inference](causal-inference.md) · Next: [7. GenAI grounding](../architecture/genai.md)

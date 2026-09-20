@@ -16,4 +16,4 @@ uvicorn apps.api.main:app --reload --port 8000   # http://localhost:8000/docs
 | Planned | Async job submission, result listing, pagination, auth |
 | Future | Registry-scale batch endpoints, webhooks, API keys |
 
-See [`docs/architecture/api.md`](../../docs/architecture/api.md).
+See [`docs/architecture/backend.md`](../../docs/architecture/backend.md).

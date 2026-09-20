@@ -1,0 +1,281 @@
+{
+  "experiment": "estimator_recovery",
+  "generated_at": "2026-09-20T06:27:31.568631+00:00",
+  "groundtruth_version": "0.3.0",
+  "seed": 20260101,
+  "data": "SIMULATED - latent factor panels, not real observations",
+  "outcomes": [
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 5,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.05436352821132869,
+      "bias": 0.004363528211328689,
+      "rmse": 0.024451729491484896,
+      "coverage_of_sign": 1.0,
+      "mean_placebo_p": 0.27749413663623895,
+      "detection_rate": 0.05,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 8,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.05048129100771882,
+      "bias": 0.0004812910077188204,
+      "rmse": 0.013035739973909975,
+      "coverage_of_sign": 1.0,
+      "mean_placebo_p": 0.2018609903259514,
+      "detection_rate": 0.3,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.05056677263588916,
+      "bias": 0.0005667726358891539,
+      "rmse": 0.009952024400680035,
+      "coverage_of_sign": 1.0,
+      "mean_placebo_p": 0.07292626728110599,
+      "detection_rate": 0.75,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 15,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.04890911047714615,
+      "bias": -0.001090889522853855,
+      "rmse": 0.012700588976226833,
+      "coverage_of_sign": 0.95,
+      "mean_placebo_p": 0.07908602150537634,
+      "detection_rate": 0.95,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 10,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.04912573204794034,
+      "bias": -0.0008742679520596652,
+      "rmse": 0.017253019322025148,
+      "coverage_of_sign": 0.95,
+      "mean_placebo_p": 0.13828282828282829,
+      "detection_rate": 0.65,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 20,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.04341537459346905,
+      "bias": -0.0065846254065309515,
+      "rmse": 0.013305349767862297,
+      "coverage_of_sign": 1.0,
+      "mean_placebo_p": 0.13633458646616542,
+      "detection_rate": 0.6,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.05308546442952061,
+      "bias": 0.0030854644295206096,
+      "rmse": 0.00874460219158009,
+      "coverage_of_sign": 1.0,
+      "mean_placebo_p": 0.05806398643995973,
+      "detection_rate": 0.9,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 50,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.043132064523303336,
+      "bias": -0.006867935476696667,
+      "rmse": 0.009624302106296083,
+      "coverage_of_sign": 1.0,
+      "mean_placebo_p": 0.08806628457834746,
+      "detection_rate": 0.8,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.005,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.05106868753563937,
+      "bias": 0.001068687535639365,
+      "rmse": 0.007785678392393092,
+      "coverage_of_sign": 1.0,
+      "mean_placebo_p": 0.03748834684040468,
+      "detection_rate": 1.0,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.04741547614277096,
+      "bias": -0.002584523857229043,
+      "rmse": 0.016227739069541672,
+      "coverage_of_sign": 0.95,
+      "mean_placebo_p": 0.1261939191694475,
+      "detection_rate": 0.6,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.02,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.055239296352768544,
+      "bias": 0.005239296352768541,
+      "rmse": 0.0164008531326856,
+      "coverage_of_sign": 1.0,
+      "mean_placebo_p": 0.16676446051167962,
+      "detection_rate": 0.55,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.04,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.048645171295982725,
+      "bias": -0.0013548287040172774,
+      "rmse": 0.026028443404617116,
+      "coverage_of_sign": 0.95,
+      "mean_placebo_p": 0.41312198739340006,
+      "detection_rate": 0.25,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.0,
+        "n_replicates": 20
+      },
+      "mean_estimate": -0.0013988962922873837,
+      "bias": -0.0013988962922873837,
+      "rmse": 0.015014901624194322,
+      "coverage_of_sign": 0.0,
+      "mean_placebo_p": 0.3859212071925544,
+      "detection_rate": 0.2,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.02,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.017480479536094003,
+      "bias": -0.0025195204639059977,
+      "rmse": 0.008370525527129092,
+      "coverage_of_sign": 0.95,
+      "mean_placebo_p": 0.3108435298479792,
+      "detection_rate": 0.35,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.05,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.05731577167000451,
+      "bias": 0.007315771670004509,
+      "rmse": 0.0221375978633202,
+      "coverage_of_sign": 1.0,
+      "mean_placebo_p": 0.07774193548387096,
+      "detection_rate": 0.7,
+      "n_failures": 0
+    },
+    {
+      "condition": {
+        "n_donors": 30,
+        "n_pre": 10,
+        "n_post": 8,
+        "noise_sd": 0.01,
+        "true_effect": 0.1,
+        "n_replicates": 20
+      },
+      "mean_estimate": 0.10350110131395376,
+      "bias": 0.0035011013139537583,
+      "rmse": 0.013192988648131763,
+      "coverage_of_sign": 1.0,
+      "mean_placebo_p": 0.04088325652841781,
+      "detection_rate": 0.95,
+      "n_failures": 0
+    }
+  ]
+}

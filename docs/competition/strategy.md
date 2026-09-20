@@ -98,7 +98,7 @@ conclusion.
 2. Kariba — a documented, third-party-confirmed case of the gap being large
 3. The insight — before/after is not causal; you need a counterfactual
 4. The architecture — where AI sits, and where it deliberately does not
-5. **Live demo** — including the refusal (see [11. Demo flow](11-demo-flow.md))
+5. **Live demo** — including the refusal (see [11. Demo flow](demo-flow.md))
 6. What is implemented vs scaffolded, stated plainly
 7. The roadmap to a registry-scale triage layer
 
@@ -124,4 +124,4 @@ conclusion.
 
 ---
 
-Previous: [8. Limitations](08-limitations.md) · Next: [10. Roadmap](10-roadmap.md)
+Previous: [8. Limitations](../science/limitations.md) · Next: [10. Roadmap](../product/roadmap-detail.md)

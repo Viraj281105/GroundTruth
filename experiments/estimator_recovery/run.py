@@ -25,9 +25,9 @@ from pathlib import Path
 import numpy as np
 
 from groundtruth import __version__
-from groundtruth.causal.synthetic_control import fit_synthetic_control
-from groundtruth.core.errors import EstimationError, InsufficientDataError
-from groundtruth.uncertainty.placebo import in_space_placebo
+from groundtruth.contracts.errors import EstimationError, InsufficientDataError
+from groundtruth.engine.causal.synthetic_control import fit_synthetic_control
+from groundtruth.engine.uncertainty.placebo import in_space_placebo
 
 
 @dataclass
@@ -56,9 +56,7 @@ class Outcome:
     n_failures: int
 
 
-def make_panel(
-    condition: Condition, rng: np.random.Generator, *, with_effect: bool
-) -> np.ndarray:
+def make_panel(condition: Condition, rng: np.random.Generator, *, with_effect: bool) -> np.ndarray:
     """Generate a latent-factor panel; column 0 is the treated unit."""
     n_periods = condition.n_pre + condition.n_post
     n_units = condition.n_donors + 1
@@ -92,9 +90,7 @@ def evaluate(condition: Condition, seed: int) -> Outcome:
                 min_pre_periods=3,
             )
             estimates.append(fit.average_effect)
-            result = in_space_placebo(
-                panel, unit_ids, 0, condition.n_pre, min_pre_periods=3
-            )
+            result = in_space_placebo(panel, unit_ids, 0, condition.n_pre, min_pre_periods=3)
             placebo_p.append(result.p_value)
         except (EstimationError, InsufficientDataError):
             failures += 1
@@ -127,7 +123,7 @@ def evaluate(condition: Condition, seed: int) -> Outcome:
 
 def default_grid(n_replicates: int) -> list[Condition]:
     """The sweep: vary one factor at a time around a realistic centre."""
-    base = dict(n_donors=30, n_pre=10, n_post=8, noise_sd=0.01, true_effect=0.05)
+    base = {"n_donors": 30, "n_pre": 10, "n_post": 8, "noise_sd": 0.01, "true_effect": 0.05}
     grid: list[Condition] = []
     for n_pre in (5, 8, 10, 15):
         grid.append(Condition(**{**base, "n_pre": n_pre}, n_replicates=n_replicates))
@@ -166,7 +162,10 @@ def main() -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
-    print(f"{'n_pre':>6} {'donors':>7} {'noise':>7} {'truth':>7} {'bias':>9} {'rmse':>8} {'det':>6}")
+    header = (
+        f"{'n_pre':>6} {'donors':>7} {'noise':>7} {'truth':>7} {'bias':>9} {'rmse':>8} {'det':>6}"
+    )
+    print(header)
     for o in outcomes:
         c = o.condition
         print(

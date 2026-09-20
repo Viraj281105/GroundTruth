@@ -87,7 +87,7 @@ SMD above 0.25 is treated as poor balance and blocks a substantive verdict.
 
 If fewer than the configured minimum survive, the pipeline raises
 `DonorPoolError` rather than estimating. See
-[5. Causal inference](05-causal-inference.md).
+[5. Causal inference](causal-inference.md).
 
 ## Stage 4 — Estimate
 
@@ -132,11 +132,11 @@ path.
 
 ## Stage 7 — Report
 
-See [7. GenAI grounding](07-genai-grounding.md).
+See [7. GenAI grounding](../architecture/genai.md).
 
 ## What the method does not do
 
-- It does not estimate carbon. See [5. Causal inference](05-causal-inference.md),
+- It does not estimate carbon. See [5. Causal inference](causal-inference.md),
   "NDVI is not carbon".
 - It does not detect fraud. It detects divergence between an independent
   estimate and a claim, which is a reason to look, not a conclusion.
@@ -145,4 +145,4 @@ See [7. GenAI grounding](07-genai-grounding.md).
 
 ---
 
-Previous: [1. Problem](01-problem.md) · Next: [3. Architecture](03-architecture.md)
+Previous: [1. Problem](../product/problem.md) · Next: [3. Architecture](../architecture/system.md)

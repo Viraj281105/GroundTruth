@@ -110,6 +110,6 @@ class TestCli:
         assert main(["doctor"]) == 0
         output = capsys.readouterr().out
         assert "earth observation implemented" in output
-        assert "no - see docs/10-roadmap.md M1" in output
+        assert "no - see docs/product/roadmap-detail.md M1" in output
         assert "no - deterministic renderer is used" in output
         assert "engine: biomass carbon conversion" in output

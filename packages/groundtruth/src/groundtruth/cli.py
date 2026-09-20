@@ -96,7 +96,7 @@ def _cmd_verify(args: argparse.Namespace) -> int:
             "Real Earth-observation providers are not implemented yet, so this case cannot be "
             "verified against real data.\n"
             "Re-run with --synthetic to exercise the pipeline on simulated data, or see "
-            "docs/10-roadmap.md milestone M1.",
+            "docs/product/roadmap-detail.md milestone M1.",
             file=sys.stderr,
         )
         return 2
@@ -154,7 +154,7 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
         ("environment", settings.app_env),
         ("cases found", str(len(load_all_cases()))),
         ("earth observation configured", str(settings.earth_observation_configured)),
-        ("earth observation implemented", "no - see docs/10-roadmap.md M1"),
+        ("earth observation implemented", "no - see docs/product/roadmap-detail.md M1"),
         ("genai provider", settings.genai_provider),
         ("genai configured", str(settings.genai_configured)),
         ("genai narration implemented", "no - deterministic renderer is used"),

@@ -83,5 +83,5 @@ def assert_not_index_to_carbon(source_unit: str, target_unit: str) -> None:
         raise ValueError(
             f"Refusing to convert {source_unit!r} directly to {target_unit!r}: a spectral "
             "index is not a carbon stock. Route the conversion through an explicit biomass "
-            "model (see docs/05-causal-inference.md, 'NDVI is not carbon')."
+            "model (see docs/science/causal-inference.md, 'NDVI is not carbon')."
         )

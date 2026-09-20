@@ -155,4 +155,4 @@ system can be trusted.
 
 ---
 
-Previous: [6. Validation](06-validation.md) · Next: [8. Limitations](08-limitations.md)
+Previous: [6. Validation](../science/validation.md) · Next: [8. Limitations](../science/limitations.md)

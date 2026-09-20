@@ -6,7 +6,7 @@ experiment has actually been run.
 
 | Experiment | Question | Status |
 | --- | --- | --- |
-| `estimator_recovery/` | Does the estimator recover a known effect? | **Run** — see the test suite |
+| `estimator_recovery/` | Does the estimator recover a known effect? | **Run** — `results/recovery.json` |
 | `kariba_benchmark/` | Does an independent estimate agree with the published correction? | **Not run** — blocked on M1/M2 |
 | `genai_grounding_eval/` | How often does each model produce ungrounded text? | **Not run** — blocked on M5 |
 | `specification_curve/` | Does the sign survive alternative specifications? | **Not run** — blocked on M3 |

@@ -105,4 +105,4 @@ See `.env.example`. Required for real data:
 
 ---
 
-Previous: [3. Architecture](03-architecture.md) · Next: [5. Causal inference](05-causal-inference.md)
+Previous: [3. Architecture](../architecture/system.md) · Next: [5. Causal inference](../science/causal-inference.md)

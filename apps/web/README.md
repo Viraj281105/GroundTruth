@@ -44,7 +44,7 @@ and versioned (`schema_version`), so the frontend can proceed.
 The backend serves an OpenAPI schema:
 
 ```bash
-uvicorn groundtruth.api.app:app --port 8000
+uvicorn apps.api.main:app --port 8000
 curl localhost:8000/openapi.json > frontend/src/lib/openapi.json
 ```
 

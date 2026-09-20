@@ -31,57 +31,60 @@ actually reliable at.
 ## Package layout
 
 ```
-src/groundtruth/
-├── core/              domain model — the shared vocabulary
+packages/groundtruth/src/groundtruth/
+├── contracts/         SHARED, VERSIONED. The boundary both sides depend on.
 │   ├── types.py       ProjectClaim, TimeSeries, DonorMatch, Confidence,
-│   │                  CausalEffect, VerdictLabel, VerificationVerdict
+│   │                  Indicator, VerdictLabel, VerificationVerdict
+│   ├── request.py     AnalysisRequest — the engine's only input
+│   ├── result.py      AnalysisResult, AnalysisError, EngineStatus, ErrorCode
+│   ├── ports.py       ObservationAccess / CovariateAccess /
+│   │                  DonorCandidateAccess protocols, DataAccess bundle
 │   ├── provenance.py  Provenance: source, method, parameters, inputs, hash
 │   ├── evidence.py    Evidence, EvidenceBundle, EvidenceBuilder
+│   ├── grounding.py   the enforced GenAI boundary
 │   ├── units.py       unit vocabulary + the index→carbon guard
+│   ├── identifiers.py DatasetRef, ModelRef, EngineRef, spec_hash
+│   ├── version.py     contract version and compatibility rules
 │   └── errors.py      typed exception hierarchy
-├── ingestion/         data acquisition
-│   ├── base.py        ObservationProvider / CovariateProvider / ClaimProvider
-│   │                  / DonorPoolProvider protocols
-│   ├── synthetic.py   deterministic simulator (offline dev + tests)
-│   └── earthengine.py GEE backend — config and band math done, calls pending
-├── geospatial/        remote-sensing processing
-│   ├── indices.py     NDVI, EVI, NBR, SAVI
-│   ├── masking.py     SCL cloud mask, median compositing, coverage audit
-│   └── zonal.py       zonal statistics, edge-buffer and leakage-belt caveats
-├── matching/donors.py donor-pool construction with recorded exclusions
-├── causal/
-│   ├── synthetic_control.py  simplex-constrained FISTA solver + diagnostics
-│   └── did.py                DiD with a pre-trend divergence diagnostic
-├── uncertainty/
-│   ├── placebo.py     in-space and in-time permutation inference
-│   └── robustness.py  leave-one-out, permutation intervals, spec curve
-├── evidence/assembler.py  bundle construction + the verdict gate chain
-├── reporting/
-│   ├── narrative.py   deterministic renderer + narration orchestration
-│   ├── grounding.py   the enforced boundary
-│   └── providers.py   Nugen / OpenAI / Anthropic narrator stubs
-├── cases/registry.py  YAML case loading and validation
-├── api/               FastAPI surface
-├── pipeline.py        orchestration — plumbing only, no statistics
-├── config.py          environment-driven settings
+├── engine/            Viraj. Pure computation. No I/O, no credentials.
+│   ├── run.py         run_analysis — the single entrypoint
+│   ├── assembler.py   bundle construction + the verdict gate chain
+│   ├── observation/   indices.py, masking.py, zonal.py — RS methodology
+│   ├── matching/donors.py    donor-pool construction with recorded exclusions
+│   ├── causal/
+│   │   ├── synthetic_control.py  simplex-constrained FISTA solver + diagnostics
+│   │   └── did.py                DiD with a pre-trend divergence diagnostic
+│   └── uncertainty/
+│       ├── placebo.py     in-space and in-time permutation inference
+│       └── robustness.py  leave-one-out, permutation intervals, spec curve
+├── platform/          Bhumi. Everything with a socket, a credential or a disk.
+│   ├── api/           FastAPI surface (app.py, schemas.py)
+│   ├── cases/registry.py     YAML case loading and validation
+│   ├── datasets/      access.py (port bundles), synthetic.py, earthengine.py
+│   ├── reports/       narrative.py, providers.py
+│   ├── jobs/ store/ storage/   declared, not yet built
+│   └── config.py      environment-driven settings
+├── logging.py
 └── cli.py             cases / show / verify / doctor
 ```
 
 ## Dependency direction
 
-Dependencies point one way, inward toward `core`. `core` imports nothing from
-the rest of the package. `pipeline` depends on protocols, never on concrete
-providers, which is why swapping the synthetic fixture for Earth Engine is a
-configuration change rather than a refactor.
+Dependencies point one way, inward toward `contracts`. `contracts` imports
+nothing from either side. The engine depends on the port protocols, never on
+concrete providers, which is why swapping the synthetic fixture for Earth
+Engine is a configuration change rather than a refactor. The direction is
+enforced by `tests/test_contract_boundary.py`, which parses the AST of every
+module and fails the build on a cross-boundary import.
 
 ## Why protocols instead of base classes
 
-`ingestion.base` uses `typing.Protocol`. A provider satisfies it structurally, so
-a test double, a cached-file reader and a live Earth Engine client are
-interchangeable without inheritance ceremony. `run_verification` accepts any
-three objects with the right shape.
+`contracts.ports` uses `typing.Protocol`. A provider satisfies it structurally,
+so a test double, a cached-file reader and a live Earth Engine client are
+interchangeable without inheritance ceremony. `run_analysis` accepts any
+`DataAccess` bundle whose members have the right shape.
 
-## Why the core package has no SciPy, GDAL or geopandas
+## Why the engine has no SciPy, GDAL or geopandas
 
 The synthetic-control solver is implemented on numpy alone. Heavy geospatial
 dependencies live behind the `geo` and `earthengine` extras. The consequence is
@@ -151,7 +154,7 @@ does not serve simulated numbers under a real-data label.
 
 ## Planned Earth Engine reduction
 
-Documented in `src/groundtruth/ingestion/earthengine.py`:
+Documented in `packages/groundtruth/src/groundtruth/platform/datasets/earthengine.py`:
 
 1. `ee.Initialize` with a service account
 2. `COPERNICUS/S2_SR_HARMONIZED` filtered to the AOI and period
@@ -162,4 +165,4 @@ Documented in `src/groundtruth/ingestion/earthengine.py`:
 
 ---
 
-Previous: [2. Methodology](02-methodology.md) · Next: [4. Data sources](04-data-sources.md)
+Previous: [2. Methodology](../science/methodology.md) · Next: [4. Data sources](../data/sources.md)

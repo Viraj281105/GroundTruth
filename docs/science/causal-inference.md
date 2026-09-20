@@ -143,14 +143,14 @@ Specifically:
   biomass requires local allometric equations with their own substantial error,
   typically 20–30% at plot level and worse when extrapolated.
 
-`groundtruth.core.units.assert_not_index_to_carbon` raises on any attempt to
+`groundtruth.contracts.units.assert_not_index_to_carbon` raises on any attempt to
 convert an index to a carbon unit, and a parametrised test asserts it for every
 index/carbon pair.
 
 ### What this means for the current output
 
 The pipeline estimates an effect on a spectral index. The developer's claim is
-in tCO2e. **These are not commensurable**, so `run_verification` passes no
+in tCO2e. **These are not commensurable**, so `run_analysis` passes no
 divergence ratio and the verdict is `INCONCLUSIVE` with the rationale that the
 claim is not expressed in comparable units.
 
@@ -206,4 +206,4 @@ the grounding layer blocks text that would supply one.
 
 ---
 
-Previous: [4. Data sources](04-data-sources.md) · Next: [6. Validation](06-validation.md)
+Previous: [4. Data sources](../data/sources.md) · Next: [6. Validation](validation.md)
