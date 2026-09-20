@@ -160,38 +160,120 @@
     },
     "part_overlap": {
       "finding": "parts 1 and 5 overlap",
-      "estimated_overlap_area_km2": 0.29,
-      "share_of_total": "0.003%",
-      "detail": "29 vertices of part 1 fall inside part 5 and 12 of part 5 inside part 1, with no shared vertices — a digitising sliver along a common edge, not a duplicated polygon.",
-      "consequence": "Area must be computed on the union, not by summing parts. Left as delivered by the registry."
+      "intersection_area_km2": 0.2886,
+      "share_of_total": "0.0027%",
+      "method": "latitude-band integration of x-interval overlap; converged: 2,000 bands 0.29249 km2, 8,000 bands 0.28839, 32,000 bands 0.28862",
+      "other_pairs": "all nine remaining pairs have zero intersection",
+      "detail": "Parts 1 and 5 are the Binga and Nyaminyami parcels, which the project description states share a border (PD p17). 29 vertices of part 1 fall inside part 5 and 12 of part 5 inside part 1, with no shared vertices - a digitising sliver along that common border, not a duplicated polygon.",
+      "consequence": "Area must be computed on the union. Left exactly as delivered by the registry."
     },
     "area_cross_check": {
-      "geodesic_area_ha": 1072667.0,
-      "method": "Chamberlain & Duquette spherical-excess area on the WGS84 ellipsoid, summed over parts (union differs by ~0.003%)",
-      "kml_embedded_area_attribute_ha": 1077930.0,
-      "agreement_between_the_two": "0.5%",
-      "registered_area_ha": 747801,
-      "case_yaml_area_ha": 785000,
-      "difference_vs_registered_pct": 43.4,
-      "difference_vs_case_yaml_pct": 36.6,
-      "verdict": "FAILS the ~10% plausibility threshold in issue #2",
-      "unresolved": "The registry's boundary document describes substantially more land than the registry's own area field and than the case YAML. The most likely explanation is a project-area versus project-zone distinction, but that is a hypothesis: it has not been confirmed against the project description, and no figure here has been adjusted to fit it."
+      "status": "RESOLVED against authoritative project documentation",
+      "the_three_figures_are_three_different_quantities": {
+        "boundary_area": {
+          "value_ha": 1077930,
+          "what_it_is": "The total area of the four Rural District Council parcels the project is drawn over - what this geometry delineates.",
+          "source": "PROJ_DESC_902_16AUG2013.pdf p98 (document id 110200000335895): “stakeholder consultations have been elaborated for the entire boundaries of the RDCs of 1’077’930 ha”. Repeated verbatim in AFOLU_PROJ_ELEM_902_01July2014.pdf and in the 2012 project description.",
+          "our_measurement_ha": 1072638,
+          "our_method": "geodesic union on the WGS84 ellipsoid: sum of parts 1,072,667 ha less the 0.2886 km2 part 1/5 intersection",
+          "agreement": "-0.49% against the documented figure. The file's own embedded Area attributes sum to 1,077,930.24 ha, matching the project description to 0.24 ha (2e-5%), which identifies this geometry as the dataset the PD describes."
+        },
+        "vcs_project_area": {
+          "value_ha": 784987,
+          "what_it_is": "The FORESTED portion - woodland plus open woodland at project start - inside those boundaries. This is the VCS accounting area. It is not a polygon in this file.",
+          "source": "PROJ_DESC_902_16AUG2013.pdf p4 “The project area of 784’987 hectares of forest (consisting of woodland and open woodland)”; p7 Table 1 “Total project area (ha) split into regions, WL an OPW” summing Binga 157,652 + Hurungwe 131,480 + Mbire 269,513 + NyamiNyami 226,341 = 784,987; p44 Table 12 labels the same parts “forest 2011 only”; p98 “The VCS project area (forested area) is about 784’987 ha”.",
+          "independently_confirmed_by": [
+            "120929_Kariba_VCS_PD_FINAL_v2_small.pdf (2012 project description, same figures)",
+            "VALID_REP_902_19AUG2013.pdf (Aster Global validation report): Binga 157,652.50, Nyaminyami 226,341.46, Hurungwe 131,480.28, Mbire 269,513.10, “Total Project area = approximately 784,987 ha”",
+            "025-VCS+CCB Kariba_VerReport_final-03January2020.pdf: “784,987 hectares of Woodland (WL) and Open Woodland (OWL) in four Rural District Councils”",
+            "220908_CCB_VCS_Kariba_REDD_MR5_v4_clean.pdf (2022 monitoring report): same sentence, same figure"
+          ],
+          "consistency_check": "1 - 784,987 / 1,077,930 = 27.2%, the exact figure the PD itself quotes for the share of additional land consulted. Implied per-parcel forest shares are Binga 74.7%, Hurungwe 87.6%, Mbire 77.7%, Nyaminyami 61.2% - all plausible for Zambezi-valley miombo."
+        },
+        "registry_area_field": {
+          "value_ha": 747801,
+          "what_it_is": "UNEXPLAINED. The 'Acres/Hectares' field on the Verra registry project page.",
+          "searched_for_it_in": [
+            "PROJ_DESC_902_16AUG2013.pdf (105 pages)",
+            "120929_Kariba_VCS_PD_FINAL_v2_small.pdf (111 pages)",
+            "CCBA_PROJ_DESC_902_08FEB2012.pdf (92 pages)",
+            "VALID_REP_902_19AUG2013.pdf (71 pages)",
+            "025-VCS+CCB Kariba_VerReport_final-03January2020.pdf (117 pages)",
+            "220908_CCB_VCS_Kariba_REDD_MR5_v4_clean.pdf (168 pages)",
+            "AFOLU_PROJ_ELEM_902_01July2014.pdf (11 pages)",
+            "CCB_VCS_V5_PRR_0902_01JUL2019_30JUN2021.pdf (17 pages)",
+            "VCS_CCB Verra Quality Control Review Report_902, 30JUN2026 (18 pages)",
+            "902 Exemption letter_25 November 2021.pdf",
+            "902, Review Completion Letter_30JUN2026.pdf"
+          ],
+          "result": "No figure between 735,000 and 765,000 hectares appears in any of them. Every document that states a project area states 784,987 ha. The registry field is not traceable to the project record and is treated as registry metadata of unknown provenance, not as a measurement.",
+          "action": "Recorded, not reconciled, not used. Nothing in the geometry or the case was adjusted to match it."
+        }
+      },
+      "verdict": "The geometry is the RDC boundary dataset the project description names, and it agrees with the documented figure to 0.5%. The earlier 43% discrepancy was a comparison between a boundary area and a forest area - two different quantities, not two estimates of one."
     }
   },
   "adr_011_compatibility": {
     "storage_crs_matches_convention": true,
     "usable_as_registry_boundary_term": true,
     "notes": [
-      "ADR-011 builds the treated unit as registry_boundary ∩ mask ⊖ inward_buffer(300 m). A MultiPolygon with five parts is admissible: the mask and buffer apply to the masked geometry as a whole.",
-      "The inward buffer must be applied after masking, per ADR-011, so it is not baked into this artifact.",
-      "The part 1 / part 5 overlap must be dissolved before any area or zonal computation, or the sliver is counted twice.",
-      "The registry names four districts (Binga, Nyaminyami, Hurungwe, Mbire). Whether the GAUL 2015 level-2 units of those names contain these parts is unverified here and belongs to #23, which pins the GAUL asset.",
-      "The unresolved area question changes what the treated unit is, and therefore the [1/3x, 3x] eligible-area band that ADR-011 derives from it. It must be settled before the donor pool is generated (#3)."
+      "ADR-011 builds the treated unit as registry_boundary INTERSECT mask MINUS exclusions, inward-buffered 300 m. This artifact is the registry_boundary term: the RDC parcels, not the forest inside them.",
+      "That is the right input. ADR-011's baseline-forest mask (Hansen treecover2000 >= 30%) does the forest extraction itself, from a source independent of the project's own classification.",
+      "It follows that the eligible area ADR-011 computes is directly comparable to the project's own 784,987 ha forest claim, from independent data. That comparison is a validation opportunity, not a rule: nothing in ADR-011 changes, and the eligible area is whatever the pinned inputs produce.",
+      "The inward buffer is applied after masking, per ADR-011, so it is not baked into this artifact.",
+      "The part 1 / part 5 overlap (0.2886 km2) must be dissolved before any area or zonal computation, or the sliver is counted twice.",
+      "The five parts correspond to the five parcels the project documents name - Binga, Nyaminyami, Hurungwe and Mbire in two pieces. Whether the GAUL 2015 level-2 units of those names contain them is unverified here and belongs to #23."
     ]
   },
   "not_verified_here": [
     "Whether the geometry lies entirely within Zimbabwe (needs an administrative boundary dataset; #23).",
-    "Whether the boundary corresponds to the accounting area used for issuance, or to a wider project zone (needs the project description PDF, PROJ_DESC_902_16AUG2013.pdf, document id 110200000335895).",
-    "Any comparison against monitoring-report maps or the CCB project description."
-  ]
+    "The origin of the registry's 747,801 ha field - absent from every project document searched. Only Verra can explain it.",
+    "Per-polygon identification against a named RDC. Bounding boxes and forest-share arithmetic are consistent with Binga, Hurungwe, Mbire (two parts) and Nyaminyami, but the KML's placemarks are unnamed and carry no authoritative label."
+  ],
+  "documents_consulted": {
+    "retrieved_at": "2026-09-20",
+    "endpoint": "POST https://prod-us.api.platts.com/ci-raas-prod/br-reg/rest/document-manager/public/downloadDocumentById",
+    "items": [
+      {
+        "id": 110200000335895,
+        "name": "PROJ_DESC_902_16AUG2013.pdf",
+        "role": "VCS project description - primary evidence for both area concepts"
+      },
+      {
+        "id": 110200000303020,
+        "name": "120929_Kariba_VCS_PD_FINAL_v2_small.pdf",
+        "role": "2012 project description - same figures"
+      },
+      {
+        "id": 110200000282555,
+        "name": "CCBA_PROJ_DESC_902_08FEB2012.pdf",
+        "role": "CCB project description"
+      },
+      {
+        "id": 110200000277962,
+        "name": "VALID_REP_902_19AUG2013.pdf",
+        "role": "validation report - per-RDC areas"
+      },
+      {
+        "id": 110200000380846,
+        "name": "025-VCS+CCB Kariba_VerReport_final-03January2020.pdf",
+        "role": "verification report"
+      },
+      {
+        "id": 110200000347277,
+        "name": "220908_CCB_VCS_Kariba_REDD_MR5_v4_clean.pdf",
+        "role": "monitoring report 5 (2022) - latest statement of project area"
+      },
+      {
+        "id": 110200000305472,
+        "name": "AFOLU_PROJ_ELEM_902_01July2014.pdf",
+        "role": "non-permanence risk report - repeats the 1,077,930 / 784,987 pair"
+      },
+      {
+        "id": 110200000383455,
+        "name": "_KML_902.kml",
+        "role": "the boundary itself"
+      }
+    ]
+  }
 }

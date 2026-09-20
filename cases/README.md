@@ -29,7 +29,9 @@ Boundaries must come from the registry record, not be redrawn by hand: a
 hand-drawn boundary changes the estimate and cannot be audited.
 
 `kariba-redd` has one, taken from Verra's approved boundary document for VCS
-902 and committed with its source file and a provenance record. Its area does
-not reconcile with the registry's own area field, which is recorded as a
-finding in the case notes rather than corrected. The other two cases have no
-boundary yet. See [boundaries/README.md](boundaries/README.md).
+902 and committed with its source file and a provenance record. It delineates
+the four Rural District Council parcels (~1,077,930 ha); the project's
+784,987 ha is the forested portion inside them, and the registry page's
+747,801 ha field matches no project document and is recorded as unexplained.
+The other two cases have no boundary yet. See
+[boundaries/README.md](boundaries/README.md).
