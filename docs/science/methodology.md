@@ -73,8 +73,22 @@ that rather than interpolating over it.
 
 ## Stage 3 — Match
 
-Candidate regions are admitted or excluded by explicit rules, each recorded with
-a reason:
+Before anything can be matched, *what counts as one region* has to be defined.
+A candidate is one administrative district intersected with a pre-treatment
+eligibility mask — baseline forest, target ecoregion, no permanent water, no
+protected area gazetted before the window, inward-buffered. The project is
+built by the same rule from its registry boundary, because a treated unit
+masked differently from its donors is not comparable to them. The full rule,
+the exclusions and the inputs it needs are in
+[ADR-011](../decisions/ADR-011-unit-of-analysis.md).
+
+The mask is deliberately built from information dated before the pre-period.
+Masking with a present-day land-cover product would condition on a
+post-treatment outcome — it would remove exactly the pixels that were cleared
+during the study window, in the direction of manufacturing a project effect.
+
+Candidate regions are then admitted or excluded by explicit rules, each recorded
+with a reason:
 
 | Rule | Why |
 | --- | --- |
