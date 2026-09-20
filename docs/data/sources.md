@@ -56,6 +56,31 @@ protected area is itself a conservation intervention, so using one as a control
 estimates the project's effect *relative to another intervention*, which is not
 the quantity anyone is buying.
 
+## Unit construction
+
+These products do not supply covariates. They define *what one analysis unit is*
+— the administrative partition and the pre-treatment eligibility mask applied to
+every unit, project and donor alike. The rule is
+[ADR-011](../decisions/ADR-011-unit-of-analysis.md).
+
+| Product | Asset | Role |
+| --- | --- | --- |
+| FAO GAUL 2015 level 2 | `FAO/GAUL/2015/level2` | The administrative partition. Frozen edition, chosen so the unit set cannot drift |
+| RESOLVE Ecoregions 2017 | `RESOLVE/ECOREGIONS/2017` | Target miombo ecoregions; ≥50% rule and the search-region ladder |
+| Hansen tree cover 2000 | `UMD/hansen/global_forest_change_*`, band `treecover2000` | Baseline forest mask, dated before the window by construction |
+| JRC Global Surface Water | `JRC/GSW1_4/GlobalSurfaceWater`, band `occurrence` | Permanent water subtraction |
+| WDPA | `WCMC/WDPA/current/polygons`, `STATUS_YR <= 2000` | Protected-area subtraction, pre-window designations only |
+
+**The mask must be dated before the analysis window.** ESA WorldCover exists only
+for 2020–2021, so it may be used for stratification but must never be used to
+build units: masking with it would condition on a post-treatment outcome and
+remove precisely the pixels cleared during the study period. The same applies to
+protected areas gazetted after 2000.
+
+**WDPA is a monthly release and is not publicly archived for long.** Pinning a
+release string is necessary but not sufficient for a re-run a year later; the
+generated unit set must be materialised as a committed artifact. See ADR-009.
+
 ## Registry and claim data
 
 | Source | Contents | Access |

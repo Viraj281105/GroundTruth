@@ -91,10 +91,10 @@ a question has one obvious place to be answered.
 
 ## Decisions
 
-[decisions/](decisions/) — ten ADRs covering the monorepo, the engine/platform
+[decisions/](decisions/) — eleven ADRs covering the monorepo, the engine/platform
 boundary, the analysis contract, the evidence object, provenance,
-reproducibility, the GenAI boundary, job architecture, data management and
-deployment.
+reproducibility, the GenAI boundary, job architecture, data management,
+deployment and the unit of analysis.
 
 ## Competition
 

@@ -43,6 +43,30 @@ plausible candidate region can produce a different estimate. This is why the
 pool, its exclusions and its balance statistics are part of the evidence bundle
 rather than an implementation detail.
 
+### The unit of analysis is an administrative district
+
+Donors are administrative districts under a pre-treatment eligibility mask
+([ADR-011](../decisions/ADR-011-unit-of-analysis.md)). District boundaries are
+drawn along rivers, roads and settlement patterns, which correlate with
+deforestation pressure, so units are not exchangeable in the way a randomised
+design would require. Matching on road distance and population density mitigates
+this; it does not remove it.
+
+Two further costs are accepted rather than solved. Excluding every district that
+touches the leakage belt removes the nearest and therefore best-matched
+neighbours, which works against covariate balance — two rules that both point the
+right way, pulling against each other. And the estimate is a boundary-wide mean,
+diluted by whatever fraction of the project area actually received activity, so
+it must not be read as a local intensity of change.
+
+### Other credited projects may contaminate the donor pool
+
+Another registered carbon project inside a candidate district is a treated unit
+in disguise. Public geometry for registered projects is largely unavailable, so
+a district known to contain one is excluded whole — conservative but lossy — and
+a project absent from the consolidated registry databases contaminates the pool
+undetected. This is unquantified.
+
 ### Leakage is only partially addressable
 
 If a project displaces deforestation beyond the monitored leakage belt, the
