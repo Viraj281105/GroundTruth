@@ -68,14 +68,21 @@ every unit, project and donor alike. The rule is
 | FAO GAUL 2015 level 2 | `FAO/GAUL/2015/level2` | The administrative partition. Frozen edition, chosen so the unit set cannot drift |
 | RESOLVE Ecoregions 2017 | `RESOLVE/ECOREGIONS/2017` | Target miombo ecoregions; ≥50% rule and the search-region ladder |
 | Hansen tree cover 2000 | `UMD/hansen/global_forest_change_*`, band `treecover2000` | Baseline forest mask, dated before the window by construction |
-| JRC Global Surface Water | `JRC/GSW1_4/GlobalSurfaceWater`, band `occurrence` | Permanent water subtraction |
-| WDPA | `WCMC/WDPA/current/polygons`, `STATUS_YR <= 2000` | Protected-area subtraction, pre-window designations only |
+| JRC Global Surface Water | `JRC/GSW1_4/GlobalSurfaceWater`, band `occurrence` | Permanent water subtraction, `occurrence >= 90%` over the full record, applied uniformly with no per-unit exception |
+| WDPA | `WCMC/WDPA/current/polygons`, `STATUS_YR <= 2000` including `0`, designated/inscribed/established only | Protected-area subtraction, pre-window designations only |
 
-**The mask must be dated before the analysis window.** ESA WorldCover exists only
-for 2020–2021, so it may be used for stratification but must never be used to
-build units: masking with it would condition on a post-treatment outcome and
-remove precisely the pixels cleared during the study period. The same applies to
-protected areas gazetted after 2000.
+**The mask must not condition on a post-treatment outcome.** ESA WorldCover
+exists only for 2020–2021, so it may be used for stratification but must never be
+used to build units: masking with it would remove precisely the pixels cleared
+during the study period. The same applies to protected areas gazetted after 2000.
+
+That test is about the *variable*, not the file date, and two of the layers above
+are not dated before 2001. GSW occurrence spans 1984–2021, and WDPA supplies
+current boundaries for pre-2000 designations. Both are admitted for reasons
+stated in ADR-011 and recorded in `docs/science/limitations.md`. A record of
+*other interventions* — registered carbon projects, whenever they were
+registered — is deliberately not restricted to the pre-period: a district
+credited in 2016 is not a clean control for 2011–2022.
 
 **WDPA is a monthly release and is not publicly archived for long.** Pinning a
 release string is necessary but not sufficient for a re-run a year later; the
