@@ -107,6 +107,7 @@ packages/groundtruth/src/groundtruth/
     api/          FastAPI, schemas                            Bhumi  [implemented]
     cases/        case registry, request translation          Bhumi  [implemented]
     datasets/     registry, pinning, DataAccess impls         Bhumi  [synthetic only]
+    units/        ADR-011 unit construction and ladder        Bhumi  [rules only]
     jobs/         analysis lifecycle                          Bhumi  [not built]
     store/        evidence persistence                        Bhumi  [not built]
     storage/      artifacts and exports                       Bhumi  [not built]
