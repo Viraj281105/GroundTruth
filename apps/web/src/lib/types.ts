@@ -1,9 +1,10 @@
 /**
  * Types mirroring the GroundTruth API schemas.
  *
- * Kept in sync with `src/groundtruth/api/schemas.py` and
- * `src/groundtruth/core/evidence.py`. Regenerate from /openapi.json once the
- * frontend build is wired up.
+ * Kept in sync with the API schemas in
+ * `packages/groundtruth/src/groundtruth/platform/api/schemas.py` and the evidence
+ * objects in `packages/groundtruth/src/groundtruth/contracts/evidence.py`.
+ * Regenerate from /openapi.json once the frontend build is wired up.
  */
 
 /** How an interval should be read. These are not interchangeable. */

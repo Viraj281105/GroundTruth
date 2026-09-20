@@ -17,6 +17,8 @@ runs, persists, scales, deploys and stays up.
 
 ## Architecture ownership
 
+Module paths below are relative to `packages/groundtruth/`.
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │  FRONTEND — Viraj                                                        │
@@ -134,7 +136,7 @@ parses the AST of every module and fails the build if:
 | API documentation | — | **A** |
 | Production hardening | — | **A** |
 | **Shared** | | |
-| The contract (`src/groundtruth/contracts/`) | **A** | **A** |
+| The contract (`packages/groundtruth/src/groundtruth/contracts/`) | **A** | **A** |
 | Scientific integrity rules in `CONTRIBUTING.md` | **A** | R |
 
 ---
@@ -248,6 +250,6 @@ defeat the purpose.
 | Bhumi | Integration, deployment, CI/CD, operations | 18 |
 | | **Bhumi total** | **60** |
 
-See [`docs/13-implementation-plan.md`](docs/13-implementation-plan.md) for the
-phased task breakdown and [`docs/12-contract.md`](docs/12-contract.md) for the
+See [`docs/product/implementation-plan.md`](docs/product/implementation-plan.md) for the
+phased task breakdown and [`docs/architecture/contract.md`](docs/architecture/contract.md) for the
 contract specification.

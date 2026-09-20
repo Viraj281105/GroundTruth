@@ -79,7 +79,7 @@ class _HttpNarrator:
         """Call the provider. NOT IMPLEMENTED."""
         raise NotImplementedError(
             f"{self.name} narration is not implemented yet. The deterministic renderer produces "
-            "a complete report without it; see docs/07-genai-grounding.md."
+            "a complete report without it; see docs/architecture/genai.md."
         )
 
 

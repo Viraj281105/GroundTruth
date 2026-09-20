@@ -27,7 +27,7 @@ verdict caveats.
 The single largest gap. The pipeline estimates an effect on NDVI or EVI. Claims
 are in tCO2e. These are not commensurable, so the verdict correctly returns
 `INCONCLUSIVE` rather than manufacturing a comparison. See
-[5. Causal inference](05-causal-inference.md).
+[5. Causal inference](causal-inference.md).
 
 ### Resolution floor
 
@@ -128,4 +128,4 @@ and not a verdict.
 
 ---
 
-Previous: [7. GenAI grounding](07-genai-grounding.md) · Next: [9. Competition strategy](09-competition-strategy.md)
+Previous: [7. GenAI grounding](../architecture/genai.md) · Next: [9. Competition strategy](../competition/strategy.md)

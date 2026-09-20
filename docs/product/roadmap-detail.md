@@ -122,4 +122,4 @@ method is correct.
 
 ---
 
-Previous: [9. Competition strategy](09-competition-strategy.md) · Next: [11. Demo flow](11-demo-flow.md)
+Previous: [9. Competition strategy](../competition/strategy.md) · Next: [11. Demo flow](../competition/demo-flow.md)

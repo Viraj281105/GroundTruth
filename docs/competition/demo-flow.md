@@ -17,15 +17,22 @@ groundtruth doctor
 ```
 
 ```
-version                       : 0.2.0
-environment                   : development
-cases found                   : 3
-earth observation configured  : False
-earth observation implemented : no - see docs/10-roadmap.md M2
-genai provider                : none
-genai configured              : False
-genai narration implemented   : no - deterministic renderer is used
-synthetic pipeline            : yes
+version                           : 0.3.0
+engine version                    : 0.3.0
+contract version                  : 1.0.0
+environment                       : development
+cases found                       : 3
+earth observation configured      : False
+earth observation implemented     : no - see docs/product/roadmap-detail.md M1
+genai provider                    : none
+genai configured                  : False
+genai narration implemented       : no - deterministic renderer is used
+synthetic pipeline                : yes
+engine: synthetic control         : yes
+engine: placebo inference         : yes
+engine: leave one out             : yes
+engine: specification curve       : no
+engine: biomass carbon conversion : no
 ```
 
 **Say:** "Before anything else — this is what is actually built and what is not.
@@ -102,7 +109,7 @@ missing."
 ## 4. The guard is real, not a comment (60s)
 
 ```bash
-python -c "from groundtruth.core.units import assert_not_index_to_carbon; assert_not_index_to_carbon('ndvi','tCO2e')"
+python -c "from groundtruth.contracts.units import assert_not_index_to_carbon; assert_not_index_to_carbon('ndvi','tCO2e')"
 ```
 
 ```
@@ -138,7 +145,7 @@ The system degrades to correct-and-dry. Never to fluent-and-wrong."
 ## 6. The API (45s)
 
 ```bash
-uvicorn groundtruth.api.app:app --port 8000
+uvicorn apps.api.main:app --port 8000
 ```
 
 Open `http://localhost:8000/docs`, then:
@@ -196,4 +203,4 @@ present. Keep `pytest -q` output from a prior run as a fallback screenshot.
 
 ---
 
-Previous: [10. Roadmap](10-roadmap.md) · Back to [documentation index](README.md)
+Previous: [10. Roadmap](../product/roadmap-detail.md) · Back to [documentation index](../README.md)

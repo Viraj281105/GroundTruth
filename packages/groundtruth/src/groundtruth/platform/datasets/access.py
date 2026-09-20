@@ -153,5 +153,5 @@ def earth_engine_access(request: AnalysisRequest) -> DataAccess:
     """
     raise DataUnavailableError(
         "Observed-data access is not implemented: the Earth Engine reducer chain has not "
-        "landed. See docs/10-roadmap.md milestone M1 and issue #1."
+        "landed. See docs/product/roadmap-detail.md milestone M1 and issue #1."
     )

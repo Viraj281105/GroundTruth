@@ -348,7 +348,7 @@ def run_analysis(
         ),
         # No divergence ratio is passed: comparing a spectral-index effect to a
         # tCO2e claim requires a biomass conversion that does not exist yet.
-        # See docs/05-causal-inference.md, "NDVI is not carbon".
+        # See docs/science/causal-inference.md, "NDVI is not carbon".
         divergence_ratio=None,
         min_donors=request.donors.min_donors,
     )

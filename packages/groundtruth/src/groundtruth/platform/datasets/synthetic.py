@@ -142,7 +142,7 @@ class SyntheticCovariateProvider:
 
     **Simulated values.** Real covariates come from CHIRPS (rainfall), SRTM
     (elevation and slope), OSM (road access) and WorldPop (settlement
-    pressure); see ``docs/04-data-sources.md``.
+    pressure); see ``docs/data/sources.md``.
     """
 
     name = "synthetic"

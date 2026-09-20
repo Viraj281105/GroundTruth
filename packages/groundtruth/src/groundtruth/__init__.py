@@ -13,7 +13,7 @@ contract between them:
 The platform consumes the engine only through the contract. A test enforces
 that, so the split is architectural rather than a convention.
 
-See ``OWNERSHIP.md`` and ``docs/12-contract.md``.
+See ``OWNERSHIP.md`` and ``docs/architecture/contract.md``.
 """
 
 from groundtruth.contracts import (

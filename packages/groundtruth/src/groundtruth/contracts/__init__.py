@@ -10,7 +10,7 @@ Nothing here imports from ``groundtruth.engine`` or ``groundtruth.platform``.
 That rule is enforced by a test, because a contract that quietly depends on one
 side's internals is not a contract.
 
-See ``docs/12-contract.md`` for the full specification and change process.
+See ``docs/architecture/contract.md`` for the full specification and change process.
 """
 
 from groundtruth.contracts.errors import (

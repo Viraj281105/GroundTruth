@@ -8,7 +8,7 @@ below is written and validated. This is intentional: a provider that silently
 falls back to simulated numbers would be a correctness hazard in a verification
 system. See issue "P0: implement Earth Engine NDVI/EVI reducer".
 
-Implementation plan (docs/03-architecture.md, section 4):
+Implementation plan (docs/architecture/earth-observation.md, "Processing chain"):
 
 1. ``ee.Initialize`` with a service account from ``GEE_SERVICE_ACCOUNT_JSON``.
 2. Build a ``COPERNICUS/S2_SR_HARMONIZED`` collection filtered to the AOI and
@@ -122,7 +122,7 @@ class EarthEngineProvider:
         """Fetch a real indicator series. NOT IMPLEMENTED."""
         raise DataUnavailableError(
             f"EarthEngineProvider.series({spec.indicator.value}) is not implemented yet. "
-            "See docs/10-roadmap.md, milestone M1."
+            "See docs/product/roadmap-detail.md, milestone M1."
         )
 
     def index_expression(self, indicator: Indicator) -> str:
