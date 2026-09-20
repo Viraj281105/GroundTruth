@@ -25,6 +25,11 @@ that is the entire point of the system.
 
 ## Boundaries
 
-`cases/boundaries/*.geojson` files are referenced but not yet obtained.
 Boundaries must come from the registry record, not be redrawn by hand: a
 hand-drawn boundary changes the estimate and cannot be audited.
+
+`kariba-redd` has one, taken from Verra's approved boundary document for VCS
+902 and committed with its source file and a provenance record. Its area does
+not reconcile with the registry's own area field, which is recorded as a
+finding in the case notes rather than corrected. The other two cases have no
+boundary yet. See [boundaries/README.md](boundaries/README.md).

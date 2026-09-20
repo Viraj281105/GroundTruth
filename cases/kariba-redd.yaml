@@ -19,12 +19,20 @@ project:
   ecosystem: miombo woodland / dry forest
   standard: VCS
   registry_id: VCS 902
-  area_ha: 785000
+  # 747,801 ha is the figure in the Verra registry's own area field, read from
+  # the project page on 2026-09-20. It replaces the 785,000 ha previously
+  # recorded here, which is the widely cited project size but not the
+  # registry's number. Note that the registry's approved boundary document
+  # covers ~1,072,667 ha - see `notes` below and the boundary provenance file.
+  area_ha: 747801
   crediting_period_start: 2011-07-01
   crediting_period_end: 2041-06-30
   claimed_credits_tco2e: null  # populate from the Verra registry serial records
   source_uri: https://registry.verra.org/app/projectDetail/VCS/902
-  boundary_path: cases/boundaries/kariba-redd.geojson  # NOT YET OBTAINED
+  # Obtained from the Verra registry's approved "Project Boundary (KML File)"
+  # document for VCS 902. Provenance, validation and the area discrepancy are
+  # in cases/boundaries/kariba-redd.provenance.json.
+  boundary_path: cases/boundaries/kariba-redd.geojson
 
 analysis_window:
   # Pre-period ends the year before crediting begins. A long pre-period is what
@@ -68,3 +76,17 @@ notes: >-
   Miombo woodland has strong rainfall-driven interannual NDVI variability, so
   rainfall matching is load-bearing for this case and a rainfall-only placebo
   specification must be reported alongside the main estimate.
+
+
+  BOUNDARY AREA DISCREPANCY, UNRESOLVED. The registry's own approved boundary
+  document for VCS 902 covers approximately 1,072,667 ha by geodesic
+  computation, corroborated to within 0.5% by the area attributes embedded in
+  the file itself. The registry's area field says 747,801 ha and the commonly
+  cited project size is 785,000 ha. The boundary is therefore 43% larger than
+  the area the registry records for the same project. The likely explanation is
+  that the KML delineates a project zone rather than the accounting area, but
+  that has not been confirmed against the project description
+  (PROJ_DESC_902_16AUG2013.pdf) and nothing has been adjusted to make the
+  numbers agree. This matters beyond bookkeeping: under ADR-011 the treated
+  unit's eligible area sets the [1/3x, 3x] donor area band, so the donor pool
+  cannot be generated until it is settled. See #2.
