@@ -59,6 +59,37 @@ right way, pulling against each other. And the estimate is a boundary-wide mean,
 diluted by whatever fraction of the project area actually received activity, so
 it must not be read as a local intensity of change.
 
+### The donor pool is not a set of independent units
+
+Adjacent districts share weather, markets, roads and a national government. The
+permutation p-value needs the treated unit to be exchangeable with its donors
+under the null, not independence, so correlation does not invalidate it — but a
+reference distribution built from correlated units carries fewer effective units
+than its count suggests, and a country-level shock moves many donors at once.
+Related: the treated unit is a registry polygon while every donor is an
+administrative district. They are masked identically and banded on area, but a
+boundary drawn around an intended intervention is not the same kind of object as
+a district boundary. The placebo p-value should be read as a screening statistic,
+not as a test with a calibrated size.
+
+### The eligibility mask is not uniformly pre-2001
+
+The mask is built to avoid conditioning on *outcomes*, which is not the same as
+every layer predating the window. Two layers do not:
+
+- **Permanent water** is JRC GSW occurrence over 1984–2021. A 90% threshold over
+  38 years is close to a "permanent throughout" test, so little post-2000 water
+  survives it, but where a body did become permanent inside the window the mask
+  removes a genuine decline — on a donor, that biases the counterfactual upward.
+- **Protected areas** are filtered to designations dated 2000 or earlier, but
+  subtracted at their *current* boundaries, so a post-2000 extension of a
+  pre-2000 park is also removed. WDPA records with an unknown designation year
+  are subtracted too, which costs eligible area in exchange for not admitting an
+  unrecognised intervention as a control.
+
+Both are applied identically to the project and to every donor. Symmetry limits
+the damage; it does not make either one neutral.
+
 ### Other credited projects may contaminate the donor pool
 
 Another registered carbon project inside a candidate district is a treated unit

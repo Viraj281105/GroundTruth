@@ -82,10 +82,13 @@ masked differently from its donors is not comparable to them. The full rule,
 the exclusions and the inputs it needs are in
 [ADR-011](../decisions/ADR-011-unit-of-analysis.md).
 
-The mask is deliberately built from information dated before the pre-period.
-Masking with a present-day land-cover product would condition on a
-post-treatment outcome — it would remove exactly the pixels that were cleared
-during the study window, in the direction of manufacturing a project effect.
+The mask is deliberately built so that it cannot condition on an *outcome*.
+Masking with a present-day land-cover product would do exactly that — it would
+remove the pixels that were cleared during the study window, in the direction of
+manufacturing a project effect. Baseline forest is therefore a year-2000 layer
+and protected areas are filtered to pre-2000 designations. Two layers in the
+mask are not dated before the window and are admitted for stated reasons; both
+are listed in [8. Limitations](limitations.md).
 
 Candidate regions are then admitted or excluded by explicit rules, each recorded
 with a reason:
