@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { getCases } from '../lib/api';
+import { API_BASE_URL, getCases } from '../lib/api';
 import { CaseSummary } from '../lib/types';
 import { formatHectares } from '../lib/formatters';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { StatusIndicator } from '../components/ui/StatusIndicator';
+import { ErrorState } from '../components/ui/States';
+import { SimulatedBanner } from '../components/ui/SimulatedBanner';
 import {
   Search,
   ArrowRight,
@@ -31,17 +33,28 @@ export default function CaseBrowserPage() {
   const [standardFilter, setStandardFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'pre_period'>('name');
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
-    async function loadCases() {
-      setIsLoading(true);
-      const data = await getCases();
+  const loadCases = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const { data, isDemo: demo } = await getCases();
       setCases(data);
+      setIsDemo(demo);
+    } catch (err) {
+      setCases([]);
+      setLoadError(err instanceof Error ? err.message : 'Failed to load cases.');
+    } finally {
       setIsLoading(false);
     }
-    loadCases();
   }, []);
+
+  useEffect(() => {
+    loadCases();
+  }, [loadCases]);
 
   // Keyboard shortcut '/' to focus search
   useEffect(() => {
@@ -76,6 +89,23 @@ export default function CaseBrowserPage() {
 
   return (
     <div id="main-content" className="gt-container gt-radar-bg" style={{ paddingTop: '32px', paddingBottom: '60px' }}>
+      {isDemo && (
+        <SimulatedBanner
+          message="DEMO MODE — NO ANALYSIS WAS EXECUTED"
+          subtext={`The backend API at ${API_BASE_URL} was unreachable, so this case list is synthetic fixture data served only because NEXT_PUBLIC_DEMO_MODE is enabled. No project has been analysed.`}
+        />
+      )}
+
+      {loadError && (
+        <div style={{ marginBottom: '24px' }}>
+          <ErrorState
+            title="Cannot Load Project Cases"
+            message={loadError}
+            onRetry={loadCases}
+          />
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className={styles.hero}>
         <div className={styles.heroBadgeRow}>

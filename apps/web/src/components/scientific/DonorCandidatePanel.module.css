@@ -1,0 +1,114 @@
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adrRef {
+  color: var(--gt-text-secondary);
+  font-weight: 600;
+}
+
+.metricsGrid {
+  margin-bottom: 24px;
+}
+
+.section {
+  margin-top: 24px;
+}
+
+.section:first-of-type {
+  margin-top: 0;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gt-text-secondary);
+  margin-bottom: 10px;
+}
+
+/* Empty / not-run notice, e.g. "no ladder climb recorded" */
+.emptyNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  background-color: var(--gt-bg-subtle);
+  border: 1px dashed var(--gt-border-default);
+  border-radius: var(--gt-radius-md);
+}
+
+.emptyNoticeIcon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--gt-text-muted);
+}
+
+.emptyNoticeText {
+  font-size: 13px;
+  color: var(--gt-text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.table th {
+  padding: 10px 12px;
+  font-family: var(--gt-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--gt-text-muted);
+  border-bottom: 1px solid var(--gt-border-subtle);
+  background-color: rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--gt-border-subtle);
+  color: var(--gt-text-secondary);
+  vertical-align: top;
+}
+
+.numeric {
+  text-align: right;
+}
+
+td.numeric {
+  font-family: var(--gt-font-mono);
+  color: var(--gt-text-primary);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background-color: var(--gt-bg-card-hover);
+}
+
+/* Applied to any cell/value rendering "Not measured", so it reads as an
+   explicit absence rather than another data point at a glance. */
+.notMeasured {
+  color: var(--gt-text-subtle);
+  font-style: italic;
+}

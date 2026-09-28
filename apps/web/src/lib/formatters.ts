@@ -68,3 +68,16 @@ export function formatSMD(smd: number, threshold = 0.25): { formatted: string; i
     isBalanced: Math.abs(smd) <= threshold,
   };
 }
+
+/**
+ * Format a count or scalar measurement that may not exist yet.
+ * RULE: the absence of a measurement is an explicit state, never a zero.
+ * `0` is a legitimate measured value (e.g. "0 admitted donors" is a real
+ * finding) and must render as `0`; only `null`/`undefined` render as
+ * "Not measured".
+ */
+export function formatMeasurement(value: number | null | undefined, unit?: string): string {
+  if (value === null || value === undefined) return 'Not measured';
+  const formatted = value.toLocaleString('en-US');
+  return unit ? `${formatted} ${unit}` : formatted;
+}

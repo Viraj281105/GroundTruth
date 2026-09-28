@@ -1,10 +1,22 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { getCaseDetail, verifyCase, getVisualizationFixture } from '../../../lib/api';
-import { CaseDetail, VerificationResponse } from '../../../lib/types';
+import {
+  API_BASE_URL,
+  getCaseDetail,
+  verifyCase,
+  getVisualizationFixture,
+  getDonorCandidateSummary,
+} from '../../../lib/api';
+import {
+  CaseDetail,
+  VerificationResponse,
+  deriveResultState,
+  resultStateTone,
+  resultStateLabel,
+} from '../../../lib/types';
 import { formatHectares } from '../../../lib/formatters';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
@@ -13,9 +25,11 @@ import { MetricDisplay } from '../../../components/ui/MetricDisplay';
 import { VerdictCard } from '../../../components/ui/VerdictCard';
 import { Tabs, TabsList, TabTrigger, TabContent } from '../../../components/ui/Tabs';
 import { LoadingState, RefusalState, ErrorState, PipelineStageId } from '../../../components/ui/States';
+import { SimulatedBanner } from '../../../components/ui/SimulatedBanner';
 import { CounterfactualChart } from '../../../components/scientific/CounterfactualChart';
 import { PlaceboDistribution } from '../../../components/scientific/PlaceboDistribution';
 import { ProjectDonorMap } from '../../../components/scientific/ProjectDonorMap';
+import { DonorCandidatePanel } from '../../../components/scientific/DonorCandidatePanel';
 import { EvidenceExplorer } from '../../../components/scientific/EvidenceExplorer';
 import { ProjectTimeline } from '../../../components/scientific/ProjectTimeline';
 import { NarrativeReport } from '../../../components/scientific/NarrativeReport';
@@ -55,6 +69,8 @@ export default function CaseAnalysisPage() {
   const [activeTab, setActiveTab] = useState<string>('causal');
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
   const [isProvenanceDrawerOpen, setIsProvenanceDrawerOpen] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
 
   // Runner Configuration Options
   const [syntheticMode, setSyntheticMode] = useState<boolean>(true);
@@ -63,19 +79,30 @@ export default function CaseAnalysisPage() {
   const [includeReport, setIncludeReport] = useState<boolean>(true);
 
   // Load case detail
-  useEffect(() => {
-    async function loadData() {
-      const detail = await getCaseDetail(caseId);
-      setCaseDetail(detail);
-
-      // Pre-load fixture verification result for immediate demonstration
-      const fixture = getVisualizationFixture(caseId);
-      if (fixture) {
-        setVerificationResult(fixture.verification);
-      }
+  const loadData = useCallback(async () => {
+    setLoadError(null);
+    try {
+      const { data, isDemo: demoDetail } = await getCaseDetail(caseId);
+      setCaseDetail(data);
+      setIsDemo((prev) => prev || demoDetail);
+    } catch (err) {
+      setCaseDetail(null);
+      setLoadError(err instanceof Error ? err.message : 'Failed to load case definition.');
+      return;
     }
-    loadData();
+
+    // Pre-load fixture verification result for immediate demonstration.
+    // Only ever returns non-null when NEXT_PUBLIC_DEMO_MODE is explicitly on.
+    const fixture = getVisualizationFixture(caseId);
+    if (fixture) {
+      setVerificationResult(fixture.verification);
+      setIsDemo(true);
+    }
   }, [caseId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const applyPreset = (effect: number, donors: number) => {
     setSyntheticMode(true);
@@ -146,6 +173,9 @@ export default function CaseAnalysisPage() {
 
     if (result.success && result.data) {
       setVerificationResult(result.data);
+      if (result.isDemo) {
+        setIsDemo(true);
+      }
     } else if (result.isRefusal) {
       setRefusalError({
         reason: result.error || 'Verification was scientifically refused.',
@@ -159,6 +189,17 @@ export default function CaseAnalysisPage() {
   };
 
   if (!caseDetail) {
+    if (loadError) {
+      return (
+        <div className="gt-container" style={{ paddingTop: '40px' }}>
+          <ErrorState
+            title="Cannot Load Case Definition"
+            message={loadError}
+            onRetry={loadData}
+          />
+        </div>
+      );
+    }
     return (
       <div className="gt-container" style={{ paddingTop: '40px' }}>
         <LoadingState message="Loading Case Definition..." subtext="Retrieving case schema and validation targets" />
@@ -168,8 +209,30 @@ export default function CaseAnalysisPage() {
 
   const fixtureViz = getVisualizationFixture(caseId);
 
+  // The lifecycle state of the verification run itself, as distinct from the
+  // scientific verdict a completed run produces. Drives what is rendered
+  // below and must never be inferred from the presence of a stale number.
+  const resultState = deriveResultState({
+    isRunning,
+    hasResult: verificationResult !== null,
+    isRefused: refusalError !== null,
+    hasError: generalError !== null,
+  });
+
+  // ADR-011 donor-candidate generation has no backend endpoint yet (see
+  // getDonorCandidateSummary's doc comment); this is the honest
+  // nothing-has-been-measured shape, not a fixture.
+  const donorCandidateSummary = getDonorCandidateSummary(caseDetail);
+
   return (
     <div className="gt-container" style={{ paddingTop: '20px', paddingBottom: '60px' }}>
+      {isDemo && (
+        <SimulatedBanner
+          message="DEMO MODE — NO ANALYSIS WAS EXECUTED"
+          subtext={`The backend API at ${API_BASE_URL} was unreachable, so this page is showing synthetic fixture data served only because NEXT_PUBLIC_DEMO_MODE is enabled. No causal verification pipeline actually ran against this case.`}
+        />
+      )}
+
       {/* Breadcrumbs Navigation */}
       <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
         <Link href="/" className={styles.breadcrumbLink}>Projects</Link>
@@ -190,6 +253,9 @@ export default function CaseAnalysisPage() {
               </Badge>
               <Badge tone="positive" size="sm" variant="subtle">
                 STATUS: {caseDetail.status.toUpperCase()}
+              </Badge>
+              <Badge tone={resultStateTone(resultState)} size="sm" variant="outline">
+                RUN: {resultStateLabel(resultState)}
               </Badge>
             </div>
             <h1 className={styles.caseTitle}>{caseDetail.name}</h1>
@@ -393,8 +459,10 @@ export default function CaseAnalysisPage() {
         </div>
       )}
 
-      {/* Results Section */}
-      {verificationResult && !isRunning && !refusalError && (
+      {/* Results Section. Gated on resultState, not just the presence of a
+          (possibly stale) verificationResult, so a subsequent failed or
+          refused run never renders alongside a prior measurement. */}
+      {resultState === 'measured' && verificationResult && (
         <div className={styles.resultsContainer}>
           {/* Progressive Causal Pipeline: Scientific Revelation */}
           <section className={styles.pipelineSection} aria-label="Progressive Causal Revelation">
@@ -409,13 +477,22 @@ export default function CaseAnalysisPage() {
             </div>
             <ProgressiveCausalPipeline
               claimValue={caseDetail.known_reference ? '+0.060 NDVI (Claim)' : undefined}
-              observedValue={fixtureViz ? '0.642 (Post-Mean)' : undefined}
-              counterfactualValue={fixtureViz ? '0.600 (Synth-Mean)' : undefined}
-              causalEffectValue={
-                verificationResult
-                  ? `${(verificationResult.bundle.items.find((i) => i.id === 'effect.point_estimate')?.value as number | undefined)?.toFixed(3) ?? '+0.042'} ${caseDetail.indicator}`
-                  : '+0.042 ndvi'
-              }
+              // observedValue / counterfactualValue are intentionally omitted:
+              // no evidence item in EvidenceBundle currently exposes a single
+              // scalar "observed mean" / "counterfactual mean" for this stage,
+              // so there is nothing real to show. Leaving them undefined lets
+              // the component render its own honest "—" rather than the
+              // fabricated '0.642 (Post-Mean)' / '0.600 (Synth-Mean)'
+              // placeholders that used to be hardcoded here regardless of
+              // whether a run had actually produced them.
+              causalEffectValue={(() => {
+                const point = verificationResult.bundle.items.find(
+                  (i) => i.id === 'effect.point_estimate'
+                )?.value;
+                return typeof point === 'number'
+                  ? `${point.toFixed(3)} ${caseDetail.indicator}`
+                  : undefined;
+              })()}
               uncertaintyValue="[-0.012, 0.084]"
               evidenceCount={verificationResult.bundle.items.length}
               provenanceHash="sha256:7f83b165"
@@ -528,13 +605,18 @@ export default function CaseAnalysisPage() {
 
               {/* Tab 3: Donor Pool & Map */}
               <TabContent value="donors">
-                {fixtureViz && (
-                  <ProjectDonorMap
-                    donors={fixtureViz.donors}
-                    searchRegion={caseDetail.donor_search_region}
-                    worstSMD={0.182}
-                  />
-                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <DonorCandidatePanel summary={donorCandidateSummary} />
+                  {/* Map intentionally not built yet for ADR-011 candidate generation;
+                      this remains the pre-existing fixture-driven map view. */}
+                  {fixtureViz && (
+                    <ProjectDonorMap
+                      donors={fixtureViz.donors}
+                      searchRegion={caseDetail.donor_search_region}
+                      worstSMD={0.182}
+                    />
+                  )}
+                </div>
               </TabContent>
 
               {/* Tab 4: Evidence Explorer */}

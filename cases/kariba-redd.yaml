@@ -19,12 +19,28 @@ project:
   ecosystem: miombo woodland / dry forest
   standard: VCS
   registry_id: VCS 902
-  area_ha: 785000
+  # 784,987 ha is the VCS project area: the FORESTED portion (woodland plus
+  # open woodland at project start) inside the project boundary. It is stated
+  # in the 2012 and 2013 project descriptions, the 2013 validation report, the
+  # 2020 verification report and the 2022 monitoring report, and it is the
+  # quantity the project accounts against.
+  #
+  # It is NOT the area of cases/boundaries/kariba-redd.geojson, which
+  # delineates the four Rural District Council parcels and covers ~1,077,930 ha
+  # (project description p98). The forest is 72.8% of that.
+  #
+  # The Verra registry's own "Acres/Hectares" field says 747,801 ha. That
+  # figure appears in none of the eleven project documents searched and is
+  # recorded as unexplained rather than used. See the boundary provenance file.
+  area_ha: 784987
   crediting_period_start: 2011-07-01
   crediting_period_end: 2041-06-30
   claimed_credits_tco2e: null  # populate from the Verra registry serial records
   source_uri: https://registry.verra.org/app/projectDetail/VCS/902
-  boundary_path: cases/boundaries/kariba-redd.geojson  # NOT YET OBTAINED
+  # Obtained from the Verra registry's approved "Project Boundary (KML File)"
+  # document for VCS 902. Provenance, validation and the area discrepancy are
+  # in cases/boundaries/kariba-redd.provenance.json.
+  boundary_path: cases/boundaries/kariba-redd.geojson
 
 analysis_window:
   # Pre-period ends the year before crediting begins. A long pre-period is what
@@ -68,3 +84,18 @@ notes: >-
   Miombo woodland has strong rainfall-driven interannual NDVI variability, so
   rainfall matching is load-bearing for this case and a rainfall-only placebo
   specification must be reported alongside the main estimate.
+
+
+  AREA FIGURES MEAN DIFFERENT THINGS, AND ONE IS UNEXPLAINED. The boundary
+  geometry covers ~1,072,638 ha (geodesic union); the project description
+  states the RDC boundaries total 1,077,930 ha, and the file's own embedded
+  area attributes sum to 1,077,930.24 ha, which identifies the geometry as
+  that dataset. The 784,987 ha above is the forested portion inside those
+  boundaries, not a second estimate of the same thing: the project description
+  says so directly, and 1 - 784,987/1,077,930 = 27.2% is the share of extra
+  land it quotes elsewhere. The Verra registry's own area field says 747,801
+  ha, which appears in no project document searched and is recorded as
+  unexplained. Nothing in the geometry or in this file was adjusted to make any
+  of these agree. Because ADR-011 masks forest out of the boundary with Hansen
+  tree cover rather than trusting the project's own classification, our
+  eligible area becomes an independent check on the 784,987 ha claim.
