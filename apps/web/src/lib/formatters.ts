@@ -81,3 +81,56 @@ export function formatMeasurement(value: number | null | undefined, unit?: strin
   const formatted = value.toLocaleString('en-US');
   return unit ? `${formatted} ${unit}` : formatted;
 }
+
+/**
+ * The following four functions derive display strings for the "Scientific
+ * Conclusion" summary cards from real evidence items only. RULE: a missing
+ * evidence item (or a missing parameter/qualifier on one that is present)
+ * renders as "Not measured" — never as a plausible-looking placeholder
+ * number, regardless of whether the underlying run was real or simulated.
+ */
+
+/** "Permutation Significance", from the `placebo.p_value` evidence item. */
+export function formatPermutationSignificance(items: Evidence[]): string {
+  const item = items.find((i) => i.id === 'placebo.p_value');
+  return typeof item?.value === 'number' ? formatPValue(item.value) : 'Not measured';
+}
+
+/**
+ * "Donor Jackknife Stability", from the `robustness.sign_stable` evidence
+ * item and its `n_refits` provenance parameter (set by
+ * `engine/assembler.py` from the actual leave-one-out refit count, not a
+ * fixture-only value).
+ */
+export function formatJackknifeStability(items: Evidence[]): string {
+  const item = items.find((i) => i.id === 'robustness.sign_stable');
+  if (typeof item?.value !== 'boolean') return 'Not measured';
+  const nRefits = item.provenance.parameters?.n_refits;
+  const refitsText = typeof nRefits === 'number' ? `${nRefits} refits` : 'an unrecorded number of refits';
+  return `${item.value ? 'Stable' : 'Not stable'} across ${refitsText}`;
+}
+
+/**
+ * "DiD Parallel Pre-Trends", from the `crosscheck.did_estimate` item's
+ * `parallel_trends_plausible` qualifier and the separate
+ * `crosscheck.did_pre_trend_divergence` evidence item.
+ */
+export function formatDidParallelTrends(items: Evidence[]): string {
+  const estimateItem = items.find((i) => i.id === 'crosscheck.did_estimate');
+  const divergenceItem = items.find((i) => i.id === 'crosscheck.did_pre_trend_divergence');
+  const plausible = estimateItem?.qualifiers?.parallel_trends_plausible;
+  if (typeof plausible !== 'boolean') return 'Not measured';
+  const divergenceText =
+    typeof divergenceItem?.value === 'number' ? ` (Div: ${divergenceItem.value.toFixed(4)})` : '';
+  return `${plausible ? 'Plausible' : 'Implausible'}${divergenceText}`;
+}
+
+/**
+ * Compact uncertainty envelope for the causal-pipeline stage card, from the
+ * `effect.point_estimate` evidence item's own confidence interval. Returns
+ * `''` (not a fabricated range) when no confidence interval was produced.
+ */
+export function formatUncertaintyEnvelope(confidence: Confidence | null | undefined): string {
+  if (!confidence) return '';
+  return `[${confidence.lower.toFixed(3)}, ${confidence.upper.toFixed(3)}]`;
+}

@@ -34,6 +34,8 @@ export interface ProgressiveCausalPipelineProps {
   counterfactualValue?: string;
   causalEffectValue?: string;
   uncertaintyValue?: string;
+  /** Unit/range shown alongside `uncertaintyValue`, e.g. the indicator name. Never defaults to a fabricated interval. */
+  uncertaintyUnit?: string;
   evidenceCount?: number;
   provenanceHash?: string;
 }
@@ -48,6 +50,7 @@ export function ProgressiveCausalPipeline({
   counterfactualValue,
   causalEffectValue,
   uncertaintyValue,
+  uncertaintyUnit,
   evidenceCount,
   provenanceHash,
 }: ProgressiveCausalPipelineProps) {
@@ -99,8 +102,10 @@ export function ProgressiveCausalPipeline({
       id: 'uncertainty',
       stepNumber: '05',
       label: 'UNCERTAINTY',
-      value: uncertaintyValue || '95% CI',
-      unit: '[-0.012, 0.084]',
+      // No fallback interval: this stage has no value until a real
+      // confidence interval supplies one.
+      value: uncertaintyValue || '—',
+      unit: uncertaintyUnit || '',
       subtext: 'Sensitivity Envelope',
       status: 'verified',
       icon: <Activity size={14} />,
@@ -119,7 +124,10 @@ export function ProgressiveCausalPipeline({
       id: 'provenance',
       stepNumber: '07',
       label: 'PROVENANCE',
-      value: provenanceHash || 'SHA-256',
+      // No fallback hash: 'SHA-256' previously appeared here regardless of
+      // whether a real spec_hash existed, implying a specific algorithm and
+      // a computed value neither of which were true.
+      value: provenanceHash || '—',
       unit: 'Verified',
       subtext: 'Chain of Custody',
       status: 'verified',
