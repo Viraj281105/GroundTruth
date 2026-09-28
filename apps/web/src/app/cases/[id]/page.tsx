@@ -17,7 +17,13 @@ import {
   resultStateTone,
   resultStateLabel,
 } from '../../../lib/types';
-import { formatHectares } from '../../../lib/formatters';
+import {
+  formatHectares,
+  formatPermutationSignificance,
+  formatJackknifeStability,
+  formatDidParallelTrends,
+  formatUncertaintyEnvelope,
+} from '../../../lib/formatters';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
@@ -223,6 +229,14 @@ export default function CaseAnalysisPage() {
   // getDonorCandidateSummary's doc comment); this is the honest
   // nothing-has-been-measured shape, not a fixture.
   const donorCandidateSummary = getDonorCandidateSummary(caseDetail);
+
+  // Real evidence lookup for a measured result. Used instead of the
+  // hardcoded stage/summary values this page used to show regardless of
+  // what (if anything) the bundle actually contained.
+  const effectPointEstimateItem =
+    resultState === 'measured' && verificationResult
+      ? verificationResult.bundle.items.find((i) => i.id === 'effect.point_estimate')
+      : undefined;
 
   return (
     <div className="gt-container" style={{ paddingTop: '20px', paddingBottom: '60px' }}>
@@ -485,17 +499,15 @@ export default function CaseAnalysisPage() {
               // fabricated '0.642 (Post-Mean)' / '0.600 (Synth-Mean)'
               // placeholders that used to be hardcoded here regardless of
               // whether a run had actually produced them.
-              causalEffectValue={(() => {
-                const point = verificationResult.bundle.items.find(
-                  (i) => i.id === 'effect.point_estimate'
-                )?.value;
-                return typeof point === 'number'
-                  ? `${point.toFixed(3)} ${caseDetail.indicator}`
-                  : undefined;
-              })()}
-              uncertaintyValue="[-0.012, 0.084]"
+              causalEffectValue={
+                typeof effectPointEstimateItem?.value === 'number'
+                  ? `${effectPointEstimateItem.value.toFixed(3)} ${caseDetail.indicator}`
+                  : undefined
+              }
+              uncertaintyValue={formatUncertaintyEnvelope(effectPointEstimateItem?.confidence) || undefined}
+              uncertaintyUnit={effectPointEstimateItem?.confidence ? caseDetail.indicator : undefined}
               evidenceCount={verificationResult.bundle.items.length}
-              provenanceHash="sha256:7f83b165"
+              provenanceHash={verificationResult.spec_hash}
               activeStage={
                 activeTab === 'causal'
                   ? 'counterfactual'
@@ -671,15 +683,21 @@ export default function CaseAnalysisPage() {
                 <div className={styles.conclusionMetrics}>
                   <div className={styles.conclusionMetricRow}>
                     <span className={styles.conclusionKey}>Permutation Significance:</span>
-                    <span className={styles.conclusionVal}>p = 0.038 (Significant)</span>
+                    <span className={styles.conclusionVal}>
+                      {formatPermutationSignificance(verificationResult.bundle.items)}
+                    </span>
                   </div>
                   <div className={styles.conclusionMetricRow}>
                     <span className={styles.conclusionKey}>Donor Jackknife Stability:</span>
-                    <span className={styles.conclusionVal}>Stable across 24 refits</span>
+                    <span className={styles.conclusionVal}>
+                      {formatJackknifeStability(verificationResult.bundle.items)}
+                    </span>
                   </div>
                   <div className={styles.conclusionMetricRow}>
                     <span className={styles.conclusionKey}>DiD Parallel Pre-Trends:</span>
-                    <span className={styles.conclusionVal}>Plausible (Div: 0.0018)</span>
+                    <span className={styles.conclusionVal}>
+                      {formatDidParallelTrends(verificationResult.bundle.items)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -700,7 +718,9 @@ export default function CaseAnalysisPage() {
                   </div>
                   <div className={styles.conclusionMetricRow}>
                     <span className={styles.conclusionKey}>Active Verdict Gates:</span>
-                    <span className={styles.conclusionVal}>4 evaluated / 1 deferred</span>
+                    {/* No backend contract reports gate evaluation counts;
+                        see the #58 follow-up verification notes. */}
+                    <span className={styles.conclusionVal}>Not available</span>
                   </div>
                   <div className={styles.conclusionMetricRow}>
                     <span className={styles.conclusionKey}>Intervention Boundary:</span>
@@ -731,12 +751,17 @@ export default function CaseAnalysisPage() {
                     <span className={styles.conclusionVal}>v{verificationResult.bundle.schema_version}</span>
                   </div>
                   <div className={styles.conclusionMetricRow}>
-                    <span className={styles.conclusionKey}>Primary Hash:</span>
-                    <span className={styles.conclusionValMono}>sha256:7f83b165...</span>
+                    <span className={styles.conclusionKey}>Spec Hash:</span>
+                    <span className={styles.conclusionValMono}>
+                      {verificationResult.spec_hash || 'Not available'}
+                    </span>
                   </div>
                   <div className={styles.conclusionMetricRow}>
                     <span className={styles.conclusionKey}>Audit Digest:</span>
-                    <span className={styles.conclusionValMono}>sha256:4a9c1e02...</span>
+                    {/* No second hash exists anywhere in the backend contract
+                        (EvidenceBundle/Evidence carry no digest field);
+                        see the #58 follow-up verification notes. */}
+                    <span className={styles.conclusionValMono}>Not available</span>
                   </div>
                 </div>
                 <button

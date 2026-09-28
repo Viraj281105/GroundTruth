@@ -122,6 +122,14 @@ export interface VerificationResponse {
   bundle: EvidenceBundle;
   report_markdown: string | null;
   report_generator: string | null;
+  /**
+   * Hash of the analysis specification (blake2b hex digest, per
+   * `contracts.identifiers.spec_hash`), present on the real API response
+   * (`platform/api/schemas.py::VerificationResponse`). Optional here only
+   * because the frontend's own simulated fixtures predate this field —
+   * never fabricate one when it is absent.
+   */
+  spec_hash?: string;
 }
 
 /** True when the UI must show the persistent simulated-data banner. */
