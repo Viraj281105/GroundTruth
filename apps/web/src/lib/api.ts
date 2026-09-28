@@ -1,6 +1,7 @@
 import {
   CaseDetail,
   CaseSummary,
+  DonorCandidateSummary,
   HealthResponse,
   VerificationRequest,
   VerificationResponse,
@@ -12,12 +13,44 @@ import {
   VerificationFixtureData,
 } from './fixtures/simulated-data';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+/**
+ * Explicit, off-by-default demo gate. Fixture data may only ever be returned
+ * to a caller when this is true, and every caller that receives it must be
+ * told so via `isDemo` — never substituted silently for a real result.
+ */
+export function isDemoMode(): boolean {
+  return process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+}
+
+/**
+ * Thrown when the backend cannot be reached and demo mode is off. A dead
+ * backend must never be indistinguishable from a successful run.
+ */
+export class ApiUnreachableError extends Error {
+  constructor(public readonly apiBaseUrl: string, cause?: unknown) {
+    super(`Backend API is unreachable at ${apiBaseUrl}.`);
+    this.name = 'ApiUnreachableError';
+    if (cause !== undefined) {
+      (this as { cause?: unknown }).cause = cause;
+    }
+  }
+}
+
+export interface DemoResult<T> {
+  data: T;
+  /** True when `data` is fixture data served under NEXT_PUBLIC_DEMO_MODE. */
+  isDemo: boolean;
+}
 
 /**
  * Fetch list of all project cases.
+ *
+ * Throws `ApiUnreachableError` when the backend cannot be reached and demo
+ * mode is off.
  */
-export async function getCases(): Promise<CaseSummary[]> {
+export async function getCases(): Promise<DemoResult<CaseSummary[]>> {
   try {
     const res = await fetch(`${API_BASE_URL}/cases`, {
       method: 'GET',
@@ -25,18 +58,24 @@ export async function getCases(): Promise<CaseSummary[]> {
       next: { revalidate: 60 },
     });
     if (res.ok) {
-      return await res.json();
+      return { data: await res.json(), isDemo: false };
     }
-  } catch {
-    // Graceful fallback to mock summary for offline development/demo
+    throw new Error(`API responded with ${res.status}`);
+  } catch (err) {
+    if (isDemoMode()) {
+      return { data: MOCK_CASES_SUMMARY, isDemo: true };
+    }
+    throw new ApiUnreachableError(API_BASE_URL, err);
   }
-  return MOCK_CASES_SUMMARY;
 }
 
 /**
  * Fetch full case definition.
+ *
+ * Throws `ApiUnreachableError` when the backend cannot be reached and demo
+ * mode is off.
  */
-export async function getCaseDetail(caseId: string): Promise<CaseDetail | null> {
+export async function getCaseDetail(caseId: string): Promise<DemoResult<CaseDetail | null>> {
   try {
     const res = await fetch(`${API_BASE_URL}/cases/${caseId}`, {
       method: 'GET',
@@ -44,12 +83,15 @@ export async function getCaseDetail(caseId: string): Promise<CaseDetail | null> 
       next: { revalidate: 60 },
     });
     if (res.ok) {
-      return await res.json();
+      return { data: await res.json(), isDemo: false };
     }
-  } catch {
-    // Fallback to fixture
+    throw new Error(`API responded with ${res.status}`);
+  } catch (err) {
+    if (isDemoMode()) {
+      return { data: MOCK_CASE_DETAILS[caseId] || null, isDemo: true };
+    }
+    throw new ApiUnreachableError(API_BASE_URL, err);
   }
-  return MOCK_CASE_DETAILS[caseId] || null;
 }
 
 /**
@@ -58,7 +100,7 @@ export async function getCaseDetail(caseId: string): Promise<CaseDetail | null> 
 export async function verifyCase(
   caseId: string,
   options: VerificationRequest = { synthetic: true, true_effect: 0.06, min_donors: 10, include_report: true }
-): Promise<{ success: boolean; data?: VerificationResponse; error?: string; isRefusal?: boolean }> {
+): Promise<{ success: boolean; data?: VerificationResponse; error?: string; isRefusal?: boolean; isDemo?: boolean }> {
   try {
     const res = await fetch(`${API_BASE_URL}/cases/${caseId}/verify`, {
       method: 'POST',
@@ -97,16 +139,17 @@ export async function verifyCase(
       isRefusal: Boolean(detail?.is_refusal),
     };
   } catch {
-    // If backend is offline, return simulated fixture if synthetic mode was requested
-    if (options.synthetic) {
+    // Backend unreachable. Only ever substitute a fixture when demo mode is
+    // explicitly on, and always flag it as such — never as a successful run.
+    if (isDemoMode() && options.synthetic) {
       const fixture = MOCK_VERIFICATION_RESULTS[caseId];
       if (fixture) {
-        return { success: true, data: fixture.verification };
+        return { success: true, data: fixture.verification, isDemo: true };
       }
     }
     return {
       success: false,
-      error: 'Backend API is unreachable. Please verify that FastAPI is running at ' + API_BASE_URL,
+      error: `Backend API is unreachable at ${API_BASE_URL}. No verification was executed.`,
       isRefusal: false,
     };
   }
@@ -114,13 +157,23 @@ export async function verifyCase(
 
 /**
  * Get rich fixture visualization data for UI display (chart series, donors map, placebos, timeline).
+ *
+ * Returns `null` unless demo mode is explicitly enabled. Never substitutes
+ * another case's fixture: a missing fixture for a known case id is `null`,
+ * not a fallback to Kariba.
  */
 export function getVisualizationFixture(caseId: string): VerificationFixtureData | null {
-  return MOCK_VERIFICATION_RESULTS[caseId] || MOCK_VERIFICATION_RESULTS['kariba-redd'];
+  if (!isDemoMode()) {
+    return null;
+  }
+  return MOCK_VERIFICATION_RESULTS[caseId] || null;
 }
 
 /**
  * Fetch health and honest capability reporting.
+ *
+ * An unreachable health endpoint renders as unknown status, never as a
+ * fabricated capability claim.
  */
 export async function getHealth(): Promise<HealthResponse> {
   try {
@@ -132,24 +185,45 @@ export async function getHealth(): Promise<HealthResponse> {
       return await res.json();
     }
   } catch {
-    // Fallback honest health representation
+    // fall through to the honest "unreachable" representation below
   }
   return {
-    status: 'ok',
-    version: '0.2.0',
-    engine_version: '0.2.0',
-    contract_version: '0.2.0',
+    status: 'unreachable',
+    version: 'unknown',
+    engine_version: 'unknown',
+    contract_version: 'unknown',
     earth_observation_implemented: false,
     genai_narration_implemented: false,
-    cases_available: 3,
-    engine_capabilities: {
-      synthetic_control: true,
-      did: true,
-      placebo_in_space: true,
-      placebo_in_time: true,
-      leave_one_out: true,
-      earth_engine_reduction: false,
-      biomass_conversion: false,
-    },
+    cases_available: 0,
+    engine_capabilities: {},
+  };
+}
+
+/**
+ * ADR-011 donor-candidate-generation summary for a case.
+ *
+ * There is currently no HTTP endpoint serving this. `EarthEngineUnitConstruction`
+ * (`packages/groundtruth/src/groundtruth/platform/units/generator.py`) raises
+ * `DataUnavailableError` on every call — no candidate count has ever been
+ * measured for any case. This returns the honest "nothing has been measured"
+ * shape rather than inventing a value or a mock: every measurement field is
+ * `null`, and `resultState` is `'not_started'`. When a real endpoint exists,
+ * this function should be replaced with a `fetch` following the same
+ * unreachable/refused/failed pattern as `getCaseDetail` and `verifyCase`
+ * above — not extended with a demo-mode fixture fallback, since inventing
+ * ADR-011 candidate counts would be fabricated scientific data regardless of
+ * the demo flag.
+ */
+export function getDonorCandidateSummary(caseDetail: CaseDetail): DonorCandidateSummary {
+  return {
+    caseId: caseDetail.case_id,
+    caseName: caseDetail.name,
+    treatedEligibleAreaKm2: null,
+    rungUsed: null,
+    rungs: [],
+    candidateCount: null,
+    admittedDonorCount: null,
+    exclusionsByCategory: null,
+    resultState: 'not_started',
   };
 }
