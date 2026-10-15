@@ -8,7 +8,7 @@ wide the permutation-implied interval is.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -158,9 +158,26 @@ class SpecificationCurve:
 
     Reporting the curve rather than the single best-looking specification is
     what prevents the analysis from becoming an exercise in motivated fitting.
+
+    Attributes:
+        estimates: Effect estimate per specification id, centre included.
+        centre_id: The pre-registered centre. Marked, not privileged: the median,
+            sign agreement and envelope are computed over every specification.
+        dimensions: Which analytic choice each specification varies.
+        failed: Specifications that could not be estimated, with the reason.
+            Kept so a reviewer sees the full set that was attempted.
     """
 
     estimates: dict[str, float]
+    centre_id: str | None = None
+    dimensions: dict[str, str] = field(default_factory=dict)
+    failed: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def sign_flips(self) -> tuple[str, ...]:
+        """Specifications whose estimate has the opposite sign to the median."""
+        target = np.sign(self.median)
+        return tuple(sid for sid, v in self.estimates.items() if np.sign(v) != target)
 
     @property
     def median(self) -> float:

@@ -18,6 +18,16 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Specification curve inside a run** (#28). With
+  `robustness.specification_curve` set, the engine sweeps one choice at a time
+  around the request's specification: ridge, pre-period length, treatment
+  date one period earlier, and donor cap. It emits
+  `robustness.spec_curve.median` with a `sensitivity-envelope`,
+  `robustness.spec_curve.sign_agreement`, and one
+  `robustness.spec_curve.estimate.<spec>` per specification, ordered by
+  estimate, with the centre marked. A sign flip is named in a warning and
+  fails a verdict gate. Failed specifications are listed, never dropped.
+  `ENGINE_VERSION` is now 0.8.0.
 - **Monorepo structure.** `apps/` for deployable entrypoints (api, worker, web)
   and `packages/groundtruth/` for the Python distribution. Root `pyproject.toml`
   now holds shared tooling configuration only.

@@ -157,6 +157,31 @@ check passes when the fake effect is less than half the estimated effect. A
 failure is a verdict gate. Reported as `placebo.in_time_fake_effect` and
 `placebo.in_time_passes`.
 
+### Specification curve
+
+Run when `robustness.specification_curve` is set. It is a one-at-a-time sweep
+around the request's own specification, which is the centre, so each deviation
+can be attributed to the one choice it changes. Only choices the engine can
+re-make from the panel it already holds are varied in-run:
+
+| Dimension | Values |
+| --- | --- |
+| Ridge penalty | 0.0, 0.01, 0.1, minus the centre's |
+| Pre-period length | 8, 10, 12 periods, where shorter than the centre's |
+| Treatment date | one period earlier (no-anticipation) |
+| Donor cap | the 20, 35, 50 nearest donors, where below the admitted pool |
+
+Indicator, caliper and covariate weighting need new observations or a re-run of
+matching. They stay in the offline experiment and are listed in the curve's
+provenance as not varied.
+
+The centre is marked but not privileged: the median, sign agreement and range
+are computed over every specification. The range is reported as a
+`sensitivity-envelope`, never as a confidence interval. Specifications that flip
+the sign relative to the median are named in a warning and fail a verdict gate,
+just as a leave-one-out sign flip does. A specification that cannot be estimated
+is listed as failed, never dropped. Reported under `robustness.spec_curve.*`.
+
 ## Difference-in-differences
 
 $$\hat{\tau}_{\text{DiD}} = (\bar{Y}_{1,\text{post}} - \bar{Y}_{1,\text{pre}}) - (\bar{Y}_{C,\text{post}} - \bar{Y}_{C,\text{pre}})$$

@@ -51,8 +51,9 @@ from groundtruth.engine.matching.donors import MatchingConfig, match_donors
 from groundtruth.engine.observation.alignment import MisalignedSeriesError, align_panel
 from groundtruth.engine.uncertainty.placebo import in_space_placebo, in_time_placebo
 from groundtruth.engine.uncertainty.robustness import leave_one_out
+from groundtruth.engine.uncertainty.specification import specification_curve
 
-ENGINE_VERSION = "0.7.0"
+ENGINE_VERSION = "0.8.0"
 """Version of the analytical engine. Bumped when results could change."""
 
 PRIMARY_ESTIMATOR = "synthetic-control"
@@ -205,11 +206,6 @@ def run_analysis(
                 f"Cross-check estimator {model.model_id!r} was requested but is not implemented, "
                 "so it was not run."
             )
-    if request.robustness.specification_curve:
-        notices.append(
-            "A specification curve was requested but is not implemented yet (#28), so this "
-            "run has no specification-curve evidence."
-        )
 
     # --- observe -----------------------------------------------------------
     try:
@@ -395,6 +391,19 @@ def run_analysis(
         )
         n_fits += len(loo.effects)
 
+    curve = None
+    if request.robustness.specification_curve:
+        curve = specification_curve(
+            treated,
+            donor_matrix,
+            donor_ids,
+            n_pre,
+            ridge=request.estimation.ridge,
+            min_pre_periods=request.estimation.min_pre_periods,
+            min_donors=request.donors.min_donors,
+        )
+        n_fits += len(curve.estimates)
+
     did = None
     if any(m.model_id == "difference-in-differences" for m in request.estimation.cross_checks):
         try:
@@ -423,6 +432,7 @@ def run_analysis(
             placebo=placebo,
             in_time_placebo=in_time,
             leave_one_out=loo,
+            specification_curve=curve,
             did=did,
             data_provenance=data_provenance,
             indicator_unit=INDICATOR_UNITS[request.indicator],
@@ -469,14 +479,19 @@ def describe_engine() -> dict[str, Any]:
         "contract_version": CONTRACT_VERSION,
         "estimators": [PRIMARY_ESTIMATOR, *sorted(CROSS_CHECK_ESTIMATORS)],
         "indicators": ["ndvi", "evi", "nbr", "tree_cover_fraction", "forest_area_ha"],
-        "robustness": ["in-space-placebo", "in-time-placebo", "leave-one-out"],
+        "robustness": [
+            "in-space-placebo",
+            "in-time-placebo",
+            "leave-one-out",
+            "specification-curve",
+        ],
         "implemented": {
             "synthetic_control": True,
             "placebo_inference": True,
             "in_space_placebo": True,
             "in_time_placebo": True,
             "leave_one_out": True,
-            "specification_curve": False,
+            "specification_curve": True,
             "biomass_carbon_conversion": False,
         },
     }

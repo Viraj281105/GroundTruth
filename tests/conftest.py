@@ -7,7 +7,17 @@ import pytest
 
 from groundtruth.contracts.evidence import Evidence, EvidenceBundle
 from groundtruth.contracts.provenance import Provenance
-from groundtruth.contracts.types import STANDARD_CAVEATS, VerdictLabel, VerificationVerdict
+from groundtruth.contracts.types import (
+    STANDARD_CAVEATS,
+    DonorMatch,
+    VerdictLabel,
+    VerificationVerdict,
+)
+from groundtruth.engine.assembler import AssemblyInputs
+from groundtruth.engine.causal.synthetic_control import fit_synthetic_control
+from groundtruth.engine.matching.donors import DonorPool
+from groundtruth.engine.uncertainty.placebo import in_space_placebo
+from groundtruth.engine.uncertainty.robustness import leave_one_out
 from groundtruth.platform.cases.registry import get_case
 
 
@@ -84,3 +94,37 @@ def bundle(provenance: Provenance) -> EvidenceBundle:
 @pytest.fixture
 def kariba_case():
     return get_case("kariba-redd")
+
+
+def _assembly_inputs(outcomes: np.ndarray, unit_ids: tuple[str, ...], n_pre: int) -> AssemblyInputs:
+    """Run the estimation stages on a panel whose column 0 is treated."""
+    treated, donors = outcomes[:, 0], outcomes[:, 1:]
+    donor_ids = unit_ids[1:]
+    fit = fit_synthetic_control(treated, donors, donor_ids, n_pre)
+    pool = DonorPool(
+        project_unit_id=unit_ids[0],
+        matches=tuple(DonorMatch(unit_id=uid, distance=0.1) for uid in donor_ids),
+        covariates=("x",),
+        standardised_mean_differences={"x": 0.0},
+    )
+    return AssemblyInputs(
+        request=get_case("kariba-redd").to_request(seed=20260101),
+        indicator_unit="ndvi",
+        donor_pool=pool,
+        fit=fit,
+        placebo=in_space_placebo(outcomes, unit_ids, 0, n_pre),
+        leave_one_out=leave_one_out(
+            treated,
+            donors,
+            donor_ids,
+            n_pre,
+            baseline_effect=fit.average_effect,
+            only_contributing=fit.contributing_donors(),
+        ),
+    )
+
+
+@pytest.fixture
+def assembly_inputs():
+    """Build ``AssemblyInputs`` from a panel whose column 0 is treated."""
+    return _assembly_inputs

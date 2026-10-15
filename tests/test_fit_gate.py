@@ -5,59 +5,25 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from groundtruth.contracts.types import DonorMatch, VerdictLabel
+from groundtruth.contracts.types import VerdictLabel
 from groundtruth.engine.assembler import (
     MAX_RELATIVE_PRE_FIT,
-    AssemblyInputs,
     assemble_evidence,
     decide_verdict,
 )
-from groundtruth.engine.causal.synthetic_control import (
-    convex_hull_diagnostic,
-    fit_synthetic_control,
-)
-from groundtruth.engine.matching.donors import DonorPool
-from groundtruth.engine.uncertainty.placebo import in_space_placebo
-from groundtruth.engine.uncertainty.robustness import leave_one_out
-from groundtruth.platform.cases.registry import get_case
-
-
-def _inputs(outcomes: np.ndarray, unit_ids: tuple[str, ...], n_pre: int) -> AssemblyInputs:
-    """Run the estimation stages on a panel whose column 0 is treated."""
-    treated, donors = outcomes[:, 0], outcomes[:, 1:]
-    donor_ids = unit_ids[1:]
-    fit = fit_synthetic_control(treated, donors, donor_ids, n_pre)
-    pool = DonorPool(
-        project_unit_id=unit_ids[0],
-        matches=tuple(DonorMatch(unit_id=uid, distance=0.1) for uid in donor_ids),
-        covariates=("x",),
-        standardised_mean_differences={"x": 0.0},
-    )
-    return AssemblyInputs(
-        request=get_case("kariba-redd").to_request(seed=20260101),
-        indicator_unit="ndvi",
-        donor_pool=pool,
-        fit=fit,
-        placebo=in_space_placebo(outcomes, unit_ids, 0, n_pre),
-        leave_one_out=leave_one_out(
-            treated,
-            donors,
-            donor_ids,
-            n_pre,
-            baseline_effect=fit.average_effect,
-            only_contributing=fit.contributing_donors(),
-        ),
-    )
+from groundtruth.engine.causal.synthetic_control import convex_hull_diagnostic
 
 
 class TestConvexHull:
-    def test_a_project_outside_the_donor_hull_is_inconclusive_with_a_warning(self, factor_panel):
+    def test_a_project_outside_the_donor_hull_is_inconclusive_with_a_warning(
+        self, assembly_inputs, factor_panel
+    ):
         outcomes, unit_ids, n_pre, _ = factor_panel
         shifted = outcomes.copy()
         # Lift the project well above every donor in every period.
         shifted[:, 0] = outcomes[:, 1:].max(axis=1) + 0.2
 
-        inputs = _inputs(shifted, unit_ids, n_pre)
+        inputs = assembly_inputs(shifted, unit_ids, n_pre)
         assert inputs.fit.hull is not None and inputs.fit.hull.materially_outside
 
         bundle = assemble_evidence(inputs, divergence_ratio=1.0)
@@ -69,9 +35,9 @@ class TestConvexHull:
         assert bundle.require("fit.hull_periods_outside_envelope").value == 1.0
         assert bundle.require("fit.hull_level_excess").value > 0.19
 
-    def test_a_project_inside_the_donor_hull_passes_cleanly(self, factor_panel):
+    def test_a_project_inside_the_donor_hull_passes_cleanly(self, assembly_inputs, factor_panel):
         outcomes, unit_ids, n_pre, _ = factor_panel
-        inputs = _inputs(outcomes, unit_ids, n_pre)
+        inputs = assembly_inputs(outcomes, unit_ids, n_pre)
         assert inputs.fit.hull is not None and not inputs.fit.hull.materially_outside
 
         bundle = assemble_evidence(inputs, divergence_ratio=1.0)
@@ -101,7 +67,9 @@ class TestConvexHull:
 
 
 class TestFitGate:
-    def test_the_gate_fires_on_a_fit_the_mean_scaled_gate_would_have_passed(self, rng):
+    def test_the_gate_fires_on_a_fit_the_mean_scaled_gate_would_have_passed(
+        self, assembly_inputs, rng
+    ):
         n_periods, n_donors, n_pre = 20, 20, 12
         offsets = np.linspace(-0.1, 0.1, n_donors)
         donors = 0.6 + offsets + rng.normal(0.0, 0.001, size=(n_periods, n_donors))
@@ -110,7 +78,7 @@ class TestFitGate:
         outcomes = np.column_stack([treated, donors])
         unit_ids = tuple(f"unit-{i:02d}" for i in range(n_donors + 1))
 
-        inputs = _inputs(outcomes, unit_ids, n_pre)
+        inputs = assembly_inputs(outcomes, unit_ids, n_pre)
         fit = inputs.fit
 
         # The old gate: RMSPE as a share of the outcome *level*, limit 30%.
@@ -124,16 +92,16 @@ class TestFitGate:
         assert "pre-treatment fit is poor" in verdict.rationale
         assert "pre-period outcome SD" in verdict.rationale
 
-    def test_a_good_fit_passes_the_gate(self, factor_panel):
+    def test_a_good_fit_passes_the_gate(self, assembly_inputs, factor_panel):
         outcomes, unit_ids, n_pre, _ = factor_panel
-        inputs = _inputs(outcomes, unit_ids, n_pre)
+        inputs = assembly_inputs(outcomes, unit_ids, n_pre)
         assert inputs.fit.relative_pre_fit < MAX_RELATIVE_PRE_FIT
         verdict = decide_verdict(inputs, divergence_ratio=1.0)
         assert "pre-treatment fit is poor" not in verdict.rationale
 
-    def test_the_relative_fit_is_recorded_as_evidence(self, factor_panel):
+    def test_the_relative_fit_is_recorded_as_evidence(self, assembly_inputs, factor_panel):
         outcomes, unit_ids, n_pre, _ = factor_panel
-        bundle = assemble_evidence(_inputs(outcomes, unit_ids, n_pre))
+        bundle = assemble_evidence(assembly_inputs(outcomes, unit_ids, n_pre))
         item = bundle.require("fit.relative_pre_rmspe")
         assert item.qualifiers["gate_threshold"] == MAX_RELATIVE_PRE_FIT
         assert item.value == pytest.approx(

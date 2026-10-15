@@ -12,6 +12,7 @@ from groundtruth.engine.uncertainty.robustness import (
     leave_one_out,
     permutation_interval,
 )
+from groundtruth.engine.uncertainty.specification import specification_curve
 
 __all__ = [
     "InTimePlaceboResult",
@@ -22,4 +23,5 @@ __all__ = [
     "in_time_placebo",
     "leave_one_out",
     "permutation_interval",
+    "specification_curve",
 ]

@@ -134,11 +134,6 @@ class TestUnimplementedOptionsAreReported:
         assert any("'event-study'" in w and "not implemented" in w for w in result.bundle.warnings)
         assert result.bundle.get("crosscheck.did_estimate") is not None
 
-    def test_a_requested_specification_curve_is_warned_about(self):
-        result = _run(_request(robustness={"specification_curve": True}))
-        assert result.bundle is not None
-        assert any("specification curve" in w.lower() for w in result.bundle.warnings)
-
 
 # Every RobustnessSpec and EstimationSpec field, classified. A new field fails
 # this test until someone decides whether the engine consumes it.
@@ -156,11 +151,10 @@ CONSUMED = {
         "leave_one_out": "runs leave-one-out",
         "confidence_level": "sets the placebo significance level",
         "max_placebo_pre_rmspe_multiple": "the placebo poor-fit screen",
+        "specification_curve": "runs the one-at-a-time specification curve",
     },
 }
-NOT_YET_IMPLEMENTED = {
-    "RobustnessSpec": {"specification_curve": "#28; warned about when requested"},
-}
+NOT_YET_IMPLEMENTED: dict[str, dict[str, str]] = {}
 
 
 @pytest.mark.parametrize("spec", [EstimationSpec, RobustnessSpec])
@@ -174,7 +168,7 @@ def test_describe_engine_matches_what_the_pipeline_runs():
     implemented = describe_engine()["implemented"]
     assert implemented["in_time_placebo"] is True
     assert implemented["in_space_placebo"] is True
-    assert implemented["specification_curve"] is False
+    assert implemented["specification_curve"] is True
 
     result = _run(_request(robustness={"in_time_placebo": True, "specification_curve": True}))
     assert result.bundle is not None
@@ -182,4 +176,4 @@ def test_describe_engine_matches_what_the_pipeline_runs():
     assert "placebo.in_time_passes" in ids
     assert "placebo.p_value" in ids
     assert "robustness.sign_stable" in ids
-    assert not any(i.startswith("speccurve.") for i in ids)
+    assert "robustness.spec_curve.sign_agreement" in ids
