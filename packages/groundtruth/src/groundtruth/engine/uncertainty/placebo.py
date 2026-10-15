@@ -37,6 +37,9 @@ class PlaceboResult:
     n_failed: int
     statistic_name: str = "post_pre_rmspe_ratio"
     excluded_poor_fit: int = 0
+    excluded_from_placebo_pools: tuple[str, ...] = ()
+    """Units never offered as donors to a placebo fit. Always includes the
+    genuinely treated unit, whose post-period path carries the real effect."""
 
     @property
     def rank(self) -> int:
@@ -73,8 +76,16 @@ def in_space_placebo(
     ridge: float = 0.0,
     max_pre_rmspe_multiple: float | None = 5.0,
     min_pre_periods: int = 5,
+    exclude_indices: tuple[int, ...] = (),
 ) -> PlaceboResult:
     """Run in-space placebo inference.
+
+    The genuinely treated unit is never a donor in a placebo fit. Its
+    post-period path contains the real intervention effect; a placebo that
+    loaded weight on it would inherit that effect into its own counterfactual,
+    and the reference distribution would no longer describe untreated outcomes
+    (Abadie, Diamond & Hainmueller, 2010). Each placebo pool therefore has one
+    donor fewer than the treated unit's own fit.
 
     Args:
         outcome_matrix: ``(n_periods, n_units)`` outcomes for all units.
@@ -87,6 +98,9 @@ def in_space_placebo(
             model cannot fit before treatment produce meaningless ratios and, if
             retained, inflate the reference distribution's tail.
         min_pre_periods: Minimum pre-periods for each fit.
+        exclude_indices: Further columns to keep out of every placebo donor
+            pool, in addition to the treated unit; for example, units suspected
+            of spillover from the project. They are still placebo units.
 
     Returns:
         A :class:`PlaceboResult` with a one-sided permutation p-value.
@@ -102,8 +116,15 @@ def in_space_placebo(
             "placebo inference needs at least three units (one treated, two donors)"
         )
 
+    never_donors = {treated_index, *exclude_indices}
+    if any(not 0 <= i < n_units for i in never_donors):
+        raise EstimationError("treated_index and exclude_indices must index outcome_matrix columns")
+
     def fit_for(index: int) -> tuple[float, float]:
-        donor_cols = [j for j in range(n_units) if j != index]
+        # The treated unit's own fit may use every other unit; placebo fits
+        # may not use the treated unit or any explicitly excluded one.
+        barred = {index} if index == treated_index else {index, *never_donors}
+        donor_cols = [j for j in range(n_units) if j not in barred]
         fit = fit_synthetic_control(
             outcomes[:, index],
             outcomes[:, donor_cols],
@@ -153,6 +174,7 @@ def in_space_placebo(
         n_placebos=n_placebos,
         n_failed=failed,
         excluded_poor_fit=excluded,
+        excluded_from_placebo_pools=tuple(unit_ids[i] for i in sorted(never_donors)),
     )
 
 
