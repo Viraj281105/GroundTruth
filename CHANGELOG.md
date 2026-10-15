@@ -38,6 +38,18 @@ Three versions are tracked independently:
 
 ### Changed
 
+- **The fit gate is scaled by the pre-period outcome SD, and a convex-hull
+  gate is added** (#56). The old gate divided pre-RMSPE by the outcome *mean*,
+  which for NDVI around 0.6 let an RMSPE of 0.18 pass, so it would essentially
+  never fire on a spectral index. It now fails above 0.5 SD
+  (`fit.relative_pre_rmspe`). A new `HullDiagnostic` checks two necessary
+  conditions for the project to be spanned by its donors (pre-period level
+  within the range of donor means, and per-period donor envelope). A material
+  failure gives a warning and an `INCONCLUSIVE` verdict
+  (`fit.inside_donor_hull`, `fit.hull_level_excess`,
+  `fit.hull_periods_outside_envelope`). The estimator docs now state the
+  variant actually implemented: no V-matrix, no covariate-informed weighting,
+  no intercept. `ENGINE_VERSION` is now 0.5.0.
 - **Observed series are aligned to the analysis window before estimation**
   (#53). `run_analysis` used `window.n_pre_periods` as a raw array index and
   stacked donor series without checking them, so a series that started late or

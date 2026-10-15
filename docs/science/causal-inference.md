@@ -40,6 +40,52 @@ The cost is that if the project lies outside the convex hull of its donors, no
 weighting can fit it. That is not a failure to route around; it is the method
 telling you the donor pool is inadequate.
 
+### The variant actually implemented
+
+The weight problem above is **not** the full estimator of Abadie, Diamond &
+Hainmueller (2010). It is the outcome-path, levels, simplex-constrained member of
+that family, and it differs from ADH in three ways:
+
+| ADH (2010) | GroundTruth | Consequence |
+| --- | --- | --- |
+| Predictor weights $V$ chosen by nested optimisation | **No V-matrix.** Every pre-period outcome weighted equally | No tuning step that can be steered towards a preferred fit; less able to down-weight noisy years |
+| Covariates and outcome lags both enter the fit | **Covariates only select donors** (`engine.matching`); the weight objective sees outcomes alone | Covariate balance is reported separately and gated, not optimised |
+| Levels, no intercept | **Levels, no intercept, no demeaning** (same as ADH) | A project outside the donors' hull carries a constant offset into the post-period. Doudchenko–Imbens demeaning would absorb it; we detect it instead |
+
+An optional ridge penalty spreads weight across near-equivalent donors. It is
+off by default.
+
+### Is the pre-treatment fit good enough?
+
+Two gates in the verdict chain answer this.
+
+**Fit relative to the outcome's own variation.** The pre-period RMSPE is divided
+by the pre-period **standard deviation** of the project's outcome, not its mean.
+A mean-scaled gate does not work on a spectral index: NDVI around 0.6 with
+year-to-year variation of 0.03 would pass a 30% mean-scaled gate with an RMSPE of
+0.18, six times the variation the fit is supposed to explain. The gate fails
+when RMSPE exceeds **0.5 SD**, which means the synthetic path explains roughly
+three quarters of the pre-period variance. Reported as `fit.relative_pre_rmspe`.
+
+**Convex-hull containment.** Exact containment of the project's pre-period path
+in the hull of donor paths is the same thing as a zero pre-period RMSPE, so it
+is not a useful test on noisy data. Two necessary conditions are checked
+instead. If either fails, every simplex weighting is structurally offset:
+
+- **Level:** the project's pre-period mean must lie within the range of donor
+  pre-period means. The distance outside is a lower bound on the constant bias
+  in the post-period gap (`fit.hull_level_excess`).
+- **Envelope:** in each pre-period the project must lie between the lowest and
+  highest donor (`fit.hull_periods_outside_envelope`).
+
+The gate fails, with a bundle warning, when the level is more than **0.1
+pre-period SD** outside the donor range, or the project is outside the envelope
+in **more than half** of the pre-periods. Isolated noisy years outside the
+envelope are expected and do not fail it.
+
+These thresholds are calibration choices. They have not yet been validated
+against interval coverage; that is #43.
+
 ### Solver
 
 `solve_simplex_least_squares` uses FISTA — projected gradient with Nesterov
