@@ -49,11 +49,20 @@ from groundtruth.engine.causal.did import estimate_did
 from groundtruth.engine.causal.synthetic_control import fit_synthetic_control
 from groundtruth.engine.matching.donors import MatchingConfig, match_donors
 from groundtruth.engine.observation.alignment import MisalignedSeriesError, align_panel
-from groundtruth.engine.uncertainty.placebo import in_space_placebo
+from groundtruth.engine.uncertainty.placebo import in_space_placebo, in_time_placebo
 from groundtruth.engine.uncertainty.robustness import leave_one_out
 
-ENGINE_VERSION = "0.6.0"
+ENGINE_VERSION = "0.7.0"
 """Version of the analytical engine. Bumped when results could change."""
+
+PRIMARY_ESTIMATOR = "synthetic-control"
+"""The only primary estimator this engine implements."""
+
+CROSS_CHECK_ESTIMATORS = frozenset({"difference-in-differences"})
+"""Cross-check estimators this engine implements."""
+
+IN_TIME_MIN_PRE_PERIODS = 3
+"""Pre-periods the fake split of an in-time placebo needs before its fake date."""
 
 
 def engine_ref(git_sha: str | None = None) -> EngineRef:
@@ -178,6 +187,28 @@ def run_analysis(
             f"{CONTRACT_VERSION}",
             stage="validation",
             remediation="Upgrade the platform or pin an engine build for that contract.",
+        )
+
+    if request.estimation.primary.model_id != PRIMARY_ESTIMATOR:
+        return fail(
+            ErrorCode.NOT_IMPLEMENTED,
+            f"primary estimator {request.estimation.primary.model_id!r} is not implemented; "
+            f"this engine runs {PRIMARY_ESTIMATOR!r} only",
+            stage="validation",
+        )
+
+    # Requested options the engine cannot honour are reported, never dropped.
+    notices: list[str] = []
+    for model in request.estimation.cross_checks:
+        if model.model_id not in CROSS_CHECK_ESTIMATORS:
+            notices.append(
+                f"Cross-check estimator {model.model_id!r} was requested but is not implemented, "
+                "so it was not run."
+            )
+    if request.robustness.specification_curve:
+        notices.append(
+            "A specification curve was requested but is not implemented yet (#28), so this "
+            "run has no specification-curve evidence."
         )
 
     # --- observe -----------------------------------------------------------
@@ -319,10 +350,37 @@ def run_analysis(
                 ridge=request.estimation.ridge,
                 max_pre_rmspe_multiple=request.robustness.max_placebo_pre_rmspe_multiple,
                 min_pre_periods=request.estimation.min_pre_periods,
+                significance_level=1.0 - request.robustness.confidence_level,
             )
             n_fits += len(donor_ids) + 1
         except (EstimationError, InsufficientDataError):
             placebo = None
+
+    in_time = None
+    if request.robustness.in_time_placebo:
+        # Pretend treatment began halfway through the pre-period. The fake
+        # split's own pre-period is necessarily short, so it gets a lower floor
+        # than the real fit; it still needs enough periods to fit at all.
+        fake_index = max(IN_TIME_MIN_PRE_PERIODS, n_pre // 2)
+        if fake_index < n_pre:
+            try:
+                in_time = in_time_placebo(
+                    treated,
+                    donor_matrix,
+                    donor_ids,
+                    n_pre,
+                    fake_index,
+                    true_effect=fit.average_effect,
+                    min_pre_periods=IN_TIME_MIN_PRE_PERIODS,
+                )
+                n_fits += 1
+            except (EstimationError, InsufficientDataError):
+                in_time = None
+        if in_time is None:
+            notices.append(
+                f"An in-time placebo was requested but {n_pre} pre-treatment periods are too few "
+                "to split, so it was not run."
+            )
 
     loo = None
     if request.robustness.leave_one_out:
@@ -363,10 +421,12 @@ def run_analysis(
             panel=panel,
             fit=fit,
             placebo=placebo,
+            in_time_placebo=in_time,
             leave_one_out=loo,
             did=did,
             data_provenance=data_provenance,
             indicator_unit=INDICATOR_UNITS[request.indicator],
+            notices=tuple(notices),
         ),
         # No divergence ratio is passed: comparing a spectral-index effect to a
         # tCO2e claim requires a biomass conversion that does not exist yet.
@@ -407,12 +467,14 @@ def describe_engine() -> dict[str, Any]:
     return {
         "engine_version": ENGINE_VERSION,
         "contract_version": CONTRACT_VERSION,
-        "estimators": ["synthetic-control", "difference-in-differences"],
+        "estimators": [PRIMARY_ESTIMATOR, *sorted(CROSS_CHECK_ESTIMATORS)],
         "indicators": ["ndvi", "evi", "nbr", "tree_cover_fraction", "forest_area_ha"],
         "robustness": ["in-space-placebo", "in-time-placebo", "leave-one-out"],
         "implemented": {
             "synthetic_control": True,
             "placebo_inference": True,
+            "in_space_placebo": True,
+            "in_time_placebo": True,
             "leave_one_out": True,
             "specification_curve": False,
             "biomass_carbon_conversion": False,

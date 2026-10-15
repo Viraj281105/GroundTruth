@@ -139,8 +139,9 @@ The verdict is decided by explicit rules, not by a model and not by a score:
    (RMSPE at most 0.30 of the pre-period outcome SD)
 3. the project inside the donors' convex hull, so the fit is not structurally offset
 4. placebo inference available and the divergence distinguishable from it
-5. leave-one-out sign stability
-6. covariate balance within the conventional guideline
+5. an in-time placebo, when requested, finding no spurious pre-period effect
+6. leave-one-out sign stability
+7. covariate balance within the conventional guideline
 ```
 
 **Any failed gate short-circuits to `INCONCLUSIVE`.** There is no weak-positive

@@ -38,6 +38,19 @@ Three versions are tracked independently:
 
 ### Changed
 
+- **Request fields that were accepted and then ignored are now wired or
+  reported** (#54). `robustness.in_time_placebo` runs the in-time placebo and
+  adds `placebo.in_time_*` evidence plus a gate. `estimation.max_pre_rmse_ratio`
+  sets the SD-scaled fit gate. `robustness.confidence_level` sets the placebo
+  significance level. The old hardcoded `p < 0.10` is gone, so the default is
+  now `p <= 0.05`. A placebo test whose p-value floor `1/(J+1)` is above the
+  level fails its gate with that reason. A primary estimator other than
+  synthetic control is refused with `not_implemented`. An unknown cross-check
+  or a requested specification curve (#28) gets a bundle warning.
+  `describe_engine()` reports in-space and in-time placebos separately. A test
+  enumerates every `EstimationSpec` and `RobustnessSpec` field.
+  `donors.min_pre_observations` still waits for real observation counts (#1).
+  `ENGINE_VERSION` is now 0.7.0.
 - **The project is never a donor in a placebo fit** (#55). Every in-space
   placebo could load weight on the genuinely treated unit, whose post-period
   path carries the real effect, so the reference distribution was not one of

@@ -40,6 +40,8 @@ class PlaceboResult:
     excluded_from_placebo_pools: tuple[str, ...] = ()
     """Units never offered as donors to a placebo fit. Always includes the
     genuinely treated unit, whose post-period path carries the real effect."""
+    significance_level: float = 0.10
+    """One minus the request's ``robustness.confidence_level``."""
 
     @property
     def rank(self) -> int:
@@ -47,9 +49,23 @@ class PlaceboResult:
         return 1 + sum(1 for s in self.placebo_statistics if s > self.observed_statistic)
 
     @property
+    def p_value_floor(self) -> float:
+        """Smallest p-value this many placebos can produce, ``1 / (J + 1)``."""
+        return 1.0 / (self.n_placebos + 1)
+
+    @property
+    def can_reject(self) -> bool:
+        """False if even rank 1 could not reach the significance level.
+
+        With 15 placebos the floor is 0.0625, so a 95% test can never reject.
+        Such a test still runs, but its "not extreme" result says nothing.
+        """
+        return self.p_value_floor <= self.significance_level
+
+    @property
     def is_extreme(self) -> bool:
-        """True if the observed statistic falls in the top decile of placebos."""
-        return self.p_value < 0.10
+        """True if the permutation p-value is at or below the significance level."""
+        return self.p_value <= self.significance_level
 
     def interpretation(self) -> str:
         """A sentence a non-statistician can read without over-claiming."""
@@ -77,6 +93,7 @@ def in_space_placebo(
     max_pre_rmspe_multiple: float | None = 5.0,
     min_pre_periods: int = 5,
     exclude_indices: tuple[int, ...] = (),
+    significance_level: float = 0.10,
 ) -> PlaceboResult:
     """Run in-space placebo inference.
 
@@ -101,6 +118,8 @@ def in_space_placebo(
         exclude_indices: Further columns to keep out of every placebo donor
             pool, in addition to the treated unit; for example, units suspected
             of spillover from the project. They are still placebo units.
+        significance_level: The p-value at or below which the observed
+            statistic counts as extreme; one minus the confidence level.
 
     Returns:
         A :class:`PlaceboResult` with a one-sided permutation p-value.
@@ -175,6 +194,7 @@ def in_space_placebo(
         n_failed=failed,
         excluded_poor_fit=excluded,
         excluded_from_placebo_pools=tuple(unit_ids[i] for i in sorted(never_donors)),
+        significance_level=float(significance_level),
     )
 
 

@@ -128,6 +128,12 @@ so a p-value is never reported as exactly zero. With 40 donors the smallest
 attainable p-value is 0.024, and the system says so rather than implying more
 precision than the design supports.
 
+The observed gap counts as extreme when $p \le \alpha$, where
+$\alpha = 1 - $ `robustness.confidence_level` (0.05 by default). If the floor
+$1/(J+1)$ is above $\alpha$, the test cannot reject whatever the data say. The
+gate then fails with that reason rather than reporting the gap as "within the
+placebo range". The level and the floor are recorded on `placebo.p_value`.
+
 **The project is never a donor in a placebo fit.** Its post-period path contains
 the real effect, and a placebo that put weight on it would carry that effect into
 its own counterfactual. The reference distribution would then not describe
@@ -144,6 +150,12 @@ and, if retained, inflate the reference distribution's tail.
 Move the treatment date earlier inside the pre-period and refit. A detected
 "effect" before anything happened is detecting misspecification, not an
 intervention.
+
+Run when `robustness.in_time_placebo` is set (off by default). The fake date is
+the middle of the pre-period, and never earlier than its third period. The
+check passes when the fake effect is less than half the estimated effect. A
+failure is a verdict gate. Reported as `placebo.in_time_fake_effect` and
+`placebo.in_time_passes`.
 
 ## Difference-in-differences
 
