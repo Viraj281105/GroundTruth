@@ -143,8 +143,9 @@ explicit gate chain, not by a model:
    measured against the pre-period outcome SD
 3. The project inside the donors' convex hull
 4. Placebo inference available and the divergence distinguishable from it
-5. Leave-one-out sign stability
-6. Covariate balance within the conventional guideline
+5. An in-time placebo, when requested, finding no spurious pre-period effect
+6. Leave-one-out sign stability
+7. Covariate balance within the conventional guideline
 
 **Any failed gate short-circuits to `INCONCLUSIVE`.** There is no weak-positive
 path.

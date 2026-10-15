@@ -29,7 +29,7 @@ from groundtruth.engine.causal.synthetic_control import (
 )
 from groundtruth.engine.matching.donors import DonorPool
 from groundtruth.engine.observation.alignment import AlignedPanel
-from groundtruth.engine.uncertainty.placebo import PlaceboResult
+from groundtruth.engine.uncertainty.placebo import InTimePlaceboResult, PlaceboResult
 from groundtruth.engine.uncertainty.robustness import LeaveOneOutResult
 
 DIVERGENCE_THRESHOLD = 0.30
@@ -52,9 +52,12 @@ class AssemblyInputs:
     fit: SyntheticControlFit
     panel: AlignedPanel | None = None
     placebo: PlaceboResult | None = None
+    in_time_placebo: InTimePlaceboResult | None = None
     leave_one_out: LeaveOneOutResult | None = None
     did: DiDResult | None = None
     data_provenance: Provenance | None = None
+    notices: tuple[str, ...] = ()
+    """Requested options the run could not honour, surfaced as bundle warnings."""
 
     @property
     def claim(self) -> object:
@@ -76,12 +79,16 @@ def _is_synthetic_run(inputs: AssemblyInputs) -> bool:
     return inputs.request.is_simulated
 
 
+def _fit_limit(inputs: AssemblyInputs, override: float | None) -> float:
+    return override if override is not None else inputs.request.estimation.max_pre_rmse_ratio
+
+
 def decide_verdict(
     inputs: AssemblyInputs,
     *,
     divergence_ratio: float | None = None,
     min_donors: int = 10,
-    max_relative_pre_fit: float = MAX_RELATIVE_PRE_FIT,
+    max_relative_pre_fit: float | None = None,
 ) -> VerificationVerdict:
     """Apply the screening rules and return a verdict.
 
@@ -97,19 +104,26 @@ def decide_verdict(
        structurally offset.
     4. Placebo inference available and the divergence distinguishable from the
        placebo distribution.
-    5. Leave-one-out sign stability, so the result is not one donor's artefact.
+    5. An in-time placebo, when one was run, finding no spurious effect at a
+       fake treatment date.
+    6. Leave-one-out sign stability, so the result is not one donor's artefact.
+    7. Covariate balance within the conventional guideline.
+
+    ``max_relative_pre_fit`` defaults to the request's
+    ``estimation.max_pre_rmse_ratio``, read as a share of the pre-period SD.
     """
     failures: list[str] = []
+    fit_limit = _fit_limit(inputs, max_relative_pre_fit)
 
     n_donors = len(inputs.donor_pool.admitted)
     if n_donors < min_donors:
         failures.append(f"donor pool has {n_donors} units, below the minimum of {min_donors}")
 
     relative_fit = inputs.fit.relative_pre_fit
-    if relative_fit > max_relative_pre_fit:
+    if relative_fit > fit_limit:
         failures.append(
             f"pre-treatment fit is poor (RMSPE {relative_fit:.2f} of the pre-period outcome SD, "
-            f"limit {max_relative_pre_fit:.2f})"
+            f"limit {fit_limit:.2f})"
         )
 
     hull = inputs.fit.hull
@@ -123,10 +137,26 @@ def decide_verdict(
 
     if inputs.placebo is None:
         failures.append("no placebo distribution was constructed, so significance is unassessed")
+    elif not inputs.placebo.can_reject:
+        failures.append(
+            f"with {inputs.placebo.n_placebos} placebo units the smallest attainable p-value is "
+            f"{inputs.placebo.p_value_floor:.3f}, above the significance level of "
+            f"{inputs.placebo.significance_level:.3f}, so the placebo test cannot distinguish "
+            "the observed gap from what untreated regions produce"
+        )
     elif not inputs.placebo.is_extreme:
         failures.append(
-            f"divergence is within the placebo range (p = {inputs.placebo.p_value:.3f}); the "
-            "observed gap is not distinguishable from what untreated regions produce"
+            f"divergence is within the placebo range (p = {inputs.placebo.p_value:.3f}, "
+            f"significance level {inputs.placebo.significance_level:.3f}); the observed gap is "
+            "not distinguishable from what untreated regions produce"
+        )
+
+    if inputs.in_time_placebo is not None and not inputs.in_time_placebo.passes:
+        failures.append(
+            "the in-time placebo finds a spurious effect of "
+            f"{inputs.in_time_placebo.fake_effect:.4f} at a fake treatment date inside the "
+            "pre-period, at least half the size of the estimated effect, which points to "
+            "misspecification rather than an intervention"
         )
 
     if inputs.leave_one_out is not None and not inputs.leave_one_out.sign_is_stable:
@@ -367,7 +397,7 @@ def assemble_evidence(
         "Pre-treatment RMSPE as a share of the pre-period outcome SD",
         float(inputs.fit.relative_pre_fit),
         provenance=scm_prov,
-        qualifiers={"gate_threshold": MAX_RELATIVE_PRE_FIT},
+        qualifiers={"gate_threshold": _fit_limit(inputs, None)},
     )
     hull = inputs.fit.hull
     if hull is not None:
@@ -475,6 +505,8 @@ def assemble_evidence(
                     "large. Not a probability of misreporting."
                 ),
                 "rank": inputs.placebo.rank,
+                "significance_level": inputs.placebo.significance_level,
+                "p_value_floor": inputs.placebo.p_value_floor,
             },
         )
         builder.add(
@@ -482,6 +514,40 @@ def assemble_evidence(
             "Placebo units in the permutation distribution",
             inputs.placebo.n_placebos,
             provenance=placebo_prov,
+        )
+
+    if inputs.in_time_placebo is not None:
+        in_time = inputs.in_time_placebo
+        fake_period = (
+            inputs.panel.pre_periods[in_time.fake_treatment_index]
+            if inputs.panel is not None
+            else None
+        )
+        in_time_prov = Provenance.computed(
+            source=data_source,
+            method="in-time-placebo/pre-period-refit",
+            stage="uncertainty",
+            parameters={
+                "fake_treatment_index": in_time.fake_treatment_index,
+                "fake_treatment_period": fake_period,
+                "pass_rule": "absolute fake effect below half the absolute estimated effect",
+            },
+            inputs=("effect.point_estimate",),
+            notes="Fitted on pre-treatment periods only, so any effect it finds is spurious.",
+        )
+        builder.add(
+            "placebo.in_time_fake_effect",
+            "Effect the model finds at a fake treatment date inside the pre-period",
+            float(in_time.fake_effect),
+            unit=inputs.indicator_unit,
+            provenance=in_time_prov,
+            qualifiers={"fake_treatment_period": fake_period},
+        )
+        builder.add(
+            "placebo.in_time_passes",
+            "In-time placebo finds no material spurious effect",
+            bool(in_time.passes),
+            provenance=in_time_prov,
         )
 
     if inputs.leave_one_out is not None:
@@ -540,6 +606,9 @@ def assemble_evidence(
             f"{len(inputs.donor_pool.excluded)} candidate regions were excluded from the donor "
             "pool; see the donor-pool table for per-unit reasons."
         )
+
+    for notice in inputs.notices:
+        builder.warn(notice)
 
     verdict = decide_verdict(inputs, divergence_ratio=divergence_ratio, min_donors=min_donors)
     return builder.build(verdict)
