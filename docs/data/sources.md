@@ -51,6 +51,25 @@ overstates land-use change in managed landscapes.
 | Protected status | WDPA | `WCMC/WDPA/current/polygons` | **Exclusion criterion**, not a covariate |
 | Land cover | ESA WorldCover | `ESA/WorldCover/v200` | Ecosystem stratification |
 
+### Matching scale
+
+Each covariate is compared on the scale set in
+`engine/features/transforms.py` (`COVARIATE_TRANSFORMS`). The same transform is
+applied to the project and to every candidate, and the transform is recorded
+for provenance. A covariate a case requests without a registered scale fails
+`tests/test_features.py`.
+
+| Covariate key | Scale | Rationale |
+| --- | --- | --- |
+| `rainfall_mm` | raw | Roughly symmetric across the dry-forest range, and greenness responds to it close to linearly there |
+| `elevation_m` | raw | No heavy tail at the scale of a donor search region; a metre means the same anywhere in it |
+| `slope_deg` | raw | Bounded and already on the scale clearing decisions respond to |
+| `road_distance_km` | `log1p` | Strongly right-skewed. Access pressure falls off steeply: 1 km versus 5 km matters far more than 51 versus 55. `log1p` keeps a unit on a road finite |
+| `population_density` | `log1p` | Heavy right tail from towns. On a raw scale a single town would dominate the distance; zero density stays finite |
+
+Not yet applied in a run: matching on these scales lands with the donor-pool
+methodology (#3), which also has to keep raw values in the donor table.
+
 Protected areas are excluded from the donor pool rather than matched on. A
 protected area is itself a conservation intervention, so using one as a control
 estimates the project's effect *relative to another intervention*, which is not
