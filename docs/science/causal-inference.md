@@ -128,6 +128,13 @@ so a p-value is never reported as exactly zero. With 40 donors the smallest
 attainable p-value is 0.024, and the system says so rather than implying more
 precision than the design supports.
 
+**The project is never a donor in a placebo fit.** Its post-period path contains
+the real effect, and a placebo that put weight on it would carry that effect into
+its own counterfactual. The reference distribution would then not describe
+untreated outcomes. Each placebo pool therefore has $J - 1$ donors. The
+contamination this removes was not uniformly conservative, so its size was
+measured rather than assumed (see `tests/test_placebo_pools.py`).
+
 Placebo units whose own pre-period fit is much worse than the treated unit's are
 excluded. Units the model cannot fit before treatment produce meaningless ratios
 and, if retained, inflate the reference distribution's tail.

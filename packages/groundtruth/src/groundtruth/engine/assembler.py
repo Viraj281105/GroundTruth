@@ -455,8 +455,14 @@ def assemble_evidence(
             parameters={
                 "n_placebos": inputs.placebo.n_placebos,
                 "statistic": inputs.placebo.statistic_name,
+                "excluded_from_placebo_pools": list(inputs.placebo.excluded_from_placebo_pools),
+                "excluded_poor_fit": inputs.placebo.excluded_poor_fit,
             },
             inputs=("fit.rmspe_ratio",),
+            notes=(
+                "The project is never a donor in a placebo fit, so no placebo counterfactual "
+                "inherits the project's post-treatment path."
+            ),
         )
         builder.add(
             "placebo.p_value",

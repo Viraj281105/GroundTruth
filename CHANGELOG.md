@@ -38,6 +38,15 @@ Three versions are tracked independently:
 
 ### Changed
 
+- **The project is never a donor in a placebo fit** (#55). Every in-space
+  placebo could load weight on the genuinely treated unit, whose post-period
+  path carries the real effect, so the reference distribution was not one of
+  untreated outcomes. On the seeded test panel, a large effect inflated the
+  largest placebo ratio from 2.44 to 11.56. The shift in p-value is not
+  uniformly conservative: under the null it moved from 14/24 to 13/24, and
+  with a small effect from 9/24 to 10/24. `in_space_placebo` gains
+  `exclude_indices` for further units to bar from placebo pools. The exclusion
+  is recorded in the `placebo.*` provenance. `ENGINE_VERSION` is now 0.6.0.
 - **The fit gate is scaled by the pre-period outcome SD, and a convex-hull
   gate is added** (#56). The old gate divided pre-RMSPE by the outcome *mean*,
   which for NDVI around 0.6 let an RMSPE of 0.18 pass, so it would essentially
