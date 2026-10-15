@@ -24,6 +24,7 @@ from groundtruth.contracts.types import (
 from groundtruth.engine.causal.did import DiDResult
 from groundtruth.engine.causal.synthetic_control import SyntheticControlFit
 from groundtruth.engine.matching.donors import DonorPool
+from groundtruth.engine.observation.alignment import AlignedPanel
 from groundtruth.engine.uncertainty.placebo import PlaceboResult
 from groundtruth.engine.uncertainty.robustness import LeaveOneOutResult
 
@@ -39,6 +40,7 @@ class AssemblyInputs:
     indicator_unit: str
     donor_pool: DonorPool
     fit: SyntheticControlFit
+    panel: AlignedPanel | None = None
     placebo: PlaceboResult | None = None
     leave_one_out: LeaveOneOutResult | None = None
     did: DiDResult | None = None
@@ -231,6 +233,53 @@ def assemble_evidence(
             ),
             qualifiers={"developer_reported": True, "under_test": True},
         )
+
+    if inputs.panel is not None:
+        panel = inputs.panel
+        alignment_prov = Provenance.computed(
+            source=data_source,
+            method="window-alignment/period-labels",
+            stage="alignment",
+            parameters={
+                "pre_periods": [panel.pre_periods[0], panel.pre_periods[-1]],
+                "post_periods": [panel.post_periods[0], panel.post_periods[-1]],
+                "n_units": len(panel.donor_ids) + 1,
+            },
+            notes=(
+                "Every included series was checked to carry a finite value for every window "
+                "period. The pre/post split is taken from period labels, not array positions."
+            ),
+        )
+        builder.add(
+            "fit.n_pre_periods",
+            "Pre-treatment periods observed for the project and every donor",
+            len(panel.pre_periods),
+            provenance=alignment_prov,
+            qualifiers={"first_period": panel.pre_periods[0], "last_period": panel.pre_periods[-1]},
+        )
+        builder.add(
+            "fit.n_post_periods",
+            "Post-treatment periods observed for the project and every donor",
+            len(panel.post_periods),
+            provenance=alignment_prov,
+            qualifiers={
+                "first_period": panel.post_periods[0],
+                "last_period": panel.post_periods[-1],
+            },
+        )
+        builder.add(
+            "fit.treatment_boundary_period",
+            "First period treated as post-treatment by the estimators",
+            panel.post_periods[0],
+            provenance=alignment_prov,
+            qualifiers={"dropped_periods": list(panel.dropped_periods)},
+        )
+        if panel.dropped_periods:
+            builder.warn(
+                f"Periods {list(panel.dropped_periods)} were returned by the data provider but "
+                "fall outside the analysis window's pre- and post-treatment ranges, so no "
+                "estimator used them."
+            )
 
     builder.add(
         "matching.n_candidates",

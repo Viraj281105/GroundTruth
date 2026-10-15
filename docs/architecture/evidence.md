@@ -58,7 +58,7 @@ verifier can check a narrated figure against it.
 | `claim.*` | Developer-reported figures under test |
 | `matching.*` | Donor counts, exclusions, covariate balance |
 | `effect.*` | Point estimate, cumulative effect |
-| `fit.*` | RMSPE, ratio, convergence, donor weights, weight identification |
+| `fit.*` | RMSPE, ratio, convergence, donor weights, weight identification, the pre/post periods fitted and the treatment-boundary period |
 | `placebo.*` | Permutation p-value, placebo unit count |
 | `robustness.*` | Leave-one-out shift, sign stability |
 | `crosscheck.*` | DiD estimate and pre-trend divergence |

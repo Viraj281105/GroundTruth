@@ -48,10 +48,11 @@ from groundtruth.engine.assembler import AssemblyInputs, assemble_evidence
 from groundtruth.engine.causal.did import estimate_did
 from groundtruth.engine.causal.synthetic_control import fit_synthetic_control
 from groundtruth.engine.matching.donors import MatchingConfig, match_donors
+from groundtruth.engine.observation.alignment import MisalignedSeriesError, align_panel
 from groundtruth.engine.uncertainty.placebo import in_space_placebo
 from groundtruth.engine.uncertainty.robustness import leave_one_out
 
-ENGINE_VERSION = "0.3.0"
+ENGINE_VERSION = "0.4.0"
 """Version of the analytical engine. Bumped when results could change."""
 
 
@@ -258,10 +259,30 @@ def run_analysis(
     donor_ids = pool.unit_ids
     metrics = metrics.model_copy(update={"n_donors_admitted": len(donor_ids)})
 
+    # --- align -------------------------------------------------------------
+    # The estimators index by position, so the treatment boundary must come
+    # from period labels and every series must cover the window. A misaligned
+    # series is a data outcome, refused here, never fitted.
+    try:
+        panel = align_panel(request.window, project_series, donor_series, donor_ids)
+    except MisalignedSeriesError as exc:
+        return fail(
+            ErrorCode.INSUFFICIENT_DATA,
+            str(exc),
+            stage="alignment",
+            detail=exc.as_detail(),
+            remediation=(
+                "Obtain observations for the missing periods or narrow the analysis window. "
+                "Do not interpolate a missing period to force a result."
+            ),
+        )
+
+    watch.lap("alignment")
+    treated = panel.treated
+    donor_matrix = panel.donors
+    n_pre = panel.n_pre
+
     # --- estimate ----------------------------------------------------------
-    treated = project_series.as_array()
-    donor_matrix = np.column_stack([donor_series[uid].as_array() for uid in donor_ids])
-    n_pre = request.window.n_pre_periods
 
     try:
         fit = fit_synthetic_control(
@@ -339,6 +360,7 @@ def run_analysis(
         AssemblyInputs(
             request=request,
             donor_pool=pool,
+            panel=panel,
             fit=fit,
             placebo=placebo,
             leave_one_out=loo,

@@ -155,7 +155,7 @@ audited, and an un-auditable number is not admissible in a verification report.
 Provenance(
     source:       str,          # "COPERNICUS/S2_SR_HARMONIZED"
     method:       str,          # "annual-median-composite/ndvi"
-    stage:        str,          # ingestion|geospatial|matching|causal|uncertainty|external
+    stage:        str,          # ingestion|geospatial|alignment|matching|causal|uncertainty|external
     source_uri:   str | None,
     retrieved_at: datetime | None,
     code_version: str | None,
@@ -212,6 +212,15 @@ teach users to dismiss the most valuable thing the system does.
 
 A test asserts every `ErrorCode` has an HTTP mapping, so a new code cannot
 silently become a 500.
+
+**Misaligned series.** Before any estimator runs, the engine checks that the
+project and every admitted donor carry a finite value for every period in the
+window's pre and post ranges. If any do not, the run is refused with
+`insufficient_data` at stage `alignment`, and `detail.units` lists each
+offending `unit_id` with its `missing_periods` and `non_finite_periods`. The
+pre/post split is taken from period labels, so periods outside the window, or in
+a gap between `pre_end` and `post_start`, are dropped rather than counted as
+post-treatment.
 
 ---
 
