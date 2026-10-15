@@ -139,10 +139,12 @@ Outputs become an immutable `EvidenceBundle`. The verdict is decided by an
 explicit gate chain, not by a model:
 
 1. Enough admitted donors
-2. Pre-treatment fit good enough that the post-period gap means something
-3. Placebo inference available and the divergence distinguishable from it
-4. Leave-one-out sign stability
-5. Covariate balance within the conventional guideline
+2. Pre-treatment fit good enough that the post-period gap means something,
+   measured against the pre-period outcome SD
+3. The project inside the donors' convex hull
+4. Placebo inference available and the divergence distinguishable from it
+5. Leave-one-out sign stability
+6. Covariate balance within the conventional guideline
 
 **Any failed gate short-circuits to `INCONCLUSIVE`.** There is no weak-positive
 path.

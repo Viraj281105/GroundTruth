@@ -1,4 +1,4 @@
-"""Synthetic control estimation (Abadie, Diamond & Hainmueller, 2010).
+"""Synthetic control estimation, in the family of Abadie, Diamond & Hainmueller (2010).
 
 The estimator builds a weighted combination of untreated donor units that tracks
 the treated unit through the pre-treatment period, then reads the post-treatment
@@ -9,6 +9,19 @@ Weights are constrained to the unit simplex (non-negative, summing to one). That
 constraint is what makes the method defensible: it forbids extrapolation outside
 the convex hull of observed donors, so the counterfactual is always a real,
 attainable combination of places that actually exist.
+
+**This is not the full ADH (2010) estimator.** It differs in three ways, each
+deliberate and each documented in ``docs/science/causal-inference.md``:
+
+- **No V-matrix.** ADH choose predictor weights ``V`` by a nested optimisation.
+  Here the weights are fitted to the pre-treatment outcome path alone, with
+  every pre-period weighted equally.
+- **No covariate-informed weighting.** Covariates decide *which* donors are
+  admitted (``engine.matching``); they do not enter the weight objective.
+- **No intercept and no demeaning.** The fit is in levels. If the treated unit
+  sits outside the donors' convex hull, the fit carries a constant offset into
+  the post-period. ``HullDiagnostic`` detects that condition rather than
+  correcting it; Doudchenko-Imbens demeaning would be the correction.
 
 The solver is FISTA (accelerated projected gradient) implemented on numpy alone,
 deliberately avoiding a SciPy or CVXPY dependency in the core package.
@@ -21,6 +34,90 @@ from dataclasses import dataclass
 import numpy as np
 
 from groundtruth.contracts.errors import EstimationError, InsufficientDataError
+
+HULL_LEVEL_EXCESS_SD = 0.10
+"""Material hull exclusion: the treated pre-period mean lies further than this
+many pre-period SDs outside the range of donor pre-period means."""
+
+HULL_ENVELOPE_SHARE = 0.50
+"""Material hull exclusion: the treated unit lies outside the per-period donor
+envelope in more than this share of pre-treatment periods."""
+
+
+@dataclass(frozen=True)
+class HullDiagnostic:
+    """Whether the treated pre-period path can be spanned by the donors.
+
+    Exact containment in the convex hull of the donor paths is equivalent to a
+    zero pre-period RMSPE, which noisy data never achieves, so it is not a
+    useful test. Two *necessary* conditions are checked instead. When either
+    fails, every simplex weighting carries a structural offset:
+
+    - **Level.** Any convex combination's pre-period mean lies within the range
+      of donor pre-period means. If the treated mean is outside that range, no
+      weighting can match its level, and the post-period gap inherits at least
+      ``level_excess`` as a constant bias.
+    - **Envelope.** In each period, any convex combination lies between the
+      lowest and highest donor. Periods where the treated unit is outside that
+      envelope cannot be fitted.
+
+    Attributes:
+        level_excess: Distance of the treated pre-period mean outside the range
+            of donor pre-period means, in outcome units; ``0.0`` if inside.
+        level_excess_sd: ``level_excess`` in units of the treated pre-period SD.
+        share_periods_outside_envelope: Share of pre-periods where the treated
+            unit lies outside the per-period donor min/max envelope.
+        max_envelope_excess: Largest per-period distance outside the envelope,
+            in outcome units.
+    """
+
+    level_excess: float
+    level_excess_sd: float
+    share_periods_outside_envelope: float
+    max_envelope_excess: float
+
+    @property
+    def materially_outside(self) -> bool:
+        """True if the hull exclusion is large enough to bias the estimate."""
+        return (
+            self.level_excess_sd > HULL_LEVEL_EXCESS_SD
+            or self.share_periods_outside_envelope > HULL_ENVELOPE_SHARE
+        )
+
+
+def _outcome_sd(values: np.ndarray) -> float:
+    return float(np.std(values, ddof=1)) if values.size > 1 else 0.0
+
+
+def convex_hull_diagnostic(treated_pre: np.ndarray, donors_pre: np.ndarray) -> HullDiagnostic:
+    """Check the treated pre-period path against the donors' convex hull.
+
+    Args:
+        treated_pre: ``(n_pre,)`` treated outcomes before treatment.
+        donors_pre: ``(n_pre, n_donors)`` donor outcomes before treatment.
+    """
+    treated_mean = float(treated_pre.mean())
+    donor_means = donors_pre.mean(axis=0)
+    level_excess = max(
+        float(donor_means.min()) - treated_mean, treated_mean - float(donor_means.max()), 0.0
+    )
+
+    below = donors_pre.min(axis=1) - treated_pre
+    above = treated_pre - donors_pre.max(axis=1)
+    per_period = np.maximum(np.maximum(below, above), 0.0)
+
+    sd = _outcome_sd(treated_pre)
+    if sd > 1e-12:
+        level_excess_sd = level_excess / sd
+    else:
+        level_excess_sd = float("inf") if level_excess > 1e-12 else 0.0
+
+    return HullDiagnostic(
+        level_excess=level_excess,
+        level_excess_sd=float(level_excess_sd),
+        share_periods_outside_envelope=float(np.mean(per_period > 0.0)),
+        max_envelope_excess=float(per_period.max()),
+    )
 
 
 @dataclass(frozen=True)
@@ -38,6 +135,27 @@ class SyntheticControlFit:
     n_iterations: int
     converged: bool
     n_pre_periods: int = 0
+    hull: HullDiagnostic | None = None
+
+    @property
+    def pre_outcome_sd(self) -> float:
+        """Sample SD of the treated unit's pre-treatment outcome."""
+        return _outcome_sd(self.treated_pre)
+
+    @property
+    def relative_pre_fit(self) -> float:
+        """Pre-period RMSPE as a share of the pre-period outcome SD.
+
+        Scaling by the SD rather than the mean is what makes the fit gate bite on
+        a spectral index: NDVI around 0.6 with year-to-year variation of 0.03
+        would pass a mean-scaled 30% gate with an RMSPE of 0.18, six times the
+        variation the fit is supposed to explain. ``1 - relative_pre_fit**2`` is
+        roughly the pre-period R-squared of the synthetic path.
+        """
+        sd = self.pre_outcome_sd
+        if sd < 1e-12:
+            return float("inf") if self.pre_rmspe > 1e-12 else 0.0
+        return float(self.pre_rmspe / sd)
 
     @property
     def weights_are_identified(self) -> bool:
@@ -265,4 +383,5 @@ def fit_synthetic_control(
         n_iterations=iterations,
         converged=converged,
         n_pre_periods=n_pre_periods,
+        hull=convex_hull_diagnostic(treated_pre, donors_pre),
     )

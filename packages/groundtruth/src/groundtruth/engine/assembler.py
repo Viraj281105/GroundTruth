@@ -22,7 +22,11 @@ from groundtruth.contracts.types import (
     VerificationVerdict,
 )
 from groundtruth.engine.causal.did import DiDResult
-from groundtruth.engine.causal.synthetic_control import SyntheticControlFit
+from groundtruth.engine.causal.synthetic_control import (
+    HULL_ENVELOPE_SHARE,
+    HULL_LEVEL_EXCESS_SD,
+    SyntheticControlFit,
+)
 from groundtruth.engine.matching.donors import DonorPool
 from groundtruth.engine.observation.alignment import AlignedPanel
 from groundtruth.engine.uncertainty.placebo import PlaceboResult
@@ -30,6 +34,12 @@ from groundtruth.engine.uncertainty.robustness import LeaveOneOutResult
 
 DIVERGENCE_THRESHOLD = 0.30
 """Relative divergence beyond which a claim is flagged for accredited review."""
+
+MAX_RELATIVE_PRE_FIT = 0.30
+"""Largest pre-period RMSPE, as a share of the pre-period outcome SD, that still
+licenses reading the post-period gap as an effect. 0.30 means the synthetic path
+explains roughly 90% of the pre-period variance. It matches the default of
+``EstimationSpec.max_pre_rmse_ratio`` and the platform's documented intent for it."""
 
 
 @dataclass(frozen=True)
@@ -71,7 +81,7 @@ def decide_verdict(
     *,
     divergence_ratio: float | None = None,
     min_donors: int = 10,
-    max_pre_rmspe_ratio: float = 0.30,
+    max_relative_pre_fit: float = MAX_RELATIVE_PRE_FIT,
 ) -> VerificationVerdict:
     """Apply the screening rules and return a verdict.
 
@@ -81,10 +91,13 @@ def decide_verdict(
     Gates, in order:
 
     1. Enough admitted donors to support a counterfactual.
-    2. Pre-treatment fit good enough that the post-period gap means something.
-    3. Placebo inference available and the divergence distinguishable from the
+    2. Pre-treatment fit good enough that the post-period gap means something,
+       measured against the pre-period outcome SD, not its level.
+    3. The treated unit inside the donors' convex hull, so the fit is not
+       structurally offset.
+    4. Placebo inference available and the divergence distinguishable from the
        placebo distribution.
-    4. Leave-one-out sign stability, so the result is not one donor's artefact.
+    5. Leave-one-out sign stability, so the result is not one donor's artefact.
     """
     failures: list[str] = []
 
@@ -92,12 +105,20 @@ def decide_verdict(
     if n_donors < min_donors:
         failures.append(f"donor pool has {n_donors} units, below the minimum of {min_donors}")
 
-    outcome_scale = float(abs(inputs.fit.treated_pre.mean())) or 1.0
-    relative_fit = inputs.fit.pre_rmspe / outcome_scale
-    if relative_fit > max_pre_rmspe_ratio:
+    relative_fit = inputs.fit.relative_pre_fit
+    if relative_fit > max_relative_pre_fit:
         failures.append(
-            f"pre-treatment fit is poor (RMSPE {relative_fit:.1%} of the outcome level, "
-            f"limit {max_pre_rmspe_ratio:.0%})"
+            f"pre-treatment fit is poor (RMSPE {relative_fit:.2f} of the pre-period outcome SD, "
+            f"limit {max_relative_pre_fit:.2f})"
+        )
+
+    hull = inputs.fit.hull
+    if hull is not None and hull.materially_outside:
+        failures.append(
+            "the project lies outside the convex hull of its donors (pre-period level "
+            f"{hull.level_excess_sd:.2f} SD outside the donor range; outside the donor envelope "
+            f"in {hull.share_periods_outside_envelope:.0%} of pre-periods), so no donor "
+            "weighting can fit it without a structural offset"
         )
 
     if inputs.placebo is None:
@@ -341,6 +362,58 @@ def assemble_evidence(
         float(inputs.fit.rmspe_ratio),
         provenance=scm_prov,
     )
+    builder.add(
+        "fit.relative_pre_rmspe",
+        "Pre-treatment RMSPE as a share of the pre-period outcome SD",
+        float(inputs.fit.relative_pre_fit),
+        provenance=scm_prov,
+        qualifiers={"gate_threshold": MAX_RELATIVE_PRE_FIT},
+    )
+    hull = inputs.fit.hull
+    if hull is not None:
+        hull_prov = Provenance.computed(
+            source=data_source,
+            method="convex-hull-necessary-conditions/level-and-envelope",
+            stage="causal",
+            parameters={
+                "level_excess_sd_threshold": HULL_LEVEL_EXCESS_SD,
+                "envelope_share_threshold": HULL_ENVELOPE_SHARE,
+            },
+            notes=(
+                "Necessary conditions for the project to be spanned by its donors. A failure "
+                "means every simplex weighting carries a structural offset into the "
+                "post-treatment gap."
+            ),
+        )
+        builder.add(
+            "fit.inside_donor_hull",
+            "Project's pre-treatment path is within the donors' convex hull",
+            not hull.materially_outside,
+            provenance=hull_prov,
+        )
+        builder.add(
+            "fit.hull_level_excess",
+            "Distance of the project's pre-period mean outside the range of donor means",
+            float(hull.level_excess),
+            unit=inputs.indicator_unit,
+            provenance=hull_prov,
+            qualifiers={"in_pre_period_sd": float(hull.level_excess_sd)},
+        )
+        builder.add(
+            "fit.hull_periods_outside_envelope",
+            "Share of pre-periods where the project is outside every donor's range",
+            float(hull.share_periods_outside_envelope),
+            provenance=hull_prov,
+            qualifiers={"max_excess": float(hull.max_envelope_excess)},
+        )
+        if hull.materially_outside:
+            builder.warn(
+                "The project's pre-treatment path lies outside the convex hull of its donor "
+                "pool, so the synthetic control cannot match its level and any post-treatment "
+                "gap includes a structural offset. The donor pool is inadequate for this "
+                "project as specified."
+            )
+
     builder.add(
         "fit.converged",
         "Weight optimiser reached its convergence tolerance",

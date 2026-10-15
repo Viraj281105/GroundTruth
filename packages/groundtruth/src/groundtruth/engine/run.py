@@ -52,7 +52,7 @@ from groundtruth.engine.observation.alignment import MisalignedSeriesError, alig
 from groundtruth.engine.uncertainty.placebo import in_space_placebo
 from groundtruth.engine.uncertainty.robustness import leave_one_out
 
-ENGINE_VERSION = "0.4.0"
+ENGINE_VERSION = "0.5.0"
 """Version of the analytical engine. Bumped when results could change."""
 
 

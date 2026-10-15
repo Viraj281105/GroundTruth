@@ -206,7 +206,8 @@ means a p-value is never reported as zero: with 40 donors the smallest
 attainable value is 0.024, and the system says so.
 
 **Explicit gate chain.** The verdict is decided by rules, not by a model:
-enough donors → good pre-treatment fit → placebo distinguishability →
+enough donors → good pre-treatment fit → project inside the donors' convex
+hull → placebo distinguishability →
 leave-one-out sign stability → covariate balance. **Any failed gate
 short-circuits to `INCONCLUSIVE`.** There is no weak-positive path.
 

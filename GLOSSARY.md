@@ -152,7 +152,7 @@ a fragile number. A legitimate scientific outcome, styled differently from an
 error.
 
 **Verdict gate chain** — the ordered checks (donor count, pre-treatment fit,
-placebo distinguishability, leave-one-out sign stability, covariate balance).
+convex-hull containment, placebo distinguishability, leave-one-out sign stability, covariate balance).
 Any failure short-circuits to `INCONCLUSIVE`; there is no weak-positive path.
 
 **Grounding** — verification that generated narrative contains only numbers
