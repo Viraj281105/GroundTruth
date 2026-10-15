@@ -35,10 +35,11 @@ from groundtruth.engine.uncertainty.robustness import LeaveOneOutResult
 DIVERGENCE_THRESHOLD = 0.30
 """Relative divergence beyond which a claim is flagged for accredited review."""
 
-MAX_RELATIVE_PRE_FIT = 0.50
+MAX_RELATIVE_PRE_FIT = 0.30
 """Largest pre-period RMSPE, as a share of the pre-period outcome SD, that still
-licenses reading the post-period gap as an effect. 0.5 means the synthetic path
-explains roughly three quarters of the pre-period variance (R-squared about 0.75)."""
+licenses reading the post-period gap as an effect. 0.30 means the synthetic path
+explains roughly 90% of the pre-period variance. It matches the default of
+``EstimationSpec.max_pre_rmse_ratio`` and the platform's documented intent for it."""
 
 
 @dataclass(frozen=True)

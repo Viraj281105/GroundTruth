@@ -136,7 +136,7 @@ The verdict is decided by explicit rules, not by a model and not by a score:
 ```
 1. enough admitted donors
 2. pre-treatment fit good enough that the post gap means something
-   (RMSPE at most 0.5 of the pre-period outcome SD)
+   (RMSPE at most 0.30 of the pre-period outcome SD)
 3. the project inside the donors' convex hull, so the fit is not structurally offset
 4. placebo inference available and the divergence distinguishable from it
 5. leave-one-out sign stability

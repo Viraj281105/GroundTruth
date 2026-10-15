@@ -41,7 +41,7 @@ Three versions are tracked independently:
 - **The fit gate is scaled by the pre-period outcome SD, and a convex-hull
   gate is added** (#56). The old gate divided pre-RMSPE by the outcome *mean*,
   which for NDVI around 0.6 let an RMSPE of 0.18 pass, so it would essentially
-  never fire on a spectral index. It now fails above 0.5 SD
+  never fire on a spectral index. It now fails above 0.30 SD
   (`fit.relative_pre_rmspe`). A new `HullDiagnostic` checks two necessary
   conditions for the project to be spanned by its donors (pre-period level
   within the range of donor means, and per-period donor envelope). A material

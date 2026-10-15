@@ -64,8 +64,9 @@ by the pre-period **standard deviation** of the project's outcome, not its mean.
 A mean-scaled gate does not work on a spectral index: NDVI around 0.6 with
 year-to-year variation of 0.03 would pass a 30% mean-scaled gate with an RMSPE of
 0.18, six times the variation the fit is supposed to explain. The gate fails
-when RMSPE exceeds **0.5 SD**, which means the synthetic path explains roughly
-three quarters of the pre-period variance. Reported as `fit.relative_pre_rmspe`.
+when RMSPE exceeds **0.30 SD**, which means the synthetic path explains roughly
+90% of the pre-period variance. This is the default of
+`EstimationSpec.max_pre_rmse_ratio`. Reported as `fit.relative_pre_rmspe`.
 
 **Convex-hull containment.** Exact containment of the project's pre-period path
 in the hull of donor paths is the same thing as a zero pre-period RMSPE, so it
