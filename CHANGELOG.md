@@ -38,6 +38,18 @@ Three versions are tracked independently:
 
 ### Changed
 
+- **Observed series are aligned to the analysis window before estimation**
+  (#53). `run_analysis` used `window.n_pre_periods` as a raw array index and
+  stacked donor series without checking them, so a series that started late or
+  skipped a year would be fitted against the wrong treatment date, and ragged
+  donors escaped as a bare `ValueError`. The new
+  `engine.observation.alignment.align_panel` derives the pre/post split from
+  period labels and refuses with `insufficient_data` at stage `alignment`,
+  naming every offending unit and its missing or non-finite periods. Coverage
+  is recorded as `fit.n_pre_periods`, `fit.n_post_periods` and
+  `fit.treatment_boundary_period`. `ENGINE_VERSION` is now 0.4.0: a window with
+  a gap between `pre_end` and `post_start` now excludes the gap periods instead
+  of counting them as post-treatment.
 - Repository path discovery now walks up for a marker directory instead of
   counting parents, which broke silently during the package move.
 
