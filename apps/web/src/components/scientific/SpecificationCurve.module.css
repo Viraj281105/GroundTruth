@@ -1,0 +1,226 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 20px;
+  background-color: var(--gt-bg-card);
+  border: 1px solid var(--gt-border-default);
+  border-radius: var(--gt-radius-lg);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.title {
+  font-family: var(--gt-font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gt-text-primary);
+  margin: 0;
+}
+
+.subtitle,
+.summary,
+.note,
+.empty {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gt-text-secondary);
+  margin: 0;
+}
+
+.subtitle,
+.note {
+  color: var(--gt-text-muted);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .facts {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fact {
+  min-width: 0;
+  padding: 10px 12px;
+  background-color: var(--gt-bg-subtle);
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-md);
+}
+
+.fact dt {
+  font-size: 12px;
+  color: var(--gt-text-muted);
+  margin-bottom: 4px;
+}
+
+.fact dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gt-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.factButton,
+.cellButton {
+  font: inherit;
+  font-family: var(--gt-font-mono);
+  font-weight: 600;
+  color: var(--gt-text-primary);
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--gt-border-strong);
+  text-underline-offset: 3px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.factButton:focus-visible,
+.cellButton:focus-visible {
+  outline: 2px solid var(--gt-border-focus);
+  outline-offset: 2px;
+}
+
+.svgWrapper {
+  width: 100%;
+  background-color: var(--gt-bg-subtle);
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-md);
+  padding: 8px 4px 4px;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.gridLine {
+  stroke: var(--gt-border-subtle);
+  stroke-dasharray: 4 4;
+}
+
+.tickY {
+  font-family: var(--gt-font-mono);
+  font-size: 10px;
+  fill: var(--gt-text-subtle);
+  text-anchor: end;
+}
+
+.axisLabel {
+  font-family: var(--gt-font-mono);
+  font-size: 10px;
+  fill: var(--gt-text-muted);
+}
+
+.envelope {
+  fill: var(--gt-series-envelope);
+}
+
+.zeroLine {
+  stroke: var(--gt-text-subtle);
+  stroke-width: 1;
+}
+
+.medianLine {
+  stroke: var(--gt-series-synthetic);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+.medianLabel,
+.centreLabel {
+  font-family: var(--gt-font-mono);
+  font-size: 10px;
+  fill: var(--gt-text-secondary);
+}
+
+.point {
+  fill: var(--gt-series-observed);
+}
+
+.flipPoint {
+  fill: var(--gt-verdict-divergent-text);
+}
+
+.centreRing {
+  fill: none;
+  stroke: var(--gt-text-secondary);
+  stroke-width: 1.5;
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.caption {
+  text-align: left;
+  font-size: 12px;
+  color: var(--gt-text-muted);
+  padding-bottom: 8px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--gt-border-subtle);
+  color: var(--gt-text-secondary);
+  vertical-align: top;
+}
+
+.table thead th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gt-text-muted);
+}
+
+.table tbody th {
+  font-weight: 500;
+  color: var(--gt-text-primary);
+}
+
+/* The specification name already says which choice changed, so the column is
+   dropped on phones rather than making the table scroll. */
+@media (max-width: 640px) {
+  .dimensionCol {
+    display: none;
+  }
+
+  .table th,
+  .table td {
+    padding: 8px 6px;
+  }
+}

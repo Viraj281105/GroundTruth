@@ -24,7 +24,18 @@ describe('Scientific UI Rules Verification', () => {
         'ndvi'
       );
       expect(interval).toContain('[-0.0120, 0.0840 ndvi]');
-      expect(interval).toContain('95% sensitivity-envelope');
+      expect(interval).toContain('sensitivity-envelope');
+      // An envelope is a min-max range; its level has no coverage meaning.
+      expect(interval).not.toContain('95%');
+      expect(interval).toContain('not a confidence interval');
+    });
+
+    it('keeps the confidence level for intervals that have one', () => {
+      const interval = formatConfidenceInterval(
+        { lower: 0.046, upper: 0.058, level: 0.95, kind: 'bootstrap' },
+        'ndvi'
+      );
+      expect(interval).toContain('95% bootstrap');
     });
   });
 

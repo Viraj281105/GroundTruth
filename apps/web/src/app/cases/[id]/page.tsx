@@ -43,6 +43,7 @@ import { ProgressiveCausalPipeline, CausalPipelineStage } from '../../../compone
 import { ProvenanceDrawer } from '../../../components/ui/ProvenanceDrawer';
 import { FitDiagnostics } from '../../../components/scientific/FitDiagnostics';
 import { PlaceboDiagnostics } from '../../../components/scientific/PlaceboDiagnostics';
+import { SpecificationCurve } from '../../../components/scientific/SpecificationCurve';
 import { findEvidence, numberValue, sig } from '../../../lib/evidence';
 import { Evidence } from '../../../lib/types';
 import {
@@ -600,6 +601,10 @@ export default function CaseAnalysisPage() {
                       evidence panel below renders for every response. */}
                   {fixtureViz && <PlaceboDistribution data={fixtureViz.placebos} />}
                   <PlaceboDiagnostics
+                    items={verificationResult.bundle.items}
+                    onSelectEvidence={openProvenance}
+                  />
+                  <SpecificationCurve
                     items={verificationResult.bundle.items}
                     onSelectEvidence={openProvenance}
                   />

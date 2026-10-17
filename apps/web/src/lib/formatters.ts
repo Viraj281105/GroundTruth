@@ -29,8 +29,14 @@ export function formatConfidenceInterval(confidence: Confidence | null, unit?: s
   if (!confidence) return '';
   const lower = confidence.lower.toFixed(4);
   const upper = confidence.upper.toFixed(4);
-  const levelPct = Math.round(confidence.level * 100);
   const unitStr = unit ? ` ${unit}` : '';
+  // A sensitivity envelope is the smallest-to-largest estimate across refits
+  // or specifications. The engine still fills `level` with a default, but it
+  // has no coverage meaning, so printing "95%" would pass it off as one.
+  if (confidence.kind === 'sensitivity-envelope') {
+    return `[${lower}, ${upper}${unitStr}] (sensitivity-envelope: range, not a confidence interval)`;
+  }
+  const levelPct = Math.round(confidence.level * 100);
   return `[${lower}, ${upper}${unitStr}] (${levelPct}% ${confidence.kind})`;
 }
 
