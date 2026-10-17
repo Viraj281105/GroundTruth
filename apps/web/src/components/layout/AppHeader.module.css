@@ -239,5 +239,46 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .mobileNavLink {
+    min-height: 44px;
+  }
+}
+
+/*
+ * Phone: the brand, telemetry pill, SIMULATED badge and hamburger cannot share
+ * one 375px row. headerRight dissolves into the container so the brand and the
+ * hamburger take the first row and the status pill and SIMULATED badge wrap to
+ * a second. The badge stays visible (R7); nothing here hides it.
+ */
+@media (max-width: 640px) {
+  .container {
+    flex-wrap: wrap;
+    padding: 8px 16px;
+    gap: 8px 12px;
+  }
+  .brand {
+    flex: 1 1 calc(100% - 56px);
+    min-width: 0;
+  }
+  .brandText {
+    min-width: 0;
+  }
+  .brandTitleRow,
+  .brandSubRow {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  .headerRight {
+    display: contents;
+  }
+  .hamburgerBtn {
+    order: 1;
+  }
+  .apiStatus,
+  .simulatedBadge {
+    order: 2;
   }
 }

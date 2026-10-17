@@ -12,6 +12,15 @@
   flex-wrap: wrap;
 }
 
+/* Badges are nowrap by default; the engine badge is wider than a phone row. */
+@media (max-width: 640px) {
+  .heroBadgeRow > * {
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.3;
+  }
+}
+
 .heroTitle {
   font-family: var(--gt-font-display);
   font-size: 34px;
