@@ -173,6 +173,9 @@ export interface PlaceboDistributionData {
   pValue: number;
   rank: number;
   totalUnits: number;
+  /** From the `placebo.p_value` qualifiers; absent on bundles that predate them. */
+  significanceLevel?: number;
+  pValueFloor?: number;
 }
 
 export interface VerificationFixtureData {
@@ -203,6 +206,10 @@ export function chartSeriesFrom(fixture: GeneratedCompletedFixture): ChartDataPo
     gap: observed[i] - synthetic[i],
     isPost: year >= treatment_boundary_period,
   }));
+}
+
+function numberOrUndefined(v: unknown): number | undefined {
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
 }
 
 function evidenceById(fixture: GeneratedCompletedFixture, id: string): Evidence {
@@ -241,6 +248,8 @@ export function placeboDistributionFrom(
     rank: Number(pValue.qualifiers.rank),
     // The project plus every placebo unit in the permutation distribution.
     totalUnits: Number(nUnits.value) + 1,
+    significanceLevel: numberOrUndefined(pValue.qualifiers.significance_level),
+    pValueFloor: numberOrUndefined(pValue.qualifiers.p_value_floor),
   };
 }
 

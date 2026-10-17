@@ -3,7 +3,7 @@
 import React from 'react';
 import { PlaceboDistributionData } from '../../lib/fixtures/simulated-data';
 import { Badge } from '../ui/Badge';
-import { formatPValue } from '../../lib/formatters';
+import { sig } from '../../lib/evidence';
 import { Info } from 'lucide-react';
 import styles from './PlaceboDistribution.module.css';
 
@@ -16,7 +16,23 @@ export const PlaceboDistribution: React.FC<PlaceboDistributionProps> = ({
   data,
   className = '',
 }) => {
-  const { bins, projectStatistic, pValue, rank, totalUnits } = data;
+  const { bins, projectStatistic, pValue, rank, totalUnits, significanceLevel, pValueFloor } = data;
+  // Keep x labels legible at phone width however many bins there are.
+  const tickEvery = Math.max(1, Math.ceil(bins.length / 8));
+  const nPlacebos = bins.reduce((n, b) => n + b.count, 0);
+  const belowAlpha = significanceLevel !== undefined && pValue <= significanceLevel;
+  const pText = `p = ${sig(pValue)}`;
+  const qualifierText = [
+    pValueFloor !== undefined ? `floor ${sig(pValueFloor)}` : null,
+    significanceLevel !== undefined ? `α = ${sig(significanceLevel)}` : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+  const chartDescription =
+    `Histogram of the post/pre RMSPE ratio for ${nPlacebos} untreated placebo regions, ` +
+    `ranging from ${sig(bins[0]?.min ?? 0)} to ${sig(bins[bins.length - 1]?.max ?? 0)}. ` +
+    `The project's ratio is ${sig(projectStatistic)}, rank ${rank} of ${totalUnits} units; ` +
+    `${pText}${qualifierText ? ` (${qualifierText})` : ''}.`;
 
   const maxCount = Math.max(...bins.map((b) => b.count), 1);
   const width = 600;
@@ -45,8 +61,9 @@ export const PlaceboDistribution: React.FC<PlaceboDistributionProps> = ({
       <div className={styles.header}>
         <div className={styles.titleRow}>
           <h4 className={styles.title}>In-Space Placebo Permutation Distribution</h4>
-          <Badge tone={pValue < 0.1 ? 'positive' : 'inconclusive'} size="sm" variant="subtle">
-            {formatPValue(pValue)}
+          <Badge tone={belowAlpha ? 'positive' : 'inconclusive'} size="sm" variant="subtle">
+            {pText}
+            {qualifierText ? ` (${qualifierText})` : ''}
           </Badge>
           <Badge tone="neutral" size="sm" variant="outline">
             RANK: {rank} OF {totalUnits}
@@ -59,7 +76,12 @@ export const PlaceboDistribution: React.FC<PlaceboDistributionProps> = ({
 
       {/* Histogram SVG */}
       <div className={styles.svgWrapper}>
-        <svg viewBox={`0 0 ${width} ${height}`} className={styles.svg}>
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className={styles.svg}
+          role="img"
+          aria-label={chartDescription}
+        >
           {/* Horizontal grid lines */}
           {[0, Math.ceil(maxCount / 2), maxCount].map((cnt) => {
             const y = scaleY(cnt);
@@ -98,16 +120,17 @@ export const PlaceboDistribution: React.FC<PlaceboDistributionProps> = ({
                   height={barH}
                   className={`${styles.bar} ${containsProject ? styles.barWithProject : ''}`}
                 />
-                <text
-                  x={(x1 + x2) / 2}
-                  y={padTop + chartH + 18}
-                  className={styles.tickX}
-                >
-                  {b.min.toFixed(1)}
-                </text>
+                {i % tickEvery === 0 && (
+                  <text x={x1} y={padTop + chartH + 18} className={styles.tickX}>
+                    {sig(b.min)}
+                  </text>
+                )}
               </g>
             );
           })}
+          <text x={padLeft + chartW / 2} y={height - 4} className={styles.tickX}>
+            Post/pre RMSPE ratio (×)
+          </text>
 
           {/* Project Statistic Line */}
           <line
@@ -126,7 +149,7 @@ export const PlaceboDistribution: React.FC<PlaceboDistributionProps> = ({
             className={styles.projectLabel}
             textAnchor="middle"
           >
-            PROJECT ({projectStatistic.toFixed(2)})
+            PROJECT ({sig(projectStatistic)}×)
           </text>
         </svg>
       </div>
@@ -135,12 +158,21 @@ export const PlaceboDistribution: React.FC<PlaceboDistributionProps> = ({
       <div className={styles.interpretationBox}>
         <Info size={16} className={styles.infoIcon} />
         <p className={styles.interpretationText}>
-          <strong>Interpretation:</strong> The project&apos;s post/pre divergence ratio ranks{' '}
-          <strong>{rank} of {totalUnits}</strong> units ({formatPValue(pValue)}).{' '}
-          {pValue < 0.1
-            ? 'The divergence is larger than 90% of untreated placebo regions.'
-            : 'The divergence is within the placebo range and is not statistically distinguishable from untreated regions.'}
-          {' '}<em>This measures how unusual the divergence is relative to untreated comparison regions; it is not a probability of misreporting.</em>
+          <strong>Interpretation:</strong> The project&apos;s post/pre RMSPE ratio ranks{' '}
+          <strong>
+            {rank} of {totalUnits}
+          </strong>{' '}
+          units ({pText}
+          {qualifierText ? `; ${qualifierText}` : ''}).{' '}
+          {pValueFloor !== undefined && Math.abs(pValue - pValueFloor) < 1e-12
+            ? `No placebo region diverges as much; with ${nPlacebos} placebos ${sig(pValueFloor)} is the smallest p-value this test can produce, not a p-value near zero.`
+            : belowAlpha
+              ? 'Few placebo regions diverge as much as the project.'
+              : 'The divergence is within the range seen in placebo regions and is not distinguishable from them by this test.'}{' '}
+          <em>
+            This is the share of untreated comparison regions diverging at least as much; it is not a
+            probability of misreporting.
+          </em>
         </p>
       </div>
     </div>
