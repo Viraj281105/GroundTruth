@@ -18,6 +18,14 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Engine covariate features module** (#18). `engine/features/` provides
+  pure `log1p`, `winsorise` and `standardise` transforms. Each returns the
+  parameters it learned, so they can be recorded. `COVARIATE_TRANSFORMS` sets
+  the matching scale per covariate: raw for rainfall, elevation and slope,
+  `log1p` for road distance and population density, with the rationale in
+  `docs/data/sources.md`. `engineer_covariates` applies the same transform to
+  the project and every candidate. It is not yet applied in a run; that lands
+  with the donor-pool methodology (#3).
 - **Specification curve inside a run** (#28). With
   `robustness.specification_curve` set, the engine sweeps one choice at a time
   around the request's specification: ridge, pre-period length, treatment
