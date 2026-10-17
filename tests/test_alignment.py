@@ -51,7 +51,18 @@ class _TamperedObservations:
 
 
 def _rebuild(series: TimeSeries, periods: list[int], values: list[float]) -> TimeSeries:
-    return series.model_copy(update={"periods": tuple(periods), "values": tuple(values)})
+    """Rewrite a series as a provider would return it, counts kept per period."""
+    counts = None
+    if series.n_valid_observations is not None:
+        by_period = dict(zip(series.periods, series.n_valid_observations, strict=True))
+        counts = tuple(by_period.get(p, 0) for p in periods)
+    return series.model_copy(
+        update={
+            "periods": tuple(periods),
+            "values": tuple(values),
+            "n_valid_observations": counts,
+        }
+    )
 
 
 def _drop(series: TimeSeries, drop: set[int]) -> TimeSeries:
@@ -105,11 +116,13 @@ class TestRunRefusesMisalignedSeries:
         ]
         assert request.project.unit_id in result.error.message
 
-    def test_donors_of_differing_lengths_refuse_rather_than_raise(self):
-        request = _request()
+    @staticmethod
+    def _late_donors(request: AnalysisRequest, *, keep_counts: bool) -> Tamper:
         first_donor: list[str] = []
 
         def tamper(series: TimeSeries, spec: ObservationSpec) -> TimeSeries:
+            if not keep_counts:
+                series = series.model_copy(update={"n_valid_observations": None})
             if spec.unit.unit_id == request.project.unit_id:
                 return series
             if not first_donor:
@@ -118,13 +131,28 @@ class TestRunRefusesMisalignedSeries:
             # Every donor but the first starts two years late.
             return _drop(series, {request.window.pre_start, request.window.pre_start + 1})
 
-        result = _run(request, tamper)
+        return tamper
+
+    def test_donors_of_differing_lengths_refuse_rather_than_raise(self):
+        # Without clear-observation counts, matching cannot see the gap, so the
+        # alignment check is what catches it.
+        request = _request()
+        result = _run(request, self._late_donors(request, keep_counts=False))
         _refusal(result)
         assert result.error is not None
         units = result.error.detail["units"]
         assert units, "every offending donor is named"
         assert all(u["missing_periods"] == [2001, 2002] for u in units)
         assert result.error.detail["n_units_misaligned"] == len(units)
+
+    def test_with_counts_late_donors_are_excluded_at_matching_with_a_reason(self):
+        # With counts, the pre-period coverage rule excludes each late donor
+        # before alignment, and the pool is then too small to proceed.
+        request = _request()
+        result = _run(request, self._late_donors(request, keep_counts=True))
+        assert result.status is EngineStatus.REFUSED
+        assert result.error is not None
+        assert result.error.code is ErrorCode.DONOR_POOL_INADEQUATE
 
     def test_a_non_finite_value_in_the_window_refuses(self):
         request = _request()

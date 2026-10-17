@@ -51,7 +51,7 @@ moves, update this table in the same change.
 | Permutation intervals, specification-curve type | Implemented |
 | Evidence assembly and verdict gate chain | Implemented |
 | Effect recovery validated on synthetic panels | Implemented |
-| **Real Earth-observation reduction** | **Planned — MVP** |
+| **Real Earth-observation reduction** | **Engine methodology specified** (`engine/observation/reduction.py`, published via `describe_engine()`). The Earth Engine client that executes it is **Planned — MVP** (#22) |
 | **Cross-sensor calibration** | **Planned — MVP** |
 | **Covariate engineering from real products** | **Planned — MVP** |
 | **Cloud-starved period handling downstream** | **Planned** |

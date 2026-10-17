@@ -192,10 +192,37 @@ def align_panel(
     )
 
 
+def pre_period_coverage(
+    window: AnalysisWindow, series: Mapping[str, TimeSeries]
+) -> dict[str, int] | None:
+    """Fewest clear scenes behind any pre-treatment period, per unit.
+
+    This is the statistic ``donors.min_pre_observations`` is compared against,
+    on the same scene-count scale as the masking audit: a donor is only as well
+    observed as its worst pre-treatment year. A pre-period the series does not
+    carry counts as zero.
+
+    Returns:
+        Counts keyed by unit id, or ``None`` if any series lacks
+        ``n_valid_observations`` or carries a count list that does not line up
+        with its periods. A partial map would let units without counts pass the
+        rule by default, so it is all or nothing.
+    """
+    pre, _ = analysis_periods(window)
+    coverage: dict[str, int] = {}
+    for uid, s in series.items():
+        if s.n_valid_observations is None or len(s.n_valid_observations) != len(s.periods):
+            return None
+        counts = dict(zip(s.periods, s.n_valid_observations, strict=True))
+        coverage[uid] = min(int(counts.get(p, 0)) for p in pre)
+    return coverage
+
+
 __all__ = [
     "AlignedPanel",
     "MisalignedSeriesError",
     "SeriesDefect",
     "align_panel",
     "analysis_periods",
+    "pre_period_coverage",
 ]
