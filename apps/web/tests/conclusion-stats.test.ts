@@ -95,9 +95,10 @@ describe('formatDidParallelTrends', () => {
         value: 0.039,
         qualifiers: { parallel_trends_plausible: true },
       }),
-      evidence({ id: 'crosscheck.did_pre_trend_divergence', value: 0.0018 }),
+      evidence({ id: 'crosscheck.did_pre_trend_divergence', value: 0.0018, unit: 'ndvi' }),
     ];
-    expect(formatDidParallelTrends(items)).toBe('Plausible (Div: 0.0018)');
+    // Named and with its unit: an abbreviated bare number is not readable.
+    expect(formatDidParallelTrends(items)).toBe('Plausible (pre-trend divergence 0.0018 ndvi)');
   });
 
   it('formats an implausible result without inventing a divergence figure', () => {

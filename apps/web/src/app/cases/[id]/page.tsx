@@ -24,7 +24,6 @@ import {
   formatDidParallelTrends,
   formatUncertaintyEnvelope,
 } from '../../../lib/formatters';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../components/ui/Card';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { MetricDisplay } from '../../../components/ui/MetricDisplay';
@@ -44,6 +43,7 @@ import { ProvenanceDrawer } from '../../../components/ui/ProvenanceDrawer';
 import { FitDiagnostics } from '../../../components/scientific/FitDiagnostics';
 import { PlaceboDiagnostics } from '../../../components/scientific/PlaceboDiagnostics';
 import { SpecificationCurve } from '../../../components/scientific/SpecificationCurve';
+import { DidCrossCheck } from '../../../components/scientific/DidCrossCheck';
 import { findEvidence, numberValue, sig } from '../../../lib/evidence';
 import { Evidence } from '../../../lib/types';
 import {
@@ -608,28 +608,10 @@ export default function CaseAnalysisPage() {
                     items={verificationResult.bundle.items}
                     onSelectEvidence={openProvenance}
                   />
-                  {fixtureViz && (
-                    <div className="gt-grid-2">
-                      <Card variant="subtle">
-                        <CardHeader>
-                          <CardTitle>Difference-in-Differences Cross-Check</CardTitle>
-                          <CardDescription>
-                            Secondary cross-check estimator. Valid only if parallel pre-trends are plausible.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className={styles.diagRow}>
-                            <span className={styles.diagKey}>DiD Estimate:</span>
-                            <span className={styles.diagValMono}>+0.0390 {caseDetail.indicator}</span>
-                          </div>
-                          <div className={styles.diagRow} style={{ marginTop: '8px' }}>
-                            <span className={styles.diagKey}>Parallel Trends Screen:</span>
-                            <Badge tone="positive" size="sm" variant="subtle">PLAUSIBLE (Divergence 0.0018)</Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
+                  <DidCrossCheck
+                    items={verificationResult.bundle.items}
+                    onSelectEvidence={openProvenance}
+                  />
                 </div>
               </TabContent>
 

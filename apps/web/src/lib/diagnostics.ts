@@ -26,6 +26,8 @@ export interface DiagnosticGroup {
   status: string;
   tone: CheckTone;
   rows: DiagnosticRow[];
+  /** Limitations that travel with the values. Always rendered, never collapsed. */
+  caveats?: string[];
 }
 
 export function row(

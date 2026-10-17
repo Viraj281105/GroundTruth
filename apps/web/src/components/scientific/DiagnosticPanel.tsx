@@ -13,6 +13,8 @@ export interface DiagnosticPanelProps {
   title: string;
   description: string;
   groups: DiagnosticGroup[];
+  /** Grid columns on desktop; collapses on narrower screens. */
+  columns?: 1 | 2 | 3;
   /** Opens the provenance drawer for a row's evidence item. */
   onSelectEvidence: (item: Evidence) => void;
   className?: string;
@@ -31,6 +33,7 @@ export const DiagnosticPanel: React.FC<DiagnosticPanelProps> = ({
   title,
   description,
   groups,
+  columns = 3,
   onSelectEvidence,
   className = '',
 }) => {
@@ -43,7 +46,7 @@ export const DiagnosticPanel: React.FC<DiagnosticPanelProps> = ({
         <p className={styles.subtitle}>{description} Select a value to see its provenance.</p>
       </div>
 
-      <div className="gt-grid-3">
+      <div className={columns === 1 ? styles.single : `gt-grid-${columns}`}>
         {groups.map((group) => (
           <article key={group.id} className={styles.group} aria-labelledby={`${id}-${group.id}`}>
             <div className={styles.groupHeader}>
@@ -55,10 +58,17 @@ export const DiagnosticPanel: React.FC<DiagnosticPanelProps> = ({
               </Badge>
             </div>
             <p className={styles.summary}>{group.summary}</p>
+            {group.caveats && group.caveats.length > 0 && (
+              <ul className={styles.caveats} aria-label={`${group.title} caveats`}>
+                {group.caveats.map((c) => (
+                  <li key={c}>{c}</li>
+                ))}
+              </ul>
+            )}
 
             <ul className={styles.rows}>
-              {group.rows.map((r) => (
-                <li key={r.evidenceId}>
+              {group.rows.map((r, idx) => (
+                <li key={`${r.evidenceId}-${idx}`}>
                   {r.item ? (
                     <button
                       type="button"
