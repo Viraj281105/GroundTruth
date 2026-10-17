@@ -65,12 +65,14 @@
 
 .headerText {
   flex: 1;
+  min-width: 0;
 }
 
 .metaRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 6px 10px;
   margin-bottom: 6px;
 }
 
@@ -87,6 +89,7 @@
   color: var(--gt-text-primary);
   line-height: 1.2;
   letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
 }
 
 .tagline {
@@ -342,8 +345,24 @@
 }
 
 @media (max-width: 640px) {
+  .card {
+    padding: 16px;
+  }
   .header {
     flex-direction: column;
+  }
+  .header,
+  .headerText {
+    width: 100%;
+  }
+  /* The verdict badge label is longer than a phone row; let it wrap inside its pill. */
+  .metaRow > :first-child {
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.3;
+  }
+  .title {
+    font-size: 20px;
   }
   .divergenceBox {
     align-items: flex-start;
