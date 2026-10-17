@@ -1,6 +1,6 @@
 import { Evidence } from './types';
+import { DiagnosticGroup, row } from './diagnostics';
 import {
-  CheckTone,
   NOT_MEASURED,
   booleanValue,
   checkTone,
@@ -17,44 +17,6 @@ import {
  * evidence (engine PRs #65-#66 and the alignment stage). Pure, so the copy and
  * the pass/fail reading are tested without rendering.
  */
-
-export interface DiagnosticRow {
-  /** Evidence id the row is read from; opens its provenance. */
-  evidenceId: string;
-  label: string;
-  /** Always carries a unit or an explicit dimension, never a bare number. */
-  display: string;
-  /** Secondary line: threshold, qualifier or scope of the value. */
-  detail?: string;
-  item?: Evidence;
-}
-
-export interface DiagnosticGroup {
-  id: 'fit' | 'hull' | 'coverage';
-  title: string;
-  /** One-sentence plain-language reading of the group. */
-  summary: string;
-  status: string;
-  tone: CheckTone;
-  rows: DiagnosticRow[];
-}
-
-function row(
-  items: Evidence[],
-  evidenceId: string,
-  label: string,
-  display: (item: Evidence) => string,
-  detail?: (item: Evidence) => string | undefined,
-): DiagnosticRow {
-  const item = findEvidence(items, evidenceId);
-  return {
-    evidenceId,
-    label,
-    display: item ? display(item) : NOT_MEASURED,
-    detail: item && detail ? detail(item) : undefined,
-    item,
-  };
-}
 
 function periodRange(item: Evidence): string | undefined {
   const first = item.qualifiers?.first_period;

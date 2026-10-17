@@ -93,7 +93,17 @@ export function formatMeasurement(value: number | null | undefined, unit?: strin
 /** "Permutation Significance", from the `placebo.p_value` evidence item. */
 export function formatPermutationSignificance(items: Evidence[]): string {
   const item = items.find((i) => i.id === 'placebo.p_value');
-  return typeof item?.value === 'number' ? formatPValue(item.value) : 'Not measured';
+  if (typeof item?.value !== 'number') return 'Not measured';
+  // The floor travels with the p-value: with J placebos nothing below
+  // 1/(J+1) is attainable, so a bare p-value overstates the test.
+  const floor = item.qualifiers?.p_value_floor;
+  const alpha = item.qualifiers?.significance_level;
+  const parts = [
+    typeof floor === 'number' ? `floor ${Number(floor.toPrecision(3))}` : null,
+    typeof alpha === 'number' ? `α = ${Number(alpha.toPrecision(3))}` : null,
+  ].filter(Boolean);
+  const base = `p = ${Number(item.value.toPrecision(3))}`;
+  return parts.length > 0 ? `${base} (${parts.join(', ')})` : base;
 }
 
 /**

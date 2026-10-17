@@ -42,6 +42,7 @@ import { NarrativeReport } from '../../../components/scientific/NarrativeReport'
 import { ProgressiveCausalPipeline, CausalPipelineStage } from '../../../components/scientific/ProgressiveCausalPipeline';
 import { ProvenanceDrawer } from '../../../components/ui/ProvenanceDrawer';
 import { FitDiagnostics } from '../../../components/scientific/FitDiagnostics';
+import { PlaceboDiagnostics } from '../../../components/scientific/PlaceboDiagnostics';
 import { findEvidence, numberValue, sig } from '../../../lib/evidence';
 import { Evidence } from '../../../lib/types';
 import {
@@ -572,6 +573,7 @@ export default function CaseAnalysisPage() {
 
               {/* Tab 1: Causal Fit & Counterfactual */}
               <TabContent value="causal">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {fixtureViz && (
                   <CounterfactualChart
                     data={fixtureViz.chartSeries}
@@ -588,35 +590,21 @@ export default function CaseAnalysisPage() {
                   items={verificationResult.bundle.items}
                   onSelectEvidence={openProvenance}
                 />
+                </div>
               </TabContent>
 
               {/* Tab 2: Uncertainty & Placebos */}
               <TabContent value="uncertainty">
-                {fixtureViz && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <PlaceboDistribution data={fixtureViz.placebos} />
-                    
-                    {/* Robustness diagnostics cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {/* The distribution itself is not served by the API yet; the
+                      evidence panel below renders for every response. */}
+                  {fixtureViz && <PlaceboDistribution data={fixtureViz.placebos} />}
+                  <PlaceboDiagnostics
+                    items={verificationResult.bundle.items}
+                    onSelectEvidence={openProvenance}
+                  />
+                  {fixtureViz && (
                     <div className="gt-grid-2">
-                      <Card variant="subtle">
-                        <CardHeader>
-                          <CardTitle>Leave-One-Donor-Out Sensitivity</CardTitle>
-                          <CardDescription>
-                            Refits the model excluding each contributing donor in turn to ensure the estimate does not hinge on a single unit.
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className={styles.diagRow}>
-                            <span className={styles.diagKey}>Sign Stability:</span>
-                            <Badge tone="positive" size="sm" variant="subtle">STABLE ACROSS ALL REFITS</Badge>
-                          </div>
-                          <div className={styles.diagRow} style={{ marginTop: '8px' }}>
-                            <span className={styles.diagKey}>Max Absolute Shift:</span>
-                            <span className={styles.diagValMono}>0.0094 {caseDetail.indicator}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-
                       <Card variant="subtle">
                         <CardHeader>
                           <CardTitle>Difference-in-Differences Cross-Check</CardTitle>
@@ -636,8 +624,8 @@ export default function CaseAnalysisPage() {
                         </CardContent>
                       </Card>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </TabContent>
 
               {/* Tab 3: Donor Pool & Map */}
