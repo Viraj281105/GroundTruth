@@ -125,11 +125,15 @@ export interface VerificationResponse {
   /**
    * Hash of the analysis specification (blake2b hex digest, per
    * `contracts.identifiers.spec_hash`), present on the real API response
-   * (`platform/api/schemas.py::VerificationResponse`). Optional here only
-   * because the frontend's own simulated fixtures predate this field —
-   * never fabricate one when it is absent.
+   * (`platform/api/schemas.py::VerificationResponse`). These identity fields
+   * are optional until the generated client (#17) replaces this file — never
+   * fabricate one when it is absent.
    */
   spec_hash?: string;
+  run_id?: string;
+  engine_version?: string;
+  contract_version?: string;
+  duration_ms?: number;
 }
 
 /** True when the UI must show the persistent simulated-data banner. */

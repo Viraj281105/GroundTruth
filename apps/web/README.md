@@ -50,3 +50,18 @@ curl localhost:8000/openapi.json > frontend/src/lib/openapi.json
 
 `src/lib/types.ts` holds the hand-maintained subset until generation is wired
 up.
+
+## Demo fixtures are engine output
+
+`src/lib/fixtures/generated/*.json` is written by running the real engine on
+the synthetic fixture provider. Do not hand-edit it; regenerate after any
+engine change and commit the result:
+
+```bash
+.venv/Scripts/python apps/web/scripts/generate_fixtures.py
+```
+
+Every file is SIMULATED DATA and carries that marker. Sections under
+`not_served_by_api` (counterfactual path, per-candidate donor table, placebo
+distribution, refusal detail) are engine intermediates the API does not
+return yet. UI code must keep working when they are absent.
