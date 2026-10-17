@@ -196,6 +196,25 @@ When DiD and synthetic control disagree substantially, that disagreement is
 itself reported. It usually means parallel trends fails, and the synthetic
 control is the one to trust.
 
+### Standard error
+
+Neighbouring control regions share weather, markets and policy, so they are not
+independent draws. The DiD standard error is clustered (CR1) on a spatial level
+such as district, ecoregion or country, and a wild cluster bootstrap gives a
+second standard error and a 95% interval labelled `kind="bootstrap"`. Few
+clusters are the common case here and the one where CR1 is least reliable.
+Webb six-point weights are used below 12 clusters and Rademacher weights at 12
+or more. The bootstrap is seeded from the request, so a re-run reproduces it.
+Reported as `crosscheck.did_standard_error`, with the clustering level in its
+provenance because the choice changes the interval.
+
+Two limits are stated with the number. **No cluster labels reach the engine
+yet**: `UnitRef` has nowhere to carry a district or ecoregion until #60. Until
+then each control is its own cluster, flagged `independent_units_assumed`.
+**Control-side uncertainty only**: with a single treated unit, its own noise
+cannot be estimated (Conley & Taber, 2011), so even a correctly clustered
+interval is a lower bound.
+
 ## Identifying assumptions, stated plainly
 
 | Assumption | What it means | How it can fail |

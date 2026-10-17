@@ -53,7 +53,7 @@ from groundtruth.engine.uncertainty.placebo import in_space_placebo, in_time_pla
 from groundtruth.engine.uncertainty.robustness import leave_one_out
 from groundtruth.engine.uncertainty.specification import specification_curve
 
-ENGINE_VERSION = "0.8.0"
+ENGINE_VERSION = "0.9.0"
 """Version of the analytical engine. Bumped when results could change."""
 
 PRIMARY_ESTIMATOR = "synthetic-control"
@@ -407,7 +407,9 @@ def run_analysis(
     did = None
     if any(m.model_id == "difference-in-differences" for m in request.estimation.cross_checks):
         try:
-            did = estimate_did(treated, donor_matrix, n_pre)
+            # No cluster labels reach the engine yet (they need #60), so each
+            # control is its own cluster and the provenance says so.
+            did = estimate_did(treated, donor_matrix, n_pre, seed=request.seed)
             n_fits += 1
         except (EstimationError, InsufficientDataError):
             did = None
