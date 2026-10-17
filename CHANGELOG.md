@@ -18,6 +18,13 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Cluster-robust inference for the DiD cross-check** (#12). The standard
+  error is clustered (CR1). A wild cluster bootstrap, Webb six-point below 12
+  clusters and Rademacher above, gives a seeded `bootstrap` interval.
+  Reported as `crosscheck.did_standard_error`, with the clustering level in
+  provenance. No cluster labels reach the engine until #60, so runs are
+  unclustered for now and flagged `independent_units_assumed`. The interval is
+  control-side only. `ENGINE_VERSION` is now 0.9.0.
 - **Engine covariate features module** (#18). `engine/features/` provides
   pure `log1p`, `winsorise` and `standardise` transforms. Each returns the
   parameters it learned, so they can be recorded. `COVARIATE_TRANSFORMS` sets

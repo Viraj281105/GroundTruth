@@ -665,6 +665,47 @@ def assemble_evidence(
             provenance=did_prov,
             qualifiers={"parallel_trends_plausible": inputs.did.parallel_trends_plausible},
         )
+        inference = inputs.did.inference
+        if inference is not None and inference.cr1_standard_error is not None:
+            independent = inference.cluster_level == "unit"
+            inference_prov = Provenance.computed(
+                source=data_source,
+                method="cluster-robust-cr1/wild-cluster-bootstrap",
+                stage="uncertainty",
+                parameters={
+                    "cluster_level": inference.cluster_level,
+                    "n_clusters": inference.n_clusters,
+                    "bootstrap_weights": inference.bootstrap_weights,
+                    "n_bootstrap": inference.n_bootstrap,
+                    "seed": inputs.request.seed,
+                },
+                inputs=("crosscheck.did_estimate",),
+                notes=(
+                    "Control-side uncertainty only: with one treated unit its own noise cannot "
+                    "be estimated, so this understates the full uncertainty."
+                    + (
+                        " No cluster labels were available, so each control region is treated "
+                        "as an independent draw, which understates it further."
+                        if independent
+                        else ""
+                    )
+                ),
+            )
+            builder.add(
+                "crosscheck.did_standard_error",
+                "Cluster-robust standard error of the difference-in-differences cross-check",
+                float(inference.cr1_standard_error),
+                unit=inputs.indicator_unit,
+                confidence=inference.bootstrap_interval,
+                provenance=inference_prov,
+                qualifiers={
+                    "cluster_level": inference.cluster_level,
+                    "n_clusters": inference.n_clusters,
+                    "independent_units_assumed": independent,
+                    "bootstrap_standard_error": inference.bootstrap_standard_error,
+                    "control_side_only": True,
+                },
+            )
         builder.add(
             "crosscheck.did_pre_trend_divergence",
             "Pre-treatment slope divergence between project and controls",
