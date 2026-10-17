@@ -1,5 +1,5 @@
 import { CaseDetail, CaseSummary, Evidence, VerificationResponse } from '../types';
-import { GeneratedCompletedFixture, KARIBA_COMPLETED } from './generated';
+import { GeneratedCompletedFixture, GeneratedDonorCandidate, KARIBA_COMPLETED } from './generated';
 
 /**
  * SIMULATED FIXTURE DATA
@@ -155,18 +155,6 @@ export interface ChartDataPoint {
   isPost: boolean;
 }
 
-export interface DonorMapUnit {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  status: 'project' | 'admitted' | 'excluded';
-  weight?: number;
-  smd?: number;
-  exclusionReason?: string;
-  distanceKm: number;
-}
-
 export interface PlaceboDistributionData {
   bins: { min: number; max: number; count: number }[];
   projectStatistic: number;
@@ -181,7 +169,8 @@ export interface PlaceboDistributionData {
 export interface VerificationFixtureData {
   verification: VerificationResponse;
   chartSeries: ChartDataPoint[];
-  donors: DonorMapUnit[];
+  /** Per-candidate matching outcomes recorded from the engine run (not served by the API). */
+  donorPool: GeneratedDonorCandidate[];
   placebos: PlaceboDistributionData;
   timeline: {
     year: number;
@@ -259,21 +248,7 @@ export const MOCK_VERIFICATION_RESULTS: Record<string, VerificationFixtureData> 
     verification: KARIBA_COMPLETED.verification,
     chartSeries: chartSeriesFrom(KARIBA_COMPLETED),
     placebos: placeboDistributionFrom(KARIBA_COMPLETED),
-    // Hand-drawn layout for the map view only. The synthetic provider has no
-    // geography, so these coordinates and names illustrate the map component
-    // and are not engine output.
-    donors: [
-      { id: 'project-kariba', name: 'Kariba Project Area', lat: -17.5, lng: 28.2, status: 'project', distanceKm: 0 },
-      { id: 'zw-matabeleland-n-d03', name: 'Matabeleland North D03', lat: -18.2, lng: 27.6, status: 'admitted', weight: 0.342, smd: 0.08, distanceKm: 85 },
-      { id: 'zm-southern-d07', name: 'Zambia Southern D07', lat: -16.8, lng: 27.9, status: 'admitted', weight: 0.281, smd: 0.12, distanceKm: 110 },
-      { id: 'mz-tete-d12', name: 'Mozambique Tete D12', lat: -16.1, lng: 32.4, status: 'admitted', weight: 0.194, smd: 0.18, distanceKm: 420 },
-      { id: 'zw-mashonaland-w-d04', name: 'Mashonaland West D04', lat: -17.1, lng: 29.4, status: 'admitted', weight: 0.112, smd: 0.15, distanceKm: 140 },
-      { id: 'zm-lusaka-d02', name: 'Zambia Lusaka D02', lat: -15.6, lng: 28.6, status: 'admitted', weight: 0.071, smd: 0.14, distanceKm: 190 },
-      { id: 'zw-ex-leakage-01', name: 'Buffer Zone East', lat: -17.3, lng: 28.9, status: 'excluded', distanceKm: 8, exclusionReason: 'Within 10 km leakage belt' },
-      { id: 'zw-ex-wdpa-02', name: 'Matusadona National Park', lat: -16.9, lng: 28.4, status: 'excluded', distanceKm: 35, exclusionReason: 'WDPA Protected Area overlap' },
-      { id: 'zm-ex-cloud-03', name: 'Kafue Flats East', lat: -15.8, lng: 27.2, status: 'excluded', distanceKm: 210, exclusionReason: 'Cloud cover > 25% in > 3 pre-treatment years' },
-      { id: 'mz-ex-caliper-04', name: 'Cahora Bassa Hills', lat: -15.5, lng: 31.8, status: 'excluded', distanceKm: 380, exclusionReason: 'Exceeds common support covariate distance caliper' },
-    ],
+    donorPool: KARIBA_COMPLETED.not_served_by_api.donor_pool,
     timeline: [
       { year: 2001, title: 'Pre-period fit begins', description: 'Baseline monitoring window starts on annual Landsat composites.', type: 'baseline' },
       { year: 2003, title: 'Landsat 7 SLC-off transition', description: 'Scan Line Corrector anomaly; masked in compositing pipeline.', type: 'sensor' },

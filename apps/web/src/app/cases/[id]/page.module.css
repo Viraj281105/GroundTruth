@@ -237,7 +237,7 @@
 
 @media (max-width: 640px) {
   .runnerControls {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -332,7 +332,9 @@
 
 .actionCol {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .stateWrapper {
