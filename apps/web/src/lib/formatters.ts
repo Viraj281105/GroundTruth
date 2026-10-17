@@ -136,8 +136,11 @@ export function formatDidParallelTrends(items: Evidence[]): string {
   const divergenceItem = items.find((i) => i.id === 'crosscheck.did_pre_trend_divergence');
   const plausible = estimateItem?.qualifiers?.parallel_trends_plausible;
   if (typeof plausible !== 'boolean') return 'Not measured';
+  const unit = divergenceItem?.unit ? ` ${divergenceItem.unit}` : '';
   const divergenceText =
-    typeof divergenceItem?.value === 'number' ? ` (Div: ${divergenceItem.value.toFixed(4)})` : '';
+    typeof divergenceItem?.value === 'number'
+      ? ` (pre-trend divergence ${divergenceItem.value.toFixed(4)}${unit})`
+      : '';
   return `${plausible ? 'Plausible' : 'Implausible'}${divergenceText}`;
 }
 

@@ -131,3 +131,25 @@ button.row:focus-visible {
   grid-area: icon;
   color: var(--gt-text-subtle);
 }
+
+.single {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+/* Caveats sit with the values they qualify and are never collapsed. */
+.caveats {
+  margin: 0;
+  padding: 10px 12px 10px 28px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gt-verdict-inconclusive-text);
+  background-color: var(--gt-verdict-inconclusive-bg);
+  border: 1px solid var(--gt-verdict-inconclusive-border);
+  border-radius: var(--gt-radius-md);
+}
+
+.caveats li + li {
+  margin-top: 4px;
+}
