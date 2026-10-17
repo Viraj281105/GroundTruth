@@ -8,6 +8,8 @@ import {
   getCaseDetail,
   verifyCase,
   getVisualizationFixture,
+  getRefusalFixture,
+  RefusalInfo,
   getDonorCandidateSummary,
 } from '../../../lib/api';
 import {
@@ -33,7 +35,9 @@ import { LoadingState, RefusalState, ErrorState, PipelineStageId } from '../../.
 import { SimulatedBanner } from '../../../components/ui/SimulatedBanner';
 import { CounterfactualChart } from '../../../components/scientific/CounterfactualChart';
 import { PlaceboDistribution } from '../../../components/scientific/PlaceboDistribution';
-import { ProjectDonorMap } from '../../../components/scientific/ProjectDonorMap';
+import { DonorPoolPanel } from '../../../components/scientific/DonorPoolPanel';
+import { RefusalDetails } from '../../../components/ui/RefusalDetails';
+import { refusalStageLabel } from '../../../lib/refusal';
 import { DonorCandidatePanel } from '../../../components/scientific/DonorCandidatePanel';
 import { EvidenceExplorer } from '../../../components/scientific/EvidenceExplorer';
 import { ProjectTimeline } from '../../../components/scientific/ProjectTimeline';
@@ -74,7 +78,7 @@ export default function CaseAnalysisPage() {
   const [verificationResult, setVerificationResult] = useState<VerificationResponse | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [runStage, setRunStage] = useState<PipelineStageId>('fitting_counterfactual');
-  const [refusalError, setRefusalError] = useState<{ reason: string; remediation?: string } | null>(null);
+  const [refusalError, setRefusalError] = useState<RefusalInfo | null>(null);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('causal');
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
@@ -187,12 +191,16 @@ export default function CaseAnalysisPage() {
         setIsDemo(true);
       }
     } else if (result.isRefusal) {
-      setRefusalError({
-        reason: result.error || 'Verification was scientifically refused.',
-        remediation: syntheticMode
-          ? 'Check donor pool size and caliper parameters.'
-          : 'Earth Engine reducer chain is planned for MVP. Set synthetic=true to exercise the pipeline.',
-      });
+      // The engine's own remediation, never a generic one: advice for a
+      // donor-pool refusal is wrong for a misaligned panel.
+      setRefusalError(
+        result.refusal ?? {
+          message: result.error || 'Verification was scientifically refused.',
+          remediation: syntheticMode
+            ? null
+            : 'Earth Engine reducer chain is planned for MVP. Set synthetic=true to exercise the pipeline.',
+        },
+      );
     } else {
       setGeneralError(result.error || 'Execution failed.');
     }
@@ -457,6 +465,19 @@ export default function CaseAnalysisPage() {
             >
               {isRunning ? 'Running Engine...' : 'Run Causal Verification'}
             </Button>
+            {isDemo && getRefusalFixture(caseId) && (
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={() => {
+                  setGeneralError(null);
+                  setRefusalError(getRefusalFixture(caseId));
+                }}
+                style={{ width: '100%', minHeight: '44px', whiteSpace: 'normal' }}
+              >
+                Preview a refusal (simulated)
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -471,10 +492,17 @@ export default function CaseAnalysisPage() {
       {refusalError && !isRunning && (
         <div className={styles.stateWrapper}>
           <RefusalState
-            reason={refusalError.reason}
+            title={
+              refusalError.stage
+                ? `Analysis refused at ${refusalStageLabel(refusalError.stage)}`
+                : undefined
+            }
+            reason={refusalError.message}
             remediation={refusalError.remediation}
             onBack={() => setRefusalError(null)}
-          />
+          >
+            <RefusalDetails refusal={refusalError} />
+          </RefusalState>
         </div>
       )}
 
@@ -559,7 +587,7 @@ export default function CaseAnalysisPage() {
                   2. Placebos & Uncertainty
                 </TabTrigger>
                 <TabTrigger value="donors" icon={<Map size={15} />}>
-                  3. Donor Pool & Spatial Map
+                  3. Donor Pool & Matching
                 </TabTrigger>
                 <TabTrigger value="evidence" icon={<Layers size={15} />}>
                   4. Evidence Explorer ({verificationResult.bundle.items.length})
@@ -619,15 +647,13 @@ export default function CaseAnalysisPage() {
               <TabContent value="donors">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <DonorCandidatePanel summary={donorCandidateSummary} />
-                  {/* Map intentionally not built yet for ADR-011 candidate generation;
-                      this remains the pre-existing fixture-driven map view. */}
-                  {fixtureViz && (
-                    <ProjectDonorMap
-                      donors={fixtureViz.donors}
-                      searchRegion={caseDetail.donor_search_region}
-                      worstSMD={0.182}
-                    />
-                  )}
+                  {/* No map: the engine matches in covariate space and no unit
+                      geometry exists yet, so a map would have to invent it. */}
+                  <DonorPoolPanel
+                    items={verificationResult.bundle.items}
+                    candidates={fixtureViz?.donorPool}
+                    onSelectEvidence={openProvenance}
+                  />
                 </div>
               </TabContent>
 

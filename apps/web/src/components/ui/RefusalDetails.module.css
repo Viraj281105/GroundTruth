@@ -1,0 +1,83 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 640px;
+  text-align: left;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.meta dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gt-text-muted);
+}
+
+.meta dd {
+  margin: 2px 0 0;
+  font-family: var(--gt-font-mono);
+  color: var(--gt-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.alignment {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gt-text-secondary);
+  margin: 0;
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.caption {
+  text-align: left;
+  font-size: 12px;
+  color: var(--gt-text-muted);
+  padding-bottom: 6px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--gt-border-subtle);
+  color: var(--gt-text-secondary);
+}
+
+.table thead th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gt-text-muted);
+}
+
+.table tbody th {
+  font-family: var(--gt-font-mono);
+  font-weight: 500;
+  color: var(--gt-text-primary);
+}

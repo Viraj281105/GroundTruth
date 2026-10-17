@@ -12,6 +12,7 @@ import {
   MOCK_VERIFICATION_RESULTS,
   VerificationFixtureData,
 } from './fixtures/simulated-data';
+import { AlignmentRefusalDetail, KARIBA_REFUSED_ALIGNMENT } from './fixtures/generated';
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -95,12 +96,49 @@ export async function getCaseDetail(caseId: string): Promise<DemoResult<CaseDeta
 }
 
 /**
+ * A scientific refusal as the engine stated it. Every field except `message`
+ * is optional because older API builds and the 501 path send less.
+ */
+export interface RefusalInfo {
+  message: string;
+  code?: string;
+  stage?: string;
+  remediation?: string | null;
+  runId?: string;
+  /**
+   * `AnalysisError.detail`. The API's refusal body does not include it yet;
+   * it is read when present so per-unit defects appear as soon as it does.
+   */
+  detail?: AlignmentRefusalDetail | Record<string, unknown>;
+}
+
+function refusalFrom(detail: Record<string, unknown>, fallback: string): RefusalInfo {
+  const str = (k: string) => (typeof detail[k] === 'string' ? (detail[k] as string) : undefined);
+  const inner = detail.detail;
+  return {
+    message: str('message') ?? fallback,
+    code: str('code'),
+    stage: str('stage'),
+    remediation: str('remediation') ?? null,
+    runId: str('run_id'),
+    detail: inner && typeof inner === 'object' ? (inner as Record<string, unknown>) : undefined,
+  };
+}
+
+/**
  * Run verification pipeline.
  */
 export async function verifyCase(
   caseId: string,
   options: VerificationRequest = { synthetic: true, true_effect: 0.06, min_donors: 10, include_report: true }
-): Promise<{ success: boolean; data?: VerificationResponse; error?: string; isRefusal?: boolean; isDemo?: boolean }> {
+): Promise<{
+  success: boolean;
+  data?: VerificationResponse;
+  error?: string;
+  isRefusal?: boolean;
+  refusal?: RefusalInfo;
+  isDemo?: boolean;
+}> {
   try {
     const res = await fetch(`${API_BASE_URL}/cases/${caseId}/verify`, {
       method: 'POST',
@@ -126,10 +164,12 @@ export async function verifyCase(
     }
 
     if (res.status === 422 && typeof detail === 'object' && detail?.is_refusal) {
+      const refusal = refusalFrom(detail, 'Verification was scientifically refused.');
       return {
         success: false,
-        error: detail.message || 'Verification was scientifically refused.',
+        error: refusal.message,
         isRefusal: true,
+        refusal,
       };
     }
 
@@ -153,6 +193,21 @@ export async function verifyCase(
       isRefusal: false,
     };
   }
+}
+
+/**
+ * The engine-generated alignment refusal, for showing the refusal state in a
+ * demo. `null` unless demo mode is explicitly on; never returned in place of
+ * a real response.
+ */
+export function getRefusalFixture(caseId: string): RefusalInfo | null {
+  if (!isDemoMode() || KARIBA_REFUSED_ALIGNMENT._generated.case_id !== caseId) {
+    return null;
+  }
+  return {
+    ...refusalFrom(KARIBA_REFUSED_ALIGNMENT.error_body.detail as unknown as Record<string, unknown>, ''),
+    detail: KARIBA_REFUSED_ALIGNMENT.not_served_by_api.error_detail,
+  };
 }
 
 /**

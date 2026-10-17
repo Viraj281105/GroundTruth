@@ -107,7 +107,10 @@ moves, update this table in the same change.
 | **Placebo distribution plot** | **Planned — MVP** |
 | **Evidence explorer with provenance drill-down** | **Planned — MVP** |
 | **Case browser and project pages** | **Planned — MVP** |
-| **Interactive map** | **Planned — MVP** |
+| **Interactive map** | **Planned — MVP**, blocked on unit geometry: the engine matches in covariate space and no unit has coordinates yet, so the hand-drawn map was removed rather than shown with invented locations |
+| Evidence diagnostics panels (fit gate, convex hull, period coverage, placebo floor and α, in-time placebo, leave-one-out, specification curve, DiD cluster-robust inference) | Implemented; rendered from the bundle, exercised only against the engine-generated simulated fixture |
+| Refusal states with engine code, stage and remediation | Implemented; the per-unit alignment table is fixture-only until the API returns `AnalysisError.detail` |
+| Donor pool, contributing weights and exclusions grouped by rule | Implemented; the per-candidate exclusion list is fixture-only until the API returns the candidate list |
 | Project timeline | Planned — Stage 2 |
 | Report view | Planned — Stage 2 |
 | Analysis comparison views | Planned — Stage 2 |

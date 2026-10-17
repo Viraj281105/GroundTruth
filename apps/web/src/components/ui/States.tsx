@@ -171,6 +171,8 @@ export interface RefusalStateProps {
   reason: string;
   remediation?: string | null;
   onBack?: () => void;
+  /** Structured detail rendered under the reason, e.g. per-unit defects. */
+  children?: React.ReactNode;
 }
 
 export const RefusalState: React.FC<RefusalStateProps> = ({
@@ -178,6 +180,7 @@ export const RefusalState: React.FC<RefusalStateProps> = ({
   reason,
   remediation,
   onBack,
+  children,
 }) => {
   return (
     <div className={styles.refusalContainer}>
@@ -191,6 +194,7 @@ export const RefusalState: React.FC<RefusalStateProps> = ({
       </div>
       <h3 className={styles.refusalTitle}>{title}</h3>
       <p className={styles.refusalReason}>{reason}</p>
+      {children}
 
       {remediation && (
         <div className={styles.remediationBox}>
