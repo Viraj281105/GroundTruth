@@ -77,32 +77,22 @@ export const EvidenceExplorer: React.FC<EvidenceExplorerProps> = ({
     );
   };
 
-  // Group items for DAG stages
+  // Group items for DAG stages. Every stage the engine emits must appear
+  // here; anything unlisted falls into a final group rather than vanishing.
+  const knownStages: { id: string; name: string; description: string }[] = [
+    { id: 'ingestion', name: '1. INGESTION', description: 'Registry baseline & raw satellite assets' },
+    { id: 'matching', name: '2. SPATIAL MATCHING', description: 'Caliper distance & donor exclusions' },
+    { id: 'alignment', name: '3. PERIOD ALIGNMENT', description: 'Window coverage & treatment boundary' },
+    { id: 'causal', name: '4. SYNTHETIC CONTROL', description: 'Convex least squares & effect estimates' },
+    { id: 'uncertainty', name: '5. ROBUSTNESS & PLACEBOS', description: 'Placebos, leave-one-out & specification curve' },
+  ];
+  const knownIds = new Set(knownStages.map((s) => s.id));
+  const otherItems = items.filter((i) => !knownIds.has(i.provenance.stage));
   const dagStages = [
-    {
-      id: 'ingestion',
-      name: '1. INGESTION',
-      description: 'Registry baseline & raw satellite assets',
-      items: items.filter((i) => i.provenance.stage === 'ingestion'),
-    },
-    {
-      id: 'matching',
-      name: '2. SPATIAL MATCHING',
-      description: 'Caliper distance & donor exclusions',
-      items: items.filter((i) => i.provenance.stage === 'matching'),
-    },
-    {
-      id: 'causal',
-      name: '3. SYNTHETIC CONTROL',
-      description: 'Convex least squares & effect estimates',
-      items: items.filter((i) => i.provenance.stage === 'causal'),
-    },
-    {
-      id: 'uncertainty',
-      name: '4. ROBUSTNESS & PLACEBOS',
-      description: 'In-space permutation & leave-one-out',
-      items: items.filter((i) => i.provenance.stage === 'uncertainty'),
-    },
+    ...knownStages.map((s) => ({ ...s, items: items.filter((i) => i.provenance.stage === s.id) })),
+    ...(otherItems.length > 0
+      ? [{ id: 'other', name: '6. OTHER STAGES', description: 'Stages not yet grouped in this view', items: otherItems }]
+      : []),
   ];
 
   return (

@@ -41,6 +41,8 @@ import { ProjectTimeline } from '../../../components/scientific/ProjectTimeline'
 import { NarrativeReport } from '../../../components/scientific/NarrativeReport';
 import { ProgressiveCausalPipeline, CausalPipelineStage } from '../../../components/scientific/ProgressiveCausalPipeline';
 import { ProvenanceDrawer } from '../../../components/ui/ProvenanceDrawer';
+import { FitDiagnostics } from '../../../components/scientific/FitDiagnostics';
+import { findEvidence, numberValue, sig } from '../../../lib/evidence';
 import { Evidence } from '../../../lib/types';
 import {
   ArrowLeft,
@@ -233,6 +235,16 @@ export default function CaseAnalysisPage() {
   // Real evidence lookup for a measured result. Used instead of the
   // hardcoded stage/summary values this page used to show regardless of
   // what (if anything) the bundle actually contained.
+  const openProvenance = (item: Evidence) => {
+    setSelectedEvidence(item);
+    setIsProvenanceDrawerOpen(true);
+  };
+
+  const claimCreditsItem =
+    resultState === 'measured' && verificationResult
+      ? findEvidence(verificationResult.bundle.items, 'claim.credits_tco2e')
+      : undefined;
+
   const effectPointEstimateItem =
     resultState === 'measured' && verificationResult
       ? verificationResult.bundle.items.find((i) => i.id === 'effect.point_estimate')
@@ -490,7 +502,14 @@ export default function CaseAnalysisPage() {
               </span>
             </div>
             <ProgressiveCausalPipeline
-              claimValue={caseDetail.known_reference ? '+0.060 NDVI (Claim)' : undefined}
+              // The developer's own claim, as the registry reports it. Never the
+              // known_reference block (a third-party finding) and never the
+              // effect injected into a synthetic run.
+              claimValue={
+                claimCreditsItem && numberValue(claimCreditsItem) !== undefined
+                  ? `${sig(numberValue(claimCreditsItem) as number, 4)} ${claimCreditsItem.unit} (claimed)`
+                  : undefined
+              }
               // observedValue / counterfactualValue are intentionally omitted:
               // no evidence item in EvidenceBundle currently exposes a single
               // scalar "observed mean" / "counterfactual mean" for this stage,
@@ -556,13 +575,19 @@ export default function CaseAnalysisPage() {
                 {fixtureViz && (
                   <CounterfactualChart
                     data={fixtureViz.chartSeries}
-                    treatmentYear={parseInt(caseDetail.post_period.split('-')[0], 10)}
+                    treatmentYear={
+                      numberValue(findEvidence(verificationResult.bundle.items, 'fit.treatment_boundary_period')) ??
+                      parseInt(caseDetail.post_period.split('-')[0], 10)
+                    }
                     indicator={caseDetail.indicator}
                     indicatorUnit={caseDetail.indicator}
-                    preRMSPE={0.0082}
-                    postRMSPE={0.0338}
+                    evidence={verificationResult.bundle.items}
                   />
                 )}
+                <FitDiagnostics
+                  items={verificationResult.bundle.items}
+                  onSelectEvidence={openProvenance}
+                />
               </TabContent>
 
               {/* Tab 2: Uncertainty & Placebos */}

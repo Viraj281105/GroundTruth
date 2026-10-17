@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ChartDataPoint } from '../../lib/fixtures/simulated-data';
+import { Evidence } from '../../lib/types';
+import { NOT_MEASURED, booleanValue, findEvidence, numberValue, sig } from '../../lib/evidence';
 import { Badge } from '../ui/Badge';
 import { Info, ZoomIn, Calendar, Sliders } from 'lucide-react';
 import styles from './CounterfactualChart.module.css';
@@ -11,8 +13,8 @@ export interface CounterfactualChartProps {
   treatmentYear?: number;
   indicator?: string;
   indicatorUnit?: string;
-  preRMSPE?: number;
-  postRMSPE?: number;
+  /** The run's evidence bundle items; the diagnostics bar reads from these. */
+  evidence?: Evidence[];
   className?: string;
 }
 
@@ -21,10 +23,14 @@ export const CounterfactualChart: React.FC<CounterfactualChartProps> = ({
   treatmentYear = 2011,
   indicator = 'ndvi',
   indicatorUnit = 'ndvi',
-  preRMSPE,
-  postRMSPE,
+  evidence,
   className = '',
 }) => {
+  const preRmspeItem = findEvidence(evidence, 'fit.pre_rmspe');
+  const preRmspe = numberValue(preRmspeItem);
+  const rmspeRatio = numberValue(findEvidence(evidence, 'fit.rmspe_ratio'));
+  const weightsIdentified = booleanValue(findEvidence(evidence, 'fit.weights_identified'));
+  const solverMethod = findEvidence(evidence, 'effect.point_estimate')?.provenance.method;
   const [hoveredPoint, setHoveredPoint] = useState<ChartDataPoint | null>(null);
   const [timeFilter, setTimeFilter] = useState<'all' | 'pre' | 'post'>('all');
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -478,19 +484,27 @@ export const CounterfactualChart: React.FC<CounterfactualChartProps> = ({
       <div className={styles.diagnosticsBar}>
         <div className={styles.diagItem}>
           <span className={styles.diagLabel}>PRE-TREATMENT RMSPE:</span>
-          <span className={styles.diagVal}>{preRMSPE ? `${preRMSPE.toFixed(4)} ${indicatorUnit}` : '0.0082 ndvi'}</span>
+          <span className={styles.diagVal}>
+            {preRmspe === undefined ? NOT_MEASURED : `${sig(preRmspe)} ${preRmspeItem?.unit ?? ''}`.trim()}
+          </span>
         </div>
         <div className={styles.diagItem}>
           <span className={styles.diagLabel}>POST/PRE RMSPE RATIO:</span>
-          <span className={styles.diagVal}>{postRMSPE ? `${postRMSPE.toFixed(2)}x` : '4.12x'}</span>
+          <span className={styles.diagVal}>{rmspeRatio === undefined ? NOT_MEASURED : `${sig(rmspeRatio)}×`}</span>
         </div>
         <div className={styles.diagItem}>
-          <span className={styles.diagLabel}>SOLVER:</span>
-          <span className={styles.diagVal}>FISTA (Simplex-Constrained Least Squares)</span>
+          <span className={styles.diagLabel}>METHOD:</span>
+          <span className={styles.diagVal}>{solverMethod ?? NOT_MEASURED}</span>
         </div>
         <div className={styles.diagItem}>
-          <span className={styles.diagLabel}>DONOR IDENTIFICATION:</span>
-          <span className={styles.diagVal} style={{ color: '#fbbf24' }}>Illustrative (P &lt; N)</span>
+          <span className={styles.diagLabel}>DONOR WEIGHTS:</span>
+          <span className={styles.diagVal}>
+            {weightsIdentified === undefined
+              ? NOT_MEASURED
+              : weightsIdentified
+                ? 'Uniquely identified'
+                : 'Not unique (more donors than pre-periods); path still determined'}
+          </span>
         </div>
       </div>
     </div>

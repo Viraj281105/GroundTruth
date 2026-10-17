@@ -1,0 +1,133 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-family: var(--gt-font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gt-text-primary);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--gt-text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px;
+  background-color: var(--gt-bg-card);
+  border: 1px solid var(--gt-border-default);
+  border-radius: var(--gt-radius-lg);
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.groupTitle {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gt-text-secondary);
+  margin: 0;
+}
+
+.summary {
+  font-size: 13px;
+  color: var(--gt-text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'label icon'
+    'value icon'
+    'detail icon';
+  align-items: center;
+  column-gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background-color: var(--gt-bg-subtle);
+  border: 1px solid var(--gt-border-subtle);
+  border-radius: var(--gt-radius-md);
+  cursor: pointer;
+  transition: border-color var(--gt-transition-fast);
+}
+
+button.row:hover {
+  border-color: var(--gt-border-strong);
+}
+
+button.row:focus-visible {
+  outline: 2px solid var(--gt-border-focus);
+  outline-offset: 2px;
+}
+
+.rowMissing {
+  cursor: default;
+  border-style: dashed;
+}
+
+.rowLabel {
+  grid-area: label;
+  font-size: 12px;
+  color: var(--gt-text-muted);
+}
+
+.rowValue {
+  grid-area: value;
+  font-family: var(--gt-font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gt-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.rowDetail {
+  grid-area: detail;
+  font-size: 12px;
+  color: var(--gt-text-subtle);
+}
+
+.rowIcon {
+  grid-area: icon;
+  color: var(--gt-text-subtle);
+}

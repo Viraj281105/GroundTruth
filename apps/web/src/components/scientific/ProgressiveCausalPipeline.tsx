@@ -60,7 +60,8 @@ export function ProgressiveCausalPipeline({
       id: 'claim',
       stepNumber: '01',
       label: 'CLAIM',
-      value: claimValue || 'VCS 902 Baseline',
+      // No case-specific fallback: a claim figure only appears when the bundle carries one.
+      value: claimValue || '—',
       unit: '',
       subtext: 'Claimed Crediting Impact',
       status: 'active',
