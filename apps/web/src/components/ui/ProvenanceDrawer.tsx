@@ -15,9 +15,20 @@ import {
   Info,
   Copy,
   Check,
-  ShieldCheck,
+  Sigma,
 } from 'lucide-react';
+import { describeMethod } from '../../lib/method-descriptions';
 import styles from './ProvenanceDrawer.module.css';
+
+function formatQualifier(value: unknown): string {
+  if (typeof value === 'string') return value;
+  // Six significant figures hides binary noise (0.050000000000000044) without
+  // rounding away anything a reader could act on.
+  if (typeof value === 'number' && Number.isFinite(value) && !Number.isInteger(value)) {
+    return String(Number(value.toPrecision(6)));
+  }
+  return JSON.stringify(value);
+}
 
 export interface ProvenanceDrawerProps {
   evidence: Evidence | null;
@@ -54,6 +65,9 @@ export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
   if (!isOpen || !evidence) return null;
 
   const { provenance } = evidence;
+  const description = describeMethod(provenance.method);
+  const hasParameters = Object.keys(provenance.parameters ?? {}).length > 0;
+  const qualifierEntries = Object.entries(evidence.qualifiers ?? {});
 
   const handleCopyParameters = () => {
     if (provenance.parameters) {
@@ -85,7 +99,7 @@ export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
               <Badge tone="info" size="sm" variant="subtle">
                 STAGE: {provenance.stage.toUpperCase()}
               </Badge>
-              <Badge tone="neutral" size="sm" variant="outline">
+              <Badge tone="neutral" size="sm" variant="outline" className={styles.wrapBadge}>
                 ID: {evidence.id}
               </Badge>
             </div>
@@ -104,13 +118,13 @@ export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
 
         {/* Value Hero Display */}
         <div id="provenance-desc" className={styles.valueHero}>
-          <span className={styles.valueHeroLabel}>ESTIMATED / RECORDED VALUE</span>
+          <span className={styles.valueHeroLabel}>VALUE</span>
           <div className={styles.valueHeroNumber}>
             {formatEvidenceValue(evidence.value, evidence.unit)}
           </div>
           {evidence.confidence && (
             <div className={styles.confidenceBadge}>
-              <Badge tone="neutral" size="sm">
+              <Badge tone="neutral" size="sm" className={styles.wrapBadge}>
                 {formatConfidenceInterval(evidence.confidence, evidence.unit)}
               </Badge>
             </div>
@@ -127,7 +141,7 @@ export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
             </div>
             <div className={styles.metaCard}>
               <div className={styles.metaRow}>
-                <span className={styles.metaKey}>Algorithm:</span>
+                <span className={styles.metaKey}>Method:</span>
                 <span className={styles.metaValMono}>{provenance.method}</span>
               </div>
               <div className={styles.metaRow}>
@@ -180,54 +194,47 @@ export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
             </div>
           </div>
 
-          {/* Mathematical Formulation (When applicable to causal estimation) */}
-          {(evidence.id.includes('effect') || evidence.id.includes('fit')) && (
-            <div className={styles.section}>
-              <div className={styles.sectionTitle}>
-                <Code size={16} />
-                <span>Mathematical Formulation (Quadratic Optimization)</span>
-              </div>
-              <div className={styles.mathCard}>
-                <div className={styles.mathEquation}>
-                  min_W || X_1 - X_0 W ||^2_V + λ || W ||^2_2
-                </div>
-                <div className={styles.mathConstraint}>
-                  subject to: w_i ≥ 0, Σ w_i = 1 (Simplex-Constrained Least Squares)
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Cryptographic Attestation Chain */}
+          {/* What the method does, read from provenance.method. An unknown
+              method gets no description: the method string above and the
+              parameters below are all that is shown. */}
           <div className={styles.section}>
             <div className={styles.sectionTitle}>
-              <ShieldCheck size={16} />
-              <span>Cryptographic Chain of Custody</span>
+              <Sigma size={16} />
+              <span>Method</span>
             </div>
-            <div className={styles.metaCard}>
-              <div className={styles.metaRow}>
-                <span className={styles.metaKey}>Stage Hash:</span>
-                <span className={styles.metaValMono}>
-                  SHA-256: {evidence.id.split('').reduce((acc, c) => (acc + c.charCodeAt(0).toString(16)).slice(0, 16), 'e3b0c442')}...
-                </span>
+            {description ? (
+              <div className={styles.methodCard}>
+                <div className={styles.methodTitle}>{description.title}</div>
+                {description.summary.map((paragraph, i) => (
+                  <p key={i} className={styles.methodText}>
+                    {paragraph}
+                  </p>
+                ))}
+                {description.formula && (
+                  <div className={styles.mathCard} aria-label="Formula">
+                    {description.formula.map((line, i) => (
+                      <div key={i} className={styles.mathEquation}>
+                        {line}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {description.caveat && (
+                  <p className={styles.methodCaveat}>{description.caveat}</p>
+                )}
               </div>
-              <div className={styles.metaRow}>
-                <span className={styles.metaKey}>Container Digest:</span>
-                <span className={styles.metaValMono}>
-                  docker.groundtruth.io/causal-engine:v0.2.0@sha256:990184b...
-                </span>
-              </div>
-              <div className={styles.metaRow}>
-                <span className={styles.metaKey}>Attestation Status:</span>
-                <Badge tone="positive" size="sm" variant="subtle">
-                  DETERMINISTIC BIT-PERFECT REPRODUCIBLE
-                </Badge>
-              </div>
-            </div>
+            ) : (
+              <p className={styles.methodUnknown}>
+                No description is available for <code>{provenance.method}</code>.{' '}
+                {hasParameters
+                  ? 'Its parameters below are the only record of how this value was produced.'
+                  : 'No parameters were recorded for it.'}
+              </p>
+            )}
           </div>
 
           {/* Execution Parameters JSON */}
-          {provenance.parameters && Object.keys(provenance.parameters).length > 0 && (
+          {hasParameters && (
             <div className={styles.section}>
               <div className={styles.sectionTitleRow}>
                 <div className={styles.sectionTitle}>
@@ -277,14 +284,28 @@ export const ProvenanceDrawer: React.FC<ProvenanceDrawerProps> = ({
               <p className={styles.notesText}>{provenance.notes}</p>
             </div>
           )}
+
+          {/* Qualifiers: conditions the engine attached to this value */}
+          {qualifierEntries.length > 0 && (
+            <div className={styles.section}>
+              <div className={styles.sectionTitle}>
+                <Info size={16} />
+                <span>Qualifiers</span>
+              </div>
+              <div className={styles.metaCard}>
+                {qualifierEntries.map(([key, val]) => (
+                  <div key={key} className={styles.metaRow}>
+                    <span className={styles.metaKey}>{key}:</span>
+                    <span className={styles.metaValMono}>{formatQualifier(val)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
         <div className={styles.footer}>
-          <div className={styles.footerNote}>
-            <ShieldCheck size={14} className={styles.shieldIcon} />
-            <span>Immutable contract artifact</span>
-          </div>
           <Button variant="secondary" size="md" onClick={onClose}>
             Close Provenance
           </Button>
