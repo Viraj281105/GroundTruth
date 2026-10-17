@@ -48,12 +48,17 @@ from groundtruth.engine.assembler import AssemblyInputs, assemble_evidence
 from groundtruth.engine.causal.did import estimate_did
 from groundtruth.engine.causal.synthetic_control import fit_synthetic_control
 from groundtruth.engine.matching.donors import MatchingConfig, match_donors
-from groundtruth.engine.observation.alignment import MisalignedSeriesError, align_panel
+from groundtruth.engine.observation.alignment import (
+    MisalignedSeriesError,
+    align_panel,
+    pre_period_coverage,
+)
+from groundtruth.engine.observation.reduction import describe_reduction
 from groundtruth.engine.uncertainty.placebo import in_space_placebo, in_time_placebo
 from groundtruth.engine.uncertainty.robustness import leave_one_out
 from groundtruth.engine.uncertainty.specification import specification_curve
 
-ENGINE_VERSION = "0.9.0"
+ENGINE_VERSION = "0.10.0"
 """Version of the analytical engine. Bumped when results could change."""
 
 PRIMARY_ESTIMATOR = "synthetic-control"
@@ -252,6 +257,13 @@ def run_analysis(
     metrics = metrics.model_copy(update={"n_units_observed": len(candidates) + 1})
 
     # --- match -------------------------------------------------------------
+    pre_coverage = pre_period_coverage(request.window, donor_series)
+    if pre_coverage is None:
+        notices.append(
+            "The observation provider did not report clear-observation counts, so the "
+            f"pre-treatment coverage rule (at least {request.donors.min_pre_observations} clear "
+            "scenes in every pre-period) could not be applied to donor candidates."
+        )
     try:
         pool = match_donors(
             request.case_id,
@@ -266,6 +278,7 @@ def run_analysis(
                 excluded_unit_ids=frozenset(request.donors.excluded_unit_ids),
                 min_pre_observations=request.donors.min_pre_observations,
             ),
+            candidate_pre_observations=pre_coverage,
         )
     except DonorPoolError as exc:
         return fail(
@@ -495,7 +508,12 @@ def describe_engine() -> dict[str, Any]:
             "leave_one_out": True,
             "specification_curve": True,
             "biomass_carbon_conversion": False,
+            "cross_sensor_calibration": False,
         },
+        # The Earth-observation reduction the platform's client must execute
+        # (coordination point C3). Published here so the platform reads it
+        # through the engine's public API, not by importing engine internals.
+        "reduction": describe_reduction(),
     }
 
 

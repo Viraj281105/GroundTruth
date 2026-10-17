@@ -44,17 +44,51 @@ This is why adding Sentinel-1 or GEDI later is a provider, not a refactor.
 
 ```
 1. resolve       platform picks a pinned DatasetRef for the indicator
-2. filter        collection → AOI ∩ period
-3. mask          SCL cloud/shadow/snow rejection            [engine methodology]
-4. composite     annual median per period                   [engine methodology]
-5. index         band math: NDVI / EVI / NBR / SAVI         [engine, implemented]
-6. reduce        zonal mean + clear-observation count       [engine methodology]
-7. audit         flag periods below the coverage threshold  [engine, implemented]
-8. emit          TimeSeries with n_valid_observations
+2. filter        collection → AOI ∩ calendar year
+3. reflectance   DN × scale + offset; outside [0, 1] masked [engine, specified]
+4. mask          S2: SCL classes · Landsat C2: QA_PIXEL bits + QA_RADSAT
+                                                            [engine, specified]
+5. index         per clear scene: NDVI / EVI / NBR          [engine, specified]
+6. composite     per-pixel annual median of the index       [engine, specified]
+7. reduce        zonal mean over clear pixels; n_valid = zonal median of
+                 per-pixel clear-scene count; clear-pixel fraction
+                                                            [engine, specified]
+8. audit         flag periods below the coverage threshold  [engine, implemented]
+9. emit          TimeSeries with n_valid_observations
 ```
 
-Steps 3–7 are methodology. Steps 1–2 and the network call under them are
-plumbing.
+Steps 3–8 are methodology. They are specified in
+`engine/observation/reduction.py` and published as plain data through
+`describe_engine()["reduction"]`, which is the coordination point C3 handover.
+`reduce_period` is a numpy reference implementation of the same chain, so a
+platform client can check an Earth Engine chip against it. Steps 1–2 and the
+network call under them are plumbing (#22).
+
+### Reflectance before band math
+
+Collection 2 Landsat stores `DN`, with `ρ = DN × 0.0000275 − 0.2`. The harmonized
+Sentinel-2 collection stores `ρ × 10000`. Index formulae assume reflectance: EVI's
+`+1` term is wrong on digital numbers. Pixels whose scaled value falls outside
+`[0, 1]` are fill or artefacts and are masked.
+
+### Index per scene, then the median
+
+The index is computed on each clear scene, and the per-pixel median is taken
+across the year. A band-first composite would pair red from one date with NIR
+from another and describe a pixel that was never observed.
+
+### Which sensor serves which year
+
+| Sensor | Collection | Years | NBR SWIR band |
+| --- | --- | --- | --- |
+| Sentinel-2 | `COPERNICUS/S2_SR_HARMONIZED` | 2017– | B12 |
+| Landsat 9 | `LANDSAT/LC09/C02/T1_L2` | 2022– | SR_B7 |
+| Landsat 8 | `LANDSAT/LC08/C02/T1_L2` | 2013– | SR_B7 |
+| Landsat 7 | `LANDSAT/LE07/C02/T1_L2` | 1999–2022 (SLC-off from mid-2003) | SR_B7 |
+| Landsat 5 | `LANDSAT/LT05/C02/T1_L2` | 1984–2011 | SR_B7 |
+
+Kariba's pre-period (2001–2010) predates Sentinel-2 and Landsat 8, so it rests on
+Landsat 5/7. Calibration across the transition is #5 and is not done here.
 
 ### Why median, not mean
 

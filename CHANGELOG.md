@@ -18,6 +18,19 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Earth-observation reduction methodology** (#1, engine half).
+  `engine/observation/reduction.py` specifies, per sensor (Sentinel-2,
+  Landsat 5/7/8/9), the collection, band roles, DN-to-reflectance scale and
+  offset, quality mask (SCL classes, or QA_PIXEL bits plus saturation), index
+  per scene then annual median, zonal mean over clear pixels, and
+  `n_valid_observations` as the zonal median clear-scene count. It is
+  published through `describe_engine()["reduction"]` for the platform's Earth
+  Engine client (#22). `reduce_period` is a numpy reference implementation,
+  validated against known reflectance targets. NBR uses SWIR2. The
+  `donors.min_pre_observations` rule is now applied: a candidate is excluded
+  when any pre-period has fewer clear scenes than the threshold. A bundle
+  warning is added when the provider reports no counts. `ENGINE_VERSION` is
+  now 0.10.0.
 - **Cluster-robust inference for the DiD cross-check** (#12). The standard
   error is clustered (CR1). A wild cluster bootstrap, Webb six-point below 12
   clusters and Rademacher above, gives a seeded `bootstrap` interval.
