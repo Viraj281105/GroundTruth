@@ -30,7 +30,8 @@ from groundtruth.engine.causal.synthetic_control import (
 from groundtruth.engine.matching.donors import DonorPool
 from groundtruth.engine.observation.alignment import AlignedPanel
 from groundtruth.engine.uncertainty.placebo import InTimePlaceboResult, PlaceboResult
-from groundtruth.engine.uncertainty.robustness import LeaveOneOutResult
+from groundtruth.engine.uncertainty.robustness import LeaveOneOutResult, SpecificationCurve
+from groundtruth.engine.uncertainty.specification import NOT_VARIED_IN_RUN
 
 DIVERGENCE_THRESHOLD = 0.30
 """Relative divergence beyond which a claim is flagged for accredited review."""
@@ -54,6 +55,7 @@ class AssemblyInputs:
     placebo: PlaceboResult | None = None
     in_time_placebo: InTimePlaceboResult | None = None
     leave_one_out: LeaveOneOutResult | None = None
+    specification_curve: SpecificationCurve | None = None
     did: DiDResult | None = None
     data_provenance: Provenance | None = None
     notices: tuple[str, ...] = ()
@@ -107,7 +109,9 @@ def decide_verdict(
     5. An in-time placebo, when one was run, finding no spurious effect at a
        fake treatment date.
     6. Leave-one-out sign stability, so the result is not one donor's artefact.
-    7. Covariate balance within the conventional guideline.
+    7. A specification curve, when one was run, agreeing on the sign, so the
+       result is not one analytic choice's artefact.
+    8. Covariate balance within the conventional guideline.
 
     ``max_relative_pre_fit`` defaults to the request's
     ``estimation.max_pre_rmse_ratio``, read as a share of the pre-period SD.
@@ -161,6 +165,13 @@ def decide_verdict(
 
     if inputs.leave_one_out is not None and not inputs.leave_one_out.sign_is_stable:
         failures.append("the estimate changes sign when a single contributing donor is removed")
+
+    curve = inputs.specification_curve
+    if curve is not None and curve.estimates and curve.sign_flips:
+        failures.append(
+            f"{len(curve.sign_flips)} of {len(curve.estimates)} alternative specifications give "
+            f"the opposite sign ({', '.join(curve.sign_flips)})"
+        )
 
     if not inputs.donor_pool.is_balanced:
         failures.append(
@@ -571,6 +582,72 @@ def assemble_evidence(
             bool(inputs.leave_one_out.sign_is_stable),
             provenance=loo_prov,
         )
+
+    curve = inputs.specification_curve
+    if curve is not None and curve.estimates:
+        curve_prov = Provenance.computed(
+            source=data_source,
+            method="specification-curve/one-at-a-time",
+            stage="uncertainty",
+            parameters={
+                "centre": curve.centre_id,
+                "n_specifications": len(curve.estimates),
+                "n_failed": len(curve.failed),
+                "dimensions_varied": sorted(set(curve.dimensions.values()) - {"centre"}),
+                "dimensions_not_varied_in_run": list(NOT_VARIED_IN_RUN),
+            },
+            inputs=("effect.point_estimate",),
+            notes=(
+                "Each specification changes one analytic choice from the centre. The centre is "
+                "marked but not privileged: the median, sign agreement and range are computed "
+                "over every specification."
+            ),
+        )
+        builder.add(
+            "robustness.spec_curve.median",
+            f"Median effect on {inputs.request.indicator.value} across specifications",
+            float(curve.median),
+            unit=inputs.indicator_unit,
+            confidence=curve.envelope(),
+            provenance=curve_prov,
+            qualifiers={
+                "range_is": "sensitivity-envelope, not a confidence interval",
+                "n_specifications": len(curve.estimates),
+            },
+        )
+        builder.add(
+            "robustness.spec_curve.sign_agreement",
+            "Share of specifications agreeing with the median's sign",
+            float(curve.sign_agreement),
+            provenance=curve_prov,
+            qualifiers={"sign_flips": list(curve.sign_flips)},
+        )
+        ordered = sorted(curve.estimates.items(), key=lambda kv: kv[1])
+        for spec_id, estimate in ordered:
+            builder.add(
+                f"robustness.spec_curve.estimate.{spec_id}",
+                f"Effect under specification {spec_id}",
+                float(estimate),
+                unit=inputs.indicator_unit,
+                provenance=curve_prov,
+                qualifiers={
+                    "dimension": curve.dimensions.get(spec_id, "unknown"),
+                    "is_centre": spec_id == curve.centre_id,
+                    "flips_sign": spec_id in curve.sign_flips,
+                },
+            )
+        if curve.sign_flips:
+            builder.warn(
+                "The sign of the estimate is not stable across specifications: "
+                f"{', '.join(curve.sign_flips)} give the opposite sign to the median. This is a "
+                "limitation of the result for this case."
+            )
+        if curve.failed:
+            builder.warn(
+                "Some specifications could not be estimated and are absent from the curve: "
+                + "; ".join(f"{sid} ({reason})" for sid, reason in sorted(curve.failed.items()))
+                + "."
+            )
 
     if inputs.did is not None:
         did_prov = Provenance.computed(

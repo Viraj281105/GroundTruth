@@ -145,7 +145,8 @@ explicit gate chain, not by a model:
 4. Placebo inference available and the divergence distinguishable from it
 5. An in-time placebo, when requested, finding no spurious pre-period effect
 6. Leave-one-out sign stability
-7. Covariate balance within the conventional guideline
+7. A specification curve, when requested, agreeing on the sign
+8. Covariate balance within the conventional guideline
 
 **Any failed gate short-circuits to `INCONCLUSIVE`.** There is no weak-positive
 path.

@@ -55,7 +55,7 @@ moves, update this table in the same change.
 | **Cross-sensor calibration** | **Planned — MVP** |
 | **Covariate engineering from real products** | **Planned — MVP** |
 | **Cloud-starved period handling downstream** | **Planned** |
-| **Specification curve wired into a run** | **Planned** |
+| **Specification curve wired into a run** | **Implemented**: ridge, pre-period length, treatment date and donor cap. Indicator, caliper and covariate weighting stay offline (`experiments/specification_curve`) |
 | **Tidal-window filtering (mangrove)** | **Planned** |
 | **Biomass / carbon conversion** | **Planned — Stage 2** |
 | Cluster-robust DiD inference | Planned |
