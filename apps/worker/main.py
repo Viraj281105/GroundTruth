@@ -1,43 +1,27 @@
-"""Background worker entrypoint. NOT IMPLEMENTED.
+"""Background worker entrypoint.
 
 **Owner: Bhumi.**
 
-The worker will consume analysis jobs from a queue, invoke the engine through
-the contract, persist the resulting evidence bundle, and transition job status.
+Deliberately thin, like ``apps/api/main.py``. All worker logic lives in
+``groundtruth.platform.jobs`` (where it is linted, type-checked and tested); this file
+gives the deployment a stable command that does not change when the package is
+reorganised.
 
-It is a separate process from the API because analyses are long-running: a
-Kariba-scale placebo suite is tens of seconds of CPU, and registry-scale batch
+The worker is a separate process from the API because analyses are long-running: a
+Kariba-scale placebo suite is seconds to minutes of CPU, and registry-scale batch
 screening is hours. Blocking an HTTP worker on that would be a design error.
 
-Shape it will take::
+Run locally, from the repository root::
 
-    while True:
-        job = queue.claim()                       # platform.jobs
-        request = job.to_request()                # platform.cases
-        data = resolve_access(request)            # platform.datasets
-        result = run_analysis(request, data)      # groundtruth.engine
-        store.persist(result)                     # platform.store
-        job.complete(result)
+    python -m apps.worker.main --migrate      # first run: create the tables
+    python -m apps.worker.main                # then: run until Ctrl+C
 
-Nothing here runs yet. See docs/architecture/worker.md and issue for the
-analysis job lifecycle.
+See ``apps/worker/README.md`` and ``docs/architecture/worker.md``.
 """
 
 from __future__ import annotations
 
-import sys
-
-
-def main() -> int:
-    """Entry point. Not implemented."""
-    print(
-        "The GroundTruth worker is not implemented yet.\n"
-        "Analyses currently run synchronously inside the API process.\n"
-        "See docs/architecture/worker.md.",
-        file=sys.stderr,
-    )
-    return 1
-
+from groundtruth.platform.jobs.entrypoint import main
 
 if __name__ == "__main__":
     raise SystemExit(main())

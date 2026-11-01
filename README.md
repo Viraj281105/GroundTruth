@@ -172,7 +172,7 @@ easier to demo. It is also wrong.
 ```
 apps/
   api/            thin ASGI entrypoint                    Bhumi  [implemented]
-  worker/         background job runner                   Bhumi  [not built]
+  worker/         background job runner                   Bhumi  [implemented; simulated data only]
   web/            Next.js frontend                        Viraj  [types only]
 
 packages/groundtruth/src/groundtruth/

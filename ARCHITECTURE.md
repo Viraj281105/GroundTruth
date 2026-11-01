@@ -89,7 +89,7 @@ This is the seam between **methodology** and **plumbing**:
 ```
 apps/
   api/            thin ASGI entrypoint                        Bhumi  [implemented]
-  worker/         background job runner                       Bhumi  [not built]
+  worker/         background job runner                       Bhumi  [implemented; simulated data only]
   web/            Next.js frontend                            Viraj  [contract types only]
 
 packages/groundtruth/src/groundtruth/

@@ -11,7 +11,7 @@ import functools
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]  # .../src/groundtruth
@@ -71,6 +71,16 @@ class Settings(BaseSettings):
     genai_max_output_tokens: int = 1200
     genai_temperature: float = 0.0
 
+    # --- build identity -----------------------------------------------------
+    git_sha: str | None = Field(
+        default=None,
+        description=(
+            "Commit this process runs, recorded on every result it produces. Set by the "
+            "deployment (env GIT_SHA). Unset means unknown, and is recorded as null, never "
+            "as a placeholder string (R6)."
+        ),
+    )
+
     # --- persistence and services -----------------------------------------
     database_url: str | None = None
     api_host: str = "0.0.0.0"
@@ -86,6 +96,14 @@ class Settings(BaseSettings):
         default=0.30,
         description="Reject a fit whose pre-period RMSE exceeds this share of the outcome SD.",
     )
+
+    @field_validator("git_sha")
+    @classmethod
+    def _blank_git_sha_is_unknown(cls, value: str | None) -> str | None:
+        # An empty GIT_SHA= in an env file must not be recorded as if it were a commit.
+        if value is None:
+            return None
+        return value.strip() or None
 
     @property
     def earth_observation_configured(self) -> bool:

@@ -182,7 +182,8 @@ bump needs a data migration for stored bundles (see `OWNERSHIP.md`, C1).
 ## Jobs
 
 **Status:** the job lifecycle library is implemented (`platform/jobs/`, #24). Nothing
-runs it yet: the worker process is #25, and the API does not submit to it (#35, #37).
+submits to it from the API yet (#35, #37); `groundtruth submit` queues a job and the
+worker (`apps/worker`, #25) runs it.
 
 See [ADR-008](../decisions/ADR-008-analysis-jobs.md). A database-backed queue, no
 broker: a job is its `analysis_runs` row (the one status) plus a `jobs` row (attempts,
@@ -196,7 +197,7 @@ lease, cancellation), so jobs survive a restart.
 | `checkpoint(job, stage)` | Honours a pending cancel between stages |
 | `complete(job, result)` / `fail(job, reason, retryable=)` | Records the outcome |
 | `cancel(run_id)` / `status(run_id)` | Cancel; poll |
-| `process_next(queue, worker_id, resolve_access)` | One claim, run, record step: the body of #25's loop |
+| `process(queue, job, resolve_access)` / `process_next(...)` | One data, engine, record step for a claimed job; the worker's loop body |
 
 ```
 QUEUED  → RUNNING | CANCELLED

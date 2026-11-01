@@ -18,6 +18,20 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Background worker** (#25). `python -m apps.worker.main` claims jobs, runs
+  `run_analysis` (unchanged) and records the outcome; Kariba runs to completion in it
+  on SIMULATED DATA. A heartbeat thread keeps the lease alive at lease/3 and stops
+  the moment the engine returns. Cancellation is cooperative: a cancel during the
+  engine discards its result when it returns. A crash writes nothing (the result is
+  one transaction) and the job is retried after its lease expires; a bug fails only
+  that job. First Ctrl+C/SIGTERM/Ctrl+Break finishes the current job, a second stops
+  at once. Logs are JSON lines carrying `run_id`, `case_id`, `stage`, `worker_id`,
+  `attempt` and `data_mode`, including the engine's own lines, with the database
+  password masked. Startup refuses a missing `DATABASE_URL` or an unmigrated database
+  (`--migrate` is opt-in) and warns when `GIT_SHA` is unset, recording `git_sha` as
+  null rather than a placeholder. New `groundtruth submit` and `groundtruth job`
+  commands queue a job and show its status. `JobStatus` now carries `data_mode` and
+  `is_simulated`. No contract or engine change.
 - **Analysis job lifecycle** (#24). `platform/jobs/` adds a database-backed queue with
   no broker: `submit`, `claim` with a stored lease, `heartbeat`, cooperative
   `cancel` honoured between stages, `complete`/`fail` with bounded exponential

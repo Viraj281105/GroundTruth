@@ -103,6 +103,9 @@ class JobStatus(BaseModel):
     status: AnalysisStatus
     engine_status: str | None
     """``refused`` here with ``status == succeeded`` is a legitimate scientific outcome."""
+    data_mode: str
+    is_simulated: bool
+    """Always present, so nothing that shows a job can show a simulated run as observed (R7)."""
     attempts: int | None
     max_attempts: int | None
     available_at: datetime | None
@@ -154,6 +157,11 @@ class JobQueue:
         self._backoff_base = backoff_base
         self._backoff_cap = backoff_cap
         self._max_attempts = max_attempts
+
+    @property
+    def lease(self) -> timedelta:
+        """How long a claim lasts without a heartbeat."""
+        return self._lease
 
     # --- submitting ------------------------------------------------------------
 
@@ -567,6 +575,8 @@ class JobQueue:
                 case_id=run.case_id,
                 status=AnalysisStatus(run.status),
                 engine_status=run.engine_status,
+                data_mode=run.data_mode,
+                is_simulated=run.is_simulated,
                 attempts=row.attempts if row else None,
                 max_attempts=row.max_attempts if row else None,
                 available_at=_as_utc(row.available_at) if row else None,
