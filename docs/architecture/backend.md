@@ -81,9 +81,10 @@ broke a parent count.
 
 ## Persistence
 
-**Status:** the schema and migrations are implemented (`platform/store/`, needs the
-`db` extra). Nothing writes to them yet; saving, listing and `spec_hash` cache
-lookups are the evidence store (#15), and no analysis of a real project has been
+**Status:** the schema, migrations and the evidence store are implemented
+(`platform/store/`, needs the `db` extra). Nothing calls the store yet: the API
+still runs analyses inline and saves nothing, and wiring it in belongs to the job
+lifecycle (#24) and the result APIs (#35). No analysis of a real project has been
 run.
 
 | Table | Holds |
@@ -121,6 +122,52 @@ Choices worth knowing before building on the schema:
   contract rather than rendering it under the wrong rules.
 - Foreign keys have no ORM `relationship()`, so SQLAlchemy does not order inserts
   for you: write the case row, then the run, then the bundle, flushing between.
+  `SqlEvidenceStore` does this.
+- `analysis_runs.engine_contract_version` (revision 0002) is the contract the engine
+  build targets, separate from the version the result is stamped with. It is
+  nullable because no row existed before the store; the store always writes it and
+  refuses to read a run without it.
+
+### The evidence store
+
+Callers depend on `store/interface.py` (`EvidenceStore`), which needs no database
+library; `store/sql.py` (`SqlEvidenceStore`) is the implementation. The interface is
+deliberately narrow so the backend can change:
+
+| Method | Does |
+| --- | --- |
+| `save_result(result)` | Writes a finished result once, run and bundle in one transaction |
+| `by_run_id(run_id)` | The exact `AnalysisResult` that was saved, or `None` |
+| `by_spec_hash(hash, *, data_mode, engine_version)` | The most recent finished result for a specification |
+| `list_for_case(case_id, ...)` | `RunSummary` rows, newest first, from indexed columns only |
+
+Rules it enforces:
+
+- **Written once.** A second `save_result` for a `run_id` raises `DuplicateRunError`
+  and changes nothing; a re-run is a new `run_id`.
+- **The case comes first.** `upsert_case(case)` mirrors a case file into `cases`.
+  `save_result` raises `UnknownCaseError` rather than invent a case from a result,
+  which carries no name or country. The stored case leaves out `known_reference`.
+- **A refusal is a whole result.** It has no bundle row; its `AnalysisError` lives
+  on the run and `by_run_id` rebuilds the full `AnalysisResult`. A refused run is a
+  `succeeded` job. An engine `error` is stored as a `failed` job.
+- **Most recent** means latest `created_at`, set by the store at microsecond
+  precision (SQLite's own clock ticks once a second). A tie is broken by `run_id`,
+  descending: arbitrary but stable, so the same query always answers the same way.
+- **`data_mode` and `engine_version` are required keywords** on `by_spec_hash`, with
+  no defaults. Without the first, a simulated result could answer an observed
+  request (R7); without the second, an older engine's result could be served as the
+  current one's (R8: the spec hash does not include the engine version).
+- **Only finished runs are returned** (completed or refused). A refusal is
+  deterministic, so it is a valid cached answer; an engine error is not.
+- **Contract version is checked on read**, on the run row as well as the bundle
+  (a refusal has none). An unreadable newest match raises
+  `IncompatibleBundleError`; it never falls back to an older run.
+- `started_at` and `finished_at` must be timezone-aware ISO-8601, as the engine
+  writes them; anything else is refused rather than guessed.
+
+The store writes *finished* results. Taking a queued run to a terminal state is the
+job layer's operation (#24).
 
 ```bash
 pip install -e "packages/groundtruth[db]"

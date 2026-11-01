@@ -15,9 +15,9 @@ Two rules shape the schema:
 * **A bundle carries the contract version it was written under**, so a bundle
   stored today stays readable after a minor contract bump (see :func:`load_bundle`).
 
-This module defines the schema and the one read helper the acceptance criteria
-need. Saving, listing and ``spec_hash`` cache lookups belong to the evidence store
-(issue #15).
+This module defines the schema and the read helpers that check a stored record's
+contract version. Saving and retrieving results is the evidence store
+(:mod:`groundtruth.platform.store.sql`, behind :mod:`groundtruth.platform.store.interface`).
 
 Timestamps are timezone-aware. SQLite does not keep the offset and returns naive
 values; the bundle document is unaffected because it stores its timestamps as ISO
@@ -33,7 +33,6 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from groundtruth.contracts.errors import GroundTruthError
 from groundtruth.contracts.evidence import EvidenceBundle
 from groundtruth.contracts.result import AnalysisStatus
 from groundtruth.contracts.version import (
@@ -42,6 +41,7 @@ from groundtruth.contracts.version import (
     is_compatible,
     parse_version,
 )
+from groundtruth.platform.store.interface import IncompatibleBundleError
 
 # Explicit constraint names make migrations reproducible and give Alembic stable
 # names to drop on downgrade. SQLite in particular cannot drop an unnamed constraint.
@@ -144,6 +144,12 @@ class AnalysisRunRow(Base):
     seed: Mapped[int] = mapped_column(sa.BigInteger)
     engine_version: Mapped[str | None] = mapped_column(sa.String(40))
     engine_git_sha: Mapped[str | None] = mapped_column(sa.String(64))
+    engine_contract_version: Mapped[str | None] = mapped_column(sa.String(20))
+    """Contract version the engine build targets (``EngineRef.contract_version``).
+
+    Distinct from ``contract_version``, which is the version the result was stamped
+    with. Added in revision 0002 so a stored result reloads exactly.
+    """
     contract_version: Mapped[str] = mapped_column(sa.String(20))
     dataset_refs: Mapped[list[dict[str, Any]]] = mapped_column(JsonDocument)
     metrics: Mapped[dict[str, Any] | None] = mapped_column(JsonDocument)
@@ -237,19 +243,34 @@ class JobRow(Base):
     )
 
 
-class IncompatibleBundleError(GroundTruthError):
-    """Raised when a stored bundle cannot be read under the running contract version."""
+def check_readable(
+    produced_under: str, run_id: str, *, what: str, consumer_version: str = CONTRACT_VERSION
+) -> None:
+    """Refuse a stored record written under a contract this consumer cannot read.
+
+    Shared by bundles and run rows. A refused run has no bundle, so its own version
+    must be checked too. The check happens before validation on purpose: a record
+    from a newer minor or a different major may still *parse* while meaning
+    something different, and quietly rendering it would show a number under the
+    wrong rules. Refusing is the safe failure (R5); a major bump ships with a
+    migration for stored bundles.
+
+    Raises:
+        IncompatibleBundleError: if ``produced_under`` is older than the supported
+            floor, or not readable by ``consumer_version``.
+    """
+    too_old = parse_version(produced_under) < parse_version(MIN_SUPPORTED_CONTRACT_VERSION)
+    if too_old or not is_compatible(produced_under, consumer_version):
+        raise IncompatibleBundleError(
+            f"{what} for run {run_id!r} was written under contract {produced_under}, "
+            f"which contract {consumer_version} cannot read"
+        )
 
 
 def load_bundle(
     row: EvidenceBundleRow, *, consumer_version: str = CONTRACT_VERSION
 ) -> EvidenceBundle:
     """Rebuild the :class:`EvidenceBundle` stored in ``row``.
-
-    The version check happens before validation on purpose. A bundle from a newer
-    minor or a different major may still *parse* while meaning something different,
-    and quietly rendering it would show a number under the wrong rules. Refusing is
-    the safe failure (R5); a major bump ships with a migration for stored bundles.
 
     Args:
         row: A stored bundle.
@@ -260,11 +281,7 @@ def load_bundle(
         IncompatibleBundleError: if the bundle was written under a version this
             consumer cannot read.
     """
-    produced_under = row.contract_version
-    too_old = parse_version(produced_under) < parse_version(MIN_SUPPORTED_CONTRACT_VERSION)
-    if too_old or not is_compatible(produced_under, consumer_version):
-        raise IncompatibleBundleError(
-            f"bundle for run {row.run_id!r} was written under contract {produced_under}, "
-            f"which contract {consumer_version} cannot read"
-        )
+    check_readable(
+        row.contract_version, row.run_id, what="bundle", consumer_version=consumer_version
+    )
     return EvidenceBundle.model_validate(row.bundle)

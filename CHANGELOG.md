@@ -18,6 +18,17 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Evidence and provenance store** (#15). `platform/store/` can now save and
+  retrieve an `AnalysisResult`: `save_result`, `by_run_id`, `by_spec_hash` and
+  `list_for_case`, behind a small `EvidenceStore` interface that needs no database
+  library. A stored result reloads equal to the original, provenance fingerprints
+  included; a refusal reloads as a full result with no bundle. A run is written once
+  (`DuplicateRunError` otherwise), atomically with its bundle. `by_spec_hash` returns
+  the most recent finished run and requires `data_mode` and `engine_version`, so a
+  simulated result cannot answer an observed lookup (R7) nor an older engine's
+  result the current one's (R8). The contract version is checked on read. Migration
+  `0002` adds `analysis_runs.engine_contract_version`. Nothing calls the store yet
+  (#24, #35). No contract change.
 - **Database schema and migrations** (#14). `platform/store/` defines `cases`,
   `analysis_runs`, `evidence_bundles`, `datasets` and `jobs` (SQLAlchemy 2.0,
   Alembic, new optional `db` extra). A bundle is one JSON document (JSONB on

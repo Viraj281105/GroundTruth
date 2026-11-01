@@ -81,7 +81,7 @@ moves, update this table in the same change.
 | **Covariate dataset services** | **Planned — MVP** |
 | **Boundary acquisition and storage** | **Planned — MVP** |
 | Database schema and migrations (SQLAlchemy 2.0 + Alembic, `db` extra) | Implemented |
-| **Evidence and provenance persistence** | **Planned — MVP** |
+| Evidence and provenance persistence (`EvidenceStore`; not yet called by the API) | Implemented |
 | **Analysis job lifecycle** | **Planned — MVP** |
 | **Background worker process** | **Planned — MVP** |
 | **Frontend/backend integration** | **Planned — MVP** |
