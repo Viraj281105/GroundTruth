@@ -108,7 +108,7 @@ packages/groundtruth/src/groundtruth/
     cases/        case registry, request translation          Bhumi  [implemented]
     datasets/     registry, pinning, DataAccess impls         Bhumi  [synthetic only]
     units/        ADR-011 unit construction and ladder        Bhumi  [rules only]
-    jobs/         analysis lifecycle                          Bhumi  [not built]
+    jobs/         analysis lifecycle                          Bhumi  [implemented; not yet called]
     store/        evidence persistence                        Bhumi  [implemented; not yet called]
     storage/      artifacts and exports                       Bhumi  [not built]
     reports/      rendering · GenAI narration                 Bhumi  [renderer only]
@@ -152,7 +152,7 @@ Detail: [`docs/architecture/earth-observation.md`](docs/architecture/earth-obser
  1. case YAML                      platform/cases      [implemented]
  2. → AnalysisRequest              case.to_request()   [implemented]
        pins DatasetRefs, drops known_reference
- 3. → job queued                   platform/jobs       [NOT BUILT — runs inline]
+ 3. → job queued                   platform/jobs       [library built; API NOT YET WIRED — runs inline]
  4. → DataAccess resolved          platform/datasets   [synthetic only]
  5. → run_analysis                 engine/run.py       [implemented]
        observe → match → estimate → test → assemble

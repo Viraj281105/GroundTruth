@@ -8,8 +8,9 @@ provenance cannot be rebuilt if the source data later changes, so the rules are
 strict. A run is written once and atomically, a stored result reloads exactly, and
 anything the code cannot read faithfully is refused rather than approximated (R5).
 
-This store writes *finished* results. Moving a queued run to a terminal state is the
-job layer's concern (issue #24), not this module's.
+``save_result`` writes a finished result as a new run. A queued run that finishes later
+is completed by the job layer (issue #24) through :func:`record_result`, so both paths
+write a result the same way.
 """
 
 from __future__ import annotations
@@ -117,32 +118,53 @@ def _run_status(result: AnalysisResult) -> AnalysisStatus:
     )
 
 
-def _run_row(
-    result: AnalysisResult, requested_by: str | None, created_at: datetime
-) -> AnalysisRunRow:
-    return AnalysisRunRow(
-        run_id=result.run_id,
-        case_id=result.case_id,
-        spec_hash=result.spec_hash,
-        status=_run_status(result).value,
-        engine_status=result.status.value,
-        error_code=result.error.code.value if result.error else None,
-        error=result.error.model_dump(mode="json") if result.error else None,
-        verdict_label=result.verdict_label,
-        data_mode=result.data_mode,
-        is_simulated=result.is_simulated,
-        seed=result.seed,
-        engine_version=result.engine.engine_version,
-        engine_git_sha=result.engine.git_sha,
-        engine_contract_version=result.engine.contract_version,
-        contract_version=result.contract_version,
-        dataset_refs=[d.model_dump(mode="json") for d in result.datasets],
-        metrics=result.metrics.model_dump(mode="json"),
-        requested_by=requested_by,
-        created_at=created_at,
-        started_at=_parse_timestamp(result.started_at, "started_at"),
-        finished_at=_parse_timestamp(result.finished_at, "finished_at"),
-    )
+def _apply_result(run: AnalysisRunRow, result: AnalysisResult) -> None:
+    """Copy a finished result onto a run row. Identity columns are left alone."""
+    started_at = _parse_timestamp(result.started_at, "started_at")
+    finished_at = _parse_timestamp(result.finished_at, "finished_at")
+    run.status = _run_status(result).value
+    run.engine_status = result.status.value
+    run.error_code = result.error.code.value if result.error else None
+    run.error = result.error.model_dump(mode="json") if result.error else None
+    run.verdict_label = result.verdict_label
+    run.is_simulated = result.is_simulated
+    run.seed = result.seed
+    run.engine_version = result.engine.engine_version
+    run.engine_git_sha = result.engine.git_sha
+    run.engine_contract_version = result.engine.contract_version
+    run.contract_version = result.contract_version
+    run.dataset_refs = [d.model_dump(mode="json") for d in result.datasets]
+    run.metrics = result.metrics.model_dump(mode="json")
+    run.started_at = started_at
+    run.finished_at = finished_at
+
+
+def record_result(
+    session: Session, run: AnalysisRunRow, result: AnalysisResult, *, written_at: datetime
+) -> None:
+    """Write a finished result onto ``run`` and add its bundle, in the caller's transaction.
+
+    Shared by :meth:`SqlEvidenceStore.save_result` (a new row) and the job layer (a
+    queued row whose engine run has finished). The caller owns the transaction, so the
+    result lands atomically with whatever else it guards; for a job, the lease check.
+
+    Raises:
+        StoreError: if the result does not belong to this run. Writing another
+            specification's numbers under this run's id would mislabel them.
+    """
+    expected = (run.run_id, run.case_id, run.spec_hash, run.data_mode)
+    actual = (result.run_id, result.case_id, result.spec_hash, result.data_mode)
+    if expected != actual:
+        raise StoreError(
+            f"result does not belong to run {run.run_id!r}: expected (run_id, case_id, "
+            f"spec_hash, data_mode) {expected}, got {actual}"
+        )
+    _apply_result(run, result)
+    # No relationship() links these, so SQLAlchemy would not order the inserts: the
+    # run row must be written before its bundle references it.
+    session.flush()
+    if result.bundle is not None:
+        session.add(_bundle_row(result, written_at))
 
 
 def _bundle_row(result: AnalysisResult, created_at: datetime) -> EvidenceBundleRow:
@@ -230,7 +252,6 @@ class SqlEvidenceStore:
         racing, by the primary key.
         """
         created_at = self._clock()
-        run = _run_row(result, requested_by, created_at)
         try:
             with self._sessions.begin() as session:
                 if session.get(AnalysisRunRow, result.run_id) is not None:
@@ -239,12 +260,16 @@ class SqlEvidenceStore:
                     raise UnknownCaseError(
                         f"case {result.case_id!r} is not stored; call upsert_case first"
                     )
+                run = AnalysisRunRow(
+                    run_id=result.run_id,
+                    case_id=result.case_id,
+                    spec_hash=result.spec_hash,
+                    data_mode=result.data_mode,
+                    requested_by=requested_by,
+                    created_at=created_at,
+                )
                 session.add(run)
-                # No relationship() links these, so SQLAlchemy would not order the
-                # inserts: the run row must exist before its bundle references it.
-                session.flush()
-                if result.bundle is not None:
-                    session.add(_bundle_row(result, created_at))
+                record_result(session, run, result, written_at=created_at)
         except sa.exc.IntegrityError as exc:
             with self._sessions() as session:
                 if session.get(AnalysisRunRow, result.run_id) is not None:
@@ -254,10 +279,16 @@ class SqlEvidenceStore:
     # --- reading ---------------------------------------------------------------
 
     def by_run_id(self, run_id: str) -> AnalysisResult | None:
-        """The stored result for ``run_id``, rebuilt exactly, or ``None``."""
+        """The stored result for ``run_id``, rebuilt exactly, or ``None``.
+
+        ``None`` also for a run with no engine result yet: one that is queued, running,
+        cancelled, or failed before the engine ran. Its job status says why.
+        """
         with self._sessions() as session:
             run = session.get(AnalysisRunRow, run_id)
-            return None if run is None else self._rebuild(session, run)
+            if run is None or run.engine_status is None:
+                return None
+            return self._rebuild(session, run)
 
     def by_spec_hash(
         self, spec_hash: str, *, data_mode: DataMode, engine_version: str

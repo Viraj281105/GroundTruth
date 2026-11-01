@@ -18,6 +18,20 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Analysis job lifecycle** (#24). `platform/jobs/` adds a database-backed queue with
+  no broker: `submit`, `claim` with a stored lease, `heartbeat`, cooperative
+  `cancel` honoured between stages, `complete`/`fail` with bounded exponential
+  backoff (`DATA_UNAVAILABLE`, `DataUnavailableError` and expired leases only), and
+  `process_next` as one worker step. A refusal is a SUCCEEDED job with a refused
+  result, never FAILED. Claiming is a single write-first statement (`FOR UPDATE SKIP
+  LOCKED` on PostgreSQL) and every status change is conditional, so two workers
+  cannot take or finish the same job. A request whose `spec_hash` already has a result
+  returns that run without recomputing; an identical request in flight returns that
+  job. The engine's `run_id` is replaced by the job's. Migration `0003` adds
+  `analysis_runs.request` and `jobs.lease_expires_at`. The store's write path is shared
+  via `record_result`, and `by_run_id` now returns `None` for a run with no engine
+  result yet. No worker runs the queue yet (#25) and the API does not submit to it
+  (#35, #37). No contract or engine change.
 - **Evidence and provenance store** (#15). `platform/store/` can now save and
   retrieve an `AnalysisResult`: `save_result`, `by_run_id`, `by_spec_hash` and
   `list_for_case`, behind a small `EvidenceStore` interface that needs no database

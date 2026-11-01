@@ -5,6 +5,11 @@
 **Status: NOT BUILT.** The entrypoint prints a not-implemented message and exits
 non-zero. Analyses currently run synchronously inside the API process.
 
+The job library this worker will drive is built (`platform/jobs/`, #24): claiming,
+leases, retries, cancellation and the refusal mapping, with `process_next` as one
+step of the loop below. What remains for #25 is the process around it: the loop, a
+heartbeat thread, signal handling and idle sleeps.
+
 ---
 
 ## Why a separate process

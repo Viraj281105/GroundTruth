@@ -153,6 +153,13 @@ class AnalysisRunRow(Base):
     contract_version: Mapped[str] = mapped_column(sa.String(20))
     dataset_refs: Mapped[list[dict[str, Any]]] = mapped_column(JsonDocument)
     metrics: Mapped[dict[str, Any] | None] = mapped_column(JsonDocument)
+    request: Mapped[dict[str, Any] | None] = mapped_column(JsonDocument)
+    """The full ``AnalysisRequest`` behind this run (revision 0003).
+
+    Stored with the run, not the job, because it is the run's specification: a queued
+    run executes exactly this, even after a restart or a change to the case file, and
+    monitoring replays it later (ADR-006). ``None`` for a result saved without it.
+    """
     requested_by: Mapped[str | None] = mapped_column(sa.String(100))
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), server_default=sa.func.now()
@@ -233,6 +240,12 @@ class JobRow(Base):
     )
     locked_by: Mapped[str | None] = mapped_column(sa.String(100))
     heartbeat_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    """When the current claim lapses unless renewed (revision 0003).
+
+    Stored rather than computed from a configured lease length, so every worker
+    agrees on whether a job is abandoned, however each one is configured.
+    """
     cancel_requested_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     last_error: Mapped[dict[str, Any] | None] = mapped_column(JsonDocument)
     created_at: Mapped[datetime] = mapped_column(

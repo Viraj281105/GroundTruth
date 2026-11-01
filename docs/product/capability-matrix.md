@@ -82,7 +82,7 @@ moves, update this table in the same change.
 | **Boundary acquisition and storage** | **Planned — MVP** |
 | Database schema and migrations (SQLAlchemy 2.0 + Alembic, `db` extra) | Implemented |
 | Evidence and provenance persistence (`EvidenceStore`; not yet called by the API) | Implemented |
-| **Analysis job lifecycle** | **Planned — MVP** |
+| Analysis job lifecycle (`JobQueue`; no worker runs it yet, #25) | Implemented |
 | **Background worker process** | **Planned — MVP** |
 | **Frontend/backend integration** | **Planned — MVP** |
 | **Result listing and comparison APIs** | **Planned — Stage 2** |
