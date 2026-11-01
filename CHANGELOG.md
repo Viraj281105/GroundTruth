@@ -18,6 +18,14 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Database schema and migrations** (#14). `platform/store/` defines `cases`,
+  `analysis_runs`, `evidence_bundles`, `datasets` and `jobs` (SQLAlchemy 2.0,
+  Alembic, new optional `db` extra). A bundle is one JSON document (JSONB on
+  PostgreSQL) plus indexed projections for listing by case, verdict and date, and
+  is stored with the `contract_version` it was written under. Bundles are
+  immutable: a database trigger rejects `UPDATE`, so a re-run is a new `run_id`.
+  `load_bundle` reads a stored bundle under the contract's compatibility rule.
+  Schema only: nothing writes to these tables yet (#15). No contract change.
 - **Earth-observation reduction methodology** (#1, engine half).
   `engine/observation/reduction.py` specifies, per sensor (Sentinel-2,
   Landsat 5/7/8/9), the collection, band roles, DN-to-reflectance scale and

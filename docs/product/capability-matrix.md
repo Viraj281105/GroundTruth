@@ -80,7 +80,7 @@ moves, update this table in the same change.
 | **Earth Engine client service** | **Planned — MVP** |
 | **Covariate dataset services** | **Planned — MVP** |
 | **Boundary acquisition and storage** | **Planned — MVP** |
-| **Database schema and migrations** | **Planned — MVP** |
+| Database schema and migrations (SQLAlchemy 2.0 + Alembic, `db` extra) | Implemented |
 | **Evidence and provenance persistence** | **Planned — MVP** |
 | **Analysis job lifecycle** | **Planned — MVP** |
 | **Background worker process** | **Planned — MVP** |

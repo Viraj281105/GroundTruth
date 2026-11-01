@@ -35,7 +35,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e "packages/groundtruth[api,genai,dev]"
+          python -m pip install -e "packages/groundtruth[api,db,genai,dev]"
 
       - name: Lint
         run: ruff check packages tests
@@ -75,7 +75,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e "packages/groundtruth[api,genai,dev]"
+          python -m pip install -e "packages/groundtruth[api,db,genai,dev]"
 
       # These are the claims the project makes about itself. If any of them
       # stops being true, the build should fail loudly rather than the README

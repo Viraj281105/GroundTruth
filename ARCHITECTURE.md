@@ -109,7 +109,7 @@ packages/groundtruth/src/groundtruth/
     datasets/     registry, pinning, DataAccess impls         Bhumi  [synthetic only]
     units/        ADR-011 unit construction and ladder        Bhumi  [rules only]
     jobs/         analysis lifecycle                          Bhumi  [not built]
-    store/        evidence persistence                        Bhumi  [not built]
+    store/        evidence persistence                        Bhumi  [schema + migrations only]
     storage/      artifacts and exports                       Bhumi  [not built]
     reports/      rendering · GenAI narration                 Bhumi  [renderer only]
     config.py     settings                                    Bhumi  [implemented]
@@ -157,7 +157,7 @@ Detail: [`docs/architecture/earth-observation.md`](docs/architecture/earth-obser
  5. → run_analysis                 engine/run.py       [implemented]
        observe → match → estimate → test → assemble
  6. → AnalysisResult
- 7. → persisted                    platform/store      [NOT BUILT — in memory]
+ 7. → persisted                    platform/store      [schema only — NOT YET WRITTEN TO; in memory]
  8. → report generated             platform/reports    [renderer only]
        grounding check → publish or fall back
  9. → served                       platform/api        [implemented]
