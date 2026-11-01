@@ -18,6 +18,21 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Stored-run APIs** (#35). `GET /runs` lists runs newest first with cursor (keyset)
+  pagination and filters for case, status, engine version, data mode and date;
+  `GET /runs/{run_id}` returns one run with its outcome and bundle; and
+  `GET /runs/compare` diffs two runs by evidence id. The cursor is bound to the filters
+  and the sort key never changes, so runs written mid-scroll cannot shift or repeat a
+  page. A refusal is a `200` with `result_state: "refused"` and its structured error.
+  A pair that is not comparable (different engine version, data mode, case or contract
+  major, or a run with no bundle) is labelled NOT COMPARABLE with every reason and gets
+  no diff, not a presented change. Every run carries `is_simulated` and `data_mode`.
+  New `result_state` values `queued` and `cancelled` extend the UI's set. With no
+  database the endpoints answer 503 and `/health`, `/cases` and `/verify` are
+  unaffected. Migration `0004` replaces three `analysis_runs` indexes with four that end
+  in `run_id` (and covers `engine_version`); downgrade restores the originals exactly.
+  The store gains `list_runs` and `summary_for`. New `platform/compare/` holds the pure
+  diff. No contract or engine change; existing endpoints unchanged.
 - **Background worker** (#25). `python -m apps.worker.main` claims jobs, runs
   `run_analysis` (unchanged) and records the outcome; Kariba runs to completion in it
   on SIMULATED DATA. A heartbeat thread keeps the lease alive at lease/3 and stops

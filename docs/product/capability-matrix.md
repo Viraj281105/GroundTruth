@@ -85,7 +85,7 @@ moves, update this table in the same change.
 | Analysis job lifecycle (`JobQueue`) | Implemented |
 | Background worker process (`apps/worker`; simulated data only, nothing submits from the API yet) | Implemented |
 | **Frontend/backend integration** | **Planned — MVP** |
-| **Result listing and comparison APIs** | **Planned — Stage 2** |
+| Result listing, retrieval and comparison APIs (`GET /runs`, `/runs/{id}`, `/runs/compare`; read-only, simulated data) | Implemented |
 | **GenAI narration providers** | **Planned — Stage 2** |
 | Report export with provenance | Planned — Stage 2 |
 | Authentication, rate limiting, audit log | Planned — Stage 2 |

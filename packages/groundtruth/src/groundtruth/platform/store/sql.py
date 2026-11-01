@@ -33,8 +33,12 @@ from groundtruth.contracts.result import (
 from groundtruth.contracts.version import CONTRACT_VERSION
 from groundtruth.platform.cases.registry import CaseDefinition
 from groundtruth.platform.store.interface import (
+    MAX_FAILURE_REASON,
     DataMode,
     DuplicateRunError,
+    RunCursor,
+    RunFilter,
+    RunPage,
     RunSummary,
     StoreError,
     UnknownCaseError,
@@ -44,6 +48,7 @@ from groundtruth.platform.store.models import (
     AnalysisRunRow,
     CaseRow,
     EvidenceBundleRow,
+    JobRow,
     check_readable,
     load_bundle,
 )
@@ -181,7 +186,23 @@ def _bundle_row(result: AnalysisResult, created_at: datetime) -> EvidenceBundleR
     )
 
 
-def _summary(run: AnalysisRunRow) -> RunSummary:
+def _failure_reason(run: AnalysisRunRow, last_error: dict[str, Any] | None) -> str | None:
+    """Why a run failed, when nothing else explains it.
+
+    A run that failed in the engine carries its stored ``error``; that is the
+    explanation, so no reason is added. Otherwise the job's last error says why (an
+    unusable request, a result that could not be stored, a bug). It is cut short
+    because it can carry exception text.
+    """
+    if run.status != "failed" or run.error is not None or not last_error:
+        return None
+    reason = last_error.get("reason")
+    if not isinstance(reason, str) or not reason:
+        return None
+    return reason[:MAX_FAILURE_REASON]
+
+
+def _summary(run: AnalysisRunRow, last_error: dict[str, Any] | None = None) -> RunSummary:
     return RunSummary(
         run_id=run.run_id,
         case_id=run.case_id,
@@ -195,6 +216,14 @@ def _summary(run: AnalysisRunRow) -> RunSummary:
         engine_version=run.engine_version,
         contract_version=run.contract_version,
         created_at=_as_utc(run.created_at),
+        failure_reason=_failure_reason(run, last_error),
+    )
+
+
+def _with_jobs() -> sa.Select[tuple[AnalysisRunRow, dict[str, Any] | None]]:
+    """Runs with their job's last error, if they have a job (saved results have none)."""
+    return sa.select(AnalysisRunRow, JobRow.last_error).outerjoin(
+        JobRow, JobRow.run_id == AnalysisRunRow.run_id
     )
 
 
@@ -330,7 +359,7 @@ class SqlEvidenceStore:
         """Runs for a case, newest first, without opening any evidence document."""
         if limit < 1 or offset < 0:
             raise ValueError("limit must be at least 1 and offset must not be negative")
-        query = sa.select(AnalysisRunRow).where(AnalysisRunRow.case_id == case_id)
+        query = _with_jobs().where(AnalysisRunRow.case_id == case_id)
         if data_mode is not None:
             query = query.where(AnalysisRunRow.data_mode == data_mode)
         query = (
@@ -339,7 +368,63 @@ class SqlEvidenceStore:
             .offset(offset)
         )
         with self._sessions() as session:
-            return [_summary(run) for run in session.scalars(query)]
+            return [_summary(run, last_error) for run, last_error in session.execute(query)]
+
+    def summary_for(self, run_id: str) -> RunSummary | None:
+        """The run's summary, or ``None`` if there is no such run."""
+        query = _with_jobs().where(AnalysisRunRow.run_id == run_id)
+        with self._sessions() as session:
+            row = session.execute(query).first()
+            return None if row is None else _summary(row[0], row[1])
+
+    def list_runs(
+        self, filters: RunFilter, *, limit: int = 25, after: RunCursor | None = None
+    ) -> RunPage:
+        """A page of runs matching ``filters``, newest first, strictly after ``after``.
+
+        Keyset pagination on ``(created_at, run_id)`` descending. Both are fixed when a
+        run is created, so a cursor stays valid however many runs are written after
+        it. Runs written later sort above the cursor and never shift a later page.
+        One row more than ``limit`` is read to learn whether another page exists, so
+        there is no ``COUNT`` (which would be slow, and stale as soon as it was read).
+
+        One limit remains: a run whose transaction commits late can carry a
+        ``created_at`` older than a position a reader has already passed. That run
+        is missing from that scroll and appears in the next. It cannot cause a
+        duplicate or a reordering.
+        """
+        if limit < 1:
+            raise ValueError("limit must be at least 1")
+        query = _with_jobs()
+        if filters.case_id is not None:
+            query = query.where(AnalysisRunRow.case_id == filters.case_id)
+        if filters.statuses:
+            query = query.where(AnalysisRunRow.status.in_(filters.statuses))
+        if filters.engine_version is not None:
+            query = query.where(AnalysisRunRow.engine_version == filters.engine_version)
+        if filters.data_mode is not None:
+            query = query.where(AnalysisRunRow.data_mode == filters.data_mode)
+        if filters.created_after is not None:
+            query = query.where(AnalysisRunRow.created_at >= filters.created_after)
+        if filters.created_before is not None:
+            query = query.where(AnalysisRunRow.created_at < filters.created_before)
+        if after is not None:
+            query = query.where(
+                sa.tuple_(AnalysisRunRow.created_at, AnalysisRunRow.run_id)
+                < sa.tuple_(after.created_at, after.run_id)
+            )
+        query = query.order_by(
+            AnalysisRunRow.created_at.desc(), AnalysisRunRow.run_id.desc()
+        ).limit(limit + 1)
+
+        with self._sessions() as session:
+            rows = list(session.execute(query))
+        page = [_summary(run, last_error) for run, last_error in rows[:limit]]
+        next_cursor = None
+        if len(rows) > limit and page:
+            last = page[-1]
+            next_cursor = RunCursor(created_at=last.created_at, run_id=last.run_id)
+        return RunPage(items=tuple(page), next_cursor=next_cursor)
 
     # --- rebuilding ------------------------------------------------------------
 

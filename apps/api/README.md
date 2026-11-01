@@ -12,8 +12,8 @@ uvicorn apps.api.main:app --reload --port 8000   # http://localhost:8000/docs
 
 | Status | |
 | --- | --- |
-| Implemented | `/health`, `/cases`, `/cases/{id}`, `/cases/{id}/verify` (synchronous) |
-| Planned | Async job submission, result listing, pagination, auth |
+| Implemented | `/health`, `/cases`, `/cases/{id}`, `/cases/{id}/verify` (synchronous); `GET /runs`, `/runs/{run_id}`, `/runs/compare` (stored runs: cursor pagination, filters, comparison; need `DATABASE_URL`) |
+| Planned | Async job submission (#37), case management (#36), auth |
 | Future | Registry-scale batch endpoints, webhooks, API keys |
 
 See [`docs/architecture/backend.md`](../../docs/architecture/backend.md).

@@ -403,15 +403,15 @@ class TestIndexes:
         [
             (
                 "SELECT run_id FROM analysis_runs WHERE case_id = 'k' ORDER BY created_at DESC",
-                "ix_analysis_runs_case_id_created_at",
+                "ix_analysis_runs_case_id_created_at_run_id",
             ),
             (
                 "SELECT run_id FROM analysis_runs WHERE status = 'queued' ORDER BY created_at",
-                "ix_analysis_runs_status_created_at",
+                "ix_analysis_runs_status_created_at_run_id",
             ),
             (
                 "SELECT run_id FROM analysis_runs ORDER BY created_at DESC LIMIT 20",
-                "ix_analysis_runs_created_at",
+                "ix_analysis_runs_created_at_run_id",
             ),
             (
                 "SELECT run_id FROM analysis_runs WHERE spec_hash = 'abc'",

@@ -12,11 +12,11 @@ it up.
 
 | Module | Responsibility | Status |
 | --- | --- | --- |
-| `api/` | FastAPI app, request/response schemas, validation, error mapping | Implemented (synchronous) |
+| `api/` | FastAPI app, request/response schemas, validation, error mapping | Implemented. `/verify` is synchronous; `/runs` reads stored runs |
 | `cases/` | Case registry, YAML loading, translation to `AnalysisRequest` | Implemented |
 | `datasets/` | Dataset registry, version pinning, credentials, caching, `DataAccess` implementations | Synthetic only |
 | `jobs/` | Analysis lifecycle: queue, claim, heartbeat, retry, cancel | Implemented; not yet called |
-| `store/` | Evidence and provenance persistence, run history | Implemented; not yet called |
+| `store/` | Evidence and provenance persistence, run history | Implemented; read by `/runs`, not yet written by the API |
 | `storage/` | Artifacts, exports, generated reports | Not built |
 | `reports/` | Deterministic rendering, grounded GenAI narration | Renderer only |
 | `config.py` | Environment-driven settings | Implemented |
@@ -49,7 +49,7 @@ HTTP request
   → project to response     api/schemas.py
 ```
 
-Steps marked not wired currently run inline: the API does not call them yet (#35, #37). The response shape will not change
+Steps marked not wired currently run inline: the API does not call them yet (#37). The read side, `/runs`, is built (#35). The response shape will not change
 when they move behind a job, which is why `run_id` and `spec_hash` are already
 in the response today.
 
@@ -82,10 +82,9 @@ broke a parent count.
 ## Persistence
 
 **Status:** the schema, migrations and the evidence store are implemented
-(`platform/store/`, needs the `db` extra). Nothing calls the store yet: the API
-still runs analyses inline and saves nothing, and wiring it in belongs to the job
-lifecycle (#24) and the result APIs (#35). No analysis of a real project has been
-run.
+(`platform/store/`, needs the `db` extra). The stored-run endpoints (#35) read from
+it; the API does not write to it yet: `/verify` still runs analyses inline and saves
+nothing, and submitting jobs is #37. No analysis of a real project has been run.
 
 | Table | Holds |
 | --- | --- |
@@ -179,10 +178,117 @@ alembic -c packages/groundtruth/alembic.ini downgrade base
 Never edit a migration that has been applied; add a new revision. A major contract
 bump needs a data migration for stored bundles (see `OWNERSHIP.md`, C1).
 
+## Stored-run endpoints
+
+**Status:** implemented (#35), read-only, on simulated data only. They read what the
+worker and the evidence store recorded. They run nothing and write nothing; submitting
+jobs through the API is #37, and `/cases/{id}/verify` is unchanged (it still runs inline
+and stores nothing).
+
+| Endpoint | Does |
+| --- | --- |
+| `GET /runs` | List runs, newest first, in pages. Filters: `case_id`, `status` (repeatable), `engine_version`, `data_mode`, `created_after` (inclusive), `created_before` (exclusive). `limit` 1 to 100, default 25. |
+| `GET /runs/{run_id}` | One run: lifecycle, outcome, error, and the evidence bundle (`include_bundle=false` leaves it out). |
+| `GET /runs/compare?baseline=&candidate=` | A per-evidence-id diff of two runs, or the reasons they cannot be compared. `include_unchanged=true` lists unchanged ids too. |
+
+Browse them at `/docs` while the API is running. Dates must carry a timezone; write UTC
+with a trailing `Z`. A `+` in an offset must be URL-encoded (`%2B`), or use `Z`.
+
+### Pagination
+
+By cursor, not offset. The listing is ordered by `(created_at, run_id)` descending, and
+both values are fixed when a run is created, so a cursor stays valid however many runs
+are written, or change status, afterwards. New runs sort above the cursor and never shift
+or repeat a later page. The query is `WHERE (created_at, run_id) < (:t, :r) LIMIT n+1`:
+the extra row says whether another page exists, so there is no `COUNT` (it would be slow,
+and stale as soon as it was read).
+
+- **The cursor** is an opaque token holding the last position and a fingerprint of the
+  filters it was issued for. Reusing it with different filters is `400 invalid_cursor`.
+  It is not signed: forging one only moves where the page starts.
+- **One honest limit:** a run whose transaction commits late can carry a `created_at`
+  older than a position a reader already passed. It is missing from that scroll and
+  appears in the next. It can never cause a duplicate or a reordering.
+- **Indexes** (migration 0004) end in `run_id`, so each page is an index range scan with
+  no sort: `(case_id | status | engine_version | -, created_at, run_id)`. A filter on
+  several statuses still uses the status index but has to sort.
+
+### What a run looks like
+
+`status` is the job; `result_state` is what happened to the analysis, in the UI's
+`ResultState` vocabulary:
+
+| `result_state` | When |
+| --- | --- |
+| `queued`, `running` | The job has not finished. No bundle yet. |
+| `measured` | The engine completed. |
+| `refused` | The engine declined to estimate. **A successful job**: `status` is `succeeded`, the response is `200`, and `error` carries the code, stage, message, remediation and detail with `is_refusal: true`. |
+| `failed` | An engine error (`error` is set), or a failure before the engine ran (`failure_reason` says why, cut to 300 characters). |
+| `cancelled` | Cancelled before it produced evidence. |
+
+**C5 note for the frontend:** the UI's `ResultState` has five values (`not_started`,
+`running`, `measured`, `refused`, `failed`). The API adds two: `queued` (a kind of
+"running" to a display) and `cancelled`. See [frontend.md](frontend.md). A stored
+refusal's `error.detail` is returned here, which `/verify` does not do.
+
+Every run object carries `data_mode` and `is_simulated` (never optional), and a simulated
+run carries a `notice`. Pages and comparisons carry `contains_simulated`. A listing or
+comparison therefore cannot present a simulated run as observed (R7).
+
+### Comparing
+
+Each evidence id is `added`, `removed`, `changed` or `unchanged`. A change lists the fields
+that moved, each with before and after: `value`, `unit`, `confidence` (bounds, level and
+kind), `qualifiers`, and the provenance fingerprint (so the same number derived a
+different way is flagged). Rewording a `label` is not a change. Numbers compare with a
+relative tolerance of 1e-9, because ADR-006 guarantees identical results for the same
+engine, spec and seed but not bit-exact floating point across machines. The response also
+carries a neutral verdict diff (the two labels, and whether they differ; nothing is
+ranked) and the warnings that appeared or disappeared.
+
+**NOT COMPARABLE.** `comparable: false`, every reason listed, and **no diff at all**.
+There is no override. A difference across engine versions might be the method and not the
+project, and presenting it as a change would be a measurement artefact in front of a
+due-diligence team.
+
+| Reason | When |
+| --- | --- |
+| `different_case` | the runs are for different cases |
+| `different_data_mode` | one simulated, one observed |
+| `different_engine_version` | the engine versions differ (R8) |
+| `different_contract_major` | incompatible contract versions |
+| `contract_unreadable` | a run was written under a contract this code cannot read |
+| `no_bundle` | a run has no evidence: refused, failed, queued or cancelled. The message says which, and for a refusal, why. |
+
+A different `spec_hash` is **not** a reason: re-running the same method on updated data is
+what monitoring compares. It sets `same_specification: false`. The diff logic is
+`platform/compare/` (pure, no database), reusable by monitoring.
+
+### Errors and when there is no database
+
+Errors use `detail: {code, message, hint}`, the shape `/verify` already uses for engine
+failures. They are `ApiErrorCode` in `platform/api/errors.py`, not the contract's
+`ErrorCode`, because they describe retrieval and not analysis.
+
+| Code | HTTP |
+| --- | --- |
+| `run_not_found` | 404 |
+| `invalid_cursor` | 400 |
+| `invalid_filter` (a date without a timezone, or an empty range) | 422 |
+| `contract_version_mismatch` (fetching one run the code cannot read; the comparison endpoint reports it as a reason instead) | 409 |
+| `store_not_configured` (no `DATABASE_URL`, the `db` extra not installed, or a schema behind the migrations) | 503 |
+| `store_unavailable` (the database is not answering) | 503 |
+| `store_error` (stored data is inconsistent) | 500 |
+
+The store is built lazily by `get_store()` on the first `/runs` request and kept. A failed
+attempt is not remembered, so fixing the configuration needs no restart. `/health`,
+`/cases` and `/verify` never touch it and keep working with no database. Tests inject a
+store with `app.dependency_overrides[get_store]`.
+
 ## Jobs
 
 **Status:** the job lifecycle library is implemented (`platform/jobs/`, #24). Nothing
-submits to it from the API yet (#35, #37); `groundtruth submit` queues a job and the
+submits to it from the API yet (#37); `groundtruth submit` queues a job and the
 worker (`apps/worker`, #25) runs it.
 
 See [ADR-008](../decisions/ADR-008-analysis-jobs.md). A database-backed queue, no

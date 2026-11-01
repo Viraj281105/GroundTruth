@@ -125,10 +125,18 @@ class AnalysisRunRow(Base):
         ),
         # Target of the composite foreign key from evidence_bundles.
         sa.UniqueConstraint("run_id", "case_id"),
-        sa.Index("ix_analysis_runs_case_id_created_at", "case_id", "created_at"),
-        sa.Index("ix_analysis_runs_status_created_at", "status", "created_at"),
+        # Keyset pagination (issue #35) orders by (created_at DESC, run_id DESC), so each
+        # filter's index ends in run_id and a page is a range scan with no sort.
+        sa.Index("ix_analysis_runs_case_id_created_at_run_id", "case_id", "created_at", "run_id"),
+        sa.Index("ix_analysis_runs_status_created_at_run_id", "status", "created_at", "run_id"),
+        sa.Index(
+            "ix_analysis_runs_engine_version_created_at_run_id",
+            "engine_version",
+            "created_at",
+            "run_id",
+        ),
+        sa.Index("ix_analysis_runs_created_at_run_id", "created_at", "run_id"),
         sa.Index("ix_analysis_runs_spec_hash", "spec_hash"),
-        sa.Index("ix_analysis_runs_created_at", "created_at"),
     )
 
     run_id: Mapped[str] = mapped_column(sa.String(32), primary_key=True)

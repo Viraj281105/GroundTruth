@@ -52,6 +52,24 @@ for rules 1, 5 and 6 already exist in `apps/web/src/lib/types.ts`.
 7. **Refusals are designed states**, not error toasts. They carry the reason and
    the remediation from the structured error.
 
+## Run states from the stored-run API
+
+`GET /runs` and `GET /runs/{run_id}` (#35) send a `result_state` so the UI derives
+nothing. It uses the existing `ResultState` values `running`, `measured`, `refused` and
+`failed`, and adds two the UI does not have yet:
+
+| New value | Meaning | Suggested rendering |
+| --- | --- | --- |
+| `queued` | Recorded, not yet picked up by a worker | The `running` style; it is waiting, not failing |
+| `cancelled` | Cancelled before it produced evidence | Neutral, like `not_started`; not an error |
+
+A stored refusal is a normal `200` response with `result_state: "refused"` and the full
+structured `error` (including `detail`), so the refusal view can be driven from it. Every
+run carries `is_simulated`; the persistent banner is driven by that field and by
+`contains_simulated` on a page or a comparison, never inferred. A comparison with
+`comparable: false` has no diff by design: render its `not_comparable` reasons, not a
+table of changes.
+
 ## Data flow
 
 ```
