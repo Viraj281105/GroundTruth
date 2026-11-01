@@ -79,7 +79,12 @@ Repository-relative paths are discovered by walking up for a marker directory
 rather than counting parents — a lesson from the monorepo move, which silently
 broke a parent count.
 
-## Planned: persistence
+## Persistence
+
+**Status:** the schema and migrations are implemented (`platform/store/`, needs the
+`db` extra). Nothing writes to them yet; saving, listing and `spec_hash` cache
+lookups are the evidence store (#15), and no analysis of a real project has been
+run.
 
 | Table | Holds |
 | --- | --- |
@@ -94,7 +99,38 @@ Fully normalising them would be premature; the object is already shaped for a
 document column.
 
 Bundles are **immutable** — a re-run is a new `run_id`, never an update. That is
-what makes result history and monitoring diffs possible.
+what makes result history and monitoring diffs possible. A database trigger
+rejects any `UPDATE` on `evidence_bundles`, so this holds for code that bypasses
+the ORM too.
+
+Choices worth knowing before building on the schema:
+
+- `analysis_runs.status` is the **only** job status. `jobs` holds queue mechanics
+  (attempts, lease, heartbeat, cancellation) and no status of its own, so the two
+  cannot disagree.
+- A refused run has no bundle. Its structured `AnalysisError` is stored on the run
+  (`error`, `error_code`), because a refusal is a result to persist and show.
+- `dataset_refs` on a run is a snapshot of the pinned datasets it used; the
+  `datasets` table is the registry.
+- `is_simulated` must equal `data_mode = 'simulated'`; the database refuses a row
+  that says otherwise (R7).
+- `status` and `data_mode` have `CHECK` constraints. `engine_status`,
+  `verdict_label` and `error_code` deliberately do not: adding an enum member is a
+  minor contract bump and must not force a database migration.
+- `load_bundle` refuses a bundle written under a newer minor or a different major
+  contract rather than rendering it under the wrong rules.
+- Foreign keys have no ORM `relationship()`, so SQLAlchemy does not order inserts
+  for you: write the case row, then the run, then the bundle, flushing between.
+
+```bash
+pip install -e "packages/groundtruth[db]"
+export DATABASE_URL=postgresql+psycopg://user:password@host/dbname   # driver is a deployment choice
+alembic -c packages/groundtruth/alembic.ini upgrade head
+alembic -c packages/groundtruth/alembic.ini downgrade base
+```
+
+Never edit a migration that has been applied; add a new revision. A major contract
+bump needs a data migration for stored bundles (see `OWNERSHIP.md`, C1).
 
 ## Planned: jobs
 

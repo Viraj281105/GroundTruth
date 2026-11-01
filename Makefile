@@ -17,7 +17,7 @@ help:
 setup:
 	$(PY) -m venv $(VENV)
 	$(BIN)/python -m pip install --upgrade pip
-	$(BIN)/python -m pip install -e "packages/groundtruth[api,genai,dev]"
+	$(BIN)/python -m pip install -e "packages/groundtruth[api,db,genai,dev]"
 
 lint:
 	ruff check packages tests
