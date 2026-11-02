@@ -18,6 +18,73 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Job status, progress and cancel APIs** (#37). `POST /jobs` queues a simulated
+  analysis (`202`, or `200` pointing at an existing result or in-flight job);
+  `GET /jobs/{run_id}` returns status, per-stage progress and a timeline, cheap enough to
+  poll; `POST /jobs/{run_id}/cancel` returns `200` for a queued job, `202` for a running
+  one (honoured by the worker when it next checks, or when the engine returns), and `409`
+  for a finished one. Polling, not streaming. Progress is honest: the worker's stages
+  (claim, data, engine, record) are observed live, with `elapsed_ms` for the active one;
+  the engine's own timings come from `RunMetrics` only after it returns and only for a
+  completed analysis; there is no percentage anywhere. A refusal is a `succeeded` job with
+  `result_state: "refused"`. `observed` data is `501`; `true_effect` is refused with `422`.
+  Migration `0005` adds `jobs.stage` and `jobs.stage_log`. `Submission` and `JobStatus`
+  move to `jobs/interface.py` (re-exported from `queue.py`) so the API does not import
+  SQLAlchemy. **No authentication: do not expose publicly.** No contract or engine change.
+- **Stored-run APIs** (#35). `GET /runs` lists runs newest first with cursor (keyset)
+  pagination and filters for case, status, engine version, data mode and date;
+  `GET /runs/{run_id}` returns one run with its outcome and bundle; and
+  `GET /runs/compare` diffs two runs by evidence id. The cursor is bound to the filters
+  and the sort key never changes, so runs written mid-scroll cannot shift or repeat a
+  page. A refusal is a `200` with `result_state: "refused"` and its structured error.
+  A pair that is not comparable (different engine version, data mode, case or contract
+  major, or a run with no bundle) is labelled NOT COMPARABLE with every reason and gets
+  no diff, not a presented change. Every run carries `is_simulated` and `data_mode`.
+  New `result_state` values `queued` and `cancelled` extend the UI's set. With no
+  database the endpoints answer 503 and `/health`, `/cases` and `/verify` are
+  unaffected. Migration `0004` replaces three `analysis_runs` indexes with four that end
+  in `run_id` (and covers `engine_version`); downgrade restores the originals exactly.
+  The store gains `list_runs` and `summary_for`. New `platform/compare/` holds the pure
+  diff. No contract or engine change; existing endpoints unchanged.
+- **Background worker** (#25). `python -m apps.worker.main` claims jobs, runs
+  `run_analysis` (unchanged) and records the outcome; Kariba runs to completion in it
+  on SIMULATED DATA. A heartbeat thread keeps the lease alive at lease/3 and stops
+  the moment the engine returns. Cancellation is cooperative: a cancel during the
+  engine discards its result when it returns. A crash writes nothing (the result is
+  one transaction) and the job is retried after its lease expires; a bug fails only
+  that job. First Ctrl+C/SIGTERM/Ctrl+Break finishes the current job, a second stops
+  at once. Logs are JSON lines carrying `run_id`, `case_id`, `stage`, `worker_id`,
+  `attempt` and `data_mode`, including the engine's own lines, with the database
+  password masked. Startup refuses a missing `DATABASE_URL` or an unmigrated database
+  (`--migrate` is opt-in) and warns when `GIT_SHA` is unset, recording `git_sha` as
+  null rather than a placeholder. New `groundtruth submit` and `groundtruth job`
+  commands queue a job and show its status. `JobStatus` now carries `data_mode` and
+  `is_simulated`. No contract or engine change.
+- **Analysis job lifecycle** (#24). `platform/jobs/` adds a database-backed queue with
+  no broker: `submit`, `claim` with a stored lease, `heartbeat`, cooperative
+  `cancel` honoured between stages, `complete`/`fail` with bounded exponential
+  backoff (`DATA_UNAVAILABLE`, `DataUnavailableError` and expired leases only), and
+  `process_next` as one worker step. A refusal is a SUCCEEDED job with a refused
+  result, never FAILED. Claiming is a single write-first statement (`FOR UPDATE SKIP
+  LOCKED` on PostgreSQL) and every status change is conditional, so two workers
+  cannot take or finish the same job. A request whose `spec_hash` already has a result
+  returns that run without recomputing; an identical request in flight returns that
+  job. The engine's `run_id` is replaced by the job's. Migration `0003` adds
+  `analysis_runs.request` and `jobs.lease_expires_at`. The store's write path is shared
+  via `record_result`, and `by_run_id` now returns `None` for a run with no engine
+  result yet. No worker runs the queue yet (#25) and the API does not submit to it
+  (#35, #37). No contract or engine change.
+- **Evidence and provenance store** (#15). `platform/store/` can now save and
+  retrieve an `AnalysisResult`: `save_result`, `by_run_id`, `by_spec_hash` and
+  `list_for_case`, behind a small `EvidenceStore` interface that needs no database
+  library. A stored result reloads equal to the original, provenance fingerprints
+  included; a refusal reloads as a full result with no bundle. A run is written once
+  (`DuplicateRunError` otherwise), atomically with its bundle. `by_spec_hash` returns
+  the most recent finished run and requires `data_mode` and `engine_version`, so a
+  simulated result cannot answer an observed lookup (R7) nor an older engine's
+  result the current one's (R8). The contract version is checked on read. Migration
+  `0002` adds `analysis_runs.engine_contract_version`. Nothing calls the store yet
+  (#24, #35). No contract change.
 - **Database schema and migrations** (#14). `platform/store/` defines `cases`,
   `analysis_runs`, `evidence_bundles`, `datasets` and `jobs` (SQLAlchemy 2.0,
   Alembic, new optional `db` extra). A bundle is one JSON document (JSONB on

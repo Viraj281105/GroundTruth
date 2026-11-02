@@ -2,7 +2,7 @@ PY ?= python
 VENV = .venv
 BIN = $(VENV)/Scripts
 
-.PHONY: help setup install lint format typecheck test test-cov check api cli clean
+.PHONY: help setup install lint format typecheck test test-cov check api worker cli clean
 
 help:
 	@echo "setup      - create venv and install dev dependencies"
@@ -12,6 +12,7 @@ help:
 	@echo "test       - pytest"
 	@echo "check      - lint + typecheck + test"
 	@echo "api        - run the FastAPI dev server"
+	@echo "worker     - run the analysis worker (needs DATABASE_URL)"
 	@echo "cli        - run the demo verification on the Kariba case"
 
 setup:
@@ -39,6 +40,9 @@ check: lint typecheck test
 
 api:
 	uvicorn apps.api.main:app --reload --port 8000
+
+worker:
+	python -m apps.worker.main
 
 cli:
 	groundtruth verify kariba-redd --synthetic

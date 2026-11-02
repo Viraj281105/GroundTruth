@@ -52,6 +52,37 @@ for rules 1, 5 and 6 already exist in `apps/web/src/lib/types.ts`.
 7. **Refusals are designed states**, not error toasts. They carry the reason and
    the remediation from the structured error.
 
+## Run states from the stored-run API
+
+`GET /runs` and `GET /runs/{run_id}` (#35) send a `result_state` so the UI derives
+nothing. It uses the existing `ResultState` values `running`, `measured`, `refused` and
+`failed`, and adds two the UI does not have yet:
+
+| New value | Meaning | Suggested rendering |
+| --- | --- | --- |
+| `queued` | Recorded, not yet picked up by a worker | The `running` style; it is waiting, not failing |
+| `cancelled` | Cancelled before it produced evidence | Neutral, like `not_started`; not an error |
+
+A stored refusal is a normal `200` response with `result_state: "refused"` and the full
+structured `error` (including `detail`), so the refusal view can be driven from it. Every
+run carries `is_simulated`; the persistent banner is driven by that field and by
+`contains_simulated` on a page or a comparison, never inferred. A comparison with
+`comparable: false` has no diff by design: render its `not_comparable` reasons, not a
+table of changes.
+
+### Watching a job
+
+`POST /jobs` returns at once with a `status_url`; poll `GET /jobs/{run_id}` about once a
+second until `terminal` is true. The response carries `stages` (claim, data, engine,
+record) with a state each, so the UI can show where a job is. It deliberately has **no
+percentage**: the engine is one uninterruptible step, so while it runs the UI gets
+`elapsed_ms` (time spent) and nothing about how much is left. Do not synthesise a
+progress bar from it. The engine's own per-stage timings arrive in `engine_metrics` after
+it finishes, for completed analyses only. A refusal is `result_state: "refused"` with
+every stage `done`, and renders as the refusal state, not an error. Cancelling a running
+job returns `202` and `cancel_requested: true`; keep polling until `terminal`, because the
+engine cannot be interrupted and the cancel completes when it returns.
+
 ## Data flow
 
 ```

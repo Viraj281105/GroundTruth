@@ -18,6 +18,8 @@ from groundtruth.contracts import CONTRACT_VERSION
 from groundtruth.contracts.errors import CaseDefinitionError, DataUnavailableError
 from groundtruth.contracts.result import AnalysisResult, EngineStatus, ErrorCode
 from groundtruth.engine import ENGINE_VERSION, describe_engine, run_analysis
+from groundtruth.platform.api.jobs import router as jobs_router
+from groundtruth.platform.api.runs import router as runs_router
 from groundtruth.platform.api.schemas import (
     CaseDetail,
     CaseSummary,
@@ -48,6 +50,11 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# Stored-run endpoints (issue #35). They read the evidence store lazily, so the endpoints
+# below keep working with no database configured.
+app.include_router(runs_router)
+app.include_router(jobs_router)
 
 ERROR_STATUS: dict[ErrorCode, int] = {
     ErrorCode.INVALID_REQUEST: 422,

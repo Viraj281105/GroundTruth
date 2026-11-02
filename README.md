@@ -172,7 +172,7 @@ easier to demo. It is also wrong.
 ```
 apps/
   api/            thin ASGI entrypoint                    Bhumi  [implemented]
-  worker/         background job runner                   Bhumi  [not built]
+  worker/         background job runner                   Bhumi  [implemented; simulated data only]
   web/            Next.js frontend                        Viraj  [types only]
 
 packages/groundtruth/src/groundtruth/
@@ -246,7 +246,7 @@ provenance, its run warnings, its verdict caveats and a banner on stderr.
 | Donor matching with exclusion accounting | Biomass / carbon conversion (deliberately deferred) |
 | Synthetic control solver and diagnostics | GenAI narration providers |
 | DiD cross-check with pre-trend diagnostic | Frontend (API contract types only) |
-| Placebo inference, leave-one-out, spec curve | Persistence logic (schema and migrations exist) |
+| Placebo inference, leave-one-out, spec curve | Running analyses as jobs and persisting them (the job queue and store exist; nothing calls them yet) |
 | Evidence assembly and verdict gate chain | Kariba benchmark run |
 | Deterministic renderer | Nugen vs baseline evaluation |
 | Grounding verifier and safe fallback | |

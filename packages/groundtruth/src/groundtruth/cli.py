@@ -4,6 +4,8 @@
     groundtruth show kariba-redd          inspect one case definition
     groundtruth verify kariba-redd        run the pipeline for a case
     groundtruth doctor                    report what is configured and what is not
+    groundtruth submit kariba-redd --synthetic   queue a job for the worker
+    groundtruth job run_...               show a job's status
 
 ``verify`` refuses to run against real providers until they are implemented, and
 ``--synthetic`` makes the simulated-data path explicit rather than a silent
@@ -14,8 +16,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 from groundtruth import __version__
 from groundtruth.contracts.errors import GroundTruthError
@@ -144,6 +148,98 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def _job_sessions() -> Any:
+    """Sessions on the configured, fully migrated database, or ``None`` after explaining why.
+
+    Imported here, not at the top, so the commands that need no database still work
+    without the ``db`` extra installed.
+    """
+    # These commands only read the schema version; Alembic's INFO chatter (emitted as it
+    # loads) is noise here. The worker, which can migrate, keeps it.
+    logging.getLogger("alembic").setLevel(logging.WARNING)
+    from groundtruth.platform.store import migrate
+    from groundtruth.platform.store.database import create_db_engine, create_session_factory
+
+    if not migrate.is_at_head():
+        print(
+            "the database is not migrated to the latest schema. Run:\n"
+            "  python -m apps.worker.main --migrate --exit-when-idle",
+            file=sys.stderr,
+        )
+        return None
+    return create_session_factory(create_db_engine())
+
+
+def _cmd_submit(args: argparse.Namespace) -> int:
+    from groundtruth.platform.jobs.queue import JobQueue
+    from groundtruth.platform.store.sql import SqlEvidenceStore
+
+    if not args.synthetic:
+        print(
+            "Real Earth-observation providers are not implemented yet, so a real-data job "
+            "would only fail.\nRe-run with --synthetic to queue a simulated run.",
+            file=sys.stderr,
+        )
+        return 2
+
+    settings = get_settings()
+    case = get_case(args.case_id)
+    sessions = _job_sessions()
+    if sessions is None:
+        return 2
+    print(SYNTHETIC_BANNER, file=sys.stderr)
+    SqlEvidenceStore(sessions).upsert_case(case)
+    request = case.to_request(
+        data_mode="simulated", seed=settings.random_seed, min_donors=args.min_donors
+    )
+    submission = JobQueue(sessions).submit(request, requested_by=args.requested_by)
+
+    if args.json:
+        print(submission.model_dump_json(indent=2))
+        return 0
+    how = (
+        "an existing result answers this request; nothing new will run"
+        if submission.from_cache
+        else "an identical job is already in flight"
+        if submission.deduplicated
+        else "queued; start a worker to run it"
+    )
+    print(f"run_id={submission.run_id} status={submission.status.value} ({how})")
+    return 0
+
+
+def _cmd_job(args: argparse.Namespace) -> int:
+    from groundtruth.platform.jobs.queue import JobQueue
+
+    sessions = _job_sessions()
+    if sessions is None:
+        return 2
+    status = JobQueue(sessions).status(args.run_id)
+    if status is None:
+        print(f"no run {args.run_id!r}", file=sys.stderr)
+        return 1
+    if args.json:
+        print(status.model_dump_json(indent=2))
+        return 0
+    if status.is_simulated:
+        print("SIMULATED DATA: this run used the synthetic fixture, not observations.")
+    rows = [
+        ("run_id", status.run_id),
+        ("case_id", status.case_id),
+        ("status", status.status.value),
+        ("engine status", status.engine_status or "-"),
+        ("data mode", status.data_mode),
+        ("attempts", f"{status.attempts} of {status.max_attempts}" if status.attempts else "-"),
+        ("worker", status.locked_by or "-"),
+        ("cancel requested", "yes" if status.cancel_requested else "no"),
+        ("last error", json.dumps(status.last_error) if status.last_error else "-"),
+    ]
+    width = max(len(k) for k, _ in rows)
+    for key, value in rows:
+        print(f"{key:<{width}} : {value}")
+    return 0
+
+
 def _cmd_doctor(_: argparse.Namespace) -> int:
     settings = get_settings()
     capabilities = describe_engine()
@@ -205,6 +301,25 @@ def build_parser() -> argparse.ArgumentParser:
     verify.add_argument("--json", action="store_true", help="Emit the full AnalysisResult as JSON.")
     verify.add_argument("--out", help="Write the report and bundle to this path.")
     verify.set_defaults(func=_cmd_verify)
+
+    submit = subparsers.add_parser(
+        "submit", help="Queue an analysis job for a case (needs DATABASE_URL)."
+    )
+    submit.add_argument("case_id")
+    submit.add_argument(
+        "--synthetic",
+        action="store_true",
+        help="Queue a simulated run. Required until real providers are implemented.",
+    )
+    submit.add_argument("--min-donors", type=int, default=10)
+    submit.add_argument("--requested-by", default=None)
+    submit.add_argument("--json", action="store_true")
+    submit.set_defaults(func=_cmd_submit)
+
+    job = subparsers.add_parser("job", help="Show a job's status (needs DATABASE_URL).")
+    job.add_argument("run_id")
+    job.add_argument("--json", action="store_true")
+    job.set_defaults(func=_cmd_job)
 
     doctor = subparsers.add_parser("doctor", help="Report what is configured and implemented.")
     doctor.set_defaults(func=_cmd_doctor)

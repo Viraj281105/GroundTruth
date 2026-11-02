@@ -2,8 +2,22 @@
 
 **Owner: Bhumi.** `apps/worker/`
 
-**Status: NOT BUILT.** The entrypoint prints a not-implemented message and exits
-non-zero. Analyses currently run synchronously inside the API process.
+**Status: IMPLEMENTED, simulated data only** (#25). The worker consumes jobs, runs
+`run_analysis` and records the outcome. Only simulated jobs can succeed: observed-data
+jobs fail because Earth Engine access is not implemented (#22). Jobs are queued by
+`POST /jobs` or `groundtruth submit`, and watched with `GET /jobs/{run_id}` (#37). At each
+checkpoint the worker records which stage the job is entering (`jobs.stage`,
+`jobs.stage_log`), which is what that endpoint shows.
+
+```powershell
+python -m apps.worker.main --migrate --exit-when-idle   # once: create the tables
+groundtruth submit kariba-redd --synthetic             # queue a simulated Kariba run
+python -m apps.worker.main                             # run until Ctrl+C
+groundtruth job <run_id>                               # status, from any terminal
+```
+
+`DATABASE_URL` must be set (there is no default database), and `GIT_SHA` should be,
+so results record the commit; unset, it is recorded as null.
 
 ---
 
@@ -24,14 +38,18 @@ CPU throughput — so they belong in separate containers from the same image
 ## Shape
 
 ```python
-while True:
-    job = queue.claim()                    # platform.jobs
-    request = job.to_request()             # platform.cases
-    data = resolve_access(request)         # platform.datasets
-    result = run_analysis(request, data)   # the contract, unchanged
-    store.persist(result)                  # platform.store
-    job.complete(result)
+while not stopping:
+    job = queue.claim(worker_id)           # reaps expired leases first
+    if job is None:
+        stop.wait(poll_seconds)            # idle: no busy loop; a stop wakes it at once
+        continue
+    with Heartbeat(queue, job, lease / 3): # keeps the lease alive while the engine runs
+        process(queue, job, resolve_access, run=run_analysis)  # data -> engine -> record
 ```
+
+The code is `groundtruth.platform.jobs.worker` (loop and heartbeat) and
+`groundtruth.platform.jobs.entrypoint` (startup, signals); `apps/worker/main.py` only
+calls it, as `apps/api/main.py` does for the API.
 
 The worker calls exactly the same `run_analysis` the API calls today. Moving
 execution here requires **no engine change and no contract change** — which was
@@ -45,9 +63,9 @@ the point of returning typed results rather than raising (ADR-008).
 | Heartbeat | Periodic touch; an expired lease returns the job to the queue |
 | Retry | Exponential backoff, bounded attempts. Safe because runs are deterministic. |
 | Idempotency | `spec_hash` — a job whose spec already has a result returns it |
-| Cancellation | Cooperative: the worker checks a cancel flag between stages |
-| Failure | A crash is `AnalysisStatus.FAILED`; a refusal is `SUCCEEDED` with `EngineStatus.REFUSED` |
-| Observability | Structured logs carrying run id, case id and stage |
+| Cancellation | Cooperative. Before data access and before the engine, the job is cancelled without running it. During the engine, the heartbeat sees the request and the result is discarded when the engine returns; `run_analysis` itself cannot be interrupted. |
+| Failure | A refusal is `SUCCEEDED` with `EngineStatus.REFUSED`. A bug fails that job (`FAILED`, traceback logged) and the worker carries on. A crash leaves the job claimed with nothing written; its lease expires and it is retried, `FAILED` only once attempts run out. |
+| Observability | One JSON object per line on stderr, each job line carrying `run_id`, `case_id`, `stage`, `worker_id`, `attempt` and `data_mode` (the engine's own lines too). The database URL is logged with its password masked. |
 
 **The refusal distinction is the thing most likely to be implemented wrongly.** A
 project the data cannot support is a *successful job* with a refusal result. If

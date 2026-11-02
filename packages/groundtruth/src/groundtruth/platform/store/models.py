@@ -15,9 +15,9 @@ Two rules shape the schema:
 * **A bundle carries the contract version it was written under**, so a bundle
   stored today stays readable after a minor contract bump (see :func:`load_bundle`).
 
-This module defines the schema and the one read helper the acceptance criteria
-need. Saving, listing and ``spec_hash`` cache lookups belong to the evidence store
-(issue #15).
+This module defines the schema and the read helpers that check a stored record's
+contract version. Saving and retrieving results is the evidence store
+(:mod:`groundtruth.platform.store.sql`, behind :mod:`groundtruth.platform.store.interface`).
 
 Timestamps are timezone-aware. SQLite does not keep the offset and returns naive
 values; the bundle document is unaffected because it stores its timestamps as ISO
@@ -33,7 +33,6 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from groundtruth.contracts.errors import GroundTruthError
 from groundtruth.contracts.evidence import EvidenceBundle
 from groundtruth.contracts.result import AnalysisStatus
 from groundtruth.contracts.version import (
@@ -42,6 +41,7 @@ from groundtruth.contracts.version import (
     is_compatible,
     parse_version,
 )
+from groundtruth.platform.store.interface import IncompatibleBundleError
 
 # Explicit constraint names make migrations reproducible and give Alembic stable
 # names to drop on downgrade. SQLite in particular cannot drop an unnamed constraint.
@@ -125,10 +125,18 @@ class AnalysisRunRow(Base):
         ),
         # Target of the composite foreign key from evidence_bundles.
         sa.UniqueConstraint("run_id", "case_id"),
-        sa.Index("ix_analysis_runs_case_id_created_at", "case_id", "created_at"),
-        sa.Index("ix_analysis_runs_status_created_at", "status", "created_at"),
+        # Keyset pagination (issue #35) orders by (created_at DESC, run_id DESC), so each
+        # filter's index ends in run_id and a page is a range scan with no sort.
+        sa.Index("ix_analysis_runs_case_id_created_at_run_id", "case_id", "created_at", "run_id"),
+        sa.Index("ix_analysis_runs_status_created_at_run_id", "status", "created_at", "run_id"),
+        sa.Index(
+            "ix_analysis_runs_engine_version_created_at_run_id",
+            "engine_version",
+            "created_at",
+            "run_id",
+        ),
+        sa.Index("ix_analysis_runs_created_at_run_id", "created_at", "run_id"),
         sa.Index("ix_analysis_runs_spec_hash", "spec_hash"),
-        sa.Index("ix_analysis_runs_created_at", "created_at"),
     )
 
     run_id: Mapped[str] = mapped_column(sa.String(32), primary_key=True)
@@ -144,9 +152,22 @@ class AnalysisRunRow(Base):
     seed: Mapped[int] = mapped_column(sa.BigInteger)
     engine_version: Mapped[str | None] = mapped_column(sa.String(40))
     engine_git_sha: Mapped[str | None] = mapped_column(sa.String(64))
+    engine_contract_version: Mapped[str | None] = mapped_column(sa.String(20))
+    """Contract version the engine build targets (``EngineRef.contract_version``).
+
+    Distinct from ``contract_version``, which is the version the result was stamped
+    with. Added in revision 0002 so a stored result reloads exactly.
+    """
     contract_version: Mapped[str] = mapped_column(sa.String(20))
     dataset_refs: Mapped[list[dict[str, Any]]] = mapped_column(JsonDocument)
     metrics: Mapped[dict[str, Any] | None] = mapped_column(JsonDocument)
+    request: Mapped[dict[str, Any] | None] = mapped_column(JsonDocument)
+    """The full ``AnalysisRequest`` behind this run (revision 0003).
+
+    Stored with the run, not the job, because it is the run's specification: a queued
+    run executes exactly this, even after a restart or a change to the case file, and
+    monitoring replays it later (ADR-006). ``None`` for a result saved without it.
+    """
     requested_by: Mapped[str | None] = mapped_column(sa.String(100))
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), server_default=sa.func.now()
@@ -226,7 +247,17 @@ class JobRow(Base):
         sa.DateTime(timezone=True), server_default=sa.func.now()
     )
     locked_by: Mapped[str | None] = mapped_column(sa.String(100))
+    stage: Mapped[str | None] = mapped_column(sa.String(20))
+    """The stage the job is in now: claim, data, engine or record (revision 0005)."""
+    stage_log: Mapped[dict[str, str] | None] = mapped_column(JsonDocument)
+    """When each stage began, as ``{stage: iso time}``. A stage ends when the next begins."""
     heartbeat_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    """When the current claim lapses unless renewed (revision 0003).
+
+    Stored rather than computed from a configured lease length, so every worker
+    agrees on whether a job is abandoned, however each one is configured.
+    """
     cancel_requested_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     last_error: Mapped[dict[str, Any] | None] = mapped_column(JsonDocument)
     created_at: Mapped[datetime] = mapped_column(
@@ -237,19 +268,34 @@ class JobRow(Base):
     )
 
 
-class IncompatibleBundleError(GroundTruthError):
-    """Raised when a stored bundle cannot be read under the running contract version."""
+def check_readable(
+    produced_under: str, run_id: str, *, what: str, consumer_version: str = CONTRACT_VERSION
+) -> None:
+    """Refuse a stored record written under a contract this consumer cannot read.
+
+    Shared by bundles and run rows. A refused run has no bundle, so its own version
+    must be checked too. The check happens before validation on purpose: a record
+    from a newer minor or a different major may still *parse* while meaning
+    something different, and quietly rendering it would show a number under the
+    wrong rules. Refusing is the safe failure (R5); a major bump ships with a
+    migration for stored bundles.
+
+    Raises:
+        IncompatibleBundleError: if ``produced_under`` is older than the supported
+            floor, or not readable by ``consumer_version``.
+    """
+    too_old = parse_version(produced_under) < parse_version(MIN_SUPPORTED_CONTRACT_VERSION)
+    if too_old or not is_compatible(produced_under, consumer_version):
+        raise IncompatibleBundleError(
+            f"{what} for run {run_id!r} was written under contract {produced_under}, "
+            f"which contract {consumer_version} cannot read"
+        )
 
 
 def load_bundle(
     row: EvidenceBundleRow, *, consumer_version: str = CONTRACT_VERSION
 ) -> EvidenceBundle:
     """Rebuild the :class:`EvidenceBundle` stored in ``row``.
-
-    The version check happens before validation on purpose. A bundle from a newer
-    minor or a different major may still *parse* while meaning something different,
-    and quietly rendering it would show a number under the wrong rules. Refusing is
-    the safe failure (R5); a major bump ships with a migration for stored bundles.
 
     Args:
         row: A stored bundle.
@@ -260,11 +306,7 @@ def load_bundle(
         IncompatibleBundleError: if the bundle was written under a version this
             consumer cannot read.
     """
-    produced_under = row.contract_version
-    too_old = parse_version(produced_under) < parse_version(MIN_SUPPORTED_CONTRACT_VERSION)
-    if too_old or not is_compatible(produced_under, consumer_version):
-        raise IncompatibleBundleError(
-            f"bundle for run {row.run_id!r} was written under contract {produced_under}, "
-            f"which contract {consumer_version} cannot read"
-        )
+    check_readable(
+        row.contract_version, row.run_id, what="bundle", consumer_version=consumer_version
+    )
     return EvidenceBundle.model_validate(row.bundle)

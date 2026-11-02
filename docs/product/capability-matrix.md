@@ -81,11 +81,12 @@ moves, update this table in the same change.
 | **Covariate dataset services** | **Planned — MVP** |
 | **Boundary acquisition and storage** | **Planned — MVP** |
 | Database schema and migrations (SQLAlchemy 2.0 + Alembic, `db` extra) | Implemented |
-| **Evidence and provenance persistence** | **Planned — MVP** |
-| **Analysis job lifecycle** | **Planned — MVP** |
-| **Background worker process** | **Planned — MVP** |
+| Evidence and provenance persistence (`EvidenceStore`; not yet called by the API) | Implemented |
+| Analysis job lifecycle (`JobQueue`) | Implemented |
+| Background worker process (`apps/worker`; simulated data only) | Implemented |
+| Job submit, status/progress and cancel APIs (`POST /jobs`, `GET /jobs/{id}`, `POST /jobs/{id}/cancel`; polling, simulated data, **no authentication**) | Implemented |
 | **Frontend/backend integration** | **Planned — MVP** |
-| **Result listing and comparison APIs** | **Planned — Stage 2** |
+| Result listing, retrieval and comparison APIs (`GET /runs`, `/runs/{id}`, `/runs/compare`; read-only, simulated data) | Implemented |
 | **GenAI narration providers** | **Planned — Stage 2** |
 | Report export with provenance | Planned — Stage 2 |
 | Authentication, rate limiting, audit log | Planned — Stage 2 |

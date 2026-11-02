@@ -89,7 +89,7 @@ This is the seam between **methodology** and **plumbing**:
 ```
 apps/
   api/            thin ASGI entrypoint                        Bhumi  [implemented]
-  worker/         background job runner                       Bhumi  [not built]
+  worker/         background job runner                       Bhumi  [implemented; simulated data only]
   web/            Next.js frontend                            Viraj  [contract types only]
 
 packages/groundtruth/src/groundtruth/
@@ -108,8 +108,8 @@ packages/groundtruth/src/groundtruth/
     cases/        case registry, request translation          Bhumi  [implemented]
     datasets/     registry, pinning, DataAccess impls         Bhumi  [synthetic only]
     units/        ADR-011 unit construction and ladder        Bhumi  [rules only]
-    jobs/         analysis lifecycle                          Bhumi  [not built]
-    store/        evidence persistence                        Bhumi  [schema + migrations only]
+    jobs/         analysis lifecycle                          Bhumi  [implemented; not yet called]
+    store/        evidence persistence                        Bhumi  [implemented; not yet called]
     storage/      artifacts and exports                       Bhumi  [not built]
     reports/      rendering · GenAI narration                 Bhumi  [renderer only]
     config.py     settings                                    Bhumi  [implemented]
@@ -152,12 +152,12 @@ Detail: [`docs/architecture/earth-observation.md`](docs/architecture/earth-obser
  1. case YAML                      platform/cases      [implemented]
  2. → AnalysisRequest              case.to_request()   [implemented]
        pins DatasetRefs, drops known_reference
- 3. → job queued                   platform/jobs       [NOT BUILT — runs inline]
+ 3. → job queued                   platform/jobs       [library built; API NOT YET WIRED — runs inline]
  4. → DataAccess resolved          platform/datasets   [synthetic only]
  5. → run_analysis                 engine/run.py       [implemented]
        observe → match → estimate → test → assemble
  6. → AnalysisResult
- 7. → persisted                    platform/store      [schema only — NOT YET WRITTEN TO; in memory]
+ 7. → persisted                    platform/store      [store built; API NOT YET WIRED — in memory]
  8. → report generated             platform/reports    [renderer only]
        grounding check → publish or fall back
  9. → served                       platform/api        [implemented]

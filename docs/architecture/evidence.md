@@ -4,8 +4,8 @@ The evidence object is the most important artefact in GroundTruth. Everything
 upstream exists to produce one; everything downstream exists to render, store,
 narrate or compare one.
 
-**Status: the core object model is implemented.** Persistence, comparison and
-signing are not.
+**Status: the core object model, persistence and comparison are implemented.**
+Signing is not.
 
 ---
 
