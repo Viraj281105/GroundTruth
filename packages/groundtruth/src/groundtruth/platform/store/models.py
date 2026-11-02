@@ -247,6 +247,10 @@ class JobRow(Base):
         sa.DateTime(timezone=True), server_default=sa.func.now()
     )
     locked_by: Mapped[str | None] = mapped_column(sa.String(100))
+    stage: Mapped[str | None] = mapped_column(sa.String(20))
+    """The stage the job is in now: claim, data, engine or record (revision 0005)."""
+    stage_log: Mapped[dict[str, str] | None] = mapped_column(JsonDocument)
+    """When each stage began, as ``{stage: iso time}``. A stage ends when the next begins."""
     heartbeat_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     lease_expires_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     """When the current claim lapses unless renewed (revision 0003).

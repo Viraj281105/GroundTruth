@@ -12,10 +12,10 @@ it up.
 
 | Module | Responsibility | Status |
 | --- | --- | --- |
-| `api/` | FastAPI app, request/response schemas, validation, error mapping | Implemented. `/verify` is synchronous; `/runs` reads stored runs |
+| `api/` | FastAPI app, request/response schemas, validation, error mapping | Implemented. `/verify` is synchronous; `/runs` reads stored runs; `/jobs` submits, polls and cancels |
 | `cases/` | Case registry, YAML loading, translation to `AnalysisRequest` | Implemented |
 | `datasets/` | Dataset registry, version pinning, credentials, caching, `DataAccess` implementations | Synthetic only |
-| `jobs/` | Analysis lifecycle: queue, claim, heartbeat, retry, cancel | Implemented; not yet called |
+| `jobs/` | Analysis lifecycle: queue, claim, heartbeat, retry, cancel | Implemented; used by `/jobs` and the worker |
 | `store/` | Evidence and provenance persistence, run history | Implemented; read by `/runs`, not yet written by the API |
 | `storage/` | Artifacts, exports, generated reports | Not built |
 | `reports/` | Deterministic rendering, grounded GenAI narration | Renderer only |
@@ -42,14 +42,14 @@ HTTP request
   → load case               cases/registry.py
   → translate               case.to_request() — pins datasets, drops known_reference
   → resolve data access     datasets/access.py
-  → [not wired] enqueue     jobs/   (library built, #24)
+  → [POST /jobs only] enqueue  jobs/   (#24, #37)
   → run_analysis            the contract
-  → [not wired] persist     store/  (built, #15)
+  → [via the worker] persist   store/  (#15)
   → generate report         reports/
   → project to response     api/schemas.py
 ```
 
-Steps marked not wired currently run inline: the API does not call them yet (#37). The read side, `/runs`, is built (#35). The response shape will not change
+`/verify` still runs everything inline and stores nothing. `POST /jobs` queues the same analysis for the worker, which persists it (#37); `/runs` reads it back (#35). The `/verify` response shape will not change
 when they move behind a job, which is why `run_id` and `spec_hash` are already
 in the response today.
 
@@ -84,7 +84,7 @@ broke a parent count.
 **Status:** the schema, migrations and the evidence store are implemented
 (`platform/store/`, needs the `db` extra). The stored-run endpoints (#35) read from
 it; the API does not write to it yet: `/verify` still runs analyses inline and saves
-nothing, and submitting jobs is #37. No analysis of a real project has been run.
+nothing; `POST /jobs` (#37) queues work for the worker, which writes. No analysis of a real project has been run.
 
 | Table | Holds |
 | --- | --- |
@@ -182,8 +182,8 @@ bump needs a data migration for stored bundles (see `OWNERSHIP.md`, C1).
 
 **Status:** implemented (#35), read-only, on simulated data only. They read what the
 worker and the evidence store recorded. They run nothing and write nothing; submitting
-jobs through the API is #37, and `/cases/{id}/verify` is unchanged (it still runs inline
-and stores nothing).
+and polling jobs is `/jobs` (#37), and `/cases/{id}/verify` is unchanged (it still runs
+inline and stores nothing).
 
 | Endpoint | Does |
 | --- | --- |
@@ -285,11 +285,109 @@ attempt is not remembered, so fixing the configuration needs no restart. `/healt
 `/cases` and `/verify` never touch it and keep working with no database. Tests inject a
 store with `app.dependency_overrides[get_store]`.
 
+## Job endpoints
+
+**Status:** implemented (#37), on simulated data only.
+
+> **No authentication yet.** None of these endpoints, nor any other endpoint of this
+> API, is authenticated. Anyone who can reach the API can queue, poll and cancel jobs, and
+> every job is a database row and CPU time for the worker. That is acceptable on a laptop
+> and **must not be exposed publicly until authentication, authorisation and rate limiting
+> are added.** Treat it as a blocker for any public deployment.
+
+| Endpoint | Does |
+| --- | --- |
+| `POST /jobs` | Queue a simulated analysis for a case and return at once. Body: `case_id`, `synthetic` (default true), `min_donors` (default 10). |
+| `GET /jobs/{run_id}` | A job's status and progress, cheap enough to poll. `Cache-Control: no-store`. |
+| `POST /jobs/{run_id}/cancel` | Stop a job. |
+
+Results and history are `/runs`; `/jobs` is the lightweight thing a UI polls. Try them at
+`/docs`.
+
+### Polling, not streaming
+
+The state lives in the database, so a client asks for it. About once a second is plenty (a
+Kariba run is seconds), it works through any proxy without long-held connections, and the
+response says when to stop: `terminal` is true. Server-sent events would hold a server
+thread per viewer on this synchronous app, need proxy buffering switched off, and are
+the usual source of flaky stream tests; they can be added later without changing anything
+here.
+
+### Submitting
+
+- **`202`**: a new job was queued. **`200`**: nothing new was queued, because a stored
+  result already answers this exact request (`from_cache`) or an identical job is already
+  in flight (`deduplicated`); `run_id` is that existing run. This is the `spec_hash` cache
+  and de-duplication from #24, unchanged.
+- The case is stored first (as `groundtruth submit` does), the request is built exactly as
+  `/verify` builds it, with the configured seed, and `data_mode` is `simulated`.
+- `synthetic: false` is `501`. It is never quietly simulated.
+- **There is no `true_effect` field, and sending one is a `422`.** It is not part of the
+  specification hash, so accepting it would let two different simulations share one cached
+  answer. (The worker has its own `--true-effect`.)
+- The response embeds the full `JobView`, labelled `is_simulated` with the simulated
+  `notice`, including on a cache hit.
+- **Engine-version assumption.** The cache lookup uses the engine version of the *API*
+  process, while the job runs on whichever *worker* picks it up. They are the same while
+  both deploy from one image (ADR-010). If they ever differ, a submit could be answered
+  from, or queued for, a different engine version than the worker runs.
+
+### What progress can honestly show
+
+`run_analysis` is one uninterruptible call that reports its own timings only when it
+returns. So there are two kinds of information, labelled by where they come from, and
+**no percentage anywhere**. A test fails if a field is named like one.
+
+| Kind | What | When |
+| --- | --- | --- |
+| `stages` (observed live) | `claim`, `data`, `engine`, `record`, each `done`, `active`, `pending`, `skipped`, `failed` or `unknown`, with start and finish times | As they happen. The active stage has `elapsed_ms`, time spent so far, never a fraction of the total. `record` is one database transaction, so it claims no duration. |
+| `engine_metrics` (from `RunMetrics`) | The engine's own total time, unit, donor and fit counts, and where it stopped | Only after the engine returns. Before then `available` is false and nothing is estimated. |
+
+- **The engine reports its internal stage timings** (`observation`, `matching`,
+  `alignment`, `estimation`, `robustness`, `assembly`) **only for a completed analysis.**
+  A refusal or error gets the total time, the counts and `stopped_at`, with an empty
+  `stages` list and a note saying why. None are invented. Having the engine report timings
+  on a refusal too would be an engine change.
+- `stages` come from `jobs.stage` and `jobs.stage_log` (migration 0005), written by the
+  worker in the same transaction as its lease renewal at each checkpoint, and in
+  `complete()` for `record`. A worker that lost its lease cannot write them. A retry clears
+  them, so a job waiting to run again does not show the failed attempt's progress. A job
+  with no recorded stages (an older row, or a result saved directly) shows `unknown`, not
+  a guess.
+- `last_heartbeat_at` and `lease_expires_at` show the worker is alive. The heartbeat is
+  coarse (a third of the lease, about 100 seconds by default).
+- The worker's identity is not exposed.
+
+### A refusal is a completed job
+
+`status` is `succeeded`, `result_state` is `refused`, `terminal` is true, `error.is_refusal`
+is true, and every stage is `done`. It is never `failed`. `result_state` comes from the one
+function that `/runs` uses, so the two endpoints cannot disagree. `queued` and `cancelled`
+extend the UI's `ResultState` (see [frontend.md](frontend.md)).
+
+### Cancelling
+
+| Job is | Response | What happens |
+| --- | --- | --- |
+| queued | `200`, `cancelled` | Cancelled at once; no worker will start it. |
+| running | `202`, still `running`, `cancel_requested: true` | The worker's heartbeat sees the request. It stops at its next checkpoint, or the result is discarded when the engine returns, and the job ends `cancelled`. The engine itself cannot be interrupted. |
+| already cancelled, or cancel already requested | the same answer again | Idempotent. |
+| succeeded or failed | `409 job_already_finished` | Nothing changes. |
+| unknown | `404 run_not_found` | |
+
+### Errors and when there is no database
+
+New codes, in the `detail: {code, message, hint}` shape: `job_already_finished` 409,
+`case_not_found` 404, and `not_implemented` 501 (the contract's code and status, as
+`/verify` uses). With no database every job endpoint answers `503`
+(`store_not_configured` or `store_unavailable`), exactly as `/runs` does; `/health`,
+`/cases` and `/verify` are unaffected.
+
 ## Jobs
 
-**Status:** the job lifecycle library is implemented (`platform/jobs/`, #24). Nothing
-submits to it from the API yet (#37); `groundtruth submit` queues a job and the
-worker (`apps/worker`, #25) runs it.
+**Status:** the job lifecycle library is implemented (`platform/jobs/`, #24). `POST
+/jobs` and `groundtruth submit` queue a job and the worker (`apps/worker`, #25) runs it;
+see [Job endpoints](#job-endpoints).
 
 See [ADR-008](../decisions/ADR-008-analysis-jobs.md). A database-backed queue, no
 broker: a job is its `analysis_runs` row (the one status) plus a `jobs` row (attempts,

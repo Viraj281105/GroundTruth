@@ -12,8 +12,6 @@ A refused run is a legitimate outcome, so it is returned as a normal ``200`` wit
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from contextlib import contextmanager
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
@@ -21,7 +19,7 @@ from fastapi import APIRouter, Depends, Query
 
 from groundtruth.contracts.result import AnalysisResult, AnalysisStatus
 from groundtruth.platform.api.cursor import CursorError, decode_cursor, encode_cursor
-from groundtruth.platform.api.dependencies import database_error_types, get_store
+from groundtruth.platform.api.dependencies import get_store, store_errors
 from groundtruth.platform.api.errors import ApiErrorBody, ApiErrorCode, api_error
 from groundtruth.platform.api.schemas import RunComparison, RunDetail, RunItem, RunListPage
 from groundtruth.platform.compare.comparison import RunSide, compare_runs
@@ -30,7 +28,6 @@ from groundtruth.platform.store.interface import (
     IncompatibleBundleError,
     RunFilter,
     RunSummary,
-    StoreError,
 )
 
 router = APIRouter(prefix="/runs", tags=["runs"])
@@ -41,27 +38,6 @@ _ERRORS: dict[int | str, dict[str, Any]] = {
     404: {"model": ApiErrorBody, "description": "No such run."},
     503: {"model": ApiErrorBody, "description": "The run store is not available."},
 }
-
-
-@contextmanager
-def _store_errors() -> Iterator[None]:
-    """Turn the store's failures into the API's structured errors."""
-    try:
-        yield
-    except IncompatibleBundleError as exc:
-        raise api_error(
-            ApiErrorCode.CONTRACT_VERSION_MISMATCH,
-            str(exc),
-            hint="Migrate stored runs to the current contract, or use a build that reads them.",
-        ) from exc
-    except StoreError as exc:
-        raise api_error(ApiErrorCode.STORE_ERROR, str(exc)) from exc
-    except database_error_types() as exc:
-        raise api_error(
-            ApiErrorCode.STORE_UNAVAILABLE,
-            "The database stopped answering.",
-            hint="Check that it is running, then retry.",
-        ) from exc
 
 
 def _require_aware(value: datetime | None, name: str) -> datetime | None:
@@ -131,7 +107,7 @@ def list_runs(
                 hint="Start again without a cursor, or reuse the filters it was issued for.",
             ) from exc
 
-    with _store_errors():
+    with store_errors():
         page = store.list_runs(filters, limit=limit, after=after)
     items = [RunItem.from_summary(s) for s in page.items]
     return RunListPage(
@@ -180,7 +156,7 @@ def compare(
     not presented as a change. Runs from different specifications are comparable, with
     `same_specification: false`.
     """
-    with _store_errors():
+    with store_errors():
         baseline_summary, baseline_side = _load_side(store, baseline, "baseline")
         candidate_summary, candidate_side = _load_side(store, candidate, "candidate")
     outcome = compare_runs(baseline_side, candidate_side, include_unchanged=include_unchanged)
@@ -206,7 +182,7 @@ def get_run(
     error (code, stage, message, remediation, detail). A run still queued or running
     returns its state with no bundle.
     """
-    with _store_errors():
+    with store_errors():
         summary = store.summary_for(run_id)
         if summary is None:
             raise api_error(ApiErrorCode.RUN_NOT_FOUND, f"No run {run_id!r}.")

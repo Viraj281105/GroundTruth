@@ -18,6 +18,19 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Job status, progress and cancel APIs** (#37). `POST /jobs` queues a simulated
+  analysis (`202`, or `200` pointing at an existing result or in-flight job);
+  `GET /jobs/{run_id}` returns status, per-stage progress and a timeline, cheap enough to
+  poll; `POST /jobs/{run_id}/cancel` returns `200` for a queued job, `202` for a running
+  one (honoured by the worker when it next checks, or when the engine returns), and `409`
+  for a finished one. Polling, not streaming. Progress is honest: the worker's stages
+  (claim, data, engine, record) are observed live, with `elapsed_ms` for the active one;
+  the engine's own timings come from `RunMetrics` only after it returns and only for a
+  completed analysis; there is no percentage anywhere. A refusal is a `succeeded` job with
+  `result_state: "refused"`. `observed` data is `501`; `true_effect` is refused with `422`.
+  Migration `0005` adds `jobs.stage` and `jobs.stage_log`. `Submission` and `JobStatus`
+  move to `jobs/interface.py` (re-exported from `queue.py`) so the API does not import
+  SQLAlchemy. **No authentication: do not expose publicly.** No contract or engine change.
 - **Stored-run APIs** (#35). `GET /runs` lists runs newest first with cursor (keyset)
   pagination and filters for case, status, engine version, data mode and date;
   `GET /runs/{run_id}` returns one run with its outcome and bundle; and

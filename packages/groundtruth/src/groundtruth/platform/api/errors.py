@@ -32,6 +32,11 @@ class ApiErrorCode(StrEnum):
     CONTRACT_VERSION_MISMATCH = ErrorCode.CONTRACT_VERSION_MISMATCH.value
     """A stored run was written under a contract this code cannot read. Same code and
     status the engine path uses for the same condition."""
+    NOT_IMPLEMENTED = ErrorCode.NOT_IMPLEMENTED.value
+    """Observed-data jobs cannot be queued yet. Same code and status as ``/verify``."""
+    CASE_NOT_FOUND = "case_not_found"
+    JOB_ALREADY_FINISHED = "job_already_finished"
+    """The job succeeded or failed, so there is nothing left to cancel."""
 
 
 API_ERROR_STATUS: dict[ApiErrorCode, int] = {
@@ -42,6 +47,9 @@ API_ERROR_STATUS: dict[ApiErrorCode, int] = {
     ApiErrorCode.STORE_UNAVAILABLE: 503,
     ApiErrorCode.STORE_ERROR: 500,
     ApiErrorCode.CONTRACT_VERSION_MISMATCH: 409,
+    ApiErrorCode.NOT_IMPLEMENTED: 501,
+    ApiErrorCode.CASE_NOT_FOUND: 404,
+    ApiErrorCode.JOB_ALREADY_FINISHED: 409,
 }
 """Every member must appear here; a test enforces it."""
 

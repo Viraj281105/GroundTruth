@@ -93,21 +93,32 @@ class RunSummary(BaseModel):
         existing ``ResultState`` values are kept as they are; ``queued`` and
         ``cancelled`` are additions (``queued`` is a kind of "running" to a display).
         """
-        if self.status == "queued":
-            return "queued"
-        if self.status == "running":
-            return "running"
-        if self.status == "cancelled":
-            return "cancelled"
-        if self.status == "succeeded" and self.engine_status == "completed":
-            return "measured"
-        if self.status == "succeeded" and self.engine_status == "refused":
-            return "refused"
-        return "failed"
+        return result_state_of(self.status, self.engine_status)
 
 
 ResultState = Literal["queued", "running", "measured", "refused", "failed", "cancelled"]
 """See :attr:`RunSummary.result_state`."""
+
+
+def result_state_of(status: str, engine_status: str | None) -> ResultState:
+    """The one place a job status and an engine status become a ``result_state``.
+
+    Both ``/runs`` and ``/jobs`` call this, so they cannot disagree. A refusal is the
+    case most likely to be got wrong: the job *succeeded* and the engine *refused*, and
+    that is ``refused``, never ``failed``.
+    """
+    if status == "queued":
+        return "queued"
+    if status == "running":
+        return "running"
+    if status == "cancelled":
+        return "cancelled"
+    if status == "succeeded" and engine_status == "completed":
+        return "measured"
+    if status == "succeeded" and engine_status == "refused":
+        return "refused"
+    return "failed"
+
 
 MAX_FAILURE_REASON = 300
 """Longest ``failure_reason`` returned. Job errors can carry exception text."""

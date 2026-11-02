@@ -4,8 +4,10 @@
 
 **Status: IMPLEMENTED, simulated data only** (#25). The worker consumes jobs, runs
 `run_analysis` and records the outcome. Only simulated jobs can succeed: observed-data
-jobs fail because Earth Engine access is not implemented (#22). Nothing submits jobs
-from the API yet (#35, #37); `groundtruth submit` queues one from the command line.
+jobs fail because Earth Engine access is not implemented (#22). Jobs are queued by
+`POST /jobs` or `groundtruth submit`, and watched with `GET /jobs/{run_id}` (#37). At each
+checkpoint the worker records which stage the job is entering (`jobs.stage`,
+`jobs.stage_log`), which is what that endpoint shows.
 
 ```powershell
 python -m apps.worker.main --migrate --exit-when-idle   # once: create the tables

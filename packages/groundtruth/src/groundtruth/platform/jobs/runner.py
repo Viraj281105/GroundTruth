@@ -81,7 +81,7 @@ def process(
     """
     try:
         with log_context(stage="data"):
-            queue.checkpoint(job, "before-data")
+            queue.checkpoint(job, "before-data", begins="data")
             try:
                 data = resolve_access(job.request)
             except DataUnavailableError as exc:
@@ -89,7 +89,7 @@ def process(
                 return queue.fail(job, f"data unavailable: {exc}", retryable=True)
             logger.info("data access ready (%s data)", job.request.data_mode)
         with log_context(stage="engine"):
-            queue.checkpoint(job, "before-engine")
+            queue.checkpoint(job, "before-engine", begins="engine")
             logger.info("engine started")
             result = run(job.request, data)
             logger.info("engine finished with status %s", result.status.value)

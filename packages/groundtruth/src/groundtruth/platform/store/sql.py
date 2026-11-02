@@ -186,7 +186,7 @@ def _bundle_row(result: AnalysisResult, created_at: datetime) -> EvidenceBundleR
     )
 
 
-def _failure_reason(run: AnalysisRunRow, last_error: dict[str, Any] | None) -> str | None:
+def failure_reason_for(run: AnalysisRunRow, last_error: dict[str, Any] | None) -> str | None:
     """Why a run failed, when nothing else explains it.
 
     A run that failed in the engine carries its stored ``error``; that is the
@@ -216,7 +216,7 @@ def _summary(run: AnalysisRunRow, last_error: dict[str, Any] | None = None) -> R
         engine_version=run.engine_version,
         contract_version=run.contract_version,
         created_at=_as_utc(run.created_at),
-        failure_reason=_failure_reason(run, last_error),
+        failure_reason=failure_reason_for(run, last_error),
     )
 
 

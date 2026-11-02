@@ -879,8 +879,9 @@ class TestCompare:
         sides = [r["side"] for r in _compare(client, a, b).json()["not_comparable"]]
         assert sides == ["baseline", "candidate"]
 
-    def test_unfinished_and_cancelled_runs(self, client, queue):
+    def test_unfinished_and_cancelled_runs(self, client, queue, clock):
         waiting = queue.submit(_request(seed=21)).run_id
+        clock.tick()  # so "the oldest" is well defined, not decided by random run ids
         running = queue.submit(_request(seed=22)).run_id
         queue.claim("w1")  # takes the oldest: `waiting`
         cancelled = queue.submit(_request(seed=23)).run_id

@@ -36,8 +36,15 @@ from sqlalchemy.orm import Session, aliased, sessionmaker
 
 from groundtruth.contracts.identifiers import new_run_id
 from groundtruth.contracts.request import AnalysisRequest
-from groundtruth.contracts.result import AnalysisResult, AnalysisStatus, EngineStatus
+from groundtruth.contracts.result import (
+    AnalysisError,
+    AnalysisResult,
+    AnalysisStatus,
+    EngineStatus,
+    RunMetrics,
+)
 from groundtruth.engine import ENGINE_VERSION
+from groundtruth.platform.jobs.interface import JobStatus, Submission
 from groundtruth.platform.jobs.lifecycle import (
     CANCELLED,
     DEFAULT_BACKOFF_BASE,
@@ -58,7 +65,7 @@ from groundtruth.platform.jobs.lifecycle import (
 )
 from groundtruth.platform.store.interface import StoreError, UnknownCaseError
 from groundtruth.platform.store.models import AnalysisRunRow, CaseRow, JobRow
-from groundtruth.platform.store.sql import SqlEvidenceStore, record_result
+from groundtruth.platform.store.sql import SqlEvidenceStore, failure_reason_for, record_result
 
 _CLAIM_SCAN_LIMIT = 10
 """How many unusable jobs one claim may skip (failing each) before giving up."""
@@ -66,19 +73,6 @@ _CLAIM_SCAN_LIMIT = 10
 
 def _utc_now() -> datetime:
     return datetime.now(UTC)
-
-
-class Submission(BaseModel):
-    """What ``submit`` did with a request."""
-
-    model_config = ConfigDict(frozen=True)
-
-    run_id: str
-    status: AnalysisStatus
-    from_cache: bool = False
-    """An existing result answered the request. No job was created and nothing ran."""
-    deduplicated: bool = False
-    """An identical request was already queued or running; this is that job."""
 
 
 class ClaimedJob(BaseModel):
@@ -91,28 +85,6 @@ class ClaimedJob(BaseModel):
     attempt: int
     """1 on the first claim. Together with ``worker_id`` it fences stale workers."""
     request: AnalysisRequest
-
-
-class JobStatus(BaseModel):
-    """A run's lifecycle state, for polling. Job fields are ``None`` for a run with no job."""
-
-    model_config = ConfigDict(frozen=True)
-
-    run_id: str
-    case_id: str
-    status: AnalysisStatus
-    engine_status: str | None
-    """``refused`` here with ``status == succeeded`` is a legitimate scientific outcome."""
-    data_mode: str
-    is_simulated: bool
-    """Always present, so nothing that shows a job can show a simulated run as observed (R7)."""
-    attempts: int | None
-    max_attempts: int | None
-    available_at: datetime | None
-    lease_expires_at: datetime | None
-    locked_by: str | None
-    cancel_requested: bool
-    last_error: dict[str, Any] | None
 
 
 def _as_utc(value: datetime | None) -> datetime | None:
@@ -302,6 +274,8 @@ class JobQueue:
                     locked_by=worker_id,
                     heartbeat_at=now,
                     lease_expires_at=now + self._lease,
+                    stage="claim",
+                    stage_log={"claim": now.isoformat()},
                     updated_at=now,
                 )
                 .execution_options(synchronize_session=False)
@@ -354,12 +328,17 @@ class JobQueue:
                 is not None
             )
 
-    def checkpoint(self, job: ClaimedJob, stage: str) -> None:
+    def checkpoint(self, job: ClaimedJob, stage: str, *, begins: str | None = None) -> None:
         """Honour a pending cancellation between stages; otherwise renew the lease.
 
         ``run_analysis`` is one call that cannot be interrupted without changing the
         engine, so "between stages" means the job's own stages: before data access,
         before the engine, and (inside :meth:`complete`) after it.
+
+        ``begins`` names the live stage that starts once the checkpoint passes, so a
+        poller can see it. It is written in the same transaction as the lease renewal
+        and the cancel check, and not at all if the job is cancelled here: a stage that
+        never began is not shown as begun.
 
         Raises:
             JobCancelledError: if cancellation was requested; the job is now CANCELLED.
@@ -373,6 +352,8 @@ class JobQueue:
             cancelled = row.cancel_requested_at is not None
             if cancelled:
                 self._finish(session, run, row, now, CANCELLED, _cancelled(stage))
+            elif begins is not None:
+                _enter_stage(row, begins, now)
         if cancelled:
             raise JobCancelledError(f"run {job.run_id!r} was cancelled at {stage}")
 
@@ -408,6 +389,7 @@ class JobQueue:
                 row, run = self._rows(session, job.run_id)
                 if row.cancel_requested_at is not None:
                     return self._finish(session, run, row, now, CANCELLED, _cancelled("engine"))
+                _enter_stage(row, "record", now)
                 error = result.error
                 if (
                     result.status is EngineStatus.ERROR
@@ -570,6 +552,12 @@ class JobQueue:
             if run is None:
                 return None
             row = session.get(JobRow, run_id)
+            # Read from the run row's small JSON columns. Rebuilding the whole result
+            # would deserialise the evidence bundle on every poll.
+            try:
+                error = AnalysisError.model_validate(run.error) if run.error else None
+            except ValidationError:  # a code added by a later contract minor
+                error = None
             return JobStatus(
                 run_id=run.run_id,
                 case_id=run.case_id,
@@ -584,6 +572,15 @@ class JobQueue:
                 locked_by=row.locked_by if row else None,
                 cancel_requested=bool(row and row.cancel_requested_at is not None),
                 last_error=row.last_error if row else None,
+                created_at=_require_utc(run.created_at),
+                updated_at=_as_utc(row.updated_at) if row else None,
+                heartbeat_at=_as_utc(row.heartbeat_at) if row else None,
+                stage=row.stage if row else None,
+                stage_log=_parse_stage_log(row.stage_log) if row else {},
+                metrics=RunMetrics.model_validate(run.metrics) if run.metrics else None,
+                error=error,
+                failure_reason=failure_reason_for(run, row.last_error if row else None),
+                as_of=self._clock(),
             )
 
     # --- internals -------------------------------------------------------------
@@ -666,6 +663,23 @@ def _release(
         row.last_error = detail
     if available_at is not None:
         row.available_at = available_at
+        # Waiting to run again: the failed attempt's progress is not this job's progress.
+        row.stage = None
+        row.stage_log = None
+
+
+def _enter_stage(row: JobRow, stage: str, now: datetime) -> None:
+    """Record that ``stage`` began now. The log is reassigned so the change is saved."""
+    row.stage = stage
+    row.stage_log = {**(row.stage_log or {}), stage: now.isoformat()}
+
+
+def _require_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+
+def _parse_stage_log(log: dict[str, str] | None) -> dict[str, datetime]:
+    return {stage: _require_utc(datetime.fromisoformat(at)) for stage, at in (log or {}).items()}
 
 
 def _rowcount(result: sa.Result[Any]) -> int:

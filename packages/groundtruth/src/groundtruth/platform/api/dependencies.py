@@ -1,4 +1,4 @@
-"""Where the stored-run endpoints get their evidence store.
+"""Where the stored-run and job endpoints get their store and job service.
 
 The database is optional: ``groundtruth[api]`` does not install SQLAlchemy (that is the
 ``db`` extra), and a process may have no ``DATABASE_URL``. ``/health``, ``/cases`` and
@@ -14,13 +14,40 @@ else can see would look durable and not be.
 from __future__ import annotations
 
 import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
 
 from groundtruth.contracts.errors import ConfigurationError
 from groundtruth.platform.api.errors import ApiErrorCode, api_error
-from groundtruth.platform.store.interface import EvidenceStore
+from groundtruth.platform.jobs.interface import JobControl
+from groundtruth.platform.store.interface import (
+    EvidenceStore,
+    IncompatibleBundleError,
+    StoreError,
+)
+
+
+@dataclass(frozen=True)
+class _Services:
+    """The store and the job service, built together on one database connection."""
+
+    store: EvidenceStore
+    jobs: JobControl
+
 
 _lock = threading.Lock()
-_store: EvidenceStore | None = None
+_services: _Services | None = None
+
+
+def _get_services() -> _Services:
+    global _services
+    if _services is not None:
+        return _services
+    with _lock:
+        if _services is None:
+            _services = _build_services()
+        return _services
 
 
 def get_store() -> EvidenceStore:
@@ -33,26 +60,31 @@ def get_store() -> EvidenceStore:
     Raises:
         HTTPException: 503 ``store_not_configured`` or ``store_unavailable``.
     """
-    global _store
-    if _store is not None:
-        return _store
-    with _lock:
-        if _store is None:
-            _store = _build_store()
-        return _store
+    return _get_services().store
+
+
+def get_jobs() -> JobControl:
+    """The process's job service, built on first use alongside the store.
+
+    Raises:
+        HTTPException: 503, as for :func:`get_store`.
+    """
+    return _get_services().jobs
 
 
 def reset_store() -> None:
-    """Forget the cached store. For tests."""
-    global _store
+    """Forget the cached store and job service. For tests."""
+    global _services
     with _lock:
-        _store = None
+        _services = None
 
 
-def _build_store() -> EvidenceStore:
+def _build_services() -> _Services:
     try:
         import sqlalchemy as sa
 
+        from groundtruth.platform.jobs.queue import JobQueue
+        from groundtruth.platform.jobs.service import SqlJobService
         from groundtruth.platform.store import migrate
         from groundtruth.platform.store.database import (
             create_db_engine,
@@ -90,7 +122,9 @@ def _build_store() -> EvidenceStore:
             "The database schema is not up to date.",
             hint="Run: python -m apps.worker.main --migrate --exit-when-idle",
         )
-    return SqlEvidenceStore(create_session_factory(create_db_engine(url)))
+    sessions = create_session_factory(create_db_engine(url))
+    store = SqlEvidenceStore(sessions)
+    return _Services(store=store, jobs=SqlJobService(store, JobQueue(sessions)))
 
 
 def database_error_types() -> tuple[type[Exception], ...]:
@@ -103,3 +137,24 @@ def database_error_types() -> tuple[type[Exception], ...]:
     except ImportError:
         return ()
     return (sa.exc.OperationalError, sa.exc.InterfaceError)
+
+
+@contextmanager
+def store_errors() -> Iterator[None]:
+    """Turn the store's failures into the API's structured errors."""
+    try:
+        yield
+    except IncompatibleBundleError as exc:
+        raise api_error(
+            ApiErrorCode.CONTRACT_VERSION_MISMATCH,
+            str(exc),
+            hint="Migrate stored runs to the current contract, or use a build that reads them.",
+        ) from exc
+    except StoreError as exc:
+        raise api_error(ApiErrorCode.STORE_ERROR, str(exc)) from exc
+    except database_error_types() as exc:
+        raise api_error(
+            ApiErrorCode.STORE_UNAVAILABLE,
+            "The database stopped answering.",
+            hint="Check that it is running, then retry.",
+        ) from exc
