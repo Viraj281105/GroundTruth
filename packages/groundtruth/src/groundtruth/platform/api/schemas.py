@@ -21,6 +21,7 @@ from groundtruth.contracts.result import (
     ErrorCode,
     RunMetrics,
 )
+from groundtruth.contracts.types import VerdictLabel
 from groundtruth.platform.compare.comparison import Comparison, NotComparable
 from groundtruth.platform.compare.diff import BundleDiff
 from groundtruth.platform.jobs.interface import LIVE_STAGES, JobStatus
@@ -106,14 +107,43 @@ class VerificationResponse(BaseModel):
     engine_version: str
     contract_version: str
     duration_ms: float = 0.0
-    data_mode: str = Field(description="'simulated' or 'observed'.")
-    verdict_label: str
+    data_mode: Literal["simulated", "observed"] = Field(
+        description="Drives the persistent simulated-data banner."
+    )
+    verdict_label: VerdictLabel
     verdict_rationale: str
     caveats: list[str]
     warnings: list[str]
     bundle: EvidenceBundle
     report_markdown: str | None = None
     report_generator: str | None = None
+
+
+class MessageErrorBody(BaseModel):
+    """An error whose ``detail`` is a plain message, e.g. an unknown case (404)."""
+
+    detail: str
+
+
+class EngineFailureDetail(BaseModel):
+    """Why ``/verify`` returned no result: the engine refused, or could not run.
+
+    ``is_refusal`` is the field that matters. A refusal is the system correctly declining
+    to produce a fragile number, and is shown as a legitimate outcome, not as an error.
+    """
+
+    code: ErrorCode
+    message: str
+    stage: str
+    is_refusal: bool
+    remediation: str | None
+    run_id: str
+
+
+class EngineFailureBody(BaseModel):
+    """The body ``/verify`` returns when the engine refused or could not run."""
+
+    detail: EngineFailureDetail
 
 
 class ErrorResponse(BaseModel):

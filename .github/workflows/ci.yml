@@ -122,6 +122,12 @@ jobs:
       - name: Test
         run: npm test
 
+      # The UI must never hand-write a backend shape (C5). The Python job checks that
+      # src/lib/generated/openapi.json is what the API serves; this checks that the
+      # TypeScript types are what that schema generates. `npm run build` runs it too.
+      - name: Generated API types are current
+        run: npm run check:api-types
+
       - name: Build
         run: npm run build
 

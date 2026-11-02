@@ -2,7 +2,7 @@ PY ?= python
 VENV = .venv
 BIN = $(VENV)/Scripts
 
-.PHONY: help setup install lint format typecheck test test-cov check api worker cli clean
+.PHONY: help setup install lint format typecheck test test-cov check api worker api-types check-api-types cli clean
 
 help:
 	@echo "setup      - create venv and install dev dependencies"
@@ -12,6 +12,7 @@ help:
 	@echo "test       - pytest"
 	@echo "check      - lint + typecheck + test"
 	@echo "api        - run the FastAPI dev server"
+	@echo "api-types  - regenerate the frontend API types after an API schema change"
 	@echo "worker     - run the analysis worker (needs DATABASE_URL)"
 	@echo "cli        - run the demo verification on the Kariba case"
 
@@ -40,6 +41,14 @@ check: lint typecheck test
 
 api:
 	uvicorn apps.api.main:app --reload --port 8000
+
+api-types:
+	$(PY) apps/web/scripts/export_openapi.py
+	cd apps/web && npm run generate:api
+
+check-api-types:
+	$(PY) -m pytest -q tests/test_openapi_snapshot.py
+	cd apps/web && npm run check:api-types
 
 worker:
 	python -m apps.worker.main

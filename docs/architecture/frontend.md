@@ -89,8 +89,21 @@ engine cannot be interrupted and the cancel completes when it returns.
 OpenAPI schema ──generate──► TypeScript types ──► typed API client ──► views
 ```
 
-Regenerating types is part of the API change workflow, not a frontend chore. If
-the schema changes and the types are not regenerated, the build should fail.
+Regenerating types is part of the API change workflow, not a frontend chore:
+`make api-types` after any API schema or route change (see `apps/web/README.md`).
+If the schema changes and the types are not regenerated, CI fails, and so does
+`npm run build`.
+
+`src/lib/types.ts` keeps its old names as aliases of the generated types, plus
+UI-only helpers. These are the places where the UI and the API still differ, kept
+visible rather than papered over:
+
+| Where | UI | API | Note |
+| --- | --- | --- | --- |
+| `Confidence.kind` | `ConfidenceKind`, four values | `string` | The contract types it as a free string. Narrowing it is a `contracts/` change. Components only compare it to strings, so they are unaffected. |
+| `VerificationResponse` identity fields | were optional | always present | `run_id`, `spec_hash`, `engine_version`, `contract_version`, `duration_ms`. The UI is now stricter, which is safe. |
+| `ResultState` | `not_started`, `running`, `measured`, `refused`, `failed` | `result_state` adds `queued`, `cancelled` | See "Run states" above. |
+| Donor ADR-011 types (`DonorExclusionCategory`, `DonorLadderRung`, `DonorCandidateSummary`) | hand-copied from `platform.units.rules` | not served by any endpoint | Generation cannot protect them; a change in Python would go unnoticed. |
 
 ## Design principles
 

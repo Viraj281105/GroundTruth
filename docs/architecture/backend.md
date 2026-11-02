@@ -53,6 +53,22 @@ HTTP request
 when they move behind a job, which is why `run_id` and `spec_hash` are already
 in the response today.
 
+## The API schema is the frontend's contract
+
+The frontend's TypeScript types are generated from the OpenAPI schema (#17). The
+served `/openapi.json` and the committed snapshot `apps/web/src/lib/generated/openapi.json`
+are built by one function, `platform/api/openapi_schema.py`, so they are always the same.
+
+**After changing any response model, request model or route: run `make api-types` and
+commit the two generated files.** CI fails otherwise: `tests/test_openapi_snapshot.py`
+catches a stale schema, and the web job's `npm run check:api-types` a stale TypeScript.
+
+One adjustment is made to FastAPI's output: every property of a schema used only in
+responses is marked required, because FastAPI always sends every field of a response
+model. Request schemas and FastAPI's own validation-error schemas are left exactly as
+generated. Error responses are documented too (`MessageErrorBody`, `EngineFailureBody`),
+including `/verify`'s 422, which is either a validation error or an engine refusal.
+
 ## Error handling
 
 Every `ErrorCode` maps to an HTTP status in `api/app.py::ERROR_STATUS`, and a

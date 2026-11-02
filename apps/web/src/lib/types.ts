@@ -1,140 +1,66 @@
 /**
- * Types mirroring the GroundTruth API schemas.
+ * Types for the GroundTruth API, and the UI helpers built on them.
  *
- * Kept in sync with the API schemas in
- * `packages/groundtruth/src/groundtruth/platform/api/schemas.py` and the evidence
- * objects in `packages/groundtruth/src/groundtruth/contracts/evidence.py`.
- * Regenerate from /openapi.json once the frontend build is wired up.
+ * Every backend shape here is GENERATED from the API's OpenAPI schema, never
+ * hand-written (issue #17, coordination point C5). The names below are aliases
+ * of `./generated/schema.d.ts`, kept so existing imports do not change. After
+ * changing an API schema or route, regenerate with `make api-types`; CI fails
+ * when the generated files are stale.
+ *
+ * What remains hand-written in this file is UI vocabulary and helpers, plus the
+ * ADR-011 donor types further down, which no endpoint serves yet.
  */
 
-/** How an interval should be read. These are not interchangeable. */
+import type { components } from "./generated/schema";
+
+type Schemas = components["schemas"];
+
+/**
+ * How an interval should be read. These are not interchangeable.
+ *
+ * UI vocabulary only: the backend contract types `Confidence.kind` as a free
+ * string and documents these four values, so the generated `Confidence.kind` is
+ * `string`, not this union.
+ */
 export type ConfidenceKind =
   | "permutation"
   | "bootstrap"
   | "analytic"
   | "sensitivity-envelope";
 
-export interface Confidence {
-  lower: number;
-  upper: number;
-  level: number;
-  kind: ConfidenceKind;
-}
+/** An interval with its interpretation. `kind` is a string; see `ConfidenceKind`. */
+export type Confidence = Schemas["Confidence"];
 
 /** Where a value came from and how it was produced. Never omit this in the UI. */
-export interface Provenance {
-  source: string;
-  method: string;
-  stage: string;
-  source_uri: string | null;
-  retrieved_at: string | null;
-  code_version: string | null;
-  parameters: Record<string, unknown>;
-  inputs: string[];
-  notes: string | null;
-}
+export type Provenance = Schemas["Provenance"];
 
-export interface Evidence {
-  id: string;
-  label: string;
-  value: number | string | boolean;
-  unit: string;
-  confidence: Confidence | null;
-  provenance: Provenance;
-  qualifiers: Record<string, unknown>;
-}
+export type Evidence = Schemas["Evidence"];
 
 /** Screening outcomes. None of these is a finding of fraud. */
-export type VerdictLabel =
-  | "consistent_with_claim"
-  | "divergent_from_claim"
-  | "inconclusive"
-  | "not_assessed";
+export type VerdictLabel = Schemas["VerdictLabel"];
 
-export interface VerificationVerdict {
-  label: VerdictLabel;
-  rationale: string;
-  divergence_ratio: number | null;
-  /** Always rendered with the verdict. Never collapsed by default. */
-  caveats: string[];
-  supporting_evidence_ids: string[];
-}
+/** The screening conclusion. Its caveats are always rendered, never collapsed. */
+export type VerificationVerdict = Schemas["VerificationVerdict"];
 
-export interface EvidenceBundle {
-  case_id: string;
-  schema_version: string;
-  items: Evidence[];
-  verdict: VerificationVerdict | null;
-  warnings: string[];
-}
+export type EvidenceBundle = Schemas["EvidenceBundle"];
 
-export interface CaseSummary {
-  case_id: string;
-  name: string;
-  country: string;
-  standard: string;
-  registry_id: string | null;
-  ecosystem: string;
-  indicator: string;
-  pre_period: string;
-  post_period: string;
-  /** "scaffolded" | "data-wired" | "analysed" */
-  status: string;
-  has_known_reference: boolean;
-}
+/** A case as listed. `status` is "scaffolded" | "data-wired" | "analysed". */
+export type CaseSummary = Schemas["CaseSummary"];
 
-export interface CaseDetail extends CaseSummary {
-  area_ha: number | null;
-  donor_search_region: string;
-  donor_pool_size: number;
-  covariates: string[];
-  /** Published third-party findings. Never an input to the estimate. */
-  known_reference: Record<string, unknown>;
-  notes: string;
-}
+/** A case in full. `known_reference` is third-party, never an input to the estimate. */
+export type CaseDetail = Schemas["CaseDetail"];
 
-export interface VerificationRequest {
-  synthetic?: boolean;
-  true_effect?: number;
-  min_donors?: number;
-  include_report?: boolean;
-}
+export type VerificationRequest = Schemas["VerificationRequest"];
 
-export interface HealthResponse {
-  status: string;
-  version: string;
-  engine_version: string;
-  contract_version: string;
-  engine_capabilities: Record<string, boolean>;
-  earth_observation_implemented: boolean;
-  genai_narration_implemented: boolean;
-  cases_available: number;
-}
+export type HealthResponse = Schemas["HealthResponse"];
 
-export interface VerificationResponse {
-  case_id: string;
-  /** "simulated" or "observed". Drives the banner. */
-  data_mode: "simulated" | "observed";
-  verdict_label: VerdictLabel;
-  verdict_rationale: string;
-  caveats: string[];
-  warnings: string[];
-  bundle: EvidenceBundle;
-  report_markdown: string | null;
-  report_generator: string | null;
-  /**
-   * Hash of the analysis specification (blake2b hex digest, per
-   * `contracts.identifiers.spec_hash`), present on the real API response
-   * (`platform/api/schemas.py::VerificationResponse`). These identity fields
-   * are optional until the generated client (#17) replaces this file — never
-   * fabricate one when it is absent.
-   */
-  spec_hash?: string;
-  run_id?: string;
-  engine_version?: string;
-  contract_version?: string;
-  duration_ms?: number;
-}
+/**
+ * The result of `POST /cases/{id}/verify`. `data_mode` drives the banner.
+ *
+ * The identity fields (`run_id`, `spec_hash`, `engine_version`,
+ * `contract_version`, `duration_ms`) are always present on a real response.
+ */
+export type VerificationResponse = Schemas["VerificationResponse"];
 
 /** True when the UI must show the persistent simulated-data banner. */
 export function isSimulated(response: VerificationResponse): boolean {

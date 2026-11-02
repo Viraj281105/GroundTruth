@@ -18,6 +18,17 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Generated TypeScript API types and client** (#17). The frontend's types are now
+  generated from the API's OpenAPI schema (`openapi-typescript` 7.13.0) into
+  `apps/web/src/lib/generated/`, with a typed `fetch` client (`openapi-fetch` 0.17.0)
+  in `api-client.ts`. `types.ts` keeps its names as aliases of the generated types plus
+  UI-only helpers; no component changed. The served `/openapi.json` and the committed
+  snapshot are built by one function; response-only schemas are marked fully required
+  (FastAPI always sends every field). `/verify`'s and `/cases/{id}`'s error bodies are
+  now documented, and `VerificationResponse.verdict_label` and `data_mode` narrowed
+  (same JSON). `make api-types` regenerates; a stale schema fails
+  `tests/test_openapi_snapshot.py`, and stale or hand-edited TypeScript fails
+  `npm run check:api-types` and `npm run build`.
 - **Job status, progress and cancel APIs** (#37). `POST /jobs` queues a simulated
   analysis (`202`, or `200` pointing at an existing result or in-flight job);
   `GET /jobs/{run_id}` returns status, per-stage progress and a timeline, cheap enough to

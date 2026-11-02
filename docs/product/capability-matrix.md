@@ -101,7 +101,7 @@ moves, update this table in the same change.
 
 | Capability | Status |
 | --- | --- |
-| API contract TypeScript types | Implemented |
+| API contract TypeScript types (generated from OpenAPI, checked in CI) and typed client | Implemented |
 | UI rule helpers (banner, verdict tone, formatting) | Implemented |
 | **Design system and app shell** | **Planned — MVP** |
 | **Counterfactual chart** | **Planned — MVP** |
