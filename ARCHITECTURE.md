@@ -152,21 +152,21 @@ Detail: [`docs/architecture/earth-observation.md`](docs/architecture/earth-obser
  1. case YAML                      platform/cases      [implemented]
  2. → AnalysisRequest              case.to_request()   [implemented]
        pins DatasetRefs, drops known_reference
- 3. → job queued                   platform/jobs       [library built; API NOT YET WIRED — runs inline]
+ 3. → job queued                   platform/jobs       [implemented: POST /jobs → worker; /verify still inline]
  4. → DataAccess resolved          platform/datasets   [synthetic only]
  5. → run_analysis                 engine/run.py       [implemented]
        observe → match → estimate → test → assemble
  6. → AnalysisResult
- 7. → persisted                    platform/store      [store built; API NOT YET WIRED — in memory]
+ 7. → persisted                    platform/store      [implemented for queued runs; /runs reads them]
  8. → report generated             platform/reports    [renderer only]
        grounding check → publish or fall back
  9. → served                       platform/api        [implemented]
-10. → rendered                     apps/web            [NOT BUILT]
+10. → rendered                     apps/web            [case page: submit, poll, cancel, render]
 ```
 
 Steps 3, 7 and 10 are the platform work that turns this from a computational
-module into a product. Step 4 with real providers is what turns it from a
-demonstration into a result.
+module into a product; they now run end to end, on simulated data only (#40).
+Step 4 with real providers is what turns it from a demonstration into a result.
 
 ## 7. Error and status model
 

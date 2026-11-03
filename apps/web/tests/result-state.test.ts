@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, expectTypeOf } from 'vitest';
 import { deriveResultState, resultStateTone, resultStateLabel, ResultState } from '../src/lib/types';
+import type { JobView } from '../src/lib/jobs';
 
 /**
  * Frontend representation of scientific result state: a verification run's
@@ -46,10 +47,30 @@ describe('deriveResultState', () => {
       deriveResultState({ isRunning: false, hasResult: false, isRefused: true, hasError: true })
     ).toBe('refused');
   });
+
+  it('is queued while a job waits for a worker, ahead of running', () => {
+    expect(
+      deriveResultState({ isQueued: true, isRunning: true, hasResult: false, isRefused: false, hasError: false })
+    ).toBe('queued');
+  });
+
+  it('is cancelled when the run was stopped, even if a stale result exists', () => {
+    expect(
+      deriveResultState({ isRunning: false, hasResult: true, isRefused: false, hasError: false, isCancelled: true })
+    ).toBe('cancelled');
+  });
 });
 
 describe('resultStateTone / resultStateLabel', () => {
-  const allStates: ResultState[] = ['not_started', 'running', 'measured', 'refused', 'failed'];
+  const allStates: ResultState[] = [
+    'not_started',
+    'queued',
+    'running',
+    'measured',
+    'refused',
+    'failed',
+    'cancelled',
+  ];
 
   it('gives every state a tone and a label, with no bare-number-shaped copy', () => {
     for (const state of allStates) {
@@ -67,5 +88,19 @@ describe('resultStateTone / resultStateLabel', () => {
   it('styles measured as positive and failed distinctly from refused', () => {
     expect(resultStateTone('measured')).toBe('positive');
     expect(resultStateTone('refused')).not.toBe(resultStateTone('failed'));
+  });
+
+  it('never styles a cancelled run as a finding or a fault', () => {
+    expect(resultStateTone('cancelled')).not.toBe('positive');
+    expect(resultStateTone('cancelled')).not.toBe('error');
+  });
+
+  it("accepts the API's result_state values one to one", () => {
+    // Checked by `npm run typecheck`: a state the API adds must be added here too.
+    expectTypeOf<JobView['result_state']>().toMatchTypeOf<ResultState>();
+    const apiStates: JobView['result_state'][] = ['queued', 'running', 'measured', 'refused', 'failed', 'cancelled'];
+    expect(apiStates.map(resultStateLabel)).toEqual([
+      'QUEUED', 'RUNNING', 'MEASURED', 'REFUSED', 'FAILED', 'CANCELLED',
+    ]);
   });
 });

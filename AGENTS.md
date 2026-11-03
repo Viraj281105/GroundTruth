@@ -145,6 +145,7 @@ Additional checks for specific work:
 | Package structure | `pytest tests/test_contract_boundary.py` — the AST import checks |
 | A case definition | `groundtruth cases && groundtruth show <case>` |
 | The pipeline end to end | `groundtruth verify kariba-redd --synthetic` |
+| An API response model, request model or route | `make api-types` and commit the two generated files in `apps/web/src/lib/generated/` |
 
 ## 7. Conventions
 

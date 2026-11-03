@@ -10,6 +10,8 @@ engine internals requires no change here.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -19,11 +21,14 @@ from groundtruth.contracts.errors import CaseDefinitionError, DataUnavailableErr
 from groundtruth.contracts.result import AnalysisResult, EngineStatus, ErrorCode
 from groundtruth.engine import ENGINE_VERSION, describe_engine, run_analysis
 from groundtruth.platform.api.jobs import router as jobs_router
+from groundtruth.platform.api.openapi_schema import install_openapi
 from groundtruth.platform.api.runs import router as runs_router
 from groundtruth.platform.api.schemas import (
     CaseDetail,
     CaseSummary,
+    EngineFailureBody,
     HealthResponse,
+    MessageErrorBody,
     VerificationRequest,
     VerificationResponse,
 )
@@ -45,7 +50,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[get_settings().frontend_url],
+    allow_origins=get_settings().cors_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
@@ -55,6 +60,19 @@ app.add_middleware(
 # below keep working with no database configured.
 app.include_router(runs_router)
 app.include_router(jobs_router)
+
+# The frontend's TypeScript types are generated from this schema (issue #17); the served
+# /openapi.json and the committed snapshot are built by the same function.
+install_openapi(app)
+
+
+def _either(*schemas: str) -> dict[str, Any]:
+    """An OpenAPI response body that may be any one of the named schemas."""
+    refs = [{"$ref": f"#/components/schemas/{name}"} for name in schemas]
+    return {"application/json": {"schema": {"anyOf": refs}}}
+
+
+_ENGINE_FAILURE = {"model": EngineFailureBody}
 
 ERROR_STATUS: dict[ErrorCode, int] = {
     ErrorCode.INVALID_REQUEST: 422,
@@ -107,7 +125,12 @@ def list_case_summaries() -> list[CaseSummary]:
     return [_summary(cid) for cid in load_all_cases()]
 
 
-@app.get("/cases/{case_id}", response_model=CaseDetail, tags=["cases"])
+@app.get(
+    "/cases/{case_id}",
+    response_model=CaseDetail,
+    tags=["cases"],
+    responses={404: {"model": MessageErrorBody, "description": "Unknown case."}},
+)
 def get_case_detail(case_id: str) -> CaseDetail:
     """Return one case definition in full."""
     try:
@@ -126,7 +149,29 @@ def get_case_detail(case_id: str) -> CaseDetail:
     )
 
 
-@app.post("/cases/{case_id}/verify", response_model=VerificationResponse, tags=["verification"])
+@app.post(
+    "/cases/{case_id}/verify",
+    response_model=VerificationResponse,
+    tags=["verification"],
+    responses={
+        404: {"model": MessageErrorBody, "description": "Unknown case."},
+        409: {**_ENGINE_FAILURE, "description": "Unsupported contract version."},
+        # 422 means two different things here, and both are documented, not one or other.
+        422: {
+            "description": "Either the request body is invalid (a validation error), or the "
+            "engine refused or rejected the request (an engine failure, where `is_refusal` "
+            "says which). A refusal is a legitimate outcome, not a malfunction.",
+            "content": _either("HTTPValidationError", "EngineFailureBody"),
+        },
+        500: {**_ENGINE_FAILURE, "description": "The engine failed to estimate."},
+        501: {
+            "description": "Not implemented: observed data (a plain message), or a capability "
+            "the engine does not have (an engine failure).",
+            "content": _either("MessageErrorBody", "EngineFailureBody"),
+        },
+        503: {**_ENGINE_FAILURE, "description": "A required dataset could not be retrieved."},
+    },
+)
 def verify(case_id: str, request: VerificationRequest) -> VerificationResponse:
     """Run the verification pipeline for a case.
 
@@ -184,7 +229,7 @@ def verify(case_id: str, request: VerificationRequest) -> VerificationResponse:
         contract_version=result.contract_version,
         data_mode="simulated" if result.is_simulated else "observed",
         duration_ms=result.metrics.duration_ms,
-        verdict_label=bundle.verdict.label.value,
+        verdict_label=bundle.verdict.label,
         verdict_rationale=bundle.verdict.rationale,
         caveats=list(bundle.verdict.caveats),
         warnings=list(bundle.warnings),

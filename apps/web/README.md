@@ -1,9 +1,9 @@
 # GroundTruth frontend
 
-**Status: scaffolded, not implemented.** This directory holds the contract
-between the frontend and the API — TypeScript types generated from the same
-Pydantic schemas the backend serves — so the UI can be built without
-renegotiating the shape of the data.
+This directory holds the UI and the contract between it and the API: TypeScript
+types generated from the same Pydantic schemas the backend serves (see "The API
+types are generated" below), so the UI is built without renegotiating the shape of
+the data.
 
 Planned stack: Next.js (App Router), TypeScript, Tailwind, Recharts.
 
@@ -39,17 +39,53 @@ and versioned (`schema_version`), so the frontend can proceed.
 6. **No language that implies wrongdoing**, in copy, in tooltips or in status
    colours. A divergent verdict is amber, never red-as-alarm.
 
-## Getting the API types
+## Configuration
 
-The backend serves an OpenAPI schema:
+Copy `.env.example` to `.env.local` in this folder (Next.js does not read the
+repository root's `.env`).
+
+| Variable | Notes |
+| --- | --- |
+| `NEXT_PUBLIC_API_URL` | Where the browser calls the API. Inlined at **build** time: a build for a deployed API must be made with its URL. |
+| `NEXT_PUBLIC_DEMO_MODE` | Off by default. Only when `true` may an unreachable API be replaced by fixture data, under the "no analysis was executed" banner. |
+
+The API must allow this site's origin: set `CORS_ALLOWED_ORIGINS` (or `FRONTEND_URL`)
+on the API. Running an analysis needs the API **and** a worker, both with the same
+`DATABASE_URL`; without a database the page says `store_not_configured` and offers to run
+inline instead.
+
+## The API types are generated
+
+The UI never hand-writes a backend shape. The types come from the API's OpenAPI
+schema:
+
+| File | What it is |
+| --- | --- |
+| `src/lib/generated/openapi.json` | The schema, exactly as `/openapi.json` serves it. Committed. |
+| `src/lib/generated/schema.d.ts` | TypeScript generated from it by `openapi-typescript`. Committed; do not edit. |
+| `src/lib/types.ts` | The familiar names (`Evidence`, `VerificationResponse`, ...) as aliases of the generated types, plus UI-only helpers. |
+| `src/lib/api-client.ts` | A typed `fetch` client (`openapi-fetch`) for the `/runs` and `/jobs` endpoints. Transport only: no demo fallback. |
+| `src/lib/jobs.ts` | What the case page uses to run an analysis: submit, poll, cancel, fetch the stored run, and turn every error body into a code, message and remediation. No demo fallback either. See `docs/architecture/frontend.md`. |
+
+**After changing any API schema or route, regenerate and commit both files:**
 
 ```bash
-uvicorn apps.api.main:app --port 8000
-curl localhost:8000/openapi.json > frontend/src/lib/openapi.json
+make api-types
+# or, step by step, without make (Windows):
+python apps/web/scripts/export_openapi.py      # 1. the schema; needs no server and no database
+cd apps/web && npm run generate:api            # 2. the TypeScript
 ```
 
-`src/lib/types.ts` holds the hand-maintained subset until generation is wired
-up.
+If you forget, CI fails: `tests/test_openapi_snapshot.py` (Python job) when the
+schema is stale, and `npm run check:api-types` (web job, and `npm run build` via
+`prebuild`) when the TypeScript is stale or was edited by hand.
+
+Two details of the schema, both deliberate:
+
+- Every field of a **response** is typed as always present, because FastAPI always
+  sends it. Request fields with defaults stay optional.
+- `openapi-typescript` is pinned to an exact version, because a different version
+  would generate different output and fail the check.
 
 ## Demo fixtures are engine output
 

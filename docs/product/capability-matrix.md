@@ -85,7 +85,7 @@ moves, update this table in the same change.
 | Analysis job lifecycle (`JobQueue`) | Implemented |
 | Background worker process (`apps/worker`; simulated data only) | Implemented |
 | Job submit, status/progress and cancel APIs (`POST /jobs`, `GET /jobs/{id}`, `POST /jobs/{id}/cancel`; polling, simulated data, **no authentication**) | Implemented |
-| **Frontend/backend integration** | **Planned — MVP** |
+| Frontend/backend integration: the case page runs through `POST /jobs`, polls observed stages, cancels, resumes from `?run=`, and renders the stored run; `CORS_ALLOWED_ORIGINS`; error code and remediation on every error state (#40; simulated data, **no authentication**) | Implemented |
 | Result listing, retrieval and comparison APIs (`GET /runs`, `/runs/{id}`, `/runs/compare`; read-only, simulated data) | Implemented |
 | **GenAI narration providers** | **Planned — Stage 2** |
 | Report export with provenance | Planned — Stage 2 |
@@ -101,7 +101,7 @@ moves, update this table in the same change.
 
 | Capability | Status |
 | --- | --- |
-| API contract TypeScript types | Implemented |
+| API contract TypeScript types (generated from OpenAPI, checked in CI) and typed client | Implemented |
 | UI rule helpers (banner, verdict tone, formatting) | Implemented |
 | **Design system and app shell** | **Planned — MVP** |
 | **Counterfactual chart** | **Planned — MVP** |

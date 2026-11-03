@@ -135,6 +135,9 @@ export async function verifyCase(
   success: boolean;
   data?: VerificationResponse;
   error?: string;
+  /** The engine's error code when the API sent one, so the error state can show it. */
+  code?: string;
+  remediation?: string | null;
   isRefusal?: boolean;
   refusal?: RefusalInfo;
   isDemo?: boolean;
@@ -176,6 +179,8 @@ export async function verifyCase(
     return {
       success: false,
       error: typeof detail === 'string' ? detail : (detail?.message || 'Verification request failed.'),
+      code: typeof detail?.code === 'string' ? detail.code : `HTTP ${res.status}`,
+      remediation: typeof detail?.remediation === 'string' ? detail.remediation : null,
       isRefusal: Boolean(detail?.is_refusal),
     };
   } catch {
@@ -190,6 +195,7 @@ export async function verifyCase(
     return {
       success: false,
       error: `Backend API is unreachable at ${API_BASE_URL}. No verification was executed.`,
+      code: 'api_unreachable',
       isRefusal: false,
     };
   }

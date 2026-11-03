@@ -1,3 +1,4 @@
+import type { components } from '../generated/schema';
 import { VerificationResponse } from '../types';
 import completedJson from './generated/kariba-redd.completed.json';
 import refusedAlignmentJson from './generated/kariba-redd.refused-alignment.json';
@@ -53,17 +54,11 @@ export interface GeneratedCompletedFixture {
   };
 }
 
-/** The HTTP error body `POST /cases/{id}/verify` returns for a refusal. */
-export interface RefusalErrorBody {
-  detail: {
-    code: string;
-    message: string;
-    stage: string;
-    is_refusal: boolean;
-    remediation: string | null;
-    run_id: string;
-  };
-}
+/**
+ * The HTTP error body `POST /cases/{id}/verify` returns for a refusal.
+ * Generated from the API schema (`EngineFailureBody`), never hand-written.
+ */
+export type RefusalErrorBody = components['schemas']['EngineFailureBody'];
 
 export interface AlignmentRefusalDetail {
   window: { pre_start: number; pre_end: number; post_start: number; post_end: number };

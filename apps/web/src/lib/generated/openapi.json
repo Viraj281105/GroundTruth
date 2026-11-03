@@ -1,0 +1,3357 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "GroundTruth",
+    "description": "Independent causal verification for climate restoration and carbon-credit claims. This API returns evidence bundles with full provenance, not bare scores. A divergence between an independent estimate and a developer claim is a trigger for accredited review, never a finding of fraud.",
+    "version": "0.3.0"
+  },
+  "paths": {
+    "/runs": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "List stored runs, newest first",
+        "description": "Runs matching the filters, newest first, in pages.\n\nPagination is by cursor, not offset: the sort key (`created_at`, `run_id`) never\nchanges, so runs written while you page cannot shift or repeat a page. A run whose\nwrite commits late can be missing from the scroll in progress and appears in the\nnext one. There is no total count; it would be stale as soon as it was read.",
+        "operationId": "list_runs_runs_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this case.",
+              "title": "Case Id"
+            },
+            "description": "Only this case."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AnalysisStatus"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Job status; repeat to allow several. A refused run is `succeeded`.",
+              "title": "Status"
+            },
+            "description": "Job status; repeat to allow several. A refused run is `succeeded`."
+          },
+          {
+            "name": "engine_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this engine version.",
+              "title": "Engine Version"
+            },
+            "description": "Only this engine version."
+          },
+          {
+            "name": "data_mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "observed",
+                    "simulated"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Data Mode"
+            }
+          },
+          {
+            "name": "created_after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Recorded at or after this instant (timezone required).",
+              "title": "Created After"
+            },
+            "description": "Recorded at or after this instant (timezone required)."
+          },
+          {
+            "name": "created_before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Recorded before this instant (timezone required).",
+              "title": "Created Before"
+            },
+            "description": "Recorded before this instant (timezone required)."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Page size.",
+              "default": 25,
+              "title": "Limit"
+            },
+            "description": "Page size."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "From a previous page's next_cursor.",
+              "title": "Cursor"
+            },
+            "description": "From a previous page's next_cursor."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunListPage"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The run store is not available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/compare": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Compare two runs by evidence id",
+        "description": "A per-evidence-id diff: each id is `added`, `removed`, `changed` or `unchanged`.\n\n**NOT COMPARABLE.** When the runs are for different cases, differ in data mode or\nengine version, were written under incompatible contracts, or one has no evidence\nbundle (refused, failed, queued, cancelled), the response says `comparable: false`\nwith every reason and returns **no diff**. A difference across engine versions is\nnot presented as a change. Runs from different specifications are comparable, with\n`same_specification: false`.",
+        "operationId": "compare_runs_compare_get",
+        "parameters": [
+          {
+            "name": "baseline",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The reference run.",
+              "title": "Baseline"
+            },
+            "description": "The reference run."
+          },
+          {
+            "name": "candidate",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The run to compare against it.",
+              "title": "Candidate"
+            },
+            "description": "The run to compare against it."
+          },
+          {
+            "name": "include_unchanged",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "List unchanged ids too (they are always counted).",
+              "default": false,
+              "title": "Include Unchanged"
+            },
+            "description": "List unchanged ids too (they are always counted)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunComparison"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such run.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The run store is not available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Fetch one stored run",
+        "description": "One run with its outcome and, when it has one, its evidence bundle.\n\nA refused run returns `200` with `result_state: \"refused\"` and the structured\nerror (code, stage, message, remediation, detail). A run still queued or running\nreturns its state with no bundle.\n\nWith `include_report=true` a run that has a bundle also carries `report_markdown`,\nrendered on read by the deterministic renderer. No language model narrates a\nstored run.",
+        "operationId": "get_run_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "include_bundle",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Include the evidence bundle (it is large).",
+              "default": true,
+              "title": "Include Bundle"
+            },
+            "description": "Include the evidence bundle (it is large)."
+          },
+          {
+            "name": "include_report",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Render the deterministic report from the bundle, when there is one.",
+              "default": false,
+              "title": "Include Report"
+            },
+            "description": "Render the deterministic report from the bundle, when there is one."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such run.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The run store is not available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Unreadable contract.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Queue an analysis",
+        "description": "Queue a simulated analysis for a case and return at once; poll `status_url`.\n\n* **`202`**: a new job was queued.\n* **`200`**: nothing new was queued. Either a stored result already answers this exact\n  request (`from_cache`), or an identical job is already in flight (`deduplicated`).\n  `run_id` is that existing run.\n\nOnly simulated data can run, and the response says so (`is_simulated`, `notice`).\n`synthetic: false` is refused with `501`; it is never quietly simulated. There is no\n`true_effect` field: it is not part of the specification hash, so accepting it would\nlet two different simulations share one cached answer.",
+        "operationId": "submit_job_jobs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitJobRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSubmission"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "An existing result or job answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSubmission"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Observed data is not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The job store is not available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{run_id}": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "A job's status and progress",
+        "description": "Where a job is, cheap enough to poll about once a second until `terminal` is true.\n\n`stages` are what was observed as the job moved through the worker: claim, data access,\nthe engine, recording. The engine is one uninterruptible step, so its internal timings\n(`engine_metrics`) appear only after it finishes, and there is **no percentage** at any\npoint. While the engine runs you get its `elapsed_ms`, which is time spent, not\nprogress. A **refusal** is `succeeded` with `result_state: \"refused\"`: the job worked.",
+        "operationId": "get_job_jobs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The job store is not available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{run_id}/cancel": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Cancel a job",
+        "description": "Stop a job.\n\n* **queued** → `200`, `cancelled` at once; no worker will start it.\n* **running** → `202`, still `running` with `cancel_requested: true`. The engine is one\n  uninterruptible step, so the worker honours the request when it reaches a checkpoint\n  or the engine returns; the result is then discarded and the job ends `cancelled`.\n* **already cancelled**, or cancel already requested → the same answer again.\n* **succeeded or failed** → `409 job_already_finished`; nothing changes.",
+        "operationId": "cancel_job_jobs__run_id__cancel_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled (or already cancelled).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobView"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Running: cancel requested, not yet honoured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already finished; nothing to cancel.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The job store is not available.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Health",
+        "description": "Liveness and honest capability reporting.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cases": {
+      "get": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "List Case Summaries",
+        "description": "List every case definition.",
+        "operationId": "list_case_summaries_cases_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CaseSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Case Summaries Cases Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cases/{case_id}": {
+      "get": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Get Case Detail",
+        "description": "Return one case definition in full.",
+        "operationId": "get_case_detail_cases__case_id__get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cases/{case_id}/verify": {
+      "post": {
+        "tags": [
+          "verification"
+        ],
+        "summary": "Verify",
+        "description": "Run the verification pipeline for a case.\n\nSynchronous today. The analysis job lifecycle (queue, poll, cancel) is\ntracked separately; this endpoint keeps the same response shape so the\nfrontend contract does not change when it moves behind a job.",
+        "operationId": "verify_cases__case_id__verify_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Unsupported contract version.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngineFailureBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Either the request body is invalid (a validation error), or the engine refused or rejected the request (an engine failure, where `is_refusal` says which). A refusal is a legitimate outcome, not a malfunction.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EngineFailureBody"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The engine failed to estimate.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngineFailureBody"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented: observed data (a plain message), or a capability the engine does not have (an engine failure).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MessageErrorBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EngineFailureBody"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A required dataset could not be retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngineFailureBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalysisStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "running",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ],
+        "title": "AnalysisStatus",
+        "description": "Platform-side job lifecycle state.\n\nOwned by the platform; defined here so both sides agree on the vocabulary\nthe API and the UI use."
+      },
+      "ApiErrorBody": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/ApiErrorDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ApiErrorBody",
+        "description": "The JSON body of an error response, for the OpenAPI schema."
+      },
+      "ApiErrorDetail": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "hint"
+        ],
+        "title": "ApiErrorDetail"
+      },
+      "BundleDiff": {
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/DiffSummary"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ItemDiff"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "verdict": {
+            "$ref": "#/components/schemas/VerdictDiff"
+          },
+          "warnings": {
+            "$ref": "#/components/schemas/WarningsDiff"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "items",
+          "verdict",
+          "warnings"
+        ],
+        "title": "BundleDiff",
+        "description": "The difference between a baseline bundle and a candidate bundle."
+      },
+      "CaseDetail": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "standard": {
+            "type": "string",
+            "title": "Standard"
+          },
+          "registry_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registry Id"
+          },
+          "ecosystem": {
+            "type": "string",
+            "title": "Ecosystem"
+          },
+          "indicator": {
+            "type": "string",
+            "title": "Indicator"
+          },
+          "pre_period": {
+            "type": "string",
+            "title": "Pre Period"
+          },
+          "post_period": {
+            "type": "string",
+            "title": "Post Period"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "has_known_reference": {
+            "type": "boolean",
+            "title": "Has Known Reference"
+          },
+          "area_ha": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area Ha"
+          },
+          "donor_search_region": {
+            "type": "string",
+            "title": "Donor Search Region"
+          },
+          "donor_pool_size": {
+            "type": "integer",
+            "title": "Donor Pool Size"
+          },
+          "covariates": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Covariates"
+          },
+          "known_reference": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Known Reference",
+            "description": "Published third-party findings. Never an input to the estimate."
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "name",
+          "country",
+          "standard",
+          "registry_id",
+          "ecosystem",
+          "indicator",
+          "pre_period",
+          "post_period",
+          "status",
+          "has_known_reference",
+          "area_ha",
+          "donor_search_region",
+          "donor_pool_size",
+          "covariates",
+          "known_reference",
+          "notes"
+        ],
+        "title": "CaseDetail",
+        "description": "Full case definition, including validation references."
+      },
+      "CaseSummary": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "standard": {
+            "type": "string",
+            "title": "Standard"
+          },
+          "registry_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registry Id"
+          },
+          "ecosystem": {
+            "type": "string",
+            "title": "Ecosystem"
+          },
+          "indicator": {
+            "type": "string",
+            "title": "Indicator"
+          },
+          "pre_period": {
+            "type": "string",
+            "title": "Pre Period"
+          },
+          "post_period": {
+            "type": "string",
+            "title": "Post Period"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "has_known_reference": {
+            "type": "boolean",
+            "title": "Has Known Reference"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "name",
+          "country",
+          "standard",
+          "registry_id",
+          "ecosystem",
+          "indicator",
+          "pre_period",
+          "post_period",
+          "status",
+          "has_known_reference"
+        ],
+        "title": "CaseSummary",
+        "description": "A case as listed by the API."
+      },
+      "Confidence": {
+        "properties": {
+          "lower": {
+            "type": "number",
+            "title": "Lower"
+          },
+          "upper": {
+            "type": "number",
+            "title": "Upper"
+          },
+          "level": {
+            "type": "number",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Level",
+            "default": 0.95
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "description": "permutation | bootstrap | analytic | sensitivity-envelope",
+            "default": "permutation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lower",
+          "upper",
+          "level",
+          "kind"
+        ],
+        "title": "Confidence",
+        "description": "An interval estimate with an explicit interpretation.\n\n``kind`` records whether the interval is a classical confidence interval, a\npermutation-based range, or a sensitivity envelope. Reporting these as if\nthey were interchangeable would be misleading."
+      },
+      "DatasetRef": {
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[-_.][a-z0-9]+)*$",
+            "title": "Dataset Id",
+            "description": "e.g. 'sentinel2-l2a', 'chirps-daily'."
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Provider version or snapshot date, e.g. '2024.1'."
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "description": "e.g. 'google-earth-engine', 'synthetic'."
+          },
+          "asset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset",
+            "description": "Provider asset path."
+          },
+          "source_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Uri"
+          },
+          "retrieved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieved At",
+            "description": "ISO timestamp of retrieval, set by the platform."
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "version",
+          "provider",
+          "asset",
+          "source_uri",
+          "retrieved_at"
+        ],
+        "title": "DatasetRef",
+        "description": "A pinned reference to an external dataset.\n\nThe platform resolves a logical dataset name to a concrete, versioned\nreference before the engine runs. The engine never chooses a dataset\nversion, so a re-run months later uses the same imagery rather than\nwhatever the provider currently serves."
+      },
+      "DiffSummary": {
+        "properties": {
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "removed": {
+            "type": "integer",
+            "title": "Removed"
+          },
+          "changed": {
+            "type": "integer",
+            "title": "Changed"
+          },
+          "unchanged": {
+            "type": "integer",
+            "title": "Unchanged"
+          }
+        },
+        "type": "object",
+        "required": [
+          "added",
+          "removed",
+          "changed",
+          "unchanged"
+        ],
+        "title": "DiffSummary",
+        "description": "How many ids fall in each status."
+      },
+      "EngineFailureBody": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/EngineFailureDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "EngineFailureBody",
+        "description": "The body ``/verify`` returns when the engine refused or could not run."
+      },
+      "EngineFailureDetail": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "is_refusal": {
+            "type": "boolean",
+            "title": "Is Refusal"
+          },
+          "remediation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remediation"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "stage",
+          "is_refusal",
+          "remediation",
+          "run_id"
+        ],
+        "title": "EngineFailureDetail",
+        "description": "Why ``/verify`` returned no result: the engine refused, or could not run.\n\n``is_refusal`` is the field that matters. A refusal is the system correctly declining\nto produce a fragile number, and is shown as a legitimate outcome, not as an error."
+      },
+      "EngineMetricsView": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "source": {
+            "type": "string",
+            "const": "run_metrics",
+            "title": "Source",
+            "default": "run_metrics"
+          },
+          "total_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Ms"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/EngineStageTiming"
+            },
+            "type": "array",
+            "title": "Stages",
+            "description": "The engine's internal stages and how long each took, in order. The engine reports these only for a completed analysis; a refusal or error has none."
+          },
+          "stopped_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stopped At",
+            "description": "The stage a refusal or error came from, as the engine names it."
+          },
+          "n_units_observed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Units Observed"
+          },
+          "n_donors_admitted": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Donors Admitted"
+          },
+          "n_estimator_fits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Estimator Fits"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available",
+          "source",
+          "total_ms",
+          "stages",
+          "stopped_at",
+          "n_units_observed",
+          "n_donors_admitted",
+          "n_estimator_fits",
+          "note"
+        ],
+        "title": "EngineMetricsView",
+        "description": "The engine's own timings, taken from ``RunMetrics``. Present only after it returns."
+      },
+      "EngineStageTiming": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "duration_ms": {
+            "type": "number",
+            "title": "Duration Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "duration_ms"
+        ],
+        "title": "EngineStageTiming"
+      },
+      "ErrorCode": {
+        "type": "string",
+        "enum": [
+          "invalid_request",
+          "contract_version_mismatch",
+          "data_unavailable",
+          "insufficient_data",
+          "donor_pool_inadequate",
+          "estimation_failed",
+          "not_implemented",
+          "internal_error"
+        ],
+        "title": "ErrorCode",
+        "description": "Machine-readable failure reasons.\n\nThe API maps these to HTTP status codes and the UI maps them to copy, so\nneither has to parse an error message. Adding a member is a minor contract\nchange; changing what one means is a major one."
+      },
+      "Evidence": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+            "title": "Id",
+            "description": "Stable, human-readable id, e.g. 'effect.ndvi.point_estimate'."
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Short human-readable description of the quantity."
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit",
+            "description": "Unit from the declared vocabulary, or '' if none.",
+            "default": ""
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Confidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "qualifiers": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Qualifiers",
+            "description": "Structured caveats, e.g. {'observed_not_causal': True}."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "value",
+          "unit",
+          "confidence",
+          "provenance",
+          "qualifiers"
+        ],
+        "title": "Evidence",
+        "description": "One auditable value with its unit, uncertainty and origin."
+      },
+      "EvidenceBundle": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": "array",
+            "title": "Items",
+            "default": []
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VerificationVerdict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "schema_version",
+          "items",
+          "verdict",
+          "warnings"
+        ],
+        "title": "EvidenceBundle",
+        "description": "An immutable, verified collection of evidence for one case.\n\nThe bundle is the hand-off point from the deterministic pipeline to the\nreporting layer. It is serialisable, diffable and fully reproducible from\nits provenance records."
+      },
+      "EvidenceSnapshot": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Confidence"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "qualifiers": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Qualifiers"
+          },
+          "provenance_method": {
+            "type": "string",
+            "title": "Provenance Method"
+          },
+          "provenance_fingerprint": {
+            "type": "string",
+            "title": "Provenance Fingerprint"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "unit",
+          "confidence",
+          "qualifiers",
+          "provenance_method",
+          "provenance_fingerprint"
+        ],
+        "title": "EvidenceSnapshot",
+        "description": "An evidence item as one side of the diff saw it."
+      },
+      "FieldChange": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "after": {
+            "title": "After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "before",
+          "after"
+        ],
+        "title": "FieldChange",
+        "description": "One field of one evidence item that differs."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "ok"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version",
+            "default": ""
+          },
+          "contract_version": {
+            "type": "string",
+            "title": "Contract Version",
+            "default": ""
+          },
+          "engine_capabilities": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Engine Capabilities",
+            "description": "What the engine can actually do, reported by the engine itself."
+          },
+          "earth_observation_implemented": {
+            "type": "boolean",
+            "title": "Earth Observation Implemented",
+            "description": "False until the Earth Engine reducer chain lands.",
+            "default": false
+          },
+          "genai_narration_implemented": {
+            "type": "boolean",
+            "title": "Genai Narration Implemented",
+            "description": "False until a narration provider is implemented.",
+            "default": false
+          },
+          "cases_available": {
+            "type": "integer",
+            "title": "Cases Available",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "engine_version",
+          "contract_version",
+          "engine_capabilities",
+          "earth_observation_implemented",
+          "genai_narration_implemented",
+          "cases_available"
+        ],
+        "title": "HealthResponse",
+        "description": "Service liveness and capability report."
+      },
+      "ItemDiff": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "added",
+              "removed",
+              "changed",
+              "unchanged"
+            ],
+            "title": "Status"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "candidate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/FieldChange"
+            },
+            "type": "array",
+            "title": "Changes",
+            "default": []
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta"
+          },
+          "relative_delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Delta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "status",
+          "baseline",
+          "candidate",
+          "changes",
+          "delta",
+          "relative_delta"
+        ],
+        "title": "ItemDiff",
+        "description": "One evidence id across the two bundles."
+      },
+      "JobSubmission": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "from_cache": {
+            "type": "boolean",
+            "title": "From Cache",
+            "description": "An existing result answers this request; nothing was queued or will run."
+          },
+          "deduplicated": {
+            "type": "boolean",
+            "title": "Deduplicated",
+            "description": "An identical job is already queued or running; this is that job."
+          },
+          "status_url": {
+            "type": "string",
+            "title": "Status Url"
+          },
+          "job": {
+            "$ref": "#/components/schemas/JobView"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "from_cache",
+          "deduplicated",
+          "status_url",
+          "job"
+        ],
+        "title": "JobSubmission",
+        "description": "What submitting did: queued a new job, or pointed at an existing run."
+      },
+      "JobView": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "queued | running | succeeded | failed | cancelled"
+          },
+          "result_state": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "measured",
+              "refused",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Result State"
+          },
+          "terminal": {
+            "type": "boolean",
+            "title": "Terminal",
+            "description": "True once nothing more will happen; stop polling."
+          },
+          "engine_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Status"
+          },
+          "data_mode": {
+            "type": "string",
+            "title": "Data Mode"
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          },
+          "notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice"
+          },
+          "attempt": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt",
+            "description": "How many times a worker has taken the job."
+          },
+          "max_attempts": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Attempts"
+          },
+          "cancel_requested": {
+            "type": "boolean",
+            "title": "Cancel Requested",
+            "description": "True once a cancel was requested. A running job honours it when its worker reaches a checkpoint or the engine returns."
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage",
+            "description": "The live stage in progress, if one is recorded."
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageView"
+            },
+            "type": "array",
+            "title": "Stages"
+          },
+          "engine_metrics": {
+            "$ref": "#/components/schemas/EngineMetricsView"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineEvent"
+            },
+            "type": "array",
+            "title": "Timeline"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "last_heartbeat_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Heartbeat At",
+            "description": "When the worker last renewed its lease. Coarse: about a third of the lease."
+          },
+          "lease_expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lease Expires At"
+          },
+          "retry_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry At",
+            "description": "When a job waiting to retry becomes available again."
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A refusal (is_refusal true) or an engine error, once recorded."
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "status_url": {
+            "type": "string",
+            "title": "Status Url"
+          },
+          "result_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Url",
+            "description": "Where the stored result is, once there is one."
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": "There is no percentage because none can be known: the analysis engine runs as one step and reports its internal timings only when it finishes. `stages` are observed as they happen; `engine_metrics` fills in afterwards."
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "case_id",
+          "status",
+          "result_state",
+          "terminal",
+          "engine_status",
+          "data_mode",
+          "is_simulated",
+          "notice",
+          "attempt",
+          "max_attempts",
+          "cancel_requested",
+          "stage",
+          "stages",
+          "engine_metrics",
+          "timeline",
+          "created_at",
+          "updated_at",
+          "last_heartbeat_at",
+          "lease_expires_at",
+          "retry_at",
+          "error",
+          "failure_reason",
+          "status_url",
+          "result_url",
+          "note"
+        ],
+        "title": "JobView",
+        "description": "A job's status and progress, small enough to poll every second.\n\nA **refusal** is a completed job: ``status`` is ``succeeded``, ``result_state`` is\n``refused``, ``terminal`` is true and ``error.is_refusal`` is true. It is never\n``failed``. ``is_simulated`` and ``data_mode`` are always present, and a simulated job\ncarries a ``notice``."
+      },
+      "MessageErrorBody": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "MessageErrorBody",
+        "description": "An error whose ``detail`` is a plain message, e.g. an unknown case (404)."
+      },
+      "NotComparable": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "different_case",
+              "different_data_mode",
+              "different_engine_version",
+              "different_contract_major",
+              "contract_unreadable",
+              "no_bundle"
+            ],
+            "title": "Code"
+          },
+          "side": {
+            "type": "string",
+            "enum": [
+              "baseline",
+              "candidate",
+              "both"
+            ],
+            "title": "Side"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "side",
+          "message"
+        ],
+        "title": "NotComparable",
+        "description": "One reason two runs cannot be compared."
+      },
+      "Provenance": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Data source or upstream system, e.g. 'Sentinel-2 L2A'."
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "description": "Algorithm or estimator that produced the value."
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage",
+            "description": "Pipeline stage: ingestion|geospatial|matching|causal|uncertainty|external.",
+            "default": "unspecified"
+          },
+          "source_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Uri",
+            "description": "Resolvable identifier for the source (URL, asset id, DOI)."
+          },
+          "retrieved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieved At",
+            "description": "When the underlying data was retrieved."
+          },
+          "code_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code Version",
+            "description": "Git SHA or package version of the producing code."
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Parameters",
+            "description": "Estimator parameters needed to reproduce the value."
+          },
+          "inputs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Inputs",
+            "description": "Evidence ids this value was derived from.",
+            "default": []
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Caveats a human auditor should read."
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "method",
+          "stage",
+          "source_uri",
+          "retrieved_at",
+          "code_version",
+          "parameters",
+          "inputs",
+          "notes"
+        ],
+        "title": "Provenance",
+        "description": "An immutable record of the origin of a single analytical value.\n\nEvery :class:`~groundtruth.contracts.evidence.Evidence` item must carry one.\nWithout provenance a number cannot be audited, and an un-auditable number is\nnot admissible in a verification report."
+      },
+      "RunComparison": {
+        "properties": {
+          "baseline": {
+            "$ref": "#/components/schemas/RunItem"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/RunItem"
+          },
+          "comparable": {
+            "type": "boolean",
+            "title": "Comparable"
+          },
+          "not_comparable": {
+            "items": {
+              "$ref": "#/components/schemas/NotComparable"
+            },
+            "type": "array",
+            "title": "Not Comparable",
+            "description": "Every reason the pair cannot be compared; empty when comparable."
+          },
+          "same_specification": {
+            "type": "boolean",
+            "title": "Same Specification",
+            "description": "False when the two runs were requested with different specifications (inputs, window, seed, or pinned datasets). Still comparable; read the diff knowing it."
+          },
+          "contains_simulated": {
+            "type": "boolean",
+            "title": "Contains Simulated"
+          },
+          "diff": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BundleDiff"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "baseline",
+          "candidate",
+          "comparable",
+          "not_comparable",
+          "same_specification",
+          "contains_simulated",
+          "diff"
+        ],
+        "title": "RunComparison",
+        "description": "Two runs compared by evidence id, or the reasons they cannot be.\n\n``comparable: false`` means NOT COMPARABLE: ``diff`` is null and no difference is\npresented, because across engine versions, data modes or cases a difference in a\nnumber may be an artefact of the instrument and not a change in the project."
+      },
+      "RunDetail": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "spec_hash": {
+            "type": "string",
+            "title": "Spec Hash"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Job lifecycle: queued, running, succeeded, failed, cancelled."
+          },
+          "result_state": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "measured",
+              "refused",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Result State",
+            "description": "queued | running | measured | refused | failed | cancelled."
+          },
+          "engine_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Status",
+            "description": "completed | refused | error, once the engine ran."
+          },
+          "verdict_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict Label"
+          },
+          "data_mode": {
+            "type": "string",
+            "title": "Data Mode",
+            "description": "'simulated' or 'observed'."
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated",
+            "description": "True for simulated data. Drives the UI banner."
+          },
+          "notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice",
+            "description": "Plain-language simulated-data notice, when simulated."
+          },
+          "engine_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Version"
+          },
+          "contract_version": {
+            "type": "string",
+            "title": "Contract Version"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the run was recorded (UTC); the sort key."
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "is_refusal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Refusal",
+            "description": "Set when the run has a stored error: true for a refusal."
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason",
+            "description": "Why a run failed before the engine produced an error."
+          },
+          "has_bundle": {
+            "type": "boolean",
+            "title": "Has Bundle",
+            "description": "False for a refused, failed, queued or cancelled run."
+          },
+          "engine": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunEngine"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetRef"
+            },
+            "type": "array",
+            "title": "Datasets"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present for a refused run or an engine error."
+          },
+          "verdict_rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict Rationale"
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Caveats"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "bundle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceBundle"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when excluded with include_bundle=false, or absent."
+          },
+          "report_markdown": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Markdown",
+            "description": "Deterministic report, when asked for with include_report=true and the run has a bundle with a verdict. Rendered on read; never narrated by a model."
+          },
+          "report_generator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Generator"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "case_id",
+          "spec_hash",
+          "status",
+          "result_state",
+          "engine_status",
+          "verdict_label",
+          "data_mode",
+          "is_simulated",
+          "notice",
+          "engine_version",
+          "contract_version",
+          "created_at",
+          "error_code",
+          "is_refusal",
+          "failure_reason",
+          "has_bundle",
+          "engine",
+          "seed",
+          "datasets",
+          "started_at",
+          "finished_at",
+          "metrics",
+          "error",
+          "verdict_rationale",
+          "caveats",
+          "warnings",
+          "bundle",
+          "report_markdown",
+          "report_generator"
+        ],
+        "title": "RunDetail",
+        "description": "One stored run in full: its lifecycle, its outcome, and its evidence bundle."
+      },
+      "RunEngine": {
+        "properties": {
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "contract_version": {
+            "type": "string",
+            "title": "Contract Version"
+          },
+          "git_sha": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Git Sha"
+          }
+        },
+        "type": "object",
+        "required": [
+          "engine_version",
+          "contract_version",
+          "git_sha"
+        ],
+        "title": "RunEngine"
+      },
+      "RunError": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Detail"
+          },
+          "remediation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remediation"
+          },
+          "is_refusal": {
+            "type": "boolean",
+            "title": "Is Refusal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "stage",
+          "detail",
+          "remediation",
+          "is_refusal"
+        ],
+        "title": "RunError",
+        "description": "A stored analysis error. A refusal has ``is_refusal`` true and is not a fault."
+      },
+      "RunItem": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "spec_hash": {
+            "type": "string",
+            "title": "Spec Hash"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Job lifecycle: queued, running, succeeded, failed, cancelled."
+          },
+          "result_state": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "measured",
+              "refused",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Result State",
+            "description": "queued | running | measured | refused | failed | cancelled."
+          },
+          "engine_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Status",
+            "description": "completed | refused | error, once the engine ran."
+          },
+          "verdict_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict Label"
+          },
+          "data_mode": {
+            "type": "string",
+            "title": "Data Mode",
+            "description": "'simulated' or 'observed'."
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated",
+            "description": "True for simulated data. Drives the UI banner."
+          },
+          "notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice",
+            "description": "Plain-language simulated-data notice, when simulated."
+          },
+          "engine_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Version"
+          },
+          "contract_version": {
+            "type": "string",
+            "title": "Contract Version"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "When the run was recorded (UTC); the sort key."
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "is_refusal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Refusal",
+            "description": "Set when the run has a stored error: true for a refusal."
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason",
+            "description": "Why a run failed before the engine produced an error."
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "case_id",
+          "spec_hash",
+          "status",
+          "result_state",
+          "engine_status",
+          "verdict_label",
+          "data_mode",
+          "is_simulated",
+          "notice",
+          "engine_version",
+          "contract_version",
+          "created_at",
+          "error_code",
+          "is_refusal",
+          "failure_reason"
+        ],
+        "title": "RunItem",
+        "description": "One stored run, as a list or a comparison shows it.\n\n``status`` is the job; ``result_state`` is what happened to the analysis, in the\nUI's existing vocabulary. A **refused** run is a successful job (``status`` is\n``succeeded``) whose ``result_state`` is ``refused``: a legitimate outcome to\ndisplay, never an error. ``is_simulated`` and ``data_mode`` are always present."
+      },
+      "RunListPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RunItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor",
+            "description": "Pass as `cursor` to get the next page. Null on the last page."
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "contains_simulated": {
+            "type": "boolean",
+            "title": "Contains Simulated",
+            "description": "True if any run on this page is simulated."
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor",
+          "limit",
+          "contains_simulated"
+        ],
+        "title": "RunListPage",
+        "description": "A page of runs, newest first."
+      },
+      "RunMetrics": {
+        "properties": {
+          "duration_ms": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Duration Ms",
+            "default": 0.0
+          },
+          "stage_durations_ms": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Stage Durations Ms"
+          },
+          "n_units_observed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "N Units Observed",
+            "default": 0
+          },
+          "n_donors_admitted": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "N Donors Admitted",
+            "default": 0
+          },
+          "n_estimator_fits": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "N Estimator Fits",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "RunMetrics",
+        "description": "Timings and counters, for monitoring and capacity planning.",
+        "required": [
+          "duration_ms",
+          "stage_durations_ms",
+          "n_units_observed",
+          "n_donors_admitted",
+          "n_estimator_fits"
+        ]
+      },
+      "StageView": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "done",
+              "active",
+              "pending",
+              "skipped",
+              "failed",
+              "unknown"
+            ],
+            "title": "State",
+            "description": "done | active | pending | skipped (never reached) | failed | unknown (no stage was recorded for this job)."
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms",
+            "description": "Finished stages only."
+          },
+          "elapsed_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Ms",
+            "description": "Time spent in the active stage so far. A clock reading, not a fraction of anything."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "label",
+          "state",
+          "started_at",
+          "finished_at",
+          "duration_ms",
+          "elapsed_ms"
+        ],
+        "title": "StageView",
+        "description": "One live stage of a job, as it was observed."
+      },
+      "SubmitJobRequest": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic",
+            "description": "Must be true until real Earth-observation providers are implemented. false is refused with 501, never silently simulated.",
+            "default": true
+          },
+          "min_donors": {
+            "type": "integer",
+            "minimum": 2.0,
+            "title": "Min Donors",
+            "default": 10
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "case_id"
+        ],
+        "title": "SubmitJobRequest",
+        "description": "Queue an analysis for a case. Simulated data only, until real providers exist."
+      },
+      "TimelineEvent": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "title": "Event",
+            "description": "queued | running | succeeded | failed | cancelled"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "at"
+        ],
+        "title": "TimelineEvent"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VerdictDiff": {
+        "properties": {
+          "baseline_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Label"
+          },
+          "candidate_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Label"
+          },
+          "label_changed": {
+            "type": "boolean",
+            "title": "Label Changed"
+          },
+          "baseline_divergence_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Divergence Ratio"
+          },
+          "candidate_divergence_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Divergence Ratio"
+          },
+          "divergence_ratio_changed": {
+            "type": "boolean",
+            "title": "Divergence Ratio Changed"
+          },
+          "rationale_changed": {
+            "type": "boolean",
+            "title": "Rationale Changed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "baseline_label",
+          "candidate_label",
+          "label_changed",
+          "baseline_divergence_ratio",
+          "candidate_divergence_ratio",
+          "divergence_ratio_changed",
+          "rationale_changed"
+        ],
+        "title": "VerdictDiff",
+        "description": "The screening verdicts side by side. Neutral by construction: it states the\ntwo labels and whether they differ, and ranks neither."
+      },
+      "VerdictLabel": {
+        "type": "string",
+        "enum": [
+          "consistent_with_claim",
+          "divergent_from_claim",
+          "inconclusive",
+          "not_assessed"
+        ],
+        "title": "VerdictLabel",
+        "description": "Screening outcomes. None of these is a finding of fraud."
+      },
+      "VerificationRequest": {
+        "properties": {
+          "synthetic": {
+            "type": "boolean",
+            "title": "Synthetic",
+            "description": "Must be true until real Earth-observation providers are implemented. A request with synthetic=false is rejected rather than silently simulated.",
+            "default": true
+          },
+          "true_effect": {
+            "type": "number",
+            "title": "True Effect",
+            "description": "Effect injected into the simulated treated unit.",
+            "default": 0.06
+          },
+          "min_donors": {
+            "type": "integer",
+            "minimum": 2.0,
+            "title": "Min Donors",
+            "default": 10
+          },
+          "include_report": {
+            "type": "boolean",
+            "title": "Include Report",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "VerificationRequest",
+        "description": "Options for a verification run."
+      },
+      "VerificationResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "spec_hash": {
+            "type": "string",
+            "title": "Spec Hash",
+            "description": "Hash of the analysis specification. Identical hashes must yield identical results under the same engine version."
+          },
+          "engine_version": {
+            "type": "string",
+            "title": "Engine Version"
+          },
+          "contract_version": {
+            "type": "string",
+            "title": "Contract Version"
+          },
+          "duration_ms": {
+            "type": "number",
+            "title": "Duration Ms",
+            "default": 0.0
+          },
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "simulated",
+              "observed"
+            ],
+            "title": "Data Mode",
+            "description": "Drives the persistent simulated-data banner."
+          },
+          "verdict_label": {
+            "$ref": "#/components/schemas/VerdictLabel"
+          },
+          "verdict_rationale": {
+            "type": "string",
+            "title": "Verdict Rationale"
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Caveats"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "bundle": {
+            "$ref": "#/components/schemas/EvidenceBundle"
+          },
+          "report_markdown": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Markdown"
+          },
+          "report_generator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Generator"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "case_id",
+          "spec_hash",
+          "engine_version",
+          "contract_version",
+          "duration_ms",
+          "data_mode",
+          "verdict_label",
+          "verdict_rationale",
+          "caveats",
+          "warnings",
+          "bundle",
+          "report_markdown",
+          "report_generator"
+        ],
+        "title": "VerificationResponse",
+        "description": "The result of a verification run."
+      },
+      "VerificationVerdict": {
+        "properties": {
+          "label": {
+            "$ref": "#/components/schemas/VerdictLabel"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "divergence_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Divergence Ratio",
+            "description": "Independent estimate / claimed effect, where both are commensurable."
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Caveats",
+            "default": [
+              "A divergence between an independent estimate and a developer claim is not evidence of fraud; it indicates that the claim warrants accredited review.",
+              "Spectral indices track vegetation condition, not carbon stocks.",
+              "Estimates are conditional on the donor pool and the pre-treatment fit reported alongside them."
+            ]
+          },
+          "supporting_evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Supporting Evidence Ids",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "rationale",
+          "divergence_ratio",
+          "caveats",
+          "supporting_evidence_ids"
+        ],
+        "title": "VerificationVerdict",
+        "description": "The screening conclusion, phrased so it cannot be read as an accusation."
+      },
+      "WarningsDiff": {
+        "properties": {
+          "added": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Added"
+          },
+          "removed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Removed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "added",
+          "removed"
+        ],
+        "title": "WarningsDiff",
+        "description": "Analyst-facing warnings that appear in only one bundle."
+      }
+    }
+  }
+}

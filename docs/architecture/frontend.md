@@ -56,11 +56,11 @@ for rules 1, 5 and 6 already exist in `apps/web/src/lib/types.ts`.
 
 `GET /runs` and `GET /runs/{run_id}` (#35) send a `result_state` so the UI derives
 nothing. It uses the existing `ResultState` values `running`, `measured`, `refused` and
-`failed`, and adds two the UI does not have yet:
+`failed`, and two more that `ResultState` now has as well (#40):
 
-| New value | Meaning | Suggested rendering |
+| Value | Meaning | Rendering |
 | --- | --- | --- |
-| `queued` | Recorded, not yet picked up by a worker | The `running` style; it is waiting, not failing |
+| `queued` | Recorded, not yet picked up by a worker | The `running` tone (info); it is waiting, not failing |
 | `cancelled` | Cancelled before it produced evidence | Neutral, like `not_started`; not an error |
 
 A stored refusal is a normal `200` response with `result_state: "refused"` and the full
@@ -83,14 +83,72 @@ every stage `done`, and renders as the refusal state, not an error. Cancelling a
 job returns `202` and `cancel_requested: true`; keep polling until `terminal`, because the
 engine cannot be interrupted and the cancel completes when it returns.
 
+## How the case page runs an analysis (#40)
+
+**Run** submits a job; it does not call `/verify`. `src/lib/jobs.ts` holds the plumbing
+(submit, poll, cancel, fetch the stored run, normalise errors); the page holds the states.
+
+```
+click Run ─► POST /jobs ─► ?run=<id> in the address
+          ─► GET /jobs/{id} every ~1 s until terminal   (LoadingState shows job.stages)
+          ─► measured  → GET /runs/{id}?include_report=true → the existing results view
+             refused   → RefusalState with the engine's code, stage, remediation, detail
+             failed    → ErrorState with the error code and remediation
+             cancelled → EmptyState "Run Cancelled"
+```
+
+- **No simulated progress.** The loading state shows only the stages the API observed,
+  with their durations or elapsed time. The illustrative 9-stage tracker is no longer
+  shown anywhere: not for queued runs, not for inline runs, not while loading a case.
+  `LoadingState` still renders it when no `stages` are passed, for other callers.
+- **Reload and links resume.** `?run=<id>` is resumed on load. A run of another case is
+  refused (`run_case_mismatch`), never shown under the wrong project.
+- **Losing the API** while polling backs off 1, 2, 4, 8, then 10 s; after 30 s without an
+  answer the page says it lost contact. Retry resumes watching the same run; it never
+  submits a second one.
+- **Cancel** is offered while the job is queued or running.
+- **No job store** (`503 store_not_configured` or `store_unavailable`): the error state
+  shows the code and remediation, and a **Run inline instead** button appears. Only the
+  user can choose it; nothing falls back to `/verify` on its own. An inline run is not
+  stored, so it has no `?run=`.
+- **Injected effect.** `POST /jobs` has no `true_effect` (it is not part of the
+  specification hash, #37), so for queued runs the slider is disabled and reads
+  "SET BY WORKER": the worker's `--true-effect` (default 0.06) applies. It is live only for
+  inline runs. The quick presets still name an effect; for a queued run only their donor
+  count applies.
+- **Demo mode is unchanged.** With `NEXT_PUBLIC_DEMO_MODE=true` and the API unreachable,
+  the fixture is shown under the non-dismissible "no analysis was executed" banner, via the
+  same `isDemoMode()`-gated helpers in `api.ts`. `jobs.ts` never returns fixture data.
+
+### Configuration for a deployed API
+
+`NEXT_PUBLIC_API_URL` is inlined at **build** time; build with the deployed API's URL
+(see `apps/web/.env.example`). The site's origin must be in the API's
+`CORS_ALLOWED_ORIGINS` (or be its `FRONTEND_URL`). A browser reports a refused
+cross-origin call as a network failure, so the unreachable error (`api_unreachable`) names
+both the API URL and that setting.
+
 ## Data flow
 
 ```
 OpenAPI schema ──generate──► TypeScript types ──► typed API client ──► views
 ```
 
-Regenerating types is part of the API change workflow, not a frontend chore. If
-the schema changes and the types are not regenerated, the build should fail.
+Regenerating types is part of the API change workflow, not a frontend chore:
+`make api-types` after any API schema or route change (see `apps/web/README.md`).
+If the schema changes and the types are not regenerated, CI fails, and so does
+`npm run build`.
+
+`src/lib/types.ts` keeps its old names as aliases of the generated types, plus
+UI-only helpers. These are the places where the UI and the API still differ, kept
+visible rather than papered over:
+
+| Where | UI | API | Note |
+| --- | --- | --- | --- |
+| `Confidence.kind` | `ConfidenceKind`, four values | `string` | The contract types it as a free string. Narrowing it is a `contracts/` change. Components only compare it to strings, so they are unaffected. |
+| `VerificationResponse` identity fields | were optional | always present | `run_id`, `spec_hash`, `engine_version`, `contract_version`, `duration_ms`. The UI is now stricter, which is safe. |
+| `ResultState` | `not_started` plus every API value | `queued`, `running`, `measured`, `refused`, `failed`, `cancelled` | Aligned in #40; a type test fails if the API adds a state the UI lacks. |
+| Donor ADR-011 types (`DonorExclusionCategory`, `DonorLadderRung`, `DonorCandidateSummary`) | hand-copied from `platform.units.rules` | not served by any endpoint | Generation cannot protect them; a change in Python would go unnoticed. |
 
 ## Design principles
 

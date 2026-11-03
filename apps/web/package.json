@@ -4,16 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run check:api-types",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "check:fixture-fallback": "node scripts/check-fixture-fallback.js"
+    "check:fixture-fallback": "node scripts/check-fixture-fallback.js",
+    "generate:api": "openapi-typescript src/lib/generated/openapi.json -o src/lib/generated/schema.d.ts --default-non-nullable=false",
+    "check:api-types": "node scripts/check-api-types.js"
   },
   "dependencies": {
     "lucide-react": "^0.475.0",
     "next": "^14.2.24",
+    "openapi-fetch": "^0.17.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -23,6 +27,7 @@
     "@types/react-dom": "^18.3.5",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.24",
+    "openapi-typescript": "7.13.0",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
   }
