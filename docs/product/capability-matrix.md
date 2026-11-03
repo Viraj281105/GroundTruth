@@ -51,7 +51,7 @@ moves, update this table in the same change.
 | Permutation intervals, specification-curve type | Implemented |
 | Evidence assembly and verdict gate chain | Implemented |
 | Effect recovery validated on synthetic panels | Implemented |
-| **Real Earth-observation reduction** | **Engine methodology specified** (`engine/observation/reduction.py`, published via `describe_engine()`). The Earth Engine client that executes it is **Planned — MVP** (#22) |
+| **Real Earth-observation reduction** | **Engine methodology specified** (`engine/observation/reduction.py`, published via `describe_engine()`). The Earth Engine client that executes it is **Implemented** (#22): tested offline, network test opt-in, no reviewed real series yet |
 | **Cross-sensor calibration** | **Planned — MVP** |
 | **Covariate engineering from real products** | **Planned — MVP** |
 | **Cloud-starved period handling downstream** | **Planned** |
@@ -77,7 +77,7 @@ moves, update this table in the same change.
 | Deterministic report renderer | Implemented |
 | Grounding enforcement with safe fallback | Implemented |
 | CLI (`cases`, `show`, `verify`, `doctor`) | Implemented |
-| **Earth Engine client service** | **Planned — MVP** |
+| **Earth Engine client service** | **Implemented** (#22) — auth, retries, rate limiting, cache, snapshot pinning; Landsat 7 2001–2022 (agreed, C3). Observed analysis runs still `501` |
 | **Covariate dataset services** | **Planned — MVP** |
 | **Boundary acquisition and storage** | **Planned — MVP** |
 | Database schema and migrations (SQLAlchemy 2.0 + Alembic, `db` extra) | Implemented |

@@ -21,6 +21,26 @@ from groundtruth.engine.uncertainty.robustness import leave_one_out
 from groundtruth.platform.cases.registry import get_case
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--run-network",
+        action="store_true",
+        default=False,
+        help="run tests marked `network`, which call real external services (needs credentials)",
+    )
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    # Network tests are opt-in: skipped by default and in CI, so the suite never
+    # depends on credentials, quotas or someone else's uptime.
+    if config.getoption("--run-network"):
+        return
+    skip = pytest.mark.skip(reason="network test: pass --run-network to run it")
+    for item in items:
+        if "network" in item.keywords:
+            item.add_marker(skip)
+
+
 @pytest.fixture
 def rng() -> np.random.Generator:
     return np.random.default_rng(20260101)

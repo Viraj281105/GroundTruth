@@ -9,16 +9,20 @@ from groundtruth.platform.datasets.access import (
     SyntheticDonorAccess,
     SyntheticObservationAccess,
     earth_engine_access,
+    earth_engine_observations,
     synthetic_access,
 )
+from groundtruth.platform.datasets.observation import EarthEngineObservationAccess
 from groundtruth.platform.datasets.synthetic import SYNTHETIC_MARKER, is_synthetic
 
 __all__ = [
     "SYNTHETIC_MARKER",
+    "EarthEngineObservationAccess",
     "SyntheticCovariateAccess",
     "SyntheticDonorAccess",
     "SyntheticObservationAccess",
     "earth_engine_access",
+    "earth_engine_observations",
     "is_synthetic",
     "synthetic_access",
 ]

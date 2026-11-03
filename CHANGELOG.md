@@ -18,6 +18,24 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Earth Engine observation service** (#22). `platform/datasets/observation.py`
+  (`EarthEngineObservationAccess`, built by `earth_engine_observations()`) implements
+  `ObservationAccess` over Google Earth Engine. It translates the engine's published
+  reduction spec (`describe_engine()["reduction"]`, C3) into Earth Engine calls and
+  returns a `TimeSeries` with `n_valid_observations` for every year. Sensor: Landsat 7 for
+  2001–2022, agreed with Viraj (C3) on 2026-11-03, set explicitly (`EARTH_ENGINE_SENSOR`,
+  no default); `max_cloud_fraction` is not applied (pixel masks only), also agreed under
+  C3. Datasets are pinned as `landsat7-c2-l2@C02-T1-L2@2026-11-01`, and the snapshot is
+  enforced with a `system:version` filter; each year records a scene fingerprint. Reduced
+  years are cached on disk under a key of pinned dataset, geometry hash, year and reduction
+  spec, verified field by field on read. Per-call retries (4 attempts, 2/4/8 s) for
+  transient errors only, a process-wide rate limit, lazy sign-in, and credentials that
+  never reach a log, message or traceback. Missing or rejected keys raise
+  `ConfigurationError`; every data failure raises `DataUnavailableError`; nothing falls
+  back to fixtures. Network tests are opt-in with `--run-network`. Observed-data analysis
+  runs still return `501`: real covariates (C4) and donors (#23) do not exist yet. The
+  stale `EarthEngineProvider` stub, whose band table contradicted the engine's spec, is
+  removed. No contract or engine change.
 - **Frontend/backend integration** (#40). The case page's **Run** now queues a job
   (`POST /jobs`), polls it about once a second, shows only the stages the API observed,
   offers **Cancel**, keeps `?run=<id>` in the address so a reload or a link resumes it, and

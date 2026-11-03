@@ -148,11 +148,18 @@ computed alongside NDVI so fire years can be identified and handled explicitly.
 
 See `.env.example`. Required for real data:
 
-- `GEE_SERVICE_ACCOUNT_JSON` and `GOOGLE_CLOUD_PROJECT`
+- `GEE_SERVICE_ACCOUNT_JSON` (a key file path, or the key JSON) and, unless the key
+  names its project, `GOOGLE_CLOUD_PROJECT`
+- `EARTH_ENGINE_SENSOR` — no default; only a sensor agreed under C3 (today `landsat7`)
 - `SENTINEL_HUB_CLIENT_ID` / `SENTINEL_HUB_CLIENT_SECRET` (optional alternative)
 - `GLOBAL_FOREST_WATCH_API_KEY` (optional)
 
-`groundtruth doctor` reports what is configured. No credential is ever logged.
+`groundtruth doctor` reports what is configured. No credential is ever logged: the
+key is held as a secret, read only when Earth Engine is first used, and redacted
+from any external error text before it reaches a message or a log. A missing or
+rejected key is a `ConfigurationError`, never a fallback to simulated data. See
+[`docs/architecture/earth-observation.md`](../architecture/earth-observation.md),
+"The Earth Engine client".
 
 ---
 

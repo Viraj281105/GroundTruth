@@ -12,9 +12,13 @@ Two bundles are provided today:
   CI and the demo. Every series it returns is pinned to a dataset reference
   whose provider is ``synthetic``, which propagates into the result's
   ``is_simulated`` flag and from there into the UI banner.
-- :func:`earth_engine_access` — the real path. Not implemented; it raises
-  rather than falling back to fixtures, because a silent fallback would let
-  simulated numbers be published under a real-data label.
+- :func:`earth_engine_access` — the real path. It raises until every port has a
+  real implementation, rather than falling back to fixtures, because a silent
+  fallback would let simulated numbers be published under a real-data label.
+
+The real observation port exists on its own: :func:`earth_engine_observations`
+(#22). Covariates (C4) and donor candidates (#23) do not yet, and no fixture may
+stand in for either in an observed run.
 """
 
 from __future__ import annotations
@@ -25,6 +29,10 @@ from groundtruth.contracts.ports import DataAccess, ObservationSpec
 from groundtruth.contracts.provenance import Provenance
 from groundtruth.contracts.request import AnalysisRequest, UnitRef
 from groundtruth.contracts.types import Indicator, TimeSeries
+from groundtruth.platform.config import Settings, get_settings
+from groundtruth.platform.datasets.cache import ReductionCache
+from groundtruth.platform.datasets.observation import EarthEngineObservationAccess
+from groundtruth.platform.datasets.resilience import shared_rate_limiter
 from groundtruth.platform.datasets.synthetic import (
     SyntheticCovariateProvider,
     SyntheticDonorPoolProvider,
@@ -141,17 +149,40 @@ def synthetic_access(
     )
 
 
-def earth_engine_access(request: AnalysisRequest) -> DataAccess:
-    """Build a real, Earth Engine-backed DataAccess bundle. NOT IMPLEMENTED.
+def earth_engine_observations(settings: Settings | None = None) -> EarthEngineObservationAccess:
+    """The real observation port, configured from the environment.
+
+    Nothing is read or contacted here: the key is loaded, and Earth Engine signed
+    in to, on the first ``series`` call.
 
     Raises:
-        DataUnavailableError: always, until the reducer chain lands.
+        ConfigurationError: if ``EARTH_ENGINE_SENSOR`` is unset or names a sensor
+            not agreed under C3.
+    """
+    s = settings or get_settings()
+    return EarthEngineObservationAccess(
+        sensor=s.earth_engine_sensor,
+        credentials=s.gee_service_account_json,
+        project=s.google_cloud_project,
+        cache=ReductionCache(s.earth_engine_cache_dir or s.data_dir / "interim" / "earthengine"),
+        rate_limiter=shared_rate_limiter(s.earth_engine_max_requests_per_minute),
+    )
 
-    This deliberately raises rather than returning fixtures. A silent fallback
-    would let simulated numbers be served under ``data_mode='observed'``, which
-    is the one failure mode this system must not have.
+
+def earth_engine_access(request: AnalysisRequest) -> DataAccess:
+    """Build a real DataAccess bundle. Not available yet.
+
+    Raises:
+        DataUnavailableError: always, until real covariates (C4) and real donor
+            candidates (#23) exist alongside :func:`earth_engine_observations`.
+
+    This deliberately raises rather than pairing real observations with fixture
+    covariates or donors. A silent fallback would let simulated numbers be served
+    under ``data_mode='observed'``, which is the one failure mode this system must
+    not have.
     """
     raise DataUnavailableError(
-        "Observed-data access is not implemented: the Earth Engine reducer chain has not "
-        "landed. See docs/product/roadmap-detail.md milestone M1 and issue #1."
+        "Observed-data runs are not implemented yet. Real observations exist (the Earth Engine "
+        "observation service, #22), but real matching covariates (C4) and real donor "
+        "candidates (#23) do not, and simulated values never stand in for them."
     )

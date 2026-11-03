@@ -56,7 +56,28 @@ class Settings(BaseSettings):
 
     # --- earth observation providers --------------------------------------
     google_cloud_project: str | None = None
-    gee_service_account_json: str | None = None
+    gee_service_account_json: SecretStr | None = Field(
+        default=None,
+        description=(
+            "Earth Engine service-account key: a path to the key file, or the key JSON itself "
+            "(env GEE_SERVICE_ACCOUNT_JSON). Secret either way, so it is never printed."
+        ),
+    )
+    earth_engine_sensor: str | None = Field(
+        default=None,
+        description=(
+            "The sensor the Earth Engine observation service reduces (env EARTH_ENGINE_SENSOR). "
+            "No default: which sensor serves which year is methodology, and only a sensor "
+            "agreed under coordination point C3 is accepted."
+        ),
+    )
+    earth_engine_cache_dir: Path | None = Field(
+        default=None,
+        description="Where reduced Earth Engine years are cached. Unset: data/interim/earthengine.",
+    )
+    earth_engine_max_requests_per_minute: int = Field(
+        default=60, ge=1, description="Client-side cap on Earth Engine requests per process."
+    )
     sentinel_hub_client_id: str | None = None
     sentinel_hub_client_secret: SecretStr | None = None
     global_forest_watch_api_key: SecretStr | None = None
@@ -113,6 +134,21 @@ class Settings(BaseSettings):
             return None
         return value.strip() or None
 
+    @field_validator("gee_service_account_json")
+    @classmethod
+    def _blank_key_is_unset(cls, value: SecretStr | None) -> SecretStr | None:
+        # An empty GEE_SERVICE_ACCOUNT_JSON= in an env file means "no key", not a key.
+        if value is None or not value.get_secret_value().strip():
+            return None
+        return value
+
+    @field_validator("earth_engine_sensor")
+    @classmethod
+    def _blank_sensor_is_unset(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return value.strip().lower() or None
+
     @field_validator("cors_allowed_origins")
     @classmethod
     def _no_wildcard_origin(cls, value: str | None) -> str | None:
@@ -136,7 +172,7 @@ class Settings(BaseSettings):
     def earth_observation_configured(self) -> bool:
         """True if at least one real Earth-observation provider has credentials."""
         return bool(
-            self.gee_service_account_json
+            self.gee_service_account_json is not None
             or self.sentinel_hub_client_id
             or self.global_forest_watch_api_key
         )

@@ -4,8 +4,11 @@ How GroundTruth gets from satellite archives to an indicator time series, and
 how that layer is designed to absorb sensors and products it does not yet
 support.
 
-**Status: the interface is implemented; no real provider is.** Everything today
-comes from a labelled simulated fixture.
+**Status: the Earth Engine observation service is implemented (#22) and tested
+offline; it has not yet produced a series that a person has reviewed.** It runs
+only when asked (`--run-network`, a key), and observed-data *analysis runs* are
+still refused (`501`) until real covariates and donors exist. Every analysis
+today comes from a labelled simulated fixture.
 
 ---
 
@@ -43,8 +46,8 @@ This is why adding Sentinel-1 or GEDI later is a provider, not a refactor.
 ## Processing chain
 
 ```
-1. resolve       platform picks a pinned DatasetRef for the indicator
-2. filter        collection → AOI ∩ calendar year
+1. resolve       platform picks a pinned DatasetRef for the indicator   [platform, #22]
+2. filter        collection → AOI ∩ calendar year ∩ snapshot            [platform, #22]
 3. reflectance   DN × scale + offset; outside [0, 1] masked [engine, specified]
 4. mask          S2: SCL classes · Landsat C2: QA_PIXEL bits + QA_RADSAT
                                                             [engine, specified]
@@ -62,7 +65,8 @@ Steps 3–8 are methodology. They are specified in
 `describe_engine()["reduction"]`, which is the coordination point C3 handover.
 `reduce_period` is a numpy reference implementation of the same chain, so a
 platform client can check an Earth Engine chip against it. Steps 1–2 and the
-network call under them are plumbing (#22).
+network call under them are plumbing (#22): the platform client translates the
+published spec into Earth Engine calls and chooses none of it.
 
 ### Reflectance before band math
 
@@ -90,6 +94,20 @@ from another and describe a pixel that was never observed.
 Kariba's pre-period (2001–2010) predates Sentinel-2 and Landsat 8, so it rests on
 Landsat 5/7. Calibration across the transition is #5 and is not done here.
 
+**Decided for Kariba: Landsat 7 for all of 2001–2022 — agreed with Viraj (C3),
+2026-11-03.** One sensor across the whole window, so the series contains no sensor
+transition. Scenes after the 2003 scan-line-corrector failure have no-data
+stripes, which the mask removes; they lower clear-observation counts rather than
+bias values. The decision is recorded in `platform/datasets/catalog.py`
+(`AGREED_SENSORS`) and in every series' provenance. **Future work:** a per-year
+sensor rule published by the engine, and cross-sensor calibration (#5). Until
+then the observation service reduces only an agreed sensor, for its agreed years.
+
+**Scene-level cloud filter: not applied — agreed with Viraj (C3), 2026-11-03.**
+`ObservationSpec.max_cloud_fraction` has no counterpart in the reduction spec, so
+no scene is dropped for its cloud cover; cloud is removed by the per-pixel masks
+only. Provenance records both the decision and the value the request carried.
+
 ### Why median, not mean
 
 Residual undetected cloud is a heavy positive-reflectance outlier. A mean
@@ -106,13 +124,57 @@ more trustworthy than it is.
 
 ---
 
+## The Earth Engine client (#22)
+
+`platform/datasets/observation.py` (`EarthEngineObservationAccess`) is the
+platform's `ObservationAccess`. Built from the environment with
+`earth_engine_observations()`.
+
+```
+ObservationSpec ─► check ─► per year: cache ─(miss)─► sign in once ─► list scenes ─► reduce ─► store
+                                                   rate-limited, retried, redacted
+TimeSeries(values, n_valid_observations) + Provenance(dataset, snapshot, C3 decisions, spec, scenes)
+```
+
+| Concern | How |
+| --- | --- |
+| **Boundary with the engine** | Reads the (sensor, indicator) spec from `describe_engine()["reduction"]` and translates it (`earthengine.py`); imports nothing else from the engine. Requests outside the agreement — another sensor, years outside 2001–2022, a non-spectral indicator, an inward buffer (unit construction, ADR-011/#23), a unit without geometry — are refused before any network call. |
+| **Credentials** | `GEE_SERVICE_ACCOUNT_JSON`: a key file path or the key JSON, held as a `SecretStr`. Read and used only on the first `series` call. Missing or rejected → `ConfigurationError`, raised `from None` so no original exception (which might quote the key) is chained. External error text is redacted against the key before it reaches a message or log. |
+| **Retries** | Per call: 4 attempts, waits 2, 4, 8 s, for transient errors only (HTTP 408/429/5xx, dropped connections, "too many concurrent aggregations", capacity). Permanent errors ("Computation timed out", "User memory limit exceeded", asset not found, permission denied, anything unrecognised) are not retried. Either way the result is `DataUnavailableError`. The job layer (#24) retries whole attempts minutes apart on top, so a persistent outage is bounded at 4 × 3 tries. |
+| **Rate limiting** | One process-wide budget, calls spaced evenly: `EARTH_ENGINE_MAX_REQUESTS_PER_MINUTE` (default 60). |
+| **Version pinning** | `DatasetRef` `landsat7-c2-l2@C02-T1-L2@2026-11-01`: product version plus snapshot date. Scenes whose `system:version` is after 2026-11-01 are filtered out, so reprocessing cannot silently change a re-run. If that filter removes every scene of a year, the error says so and names the snapshot date. The snapshot is a constant in code; moving it is a new dataset version and changes `spec_hash`. |
+| **Scene fingerprint** | Each year records a hash of the scene ids and their versions, in the cache and in provenance. |
+| **Cache** | `data/interim/earthengine/` (`EARTH_ENGINE_CACHE_DIR`), one JSON file per (geometry, year). Key: pinned dataset + geometry hash + year + the reduction spec + grid. Each file holds its full key and a read is a hit only if every field matches; anything else is a miss and is rewritten. Failures are never cached. |
+| **Grid** | Zonal reductions run in `EPSG:4326` at the spec's 30 m, unweighted (a pixel is in or out), `bestEffort=false` (the scale is methodology), `tileScale=4`. |
+| **Geometry** | Passed as delivered, geodesic with the left-inside rule, so the Kariba part 1/5 overlap is inside once rather than cut out. Provenance records its hash. |
+| **Failure** | Always raises. Nothing on this path imports or falls back to the synthetic provider; a test enforces it. |
+
+**Not wired into analysis runs yet.** `earth_engine_access()` still raises, and
+`/verify` and `POST /jobs` answer `501` for observed data: real covariates (C4)
+and real donor candidates (#23) do not exist, and a fixture may not stand in for
+either.
+
+**Tests.** `tests/test_earthengine.py` covers all of the above against a fake
+backend, offline. `tests/test_earthengine_network.py` is opt-in
+(`pytest -m network --run-network tests/test_earthengine_network.py -v -s`): the
+Kariba NDVI series 2001–2022, and a small chip checked against the engine's
+`reduce_period`.
+
+**Known risk.** The Kariba boundary is about 1.07 million ha, roughly 12 million
+pixels at 30 m. One year's reduction may exceed Earth Engine's interactive
+time limit; the service then raises `DataUnavailableError` ("Computation timed
+out") rather than return a partial number, and the remedy is a batch-export
+path (a follow-up issue).
+
+---
+
 ## Supported and planned sources
 
 | Product | Role | Status |
 | --- | --- | --- |
 | Sentinel-2 L2A | Primary optical, 2017– | **Planned** — MVP |
 | Landsat 8/9 C2 L2 | Bridge to the Sentinel era, 2013– | **Planned** — MVP |
-| Landsat 5/7 C2 L2 | Deep pre-periods, 1984– | **Planned** |
+| Landsat 5/7 C2 L2 | Deep pre-periods, 1984– | Landsat 7: **Implemented** in the observation service (agreed sensor for 2001–2022); Landsat 5: **Planned** |
 | Hansen Global Forest Change | Annual loss year, tree cover | **Planned** |
 | CHIRPS | Rainfall covariate | **Planned** — MVP |
 | SRTM | Elevation, derived slope | **Planned** — MVP |
@@ -197,12 +259,12 @@ changes what the estimate is *of*, so the buffer is recorded as a caveat.
 | SCL cloud masking, median compositing, coverage audit | Implemented |
 | Zonal statistics, edge-buffer and leakage-belt caveats | Implemented |
 | Synthetic fixture provider | Implemented, labelled simulated |
-| Earth Engine configuration, band maps, index expressions | Implemented |
-| **Earth Engine network calls** | **Not implemented — raises `DataUnavailableError`** |
+| Earth Engine observation service: auth, retries, rate limit, cache, pinning (#22) | Implemented; tested offline; network test opt-in |
+| Observed-data analysis runs | **Not available** — `501` until real covariates and donors exist |
 | **Covariate extraction from real products** | **Not implemented** |
 | **Cross-sensor calibration** | **Not implemented** |
 
-The Earth Engine provider raises rather than falling back to fixtures. A silent
+The Earth Engine service raises rather than falling back to fixtures. A silent
 fallback would let simulated numbers be served under a real-data label, which is
 the one failure mode this system must not have.
 
