@@ -70,6 +70,10 @@ export interface paths {
          *     A refused run returns `200` with `result_state: "refused"` and the structured
          *     error (code, stage, message, remediation, detail). A run still queued or running
          *     returns its state with no bundle.
+         *
+         *     With `include_report=true` a run that has a bundle also carries `report_markdown`,
+         *     rendered on read by the deterministic renderer. No language model narrates a
+         *     stored run.
          */
         get: operations["get_run_runs__run_id__get"];
         put?: never;
@@ -1007,6 +1011,13 @@ export interface components {
             warnings: string[];
             /** @description Null when excluded with include_bundle=false, or absent. */
             bundle: components["schemas"]["EvidenceBundle"] | null;
+            /**
+             * Report Markdown
+             * @description Deterministic report, when asked for with include_report=true and the run has a bundle with a verdict. Rendered on read; never narrated by a model.
+             */
+            report_markdown: string | null;
+            /** Report Generator */
+            report_generator: string | null;
         };
         /** RunEngine */
         RunEngine: {
@@ -1491,6 +1502,8 @@ export interface operations {
             query?: {
                 /** @description Include the evidence bundle (it is large). */
                 include_bundle?: boolean;
+                /** @description Render the deterministic report from the bundle, when there is one. */
+                include_report?: boolean;
             };
             header?: never;
             path: {

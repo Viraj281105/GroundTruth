@@ -109,15 +109,23 @@ export function formatEvidence(item: Evidence): string {
  * surfaced `isRefusal` (backed by `AnalysisError.is_refusal` /
  * `ErrorCode.is_refusal` in the platform contract) — via `deriveResultState`
  * below. No new backend field is introduced for this.
+ *
+ * `queued` and `cancelled` exist because runs go through the job queue
+ * (issue #40); they are the API's own `result_state` values, so a job's state
+ * maps onto this union one to one.
  */
 export type ResultState =
   | "not_started"
+  | "queued"
   | "running"
   | "measured"
   | "refused"
-  | "failed";
+  | "failed"
+  | "cancelled";
 
 export interface ResultStateInputs {
+  /** A job was accepted and is waiting for a worker. */
+  isQueued?: boolean;
   /** A verification request is currently in flight. */
   isRunning: boolean;
   /** A verification response with an evidence bundle was received. */
@@ -126,21 +134,27 @@ export interface ResultStateInputs {
   isRefused: boolean;
   /** The run failed for a non-scientific reason (network, 5xx, unexpected error). */
   hasError: boolean;
+  /** The run was cancelled before it produced a result. */
+  isCancelled?: boolean;
 }
 
 /**
- * Resolve the five distinguishable run states from the page's local signals.
+ * Resolve the distinguishable run states from the page's local signals.
  * RULE: the absence of a measurement is a state, never a zero or a guess.
  */
 export function deriveResultState({
+  isQueued = false,
   isRunning,
   hasResult,
   isRefused,
   hasError,
+  isCancelled = false,
 }: ResultStateInputs): ResultState {
+  if (isQueued) return "queued";
   if (isRunning) return "running";
   if (isRefused) return "refused";
   if (hasError) return "failed";
+  if (isCancelled) return "cancelled";
   if (hasResult) return "measured";
   return "not_started";
 }
@@ -152,6 +166,7 @@ export function resultStateTone(
   switch (state) {
     case "not_started":
       return "neutral";
+    case "queued":
     case "running":
       return "info";
     case "measured":
@@ -160,6 +175,9 @@ export function resultStateTone(
       return "inconclusive";
     case "failed":
       return "error";
+    case "cancelled":
+      // Someone chose to stop it: neither a finding nor a fault.
+      return "neutral";
   }
 }
 
@@ -168,6 +186,8 @@ export function resultStateLabel(state: ResultState): string {
   switch (state) {
     case "not_started":
       return "NOT STARTED";
+    case "queued":
+      return "QUEUED";
     case "running":
       return "RUNNING";
     case "measured":
@@ -176,6 +196,8 @@ export function resultStateLabel(state: ResultState): string {
       return "REFUSED";
     case "failed":
       return "FAILED";
+    case "cancelled":
+      return "CANCELLED";
   }
 }
 

@@ -25,6 +25,7 @@ from groundtruth.contracts.types import VerdictLabel
 from groundtruth.platform.compare.comparison import Comparison, NotComparable
 from groundtruth.platform.compare.diff import BundleDiff
 from groundtruth.platform.jobs.interface import LIVE_STAGES, JobStatus
+from groundtruth.platform.reports.narrative import generate_report
 from groundtruth.platform.store.interface import ResultState, RunSummary
 
 
@@ -286,14 +287,27 @@ class RunDetail(RunItem):
     bundle: EvidenceBundle | None = Field(
         default=None, description="Null when excluded with include_bundle=false, or absent."
     )
+    report_markdown: str | None = Field(
+        default=None,
+        description="Deterministic report, when asked for with include_report=true and the "
+        "run has a bundle with a verdict. Rendered on read; never narrated by a model.",
+    )
+    report_generator: str | None = None
 
     @classmethod
     def build(
-        cls, summary: RunSummary, result: AnalysisResult | None, *, include_bundle: bool
+        cls,
+        summary: RunSummary,
+        result: AnalysisResult | None,
+        *,
+        include_bundle: bool,
+        include_report: bool = False,
     ) -> RunDetail:
         item = RunItem.from_summary(summary)
         bundle = result.bundle if result else None
         verdict = bundle.verdict if bundle else None
+        # The deterministic renderer only: a stored run is read back, not re-narrated (R4).
+        report = generate_report(bundle) if include_report and bundle and verdict else None
         return cls(
             **item.model_dump(),
             has_bundle=bundle is not None,
@@ -316,6 +330,8 @@ class RunDetail(RunItem):
             caveats=list(verdict.caveats) if verdict else [],
             warnings=list(bundle.warnings) if bundle else [],
             bundle=bundle if include_bundle else None,
+            report_markdown=report.markdown if report else None,
+            report_generator=report.generator if report else None,
         )
 
 

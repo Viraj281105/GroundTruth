@@ -18,6 +18,20 @@ Three versions are tracked independently:
 
 ### Added
 
+- **Frontend/backend integration** (#40). The case page's **Run** now queues a job
+  (`POST /jobs`), polls it about once a second, shows only the stages the API observed,
+  offers **Cancel**, keeps `?run=<id>` in the address so a reload or a link resumes it, and
+  renders the stored run from `GET /runs/{id}`. Refusals render as the refusal state with
+  the engine's code, stage and remediation; every error state shows the error code and
+  remediation. Polling backs off on network loss and stops with a "lost contact" state
+  after 30 s, whose retry resumes rather than resubmits. When the job store is unavailable
+  the page offers, and never takes on its own, **Run inline instead** (`/verify`). The
+  illustrative 9-stage loading animation is removed, for inline runs too. `ResultState`
+  gains `queued` and `cancelled`; `LoadingState` and `ErrorState` gain optional `stages`,
+  `code` and `remediation` props. API: `CORS_ALLOWED_ORIGINS` (comma-separated, defaults
+  to `FRONTEND_URL`, `*` refused at startup); `GET /runs/{id}?include_report=true` adds the
+  deterministic report. `apps/web/.env.example` documents the build-time API URL. Simulated
+  data only; **no authentication**. No contract or engine change.
 - **Generated TypeScript API types and client** (#17). The frontend's types are now
   generated from the API's OpenAPI schema (`openapi-typescript` 7.13.0) into
   `apps/web/src/lib/generated/`, with a typed `fetch` client (`openapi-fetch` 0.17.0)

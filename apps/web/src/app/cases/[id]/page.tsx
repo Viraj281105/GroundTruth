@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   API_BASE_URL,
+  ApiUnreachableError,
   getCaseDetail,
   verifyCase,
   getVisualizationFixture,
@@ -14,11 +15,26 @@ import {
 } from '../../../lib/api';
 import {
   CaseDetail,
-  VerificationResponse,
   deriveResultState,
   resultStateTone,
   resultStateLabel,
 } from '../../../lib/types';
+import {
+  ApiFailure,
+  ApiRequestError,
+  DisplayedResult,
+  JobSubmission,
+  JobView,
+  LostContactError,
+  createJobsApi,
+  displayedResultFromRun,
+  failureFrom,
+  failureFromJob,
+  loadingStagesFromJob,
+  refusalFromJob,
+  unreachableRemediation,
+  watchJob,
+} from '../../../lib/jobs';
 import {
   formatHectares,
   formatPermutationSignificance,
@@ -31,7 +47,13 @@ import { Button } from '../../../components/ui/Button';
 import { MetricDisplay } from '../../../components/ui/MetricDisplay';
 import { VerdictCard } from '../../../components/ui/VerdictCard';
 import { Tabs, TabsList, TabTrigger, TabContent } from '../../../components/ui/Tabs';
-import { LoadingState, RefusalState, ErrorState, PipelineStageId } from '../../../components/ui/States';
+import {
+  LoadingState,
+  LoadingStateProps,
+  RefusalState,
+  ErrorState,
+  EmptyState,
+} from '../../../components/ui/States';
 import { SimulatedBanner } from '../../../components/ui/SimulatedBanner';
 import { CounterfactualChart } from '../../../components/scientific/CounterfactualChart';
 import { PlaceboDistribution } from '../../../components/scientific/PlaceboDistribution';
@@ -70,20 +92,51 @@ import {
 } from 'lucide-react';
 import styles from './page.module.css';
 
+/**
+ * What "retry" means for a failure: queue the run again, run it inline again,
+ * or resume watching a run that may still be going (never resubmit it).
+ */
+type RetryAction = { kind: 'submit' } | { kind: 'inline' } | { kind: 'resume'; runId: string };
+
+interface RunFailure extends ApiFailure {
+  title?: string;
+  retry: RetryAction;
+}
+
+/** Where a run is, as far as this page knows. Only `idle` lets a new run start. */
+type RunPhase = 'idle' | 'submitting' | 'watching' | 'fetching' | 'inline';
+
+/** Keep `?run=<id>` in the address, so a reload or a shared link resumes the same run. */
+function setRunParam(runId: string | null) {
+  const url = new URL(window.location.href);
+  if (runId) url.searchParams.set('run', runId);
+  else url.searchParams.delete('run');
+  window.history.replaceState(window.history.state, '', url);
+}
+
 export default function CaseAnalysisPage() {
   const params = useParams();
   const caseId = (params?.id as string) || 'kariba-redd';
 
   const [caseDetail, setCaseDetail] = useState<CaseDetail | null>(null);
-  const [verificationResult, setVerificationResult] = useState<VerificationResponse | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
-  const [runStage, setRunStage] = useState<PipelineStageId>('fitting_counterfactual');
+  const [verificationResult, setVerificationResult] = useState<DisplayedResult | null>(null);
+  const [runPhase, setRunPhase] = useState<RunPhase>('idle');
+  const [job, setJob] = useState<JobView | null>(null);
   const [refusalError, setRefusalError] = useState<RefusalInfo | null>(null);
-  const [generalError, setGeneralError] = useState<string | null>(null);
+  const [generalError, setGeneralError] = useState<RunFailure | null>(null);
+  const [cancelledRunId, setCancelledRunId] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  // Set when the job store answered 503: only then is running inline offered,
+  // and only the user can choose it (inlineMode).
+  const [storeUnavailable, setStoreUnavailable] = useState(false);
+  const [inlineMode, setInlineMode] = useState(false);
+  const isRunning = runPhase !== 'idle';
+  const watchRef = useRef<AbortController | null>(null);
+  const jobsApi = useMemo(() => createJobsApi(), []);
   const [activeTab, setActiveTab] = useState<string>('causal');
   const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null);
   const [isProvenanceDrawerOpen, setIsProvenanceDrawerOpen] = useState<boolean>(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<ApiFailure | null>(null);
   const [isDemo, setIsDemo] = useState(false);
 
   // Runner Configuration Options
@@ -101,7 +154,13 @@ export default function CaseAnalysisPage() {
       setIsDemo((prev) => prev || demoDetail);
     } catch (err) {
       setCaseDetail(null);
-      setLoadError(err instanceof Error ? err.message : 'Failed to load case definition.');
+      // The first call a misconfigured deployment fails on, so it carries the
+      // same code and remediation (API URL, CORS) as a failed run.
+      setLoadError(
+        err instanceof Error
+          ? failureFrom(err, window.location.origin)
+          : { code: null, message: 'Failed to load case definition.', remediation: null, status: null },
+      );
       return;
     }
 
@@ -153,28 +212,118 @@ export default function CaseAnalysisPage() {
     }
   };
 
-  const handleRunVerification = async () => {
-    setIsRunning(true);
+  // Clear the previous outcome, so a stale number never sits beside a new run.
+  const startRun = (phase: RunPhase) => {
+    // Forget the old watcher as well as stopping it, so its cleanup cannot
+    // mark this new run idle.
+    watchRef.current?.abort();
+    watchRef.current = null;
     setRefusalError(null);
     setGeneralError(null);
+    setCancelledRunId(null);
+    setCancelError(null);
+    setVerificationResult(null);
+    setJob(null);
+    setRunPhase(phase);
+  };
 
-    // 9-stage scientific instrument pipeline
-    const stages: PipelineStageId[] = [
-      'ingesting_observations',
-      'harmonizing_sensors',
-      'engineering_covariates',
-      'constructing_donor_pool',
-      'matching_controls',
-      'fitting_counterfactual',
-      'running_placebos',
-      'propagating_uncertainty',
-      'assembling_evidence',
-    ];
+  // A terminal job becomes exactly one outcome. A refusal is a result to show,
+  // never an error.
+  const finishJob = useCallback(
+    async (finished: JobView) => {
+      switch (finished.result_state) {
+        case 'measured': {
+          setRunPhase('fetching');
+          const shown = displayedResultFromRun(
+            await jobsApi.result(finished.run_id, includeReport),
+          );
+          if (shown) {
+            setVerificationResult(shown);
+          } else {
+            setGeneralError({
+              code: null,
+              status: null,
+              message: `Run ${finished.run_id} is recorded as measured, but its evidence bundle could not be read.`,
+              remediation: null,
+              retry: { kind: 'resume', runId: finished.run_id },
+            });
+          }
+          break;
+        }
+        case 'refused':
+          setRefusalError(refusalFromJob(finished));
+          break;
+        case 'cancelled':
+          setCancelledRunId(finished.run_id);
+          break;
+        default:
+          setGeneralError({ ...failureFromJob(finished), retry: { kind: 'submit' } });
+      }
+    },
+    [jobsApi, includeReport],
+  );
 
-    for (const stage of stages) {
-      setRunStage(stage);
-      await new Promise((r) => setTimeout(r, 220));
-    }
+  // Poll a run until it finishes, then show how it ended. `first` is the status
+  // the submit call already returned, so the first second is not blank.
+  const watch = useCallback(
+    async (runId: string, first?: JobView) => {
+      watchRef.current?.abort();
+      const controller = new AbortController();
+      watchRef.current = controller;
+      setRunPhase('watching');
+      if (first) setJob(first);
+      try {
+        const finished =
+          first?.terminal
+            ? first
+            : await watchJob(jobsApi, runId, {
+                caseId,
+                signal: controller.signal,
+                onUpdate: setJob,
+              });
+        await finishJob(finished);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        if (err instanceof LostContactError) {
+          setGeneralError({
+            title: 'Lost Contact With The API',
+            code: 'lost_contact',
+            status: null,
+            message: `No answer from ${jobsApi.baseUrl} for 30 seconds while watching run ${runId}. The run may still be going; nothing was cancelled.`,
+            remediation: `${unreachableRemediation(jobsApi.baseUrl, window.location.origin)} Retrying resumes watching the same run; it does not start a new one.`,
+            retry: { kind: 'resume', runId },
+          });
+        } else if (err instanceof ApiRequestError && err.code === 'run_not_found') {
+          setRunParam(null);
+          setGeneralError({ ...failureFrom(err), retry: { kind: 'submit' } });
+        } else {
+          setGeneralError({
+            ...failureFrom(err, window.location.origin),
+            retry: { kind: 'resume', runId },
+          });
+        }
+      } finally {
+        if (watchRef.current === controller) {
+          watchRef.current = null;
+          setRunPhase('idle');
+        }
+      }
+    },
+    [jobsApi, caseId, finishJob],
+  );
+
+  // Resume the run named in the address (a reload, or a shared link), and stop
+  // polling when the page goes away.
+  useEffect(() => {
+    const runId = new URLSearchParams(window.location.search).get('run');
+    if (runId) void watch(runId);
+    return () => watchRef.current?.abort();
+  }, [watch]);
+
+  const handleRunInline = async () => {
+    startRun('inline');
+    setInlineMode(true);
+    setRunParam(null); // an inline run is not stored, so there is nothing to resume
 
     const result = await verifyCase(caseId, {
       synthetic: syntheticMode,
@@ -183,7 +332,7 @@ export default function CaseAnalysisPage() {
       include_report: includeReport,
     });
 
-    setIsRunning(false);
+    setRunPhase('idle');
 
     if (result.success && result.data) {
       setVerificationResult(result.data);
@@ -202,7 +351,87 @@ export default function CaseAnalysisPage() {
         },
       );
     } else {
-      setGeneralError(result.error || 'Execution failed.');
+      setGeneralError({
+        code: result.code ?? null,
+        status: null,
+        message: result.error || 'Execution failed.',
+        remediation:
+          result.code === 'api_unreachable'
+            ? unreachableRemediation(API_BASE_URL, window.location.origin)
+            : result.remediation ?? null,
+        retry: { kind: 'inline' },
+      });
+    }
+  };
+
+  const handleRunVerification = async () => {
+    if (inlineMode) {
+      await handleRunInline();
+      return;
+    }
+    startRun('submitting');
+
+    let submission: JobSubmission;
+    try {
+      submission = await jobsApi.submit({
+        case_id: caseId,
+        synthetic: syntheticMode,
+        min_donors: minDonors,
+      });
+    } catch (err) {
+      setRunPhase('idle');
+      if (err instanceof ApiUnreachableError) {
+        // Demo mode only: getVisualizationFixture is null unless
+        // NEXT_PUBLIC_DEMO_MODE is on, and the demo banner then says no
+        // analysis was executed.
+        const fixture = syntheticMode ? getVisualizationFixture(caseId) : null;
+        if (fixture) {
+          setVerificationResult(fixture.verification);
+          setIsDemo(true);
+          return;
+        }
+      }
+      if (err instanceof ApiRequestError && err.code === 'not_implemented') {
+        // Observed data is refused, never silently simulated: a refusal state,
+        // as /verify's 501 always was.
+        setRefusalError({ message: err.message, code: err.code, remediation: err.remediation });
+        return;
+      }
+      if (
+        err instanceof ApiRequestError &&
+        (err.code === 'store_not_configured' || err.code === 'store_unavailable')
+      ) {
+        setStoreUnavailable(true);
+      }
+      setGeneralError({ ...failureFrom(err, window.location.origin), retry: { kind: 'submit' } });
+      return;
+    }
+
+    setRunParam(submission.run_id);
+    await watch(submission.run_id, submission.job);
+  };
+
+  const handleCancel = async () => {
+    if (!job) return;
+    setCancelError(null);
+    try {
+      setJob(await jobsApi.cancel(job.run_id));
+    } catch (err) {
+      // Finished first: the watcher is about to show how it ended.
+      if (err instanceof ApiRequestError && err.code === 'job_already_finished') return;
+      const failure = failureFrom(err, window.location.origin);
+      setCancelError(`${failure.code ? `${failure.code}: ` : ''}${failure.message}`);
+    }
+  };
+
+  const retry = (action: RetryAction) => {
+    if (action.kind === 'resume') {
+      setGeneralError(null);
+      void watch(action.runId);
+    } else if (action.kind === 'inline') {
+      void handleRunInline();
+    } else {
+      void handleRunVerification();
     }
   };
 
@@ -212,7 +441,9 @@ export default function CaseAnalysisPage() {
         <div className="gt-container" style={{ paddingTop: '40px' }}>
           <ErrorState
             title="Cannot Load Case Definition"
-            message={loadError}
+            message={loadError.message}
+            code={loadError.code}
+            remediation={loadError.remediation}
             onRetry={loadData}
           />
         </div>
@@ -220,7 +451,11 @@ export default function CaseAnalysisPage() {
     }
     return (
       <div className="gt-container" style={{ paddingTop: '40px' }}>
-        <LoadingState message="Loading Case Definition..." subtext="Retrieving case schema and validation targets" />
+        <LoadingState
+          message="Loading Case Definition..."
+          subtext="Retrieving case schema and validation targets"
+          stages={[]}
+        />
       </div>
     );
   }
@@ -231,11 +466,58 @@ export default function CaseAnalysisPage() {
   // scientific verdict a completed run produces. Drives what is rendered
   // below and must never be inferred from the presence of a stale number.
   const resultState = deriveResultState({
+    isQueued: runPhase === 'watching' && job?.result_state === 'queued',
     isRunning,
     hasResult: verificationResult !== null,
     isRefused: refusalError !== null,
     hasError: generalError !== null,
+    isCancelled: cancelledRunId !== null,
   });
+
+  // What the loading state shows comes from the API: the job's observed
+  // stages, or none at all. Nothing here advances on a timer.
+  const loadingProps: LoadingStateProps = (() => {
+    if (runPhase === 'inline') {
+      return {
+        subtext:
+          'Running inline: the API answers once the whole analysis is done, so there are no stages to show. Nothing is stored.',
+        isSimulated: syntheticMode,
+        stages: [],
+      };
+    }
+    if (runPhase === 'submitting') {
+      return {
+        message: 'SUBMITTING ANALYSIS JOB',
+        subtext: `Queueing the run with ${jobsApi.baseUrl}.`,
+        isSimulated: syntheticMode,
+        stages: [],
+      };
+    }
+    if (!job) {
+      return {
+        message: 'FETCHING RUN STATUS',
+        subtext: 'Asking the API where this run is.',
+        stages: [],
+      };
+    }
+    const subtext =
+      runPhase === 'fetching'
+        ? `Run ${job.run_id} finished. Fetching its stored evidence bundle.`
+        : job.cancel_requested
+        ? `Run ${job.run_id}: cancel requested. The engine is one uninterruptible step, so the run stops when it next checks in.`
+        : job.result_state === 'queued'
+        ? `Run ${job.run_id} is waiting for a worker. If it stays queued, check that a worker is running.`
+        : `Run ${job.run_id}. Stages appear as they are observed; there is no percentage because none can be known.`;
+    return {
+      message:
+        job.result_state === 'queued'
+          ? 'QUEUED — WAITING FOR A WORKER'
+          : 'RUNNING CAUSAL VERIFICATION PIPELINE',
+      subtext,
+      isSimulated: job.is_simulated,
+      stages: loadingStagesFromJob(job),
+    };
+  })();
 
   // ADR-011 donor-candidate generation has no backend endpoint yet (see
   // getDonorCandidateSummary's doc comment); this is the honest
@@ -415,7 +697,11 @@ export default function CaseAnalysisPage() {
               <div className={styles.labelWithVal}>
                 <label className={styles.controlLabel}>Injected Effect (True Effect)</label>
                 <span className={styles.controlValDisplay}>
-                  +{(trueEffect * 100).toFixed(1)}% ({trueEffect.toFixed(3)} {caseDetail.indicator})
+                  {/* A queued run uses the worker's effect, so showing the
+                      slider's value would describe a run that is not happening. */}
+                  {inlineMode
+                    ? `+${(trueEffect * 100).toFixed(1)}% (${trueEffect.toFixed(3)} ${caseDetail.indicator})`
+                    : 'SET BY WORKER'}
                 </span>
               </div>
               <input
@@ -427,9 +713,12 @@ export default function CaseAnalysisPage() {
                 onChange={(e) => setTrueEffect(parseFloat(e.target.value))}
                 className={styles.slider}
                 aria-label="Injected effect slider"
+                disabled={!inlineMode}
               />
               <span className={styles.fieldHint}>
-                Injected signal for testing estimator recovery.
+                {inlineMode
+                  ? 'Injected signal for testing estimator recovery.'
+                  : 'Queued runs use the effect the worker was started with (--true-effect, default +0.06).'}
               </span>
             </div>
           )}
@@ -465,6 +754,28 @@ export default function CaseAnalysisPage() {
             >
               {isRunning ? 'Running Engine...' : 'Run Causal Verification'}
             </Button>
+            {runPhase === 'watching' && job && !job.terminal && (
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={handleCancel}
+                disabled={job.cancel_requested}
+                style={{ width: '100%', minHeight: '44px', whiteSpace: 'normal' }}
+              >
+                {job.cancel_requested ? 'Cancel requested' : 'Cancel run'}
+              </Button>
+            )}
+            {cancelError && <span className={styles.fieldHint}>{cancelError}</span>}
+            {storeUnavailable && !inlineMode && !isRunning && (
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={handleRunInline}
+                style={{ width: '100%', minHeight: '44px', whiteSpace: 'normal' }}
+              >
+                Run inline instead (nothing is stored)
+              </Button>
+            )}
             {isDemo && getRefusalFixture(caseId) && (
               <Button
                 variant="secondary"
@@ -485,7 +796,7 @@ export default function CaseAnalysisPage() {
       {/* Execution States: Running / Refusal / Error */}
       {isRunning && (
         <div className={styles.stateWrapper}>
-          <LoadingState currentStage={runStage} />
+          <LoadingState {...loadingProps} />
         </div>
       )}
 
@@ -499,7 +810,10 @@ export default function CaseAnalysisPage() {
             }
             reason={refusalError.message}
             remediation={refusalError.remediation}
-            onBack={() => setRefusalError(null)}
+            onBack={() => {
+              setRefusalError(null);
+              setRunParam(null);
+            }}
           >
             <RefusalDetails refusal={refusalError} />
           </RefusalState>
@@ -509,8 +823,25 @@ export default function CaseAnalysisPage() {
       {generalError && !isRunning && (
         <div className={styles.stateWrapper}>
           <ErrorState
-            message={generalError}
-            onRetry={handleRunVerification}
+            title={generalError.title}
+            message={generalError.message}
+            code={generalError.code}
+            remediation={generalError.remediation}
+            onRetry={() => retry(generalError.retry)}
+          />
+        </div>
+      )}
+
+      {cancelledRunId && !isRunning && (
+        <div className={styles.stateWrapper}>
+          <EmptyState
+            title="Run Cancelled"
+            description={`Run ${cancelledRunId} was cancelled before it produced a result. Nothing was measured, so nothing is shown.`}
+            actionLabel="Return to Case Definition"
+            onAction={() => {
+              setCancelledRunId(null);
+              setRunParam(null);
+            }}
           />
         </div>
       )}

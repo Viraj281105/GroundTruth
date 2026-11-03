@@ -39,6 +39,21 @@ and versioned (`schema_version`), so the frontend can proceed.
 6. **No language that implies wrongdoing**, in copy, in tooltips or in status
    colours. A divergent verdict is amber, never red-as-alarm.
 
+## Configuration
+
+Copy `.env.example` to `.env.local` in this folder (Next.js does not read the
+repository root's `.env`).
+
+| Variable | Notes |
+| --- | --- |
+| `NEXT_PUBLIC_API_URL` | Where the browser calls the API. Inlined at **build** time: a build for a deployed API must be made with its URL. |
+| `NEXT_PUBLIC_DEMO_MODE` | Off by default. Only when `true` may an unreachable API be replaced by fixture data, under the "no analysis was executed" banner. |
+
+The API must allow this site's origin: set `CORS_ALLOWED_ORIGINS` (or `FRONTEND_URL`)
+on the API. Running an analysis needs the API **and** a worker, both with the same
+`DATABASE_URL`; without a database the page says `store_not_configured` and offers to run
+inline instead.
+
 ## The API types are generated
 
 The UI never hand-writes a backend shape. The types come from the API's OpenAPI
@@ -50,6 +65,7 @@ schema:
 | `src/lib/generated/schema.d.ts` | TypeScript generated from it by `openapi-typescript`. Committed; do not edit. |
 | `src/lib/types.ts` | The familiar names (`Evidence`, `VerificationResponse`, ...) as aliases of the generated types, plus UI-only helpers. |
 | `src/lib/api-client.ts` | A typed `fetch` client (`openapi-fetch`) for the `/runs` and `/jobs` endpoints. Transport only: no demo fallback. |
+| `src/lib/jobs.ts` | What the case page uses to run an analysis: submit, poll, cancel, fetch the stored run, and turn every error body into a code, message and remediation. No demo fallback either. See `docs/architecture/frontend.md`. |
 
 **After changing any API schema or route, regenerate and commit both files:**
 

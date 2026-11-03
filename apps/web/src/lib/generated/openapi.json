@@ -291,7 +291,7 @@
           "runs"
         ],
         "summary": "Fetch one stored run",
-        "description": "One run with its outcome and, when it has one, its evidence bundle.\n\nA refused run returns `200` with `result_state: \"refused\"` and the structured\nerror (code, stage, message, remediation, detail). A run still queued or running\nreturns its state with no bundle.",
+        "description": "One run with its outcome and, when it has one, its evidence bundle.\n\nA refused run returns `200` with `result_state: \"refused\"` and the structured\nerror (code, stage, message, remediation, detail). A run still queued or running\nreturns its state with no bundle.\n\nWith `include_report=true` a run that has a bundle also carries `report_markdown`,\nrendered on read by the deterministic renderer. No language model narrates a\nstored run.",
         "operationId": "get_run_runs__run_id__get",
         "parameters": [
           {
@@ -314,6 +314,18 @@
               "title": "Include Bundle"
             },
             "description": "Include the evidence bundle (it is large)."
+          },
+          {
+            "name": "include_report",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Render the deterministic report from the bundle, when there is one.",
+              "default": false,
+              "title": "Include Report"
+            },
+            "description": "Render the deterministic report from the bundle, when there is one."
           }
         ],
         "responses": {
@@ -2493,6 +2505,29 @@
               }
             ],
             "description": "Null when excluded with include_bundle=false, or absent."
+          },
+          "report_markdown": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Markdown",
+            "description": "Deterministic report, when asked for with include_report=true and the run has a bundle with a verdict. Rendered on read; never narrated by a model."
+          },
+          "report_generator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Generator"
           }
         },
         "type": "object",
@@ -2524,7 +2559,9 @@
           "verdict_rationale",
           "caveats",
           "warnings",
-          "bundle"
+          "bundle",
+          "report_markdown",
+          "report_generator"
         ],
         "title": "RunDetail",
         "description": "One stored run in full: its lifecycle, its outcome, and its evidence bundle."

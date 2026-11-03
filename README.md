@@ -173,7 +173,7 @@ easier to demo. It is also wrong.
 apps/
   api/            thin ASGI entrypoint                    Bhumi  [implemented]
   worker/         background job runner                   Bhumi  [implemented; simulated data only]
-  web/            Next.js frontend                        Viraj  [types only]
+  web/            Next.js frontend                        Viraj  [case page wired to the API]
 
 packages/groundtruth/src/groundtruth/
   contracts/      the shared, versioned boundary          shared [implemented]
@@ -245,13 +245,14 @@ provenance, its run warnings, its verdict caveats and a banner on stderr.
 | Spectral indices, SCL masking, zonal stats | Project boundary geometry |
 | Donor matching with exclusion accounting | Biomass / carbon conversion (deliberately deferred) |
 | Synthetic control solver and diagnostics | GenAI narration providers |
-| DiD cross-check with pre-trend diagnostic | Frontend (API contract types only) |
-| Placebo inference, leave-one-out, spec curve | Running analyses as jobs and persisting them (the job queue and store exist; nothing calls them yet) |
+| DiD cross-check with pre-trend diagnostic | Frontend beyond the case page (see the capability matrix) |
+| Placebo inference, leave-one-out, spec curve | Authentication on the job endpoints (needed before any public deployment) |
 | Evidence assembly and verdict gate chain | Kariba benchmark run |
 | Deterministic renderer | Nugen vs baseline evaluation |
 | Grounding verifier and safe fallback | |
 | Pipeline, CLI, API | |
 | Synthetic fixture provider (labelled) | |
+| Jobs, worker and stored runs, driven from the case page (simulated data) | |
 
 Anything not implemented raises rather than guessing.
 `POST /cases/{id}/verify` with `synthetic: false` returns **501**, not simulated

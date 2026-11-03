@@ -39,6 +39,7 @@ from groundtruth.platform.api.errors import API_ERROR_STATUS, ApiErrorCode
 from groundtruth.platform.cases.registry import get_case
 from groundtruth.platform.datasets.access import synthetic_access
 from groundtruth.platform.jobs.queue import JobQueue
+from groundtruth.platform.reports.narrative import render_deterministic
 from groundtruth.platform.store import database, migrate
 from groundtruth.platform.store.database import create_db_engine, create_session_factory
 from groundtruth.platform.store.interface import RunFilter, StoreError
@@ -578,6 +579,28 @@ class TestGetRun:
         body = client.get(f"/runs/{run_id}", params={"include_bundle": "false"}).json()
         assert body["bundle"] is None and body["has_bundle"] is True
         assert body["verdict_label"] == completed.verdict_label and body["caveats"]
+
+    def test_no_report_unless_asked(self, client, store, clock, completed):
+        run_id = _save(store, clock, completed)
+        body = client.get(f"/runs/{run_id}").json()
+        assert body["report_markdown"] is None and body["report_generator"] is None
+
+    def test_the_report_is_the_deterministic_rendering_of_the_stored_bundle(
+        self, client, store, clock, completed
+    ):
+        run_id = _save(store, clock, completed)
+        body = client.get(
+            f"/runs/{run_id}", params={"include_report": "true", "include_bundle": "false"}
+        ).json()
+        assert body["report_generator"] == "deterministic"
+        assert body["report_markdown"] == render_deterministic(completed.bundle)
+        assert body["bundle"] is None  # the report does not need the bundle sent too
+
+    def test_a_refusal_has_no_report_even_when_asked(self, client, store, clock, refused):
+        run_id = _save(store, clock, refused)
+        body = client.get(f"/runs/{run_id}", params={"include_report": "true"}).json()
+        assert body["result_state"] == "refused"
+        assert body["report_markdown"] is None and body["report_generator"] is None
 
     def test_a_refusal_is_a_200_with_its_reason_not_an_error(self, client, store, clock, refused):
         run_id = _save(store, clock, refused)

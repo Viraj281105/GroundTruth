@@ -175,16 +175,26 @@ def get_run(
     include_bundle: Annotated[
         bool, Query(description="Include the evidence bundle (it is large).")
     ] = True,
+    include_report: Annotated[
+        bool,
+        Query(description="Render the deterministic report from the bundle, when there is one."),
+    ] = False,
 ) -> RunDetail:
     """One run with its outcome and, when it has one, its evidence bundle.
 
     A refused run returns `200` with `result_state: "refused"` and the structured
     error (code, stage, message, remediation, detail). A run still queued or running
     returns its state with no bundle.
+
+    With `include_report=true` a run that has a bundle also carries `report_markdown`,
+    rendered on read by the deterministic renderer. No language model narrates a
+    stored run.
     """
     with store_errors():
         summary = store.summary_for(run_id)
         if summary is None:
             raise api_error(ApiErrorCode.RUN_NOT_FOUND, f"No run {run_id!r}.")
         result = store.by_run_id(run_id) if summary.engine_status is not None else None
-    return RunDetail.build(summary, result, include_bundle=include_bundle)
+    return RunDetail.build(
+        summary, result, include_bundle=include_bundle, include_report=include_report
+    )

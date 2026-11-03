@@ -86,6 +86,14 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     frontend_url: str = "http://localhost:3000"
+    cors_allowed_origins: str | None = Field(
+        default=None,
+        description=(
+            "Comma-separated browser origins the API accepts cross-origin requests from "
+            "(env CORS_ALLOWED_ORIGINS). Unset means FRONTEND_URL alone. A wildcard is "
+            "refused: the API names its callers."
+        ),
+    )
 
     # --- analysis defaults -------------------------------------------------
     min_pre_periods: int = Field(
@@ -104,6 +112,25 @@ class Settings(BaseSettings):
         if value is None:
             return None
         return value.strip() or None
+
+    @field_validator("cors_allowed_origins")
+    @classmethod
+    def _no_wildcard_origin(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        if any(origin.strip() == "*" for origin in value.split(",")):
+            # "*" would let any site drive the API from a visitor's browser. Deployments
+            # list their frontends explicitly instead.
+            raise ValueError("CORS_ALLOWED_ORIGINS must list origins explicitly, never '*'")
+        return value
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """The origins the API's CORS middleware allows, in configured order."""
+        if self.cors_allowed_origins is None:
+            return [self.frontend_url.rstrip("/")]
+        origins = (origin.strip().rstrip("/") for origin in self.cors_allowed_origins.split(","))
+        return list(dict.fromkeys(origin for origin in origins if origin))
 
     @property
     def earth_observation_configured(self) -> bool:

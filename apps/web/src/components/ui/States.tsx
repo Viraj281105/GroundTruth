@@ -24,11 +24,25 @@ export type PipelineStageId =
   | 'uncertainty'
   | 'verdict';
 
+/** One observed stage, e.g. from a job's `stages`. */
+export interface LoadingStage {
+  id: string;
+  label: string;
+  desc: string;
+  state: 'done' | 'active' | 'pending' | 'failed';
+}
+
 export interface LoadingStateProps {
   currentStage?: PipelineStageId;
   message?: string;
   subtext?: string;
   isSimulated?: boolean;
+  /**
+   * Stages as they were actually observed. When given, they replace the
+   * illustrative tracker (an empty list shows none), so the UI never animates
+   * progress it has not seen.
+   */
+  stages?: LoadingStage[];
 }
 
 const PIPELINE_STAGES = [
@@ -48,10 +62,19 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   message = 'RUNNING CAUSAL VERIFICATION PIPELINE',
   subtext = 'Estimating counterfactual baseline and constructing placebo permutation distribution...',
   isSimulated = true,
+  stages,
 }) => {
   const currentIdx = PIPELINE_STAGES.findIndex(
     (s) => s.id === currentStage || s.alias === currentStage
   );
+  const rows: LoadingStage[] =
+    stages ??
+    PIPELINE_STAGES.map((stg, idx) => ({
+      id: stg.id,
+      label: stg.label,
+      desc: stg.desc,
+      state: idx < currentIdx ? 'done' : idx === currentIdx ? 'active' : 'pending',
+    }));
 
   return (
     <div className={styles.loadingContainer}>
@@ -71,10 +94,11 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
       <p className={styles.loadingSubtext}>{subtext}</p>
 
       {/* Stage Tracker */}
+      {rows.length > 0 && (
       <div className={styles.stagesBox}>
-        {PIPELINE_STAGES.map((stg, idx) => {
-          const isDone = idx < currentIdx;
-          const isCurrent = idx === currentIdx;
+        {rows.map((stg) => {
+          const isDone = stg.state === 'done';
+          const isCurrent = stg.state === 'active';
           return (
             <div
               key={stg.id}
@@ -85,6 +109,8 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
                   <CheckCircle2 size={14} className={styles.doneIcon} />
                 ) : isCurrent ? (
                   <span className={styles.currentDot} />
+                ) : stg.state === 'failed' ? (
+                  <AlertCircle size={14} className={styles.errorIcon} />
                 ) : (
                   <span className={styles.pendingDot} />
                 )}
@@ -102,6 +128,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
           );
         })}
       </div>
+      )}
     </div>
   );
 };
@@ -143,18 +170,37 @@ export interface ErrorStateProps {
   title?: string;
   message: string;
   onRetry?: () => void;
+  /** The API's error code, e.g. `store_not_configured`, shown verbatim. */
+  code?: string | null;
+  /** What to do about it, as the API (or the client) stated it. */
+  remediation?: string | null;
 }
 
 export const ErrorState: React.FC<ErrorStateProps> = ({
   title = 'System Error Encountered',
   message,
   onRetry,
+  code,
+  remediation,
 }) => {
   return (
     <div className={styles.errorContainer}>
       <AlertCircle size={36} className={styles.errorIcon} />
+      {code && (
+        <div className={styles.refusalBadgeRow}>
+          <Badge tone="error" size="sm" variant="outline">
+            {code}
+          </Badge>
+        </div>
+      )}
       <h3 className={styles.errorTitle}>{title}</h3>
       <p className={styles.errorMessage}>{message}</p>
+      {remediation && (
+        <div className={styles.remediationBox}>
+          <strong className={styles.remediationTitle}>Remediation Guidance:</strong>
+          <p className={styles.remediationText}>{remediation}</p>
+        </div>
+      )}
       {onRetry && (
         <Button variant="danger" size="md" onClick={onRetry}>
           Retry Operation

@@ -91,6 +91,15 @@ All settings come from the environment through `Settings` (pydantic-settings).
 Secrets are `SecretStr` and never logged. `groundtruth doctor` reports whether a
 credential is present, never its value.
 
+**Browser origins (CORS, #40).** The web app is served from a different origin than the
+API, so the browser asks before every call. `CORS_ALLOWED_ORIGINS` lists the origins
+allowed, comma-separated and exact (scheme, host, port), e.g.
+`https://groundtruth.example.org,http://localhost:3000`. Unset (or blank) means
+`FRONTEND_URL` alone. A `*` is refused at startup: the API names its callers. Methods are
+`GET` and `POST`; no credentials are sent. An origin that is not listed fails in the
+browser exactly like a dead server, which is why the UI's unreachable error names this
+setting.
+
 Repository-relative paths are discovered by walking up for a marker directory
 rather than counting parents — a lesson from the monorepo move, which silently
 broke a parent count.
@@ -204,7 +213,7 @@ inline and stores nothing).
 | Endpoint | Does |
 | --- | --- |
 | `GET /runs` | List runs, newest first, in pages. Filters: `case_id`, `status` (repeatable), `engine_version`, `data_mode`, `created_after` (inclusive), `created_before` (exclusive). `limit` 1 to 100, default 25. |
-| `GET /runs/{run_id}` | One run: lifecycle, outcome, error, and the evidence bundle (`include_bundle=false` leaves it out). |
+| `GET /runs/{run_id}` | One run: lifecycle, outcome, error, and the evidence bundle (`include_bundle=false` leaves it out). `include_report=true` adds `report_markdown`, rendered on read by the deterministic renderer only; no model narrates a stored run. Off by default. |
 | `GET /runs/compare?baseline=&candidate=` | A per-evidence-id diff of two runs, or the reasons they cannot be compared. `include_unchanged=true` lists unchanged ids too. |
 
 Browse them at `/docs` while the API is running. Dates must carry a timezone; write UTC
