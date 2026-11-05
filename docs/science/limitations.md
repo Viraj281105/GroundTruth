@@ -7,9 +7,9 @@ limitations is asking for exactly the trust it claims to be replacing.
 
 | Component | Status |
 | --- | --- |
-| Earth Engine observation calls | Not implemented — raises `DataUnavailableError` |
-| Real covariate extraction (CHIRPS, SRTM, OSM, WorldPop) | Not implemented |
-| Project boundary geometry | Not obtained for any case |
+| Earth Engine observation, covariate and unit-construction services | Implemented and tested offline; **never run on real data** |
+| A real unit set for Kariba | **Not generated**: blocked on undecided settings and missing inputs (`cases/run_parameters/kariba-redd.yaml`) |
+| Project boundary geometry | Obtained for Kariba; not for the other cases (#2) |
 | Biomass / carbon conversion | Not implemented, deliberately |
 | GenAI narration providers | Not implemented |
 | Any analysis of a real project | **Not run** |
@@ -89,6 +89,28 @@ every layer predating the window. Two layers do not:
 
 Both are applied identically to the project and to every donor. Symmetry limits
 the damage; it does not make either one neutral.
+
+### The placebo's real p-value floor can be higher than it looks
+
+With J donors the smallest possible placebo p-value is 1/(J+1): 0.032 at J=30, the Kariba
+case's `min_donors`, and 0.020 at J=50. But the in-space placebo drops any donor whose
+pre-fit RMSPE is worse than 5× the treated unit's (`max_pre_rmspe_multiple`), so J there
+means the donors that survive that filter, and fewer than 19 survivors puts the floor above
+the 0.05 gate, so the test could not reject at all. The real floor can be higher than
+1/(admitted+1).
+
+### Matching covariates are not all clean pre-treatment measurements
+
+- **Road distance** uses gROADS v1, which spans 1980–2010 with a vintage that varies by
+  place. It is the nearest thing to a pre-treatment road layer, not a snapshot of one year,
+  and a road built just before 2011 may or may not be in it. If the upload proves impossible
+  and current OpenStreetMap is used instead, that is post-treatment data standing in as a
+  time-invariant access proxy. **That fallback is not in use.** Using it requires
+  `road_fallback_reason` in the run settings and an entry here.
+- **Population density** uses WorldPop 2000, a modelled estimate rather than a census
+  count, from an asset now deprecated in the Earth Engine catalog. Because the mask keeps
+  only forest pixels, it measures rural settlement pressure on eligible forest, not district
+  population.
 
 ### Other credited projects may contaminate the donor pool
 

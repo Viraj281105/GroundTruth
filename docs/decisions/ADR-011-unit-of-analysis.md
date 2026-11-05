@@ -1,6 +1,6 @@
 # ADR-011: The unit of analysis is a masked administrative district
 
-**Status:** Proposed
+**Status:** Accepted (Viraj, Bhumi — 2026-11-03)
 **Date:** 2026-09-20
 **Deciders:** Viraj, Bhumi
 
@@ -330,15 +330,15 @@ encoding above becomes a compatibility note once #60 lands.
 human-readable reason, and the obvious home for it is
 `DonorMatch.exclusion_reason`, which already exists. It cannot hold all of them.
 `match_donors` only ever sees candidates that reached it, so it can record the
-leakage-belt, caliper and coverage exclusions but never the eligibility ones: a
-district failing the ecoregion, area-band or floor rule is dropped during
-candidate generation, before covariates are computed, and `DonorCandidateAccess`
-returns bare `UnitRef`s with nowhere to put a reason. Computing covariates for
-ineligible districts purely to give them a `DonorMatch` row would be wasteful
-and would still not be the same thing.
+caliper and coverage exclusions but never the eligibility ones: a district failing
+the ecoregion, leakage-belt, area-band or floor rule is dropped during candidate
+generation, before covariates are computed, and `DonorCandidateAccess` returns
+bare `UnitRef`s with nowhere to put a reason. Computing covariates for ineligible
+districts purely to give them a `DonorMatch` row would be wasteful and would still
+not be the same thing.
 
-The eligibility-stage exclusions therefore belong in the **unit-set manifest**
-below, not in the `DonorPool`. Both records are part of the evidence bundle and
+The eligibility-stage exclusions, leakage-belt exclusions included, therefore
+belong in the **unit-set manifest** below, not in the `DonorPool`. Both records are part of the evidence bundle and
 a reader needs both: the manifest says why a district never became a candidate,
 `DonorPool.excluded` says why a candidate was not admitted.
 

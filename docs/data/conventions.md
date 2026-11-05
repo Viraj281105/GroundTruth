@@ -92,8 +92,8 @@ produced it.
 
 ## Storage
 
-Contents of `data/` are gitignored. See
-[ADR-009](../decisions/ADR-009-data-management.md).
+Contents of `data/` are gitignored, except `data/manifests/`, which holds committed
+unit-set manifests. See [ADR-009](../decisions/ADR-009-data-management.md).
 
 | Directory | Holds |
 | --- | --- |
@@ -101,3 +101,4 @@ Contents of `data/` are gitignored. See
 | `interim/` | Intermediate processing |
 | `processed/` | Analysis-ready series and covariates |
 | `external/` | Third-party reference data |
+| `manifests/` | Generated unit sets, committed (ADR-011) |

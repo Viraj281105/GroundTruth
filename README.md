@@ -241,8 +241,8 @@ provenance, its run warnings, its verdict caveats and a banner on stderr.
 | Implemented and tested | Scaffolded / not built |
 | --- | --- |
 | Domain model, provenance, evidence bundle | Observed-data analysis runs (need real covariates and donors) |
-| Unit vocabulary with the index→carbon guard | Real covariate extraction (CHIRPS/SRTM/OSM/WorldPop) |
-| Spectral indices, SCL masking, zonal stats | Project boundary geometry |
+| Unit vocabulary with the index→carbon guard | A real unit set for Kariba (settings and inputs still missing) |
+| Spectral indices, SCL masking, zonal stats | Project boundary geometry for the other cases |
 | Donor matching with exclusion accounting | Biomass / carbon conversion (deliberately deferred) |
 | Synthetic control solver and diagnostics | GenAI narration providers |
 | DiD cross-check with pre-trend diagnostic | Frontend beyond the case page (see the capability matrix) |
@@ -253,7 +253,7 @@ provenance, its run warnings, its verdict caveats and a banner on stderr.
 | Pipeline, CLI, API | |
 | Synthetic fixture provider (labelled) | |
 | Jobs, worker and stored runs, driven from the case page (simulated data) | |
-| Earth Engine observation service: pinned, cached, retried (tested offline; network test opt-in) | |
+| Earth Engine observation, covariate and unit-construction services: pinned, cached, retried (tested offline; network tests opt-in; never run on real data) | |
 
 Anything not implemented raises rather than guessing.
 `POST /cases/{id}/verify` with `synthetic: false` returns **501**, not simulated

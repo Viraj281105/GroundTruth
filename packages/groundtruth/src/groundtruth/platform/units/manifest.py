@@ -30,7 +30,12 @@ from groundtruth.contracts.identifiers import DatasetRef, spec_hash
 from groundtruth.contracts.version import CONTRACT_VERSION
 from groundtruth.platform.units.boundary import RegistryBoundary
 from groundtruth.platform.units.rules import DistrictFacts, Exclusion, RungRecord
-from groundtruth.platform.units.spec import ADR, Adr011Thresholds, RunParameters
+from groundtruth.platform.units.spec import (
+    ADR,
+    PINNED_DECISIONS,
+    Adr011Thresholds,
+    RunParameters,
+)
 
 MANIFEST_DIR = Path("data/manifests")
 
@@ -41,6 +46,11 @@ REFERENCE_PERIODS: dict[str, str] = {
     "jrc-global-surface-water": "1984-2021 full record",
     "wdpa": "designations filtered to <= 2000; boundaries as currently held",
     "registered-carbon-projects": "projects registered up to the pinned snapshot date",
+    "chirps-daily": "2001-2010 calendar years, the pre-period",
+    "srtm-gl1": "February 2000",
+    "groads-v1": "1980-2010, mixed vintage by source",
+    "osm-roads": "present day at the upload date: post-treatment, a recorded departure",
+    "worldpop-gp-100m": "the year 2000",
 }
 """Reference period of the *variable*, which is not the release date.
 
@@ -48,6 +58,17 @@ ADR-011 is explicit that only the first decides whether an input is
 pre-treatment. Hansen's 2023 release carries a year-2000 band; GSW's occurrence
 band spans the analysis window whatever its version string says.
 """
+
+
+@dataclass(frozen=True, slots=True)
+class ManifestContext:
+    """What a real generation run adds to the manifest beyond the rules' output."""
+
+    belt_geometry_hash: str
+    covariate_refs: tuple[DatasetRef, ...]
+    run_settings_sha256: str
+    carbon_snapshot_sha256: str
+    covariate_settings: dict[str, Any]
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +99,16 @@ class UnitSetManifest:
     exclusions: list[dict[str, Any]]
 
     geometry_notes: list[str] = field(default_factory=list)
+
+    boundary_source_uri: str | None = None
+    boundary_retrieved_at: str | None = None
+    leakage_belt_km: float | None = None
+    belt_geometry_hash: str | None = None
+    covariate_refs: list[dict[str, Any]] = field(default_factory=list)
+    covariate_settings: dict[str, Any] = field(default_factory=dict)
+    run_settings_sha256: str | None = None
+    carbon_snapshot_sha256: str | None = None
+    pinned_decisions: list[str] = field(default_factory=list)
 
     def to_json(self) -> str:
         """Deterministic JSON: sorted keys, fixed separators, trailing newline."""
@@ -130,8 +161,10 @@ def build_manifest(
     exclusions: tuple[Exclusion, ...],
     engine_version: str,
     git_sha: str | None = None,
+    context: ManifestContext | None = None,
 ) -> UnitSetManifest:
     """Assemble the manifest from a completed generation run."""
+    source_uri, retrieved_at = _boundary_source(boundary.path)
     geometry_notes: list[str] = []
     if boundary.report.overlaps:
         shared = sum(o.area_km2 for o in boundary.report.overlaps)
@@ -169,6 +202,7 @@ def build_manifest(
                 "country": u.country,
                 "eligible_area_km2": round(u.eligible_area_km2, 4),
                 "forest_share_in_target_ecoregions": round(u.forest_share_in_target_ecoregions, 6),
+                "eligible_pixels": u.eligible_pixels,
                 "fragments": u.fragments,
                 "geometry_hash": u.geometry_hash,
             }
@@ -179,4 +213,25 @@ def build_manifest(
             for e in exclusions
         ],
         geometry_notes=geometry_notes,
+        boundary_source_uri=source_uri,
+        boundary_retrieved_at=retrieved_at,
+        leakage_belt_km=thresholds.leakage_belt_km,
+        belt_geometry_hash=context.belt_geometry_hash if context else None,
+        covariate_refs=(
+            [r.model_dump(mode="json") for r in context.covariate_refs] if context else []
+        ),
+        covariate_settings=dict(context.covariate_settings) if context else {},
+        run_settings_sha256=context.run_settings_sha256 if context else None,
+        carbon_snapshot_sha256=context.carbon_snapshot_sha256 if context else None,
+        pinned_decisions=list(PINNED_DECISIONS),
     )
+
+
+def _boundary_source(boundary_path: Path) -> tuple[str | None, str | None]:
+    """Source URI and retrieval date from the artifact's provenance file, if it has one."""
+    path = boundary_path.with_name(f"{boundary_path.stem}.provenance.json")
+    try:
+        source = json.loads(path.read_text(encoding="utf-8")).get("source", {})
+    except (OSError, ValueError, AttributeError):
+        return None, None
+    return source.get("project_page"), source.get("retrieved_at")

@@ -41,8 +41,8 @@ from typing import Any, Protocol
 
 from pydantic import SecretStr
 
-from groundtruth.contracts.errors import ConfigurationError, DataUnavailableError
-from groundtruth.contracts.request import UnitRef
+from groundtruth.contracts.errors import ConfigurationError
+from groundtruth.platform.datasets.ee_mask import adr011_mask, split_unit_geometry
 from groundtruth.platform.datasets.resilience import PermanentError, TransientError
 
 COLLECTIONS: dict[str, str] = {
@@ -378,7 +378,8 @@ class EarthEngineApiBackend:
         # (cases/boundaries/*.provenance.json), and a sliver where two parts of a
         # boundary overlap stays inside once rather than being cut out as even-odd
         # would. The geometry itself is passed as delivered, never repaired.
-        region = ee.Geometry(dict(query.geometry), None, True, False)
+        outline, _ = split_unit_geometry(query.geometry)
+        region = ee.Geometry(outline, None, True, False)
         start = ee.Date.fromYMD(query.year, 1, 1)
         scenes = (
             ee.ImageCollection(query.collection)
@@ -409,6 +410,13 @@ class EarthEngineApiBackend:
         # A pixel no clear scene reached counts as zero, not as absent: the engine's
         # n_valid is the median over every pixel in the zone.
         counts = indexed.count().rename("count").unmask(0)
+        # An ADR-011 unit is the masked district, so only eligible pixels are measured:
+        # both the value and the clear-scene count (#23, V6).
+        _, recipe = split_unit_geometry(query.geometry)
+        if recipe is not None:
+            mask = adr011_mask(ee, region, recipe).selfMask()
+            median = median.updateMask(mask)
+            counts = counts.updateMask(mask)
         common = {
             "geometry": region,
             "scale": query.scale_m,
@@ -428,31 +436,11 @@ class EarthEngineApiBackend:
         return result
 
 
-class EarthEngineCovariateProvider:
-    """Matching covariates from Earth Engine assets. NOT IMPLEMENTED.
-
-    Planned assets: CHIRPS daily rainfall, SRTM elevation and derived slope,
-    JRC Global Surface Water, WorldPop population density, and an OSM-derived
-    distance-to-road raster. Which covariates and how they are derived is
-    coordination point C4.
-    """
-
-    name = "google-earth-engine"
-
-    def covariates(self, unit: UnitRef) -> dict[str, float]:
-        """Fetch covariates for an area. NOT IMPLEMENTED."""
-        raise DataUnavailableError(
-            "EarthEngineCovariateProvider.covariates is not implemented yet; "
-            "use SyntheticCovariateProvider for offline runs."
-        )
-
-
 __all__ = [
     "COLLECTIONS",
     "CRS",
     "EarthEngineApiBackend",
     "EarthEngineBackend",
-    "EarthEngineCovariateProvider",
     "ServiceAccountKey",
     "YearQuery",
     "classify",

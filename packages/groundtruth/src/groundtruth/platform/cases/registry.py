@@ -38,6 +38,10 @@ class CaseDefinition:
     window: AnalysisWindow
     donor_search_region: str
     donor_pool_size: int = 60
+    min_donors: int | None = None
+    """Admitted-donor floor for this case. ``None`` means the contract default."""
+    max_donors: int | None = None
+    """Admitted-donor cap for this case. ``None`` means the contract default."""
     excluded_donor_ids: tuple[str, ...] = ()
     covariates: tuple[str, ...] = ()
     known_reference: dict[str, Any] = field(default_factory=dict)
@@ -73,16 +77,21 @@ class CaseDefinition:
         It records a published third-party finding for post-hoc validation, and
         feeding it to the engine would destroy the independence the whole
         system exists to provide.
+
+        ``min_donors`` overrides the case's own floor, which overrides the
+        contract default. The cap is raised to meet the floor rather than letting
+        the contract reject a request whose floor is above it.
         """
+        defaults = DonorSpec()
+        case_min = self.min_donors if self.min_donors is not None else defaults.min_donors
+        case_max = self.max_donors if self.max_donors is not None else defaults.max_donors
+        floor = min_donors if min_donors is not None else case_min
         donors = DonorSpec(
             candidates=candidates,
             search_region=self.donor_search_region.strip(),
             pool_size=self.donor_pool_size,
-            min_donors=min_donors if min_donors is not None else DonorSpec().min_donors,
-            max_donors=max(
-                DonorSpec().max_donors,
-                min_donors if min_donors is not None else 0,
-            ),
+            min_donors=floor,
+            max_donors=max(case_max, floor),
             covariates=self.covariates or DonorSpec().covariates,
             excluded_unit_ids=self.excluded_donor_ids,
         )
@@ -135,6 +144,10 @@ def _parse_date(value: Any) -> date | None:
     if isinstance(value, date):
         return value
     return date.fromisoformat(str(value))
+
+
+def _optional_int(value: Any) -> int | None:
+    return None if value is None else int(value)
 
 
 def load_case(path: Path) -> CaseDefinition:
@@ -193,6 +206,8 @@ def load_case(path: Path) -> CaseDefinition:
         window=window,
         donor_search_region=str(analysis.get("donor_search_region", "unspecified")),
         donor_pool_size=int(analysis.get("donor_pool_size", 60)),
+        min_donors=_optional_int(analysis.get("min_donors")),
+        max_donors=_optional_int(analysis.get("max_donors")),
         excluded_donor_ids=tuple(analysis.get("excluded_donor_ids", []) or []),
         covariates=tuple(analysis.get("covariates", []) or []),
         known_reference=payload.get("known_reference", {}) or {},

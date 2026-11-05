@@ -7,8 +7,8 @@ support.
 **Status: the Earth Engine observation service is implemented (#22) and tested
 offline; it has not yet produced a series that a person has reviewed.** It runs
 only when asked (`--run-network`, a key), and observed-data *analysis runs* are
-still refused (`501`) until real covariates and donors exist. Every analysis
-today comes from a labelled simulated fixture.
+still refused (`501`) until a reviewed unit set exists. Every analysis today
+comes from a labelled simulated fixture.
 
 ---
 
@@ -150,9 +150,8 @@ TimeSeries(values, n_valid_observations) + Provenance(dataset, snapshot, C3 deci
 | **Failure** | Always raises. Nothing on this path imports or falls back to the synthetic provider; a test enforces it. |
 
 **Not wired into analysis runs yet.** `earth_engine_access()` still raises, and
-`/verify` and `POST /jobs` answer `501` for observed data: real covariates (C4)
-and real donor candidates (#23) do not exist, and a fixture may not stand in for
-either.
+`/verify` and `POST /jobs` answer `501` for observed data: no reviewed unit set
+exists yet, and a fixture may not stand in for real donors or covariates.
 
 **Tests.** `tests/test_earthengine.py` covers all of the above against a fake
 backend, offline. `tests/test_earthengine_network.py` is opt-in
@@ -165,6 +164,45 @@ pixels at 30 m. One year's reduction may exceed Earth Engine's interactive
 time limit; the service then raises `DataUnavailableError` ("Computation timed
 out") rather than return a partial number, and the remedy is a batch-export
 path (a follow-up issue).
+
+---
+
+## Covariates and units (#23)
+
+The same session, cache and retries serve two more things.
+
+**`EarthEngineCovariateAccess`** (`platform/datasets/covariates.py`) implements
+`CovariateAccess`: raw values for the five covariates, over the masked unit. Definitions
+and reference periods are in [`docs/data/sources.md`](../data/sources.md).
+
+**`EarthEngineUnitConstruction`** (`platform/units/provider.py`) measures what ADR-011's
+rules need, one district at a time, with each step cached so a timeout loses only that
+step. The rules stay in `platform/units/rules.py`. The mask is a raster rebuilt from a
+recipe that travels inside `UnitRef.geometry`
+([ADR-011 amendment 1](../decisions/ADR-011-amendment-1-raster-units.md)), and #22's
+service applies the same mask when reducing NDVI.
+
+**`experiments/kariba_benchmark/generate_unit_set.py`** drives it. It sits outside
+`platform/` because the ladder's stopping rule needs Viraj's `match_donors`, and it fetches
+only pre-period NDVI, so no post-treatment outcome is touched before the pool is fixed.
+
+```
+--list          literal names to fix the settings from; no counts
+--timing-trial  seconds per step on one district; no counts
+(no flag)       climb the ladder and report; --write also writes the manifest
+```
+
+Before any Earth Engine call it checks `cases/run_parameters/kariba-redd.yaml` and refuses,
+naming each undecided setting. A setting nobody has decided is `null` there; nothing is
+defaulted. It also refuses while the engine does not apply covariate transforms in its runs
+(V9(a), Viraj's #3), because the ladder would then match on a different scale than the run.
+
+**Compute limits.** A district is around 8 million pixels at 30 m, with several reductions
+each, and every rung climbed costs another pass. Some steps may exceed Earth Engine's
+interactive time limit. Fragment counting looks the most likely to, so it runs only for
+units that stay in the pool. A timeout raises `DataUnavailableError` with nothing partial
+returned, and the timing trial exists to measure this on one district before anyone builds
+a batch-export path.
 
 ---
 
@@ -260,8 +298,8 @@ changes what the estimate is *of*, so the buffer is recorded as a caveat.
 | Zonal statistics, edge-buffer and leakage-belt caveats | Implemented |
 | Synthetic fixture provider | Implemented, labelled simulated |
 | Earth Engine observation service: auth, retries, rate limit, cache, pinning (#22) | Implemented; tested offline; network test opt-in |
-| Observed-data analysis runs | **Not available** — `501` until real covariates and donors exist |
-| **Covariate extraction from real products** | **Not implemented** |
+| Covariate service and ADR-011 unit construction (#23) | Implemented; tested offline; network tests opt-in |
+| Observed-data analysis runs | **Not available** — `501` until a reviewed unit set exists |
 | **Cross-sensor calibration** | **Not implemented** |
 
 The Earth Engine service raises rather than falling back to fixtures. A silent

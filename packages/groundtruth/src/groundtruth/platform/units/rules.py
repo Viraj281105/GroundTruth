@@ -24,6 +24,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
 
 from groundtruth.contracts.errors import DonorPoolError
 from groundtruth.platform.units.spec import LADDER, Adr011Thresholds, Rung, RunParameters
@@ -76,7 +77,13 @@ class DistrictFacts:
     """Disconnected pieces after masking. Recorded; never used to split or drop a unit."""
 
     geometry_hash: str = ""
-    """Hash of the masked geometry, for the manifest."""
+    """Hash of the masked unit, for the manifest. Rasters: recipe plus pixel count."""
+
+    eligible_pixels: int = 0
+    """Pixels in the eroded mask. ``eligible_area_km2`` is this times the pixel area."""
+
+    geometry: dict[str, Any] | None = None
+    """The outline and mask recipe, which ``UnitRef.geometry`` carries. Not in the manifest."""
 
 
 @dataclass(frozen=True, slots=True)

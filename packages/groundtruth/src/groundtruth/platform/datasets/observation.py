@@ -27,12 +27,11 @@ from __future__ import annotations
 
 import json
 import math
-import threading
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
-from typing import Any, TypeVar
+from typing import Any
 
 from pydantic import SecretStr
 
@@ -56,22 +55,12 @@ from groundtruth.platform.datasets.earthengine import (
     TILE_SCALE,
     EarthEngineApiBackend,
     EarthEngineBackend,
-    ServiceAccountKey,
     YearQuery,
-    classify,
-    load_service_account_key,
 )
-from groundtruth.platform.datasets.resilience import (
-    PermanentError,
-    RateLimiter,
-    RetryPolicy,
-    TransientError,
-    call_with_retry,
-)
+from groundtruth.platform.datasets.resilience import RateLimiter, RetryPolicy
+from groundtruth.platform.datasets.session import EarthEngineSession
 
 logger = get_logger("datasets.earthengine")
-
-T = TypeVar("T")
 
 SUPPORTED_COMPOSITE = "annual-median"
 
@@ -161,13 +150,16 @@ class EarthEngineObservationAccess:
         reduction: The engine's published reduction (``describe_engine()["reduction"]``).
         rate_limiter: Shared request budget; ``None`` means unlimited.
         retry_policy: Per-call retries for transient failures.
+        session: A session shared with other Earth Engine services. When given, it
+            replaces ``credentials``, ``project``, ``rate_limiter`` and
+            ``retry_policy``, and ``backend`` must be the backend it signed in.
     """
 
     def __init__(
         self,
         *,
         sensor: str | None,
-        credentials: SecretStr | None,
+        credentials: SecretStr | None = None,
         project: str | None = None,
         cache: ReductionCache | None = None,
         backend: EarthEngineBackend | None = None,
@@ -176,6 +168,7 @@ class EarthEngineObservationAccess:
         retry_policy: RetryPolicy | None = None,
         sleep: Callable[[float], None] = time.sleep,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
+        session: EarthEngineSession | None = None,
     ) -> None:
         agreed = ", ".join(a.describe() for a in AGREED_SENSORS.values())
         if sensor is None:
@@ -190,17 +183,18 @@ class EarthEngineObservationAccess:
             )
         self.sensor = sensor
         self.agreement = AGREED_SENSORS[sensor]
-        self._credentials = credentials
-        self._project = project.strip() if project and project.strip() else None
         self._cache = cache
         self._backend: EarthEngineBackend = backend or EarthEngineApiBackend()
         self._reduction = reduction if reduction is not None else describe_engine()["reduction"]
-        self._limiter = rate_limiter
-        self._retry = retry_policy or RetryPolicy()
-        self._sleep = sleep
+        self._session = session or EarthEngineSession(
+            credentials=credentials,
+            project=project,
+            backend=self._backend,
+            rate_limiter=rate_limiter,
+            retry_policy=retry_policy,
+            sleep=sleep,
+        )
         self._now = now
-        self._key: ServiceAccountKey | None = None
-        self._init_lock = threading.Lock()
         self._records: dict[tuple[str, ...], dict[int, YearRecord]] = {}
 
     # --- the port ---------------------------------------------------------
@@ -377,7 +371,6 @@ class EarthEngineObservationAccess:
                 except (KeyError, TypeError, ValueError):
                     logger.warning("cache entry has an unexpected shape; treated as a miss")
 
-        self._ensure_initialized()
         query = YearQuery(
             collection=str(reduction["collection"]),
             year=year,
@@ -386,7 +379,9 @@ class EarthEngineObservationAccess:
             snapshot_micros=SNAPSHOT_MICROS,
             scale_m=int(reduction["scale_m"]),
         )
-        listing = self._call(f"scene listing for {year}", lambda: self._backend.list_scenes(query))
+        listing = self._session.call(
+            f"scene listing for {year}", lambda: self._backend.list_scenes(query)
+        )
         ids = list(listing.get("ids") or [])
         versions = list(listing.get("versions") or [])
         n_available = int(listing.get("n_available") or 0)
@@ -416,7 +411,9 @@ class EarthEngineObservationAccess:
                 retrieved_at=retrieved_at,
             )
         else:
-            reduced = self._call(f"reduction for {year}", lambda: self._backend.reduce(query))
+            reduced = self._session.call(
+                f"reduction for {year}", lambda: self._backend.reduce(query)
+            )
             record = self._record(year, reduced, ids, versions, retrieved_at)
 
         if self._cache is not None:
@@ -462,69 +459,6 @@ class EarthEngineObservationAccess:
             scene_fingerprint=scene_fingerprint(ids, versions),
             retrieved_at=retrieved_at,
         )
-
-    # --- calls ------------------------------------------------------------
-
-    def _ensure_initialized(self) -> None:
-        """Sign in once per service, on first use. Never before."""
-        if self._key is not None:
-            return
-        with self._init_lock:
-            if self._key is not None:
-                return
-            key = load_service_account_key(self._credentials)
-            project = self._project or key.project_id
-            if not project:
-                raise ConfigurationError(
-                    "GOOGLE_CLOUD_PROJECT is not set and the service-account key names no "
-                    "project_id; Earth Engine needs a Cloud project"
-                )
-            try:
-                self._attempt(key, lambda: self._backend.initialize(key, project))
-            except TransientError as exc:
-                raise DataUnavailableError(
-                    f"could not reach Earth Engine to sign in after {self._retry.max_attempts} "
-                    f"attempts: {exc}"
-                ) from None
-            except PermanentError as exc:
-                raise ConfigurationError(
-                    f"Earth Engine rejected the service-account credentials for project "
-                    f"{project!r} ({exc}). Check that the key is active and that the account "
-                    "is registered for Earth Engine on that project."
-                ) from None
-            self._key = key
-            logger.info("Earth Engine initialised", extra={"project": project})
-
-    def _attempt(self, key: ServiceAccountKey | None, call: Callable[[], T]) -> T:
-        """One rate-limited try, then retries, with every error redacted and classified."""
-
-        def once() -> T:
-            if self._limiter is not None:
-                self._limiter.acquire()
-            try:
-                return call()
-            except (TransientError, PermanentError):
-                raise
-            except Exception as exc:
-                raise classify(exc, key) from None
-
-        def on_retry(attempt: int, wait: float, exc: TransientError) -> None:
-            logger.warning(
-                "Earth Engine call failed (transient); retrying",
-                extra={"attempt": attempt, "wait_s": wait, "reason": str(exc)},
-            )
-
-        return call_with_retry(once, policy=self._retry, sleep=self._sleep, on_retry=on_retry)
-
-    def _call(self, what: str, call: Callable[[], T]) -> T:
-        try:
-            return self._attempt(self._key, call)
-        except TransientError as exc:
-            raise DataUnavailableError(
-                f"Earth Engine {what} failed after {self._retry.max_attempts} attempts: {exc}"
-            ) from None
-        except PermanentError as exc:
-            raise DataUnavailableError(f"Earth Engine {what} failed: {exc}") from None
 
 
 __all__ = [

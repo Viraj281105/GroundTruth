@@ -42,7 +42,8 @@ supersedes it, so the history of reasoning stays intact.
 | [008](ADR-008-analysis-jobs.md) | Analyses as asynchronous jobs, typed results not exceptions | Accepted |
 | [009](ADR-009-data-management.md) | Pinned dataset references, data out of git | Accepted |
 | [010](ADR-010-deployment.md) | Containerised API and worker, deferred until MVP | Proposed |
-| [011](ADR-011-unit-of-analysis.md) | The unit of analysis is a masked administrative district | Proposed |
+| [011](ADR-011-unit-of-analysis.md) | The unit of analysis is a masked administrative district | Accepted |
+| [011, amendment 1](ADR-011-amendment-1-raster-units.md) | A masked unit is a raster rebuilt from a recipe, not a stored multipolygon | Agreed by both owners |
 
 ## Template
 

@@ -78,7 +78,8 @@ moves, update this table in the same change.
 | Grounding enforcement with safe fallback | Implemented |
 | CLI (`cases`, `show`, `verify`, `doctor`) | Implemented |
 | **Earth Engine client service** | **Implemented** (#22) — auth, retries, rate limiting, cache, snapshot pinning; Landsat 7 2001–2022 (agreed, C3). Observed analysis runs still `501` |
-| **Covariate dataset services** | **Planned — MVP** |
+| **Covariate dataset services** | **Implemented** (#23), tested offline; network tests opt-in. Never run on real data. Blocked on the settings in `cases/run_parameters/kariba-redd.yaml` |
+| **ADR-011 unit construction and manifest** | **Implemented** (#23), tested offline. No real unit set has been generated |
 | **Boundary acquisition and storage** | **Planned — MVP** |
 | Database schema and migrations (SQLAlchemy 2.0 + Alembic, `db` extra) | Implemented |
 | Evidence and provenance persistence (`EvidenceStore`; not yet called by the API) | Implemented |

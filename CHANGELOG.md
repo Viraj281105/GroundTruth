@@ -16,8 +16,27 @@ Three versions are tracked independently:
 
 ## [Unreleased]
 
+### Fixed
+
+- The case loader ignored `min_donors` and `max_donors`, reading only `donor_pool_size`.
+  It now reads both; `cases/kariba-redd.yaml` sets 80 / 30 / 50 (V8, agreed with Viraj (C4),
+  2026-11-05). The API still sends its own default, so simulated API runs are unchanged.
+
 ### Added
 
+- **Covariate services and ADR-011 unit construction** (#23).
+  `EarthEngineCovariateAccess` implements `CovariateAccess` over the masked unit: CHIRPS
+  mean annual total 2001-2010 at native scale, SRTM elevation and per-pixel slope, gROADS
+  v1 road distance from our own uploaded asset, and WorldPop 2000 summed over eligible
+  area (V1-V4, agreed with Viraj (C4), 2026-11-05). `EarthEngineUnitConstruction` measures
+  ADR-011's facts over a raster mask ([amendment 1](docs/decisions/ADR-011-amendment-1-raster-units.md)),
+  applying WDPA from a dated snapshot and refusing if protected pixels stay inside a unit.
+  Sign-in, retries, rate limiting and redaction move into a shared `EarthEngineSession`.
+  `experiments/kariba_benchmark/generate_unit_set.py` lists names, times one district, and
+  climbs the ladder to write a manifest under `data/manifests/`. **No real unit set exists:**
+  it refuses until every setting in `cases/run_parameters/kariba-redd.yaml` is decided, the
+  carbon-project snapshot is committed, and the engine applies covariate transforms in its
+  runs (V9(a), #3). Observed-data runs still answer `501`.
 - **Earth Engine observation service** (#22). `platform/datasets/observation.py`
   (`EarthEngineObservationAccess`, built by `earth_engine_observations()`) implements
   `ObservationAccess` over Google Earth Engine. It translates the engine's published

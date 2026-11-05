@@ -16,12 +16,15 @@ Two bundles are provided today:
   real implementation, rather than falling back to fixtures, because a silent
   fallback would let simulated numbers be published under a real-data label.
 
-The real observation port exists on its own: :func:`earth_engine_observations`
-(#22). Covariates (C4) and donor candidates (#23) do not yet, and no fixture may
-stand in for either in an observed run.
+The real ports exist on their own: :func:`earth_engine_observations` (#22) and
+:func:`earth_engine_covariates` (#23), with ADR-011 unit construction in
+``platform/units``. They are not wired into analysis runs yet: no reviewed unit set
+exists, and no fixture may stand in for one in an observed run.
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from groundtruth.contracts.errors import DataUnavailableError
 from groundtruth.contracts.identifiers import DatasetRef
@@ -31,8 +34,11 @@ from groundtruth.contracts.request import AnalysisRequest, UnitRef
 from groundtruth.contracts.types import Indicator, TimeSeries
 from groundtruth.platform.config import Settings, get_settings
 from groundtruth.platform.datasets.cache import ReductionCache
+from groundtruth.platform.datasets.covariates import EarthEngineCovariateAccess, RoadSource
+from groundtruth.platform.datasets.ee_units import EarthEngineUnitApiBackend
 from groundtruth.platform.datasets.observation import EarthEngineObservationAccess
 from groundtruth.platform.datasets.resilience import shared_rate_limiter
+from groundtruth.platform.datasets.session import EarthEngineSession
 from groundtruth.platform.datasets.synthetic import (
     SyntheticCovariateProvider,
     SyntheticDonorPoolProvider,
@@ -149,23 +155,77 @@ def synthetic_access(
     )
 
 
-def earth_engine_observations(settings: Settings | None = None) -> EarthEngineObservationAccess:
+def earth_engine_cache(settings: Settings | None = None) -> ReductionCache:
+    """The reduction cache all Earth Engine services share (gitignored)."""
+    s = settings or get_settings()
+    return ReductionCache(s.earth_engine_cache_dir or s.data_dir / "interim" / "earthengine")
+
+
+def earth_engine_session(
+    settings: Settings | None = None, *, backend: Any = None
+) -> tuple[EarthEngineSession, Any]:
+    """One session and its backend, shared by every Earth Engine service in a process.
+
+    Nothing is read or contacted here: the key is loaded, and Earth Engine signed in
+    to, on the first call.
+    """
+    s = settings or get_settings()
+    client = backend if backend is not None else EarthEngineUnitApiBackend()
+    session = EarthEngineSession(
+        credentials=s.gee_service_account_json,
+        project=s.google_cloud_project,
+        backend=client,
+        rate_limiter=shared_rate_limiter(s.earth_engine_max_requests_per_minute),
+    )
+    return session, client
+
+
+def earth_engine_observations(
+    settings: Settings | None = None,
+    *,
+    session: EarthEngineSession | None = None,
+    backend: Any = None,
+) -> EarthEngineObservationAccess:
     """The real observation port, configured from the environment.
 
-    Nothing is read or contacted here: the key is loaded, and Earth Engine signed
-    in to, on the first ``series`` call.
+    Args:
+        settings: Application settings.
+        session: A session to share; otherwise this port opens its own.
+        backend: The backend ``session`` signed in.
 
     Raises:
         ConfigurationError: if ``EARTH_ENGINE_SENSOR`` is unset or names a sensor
             not agreed under C3.
     """
     s = settings or get_settings()
+    if session is None:
+        session, backend = earth_engine_session(s, backend=backend)
     return EarthEngineObservationAccess(
         sensor=s.earth_engine_sensor,
-        credentials=s.gee_service_account_json,
-        project=s.google_cloud_project,
-        cache=ReductionCache(s.earth_engine_cache_dir or s.data_dir / "interim" / "earthengine"),
-        rate_limiter=shared_rate_limiter(s.earth_engine_max_requests_per_minute),
+        cache=earth_engine_cache(s),
+        backend=backend,
+        session=session,
+    )
+
+
+def earth_engine_covariates(
+    settings: Settings | None = None,
+    *,
+    road: RoadSource,
+    mask_rule: str,
+    session: EarthEngineSession | None = None,
+    backend: Any = None,
+) -> EarthEngineCovariateAccess:
+    """The real covariate port. ``road`` and ``mask_rule`` have no defaults, on purpose."""
+    s = settings or get_settings()
+    if session is None:
+        session, backend = earth_engine_session(s, backend=backend)
+    return EarthEngineCovariateAccess(
+        session=session,
+        backend=backend,
+        road=road,
+        mask_rule=mask_rule,
+        cache=earth_engine_cache(s),
     )
 
 
@@ -173,8 +233,8 @@ def earth_engine_access(request: AnalysisRequest) -> DataAccess:
     """Build a real DataAccess bundle. Not available yet.
 
     Raises:
-        DataUnavailableError: always, until real covariates (C4) and real donor
-            candidates (#23) exist alongside :func:`earth_engine_observations`.
+        DataUnavailableError: always, until a reviewed unit set exists to pair
+            with :func:`earth_engine_observations` and :func:`earth_engine_covariates`.
 
     This deliberately raises rather than pairing real observations with fixture
     covariates or donors. A silent fallback would let simulated numbers be served
@@ -182,7 +242,7 @@ def earth_engine_access(request: AnalysisRequest) -> DataAccess:
     not have.
     """
     raise DataUnavailableError(
-        "Observed-data runs are not implemented yet. Real observations exist (the Earth Engine "
-        "observation service, #22), but real matching covariates (C4) and real donor "
-        "candidates (#23) do not, and simulated values never stand in for them."
+        "Observed-data runs are not implemented yet. The Earth Engine services for observations "
+        "(#22), covariates and donor units (#23) exist, but no reviewed unit set has been "
+        "generated, and simulated values never stand in for real donors or covariates."
     )
