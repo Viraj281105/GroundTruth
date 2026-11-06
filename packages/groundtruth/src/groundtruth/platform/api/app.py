@@ -10,9 +10,12 @@ engine internals requires no change here.
 
 from __future__ import annotations
 
+import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from groundtruth import __version__
@@ -21,6 +24,7 @@ from groundtruth.contracts.errors import CaseDefinitionError, DataUnavailableErr
 from groundtruth.contracts.result import AnalysisResult, EngineStatus, ErrorCode
 from groundtruth.engine import ENGINE_VERSION, describe_engine, run_analysis
 from groundtruth.observability import setup_telemetry
+from groundtruth.platform.api.auth import router as auth_router
 from groundtruth.platform.api.claims import router as claims_router
 from groundtruth.platform.api.events import router as events_router
 from groundtruth.platform.api.jobs import router as jobs_router
@@ -36,12 +40,29 @@ from groundtruth.platform.api.schemas import (
     VerificationResponse,
 )
 from groundtruth.platform.api.tiles import router as tiles_router
+from groundtruth.platform.auth.csrf import CsrfOriginMiddleware
+from groundtruth.platform.auth.deps import require_role
 from groundtruth.platform.cases.registry import get_case, load_all_cases
 from groundtruth.platform.config import get_settings
 from groundtruth.platform.datasets.access import earth_engine_access, synthetic_access
 from groundtruth.platform.reports.narrative import generate_report
 
+_log = logging.getLogger("groundtruth.auth")
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    if not get_settings().auth_required:
+        _log.warning(
+            "AUTH_REQUIRED is false: starting/cancelling analyses and the claims workbench "
+            "are open to anyone who can reach this API. Set AUTH_REQUIRED=true for any "
+            "shared deployment."
+        )
+    yield
+
+
 app = FastAPI(
+    lifespan=_lifespan,
     title="GroundTruth",
     version=__version__,
     description=(
@@ -54,11 +75,13 @@ app = FastAPI(
 
 setup_telemetry(app)  # no-op unless OpenTelemetry is installed and an endpoint is set
 
+# Added before CORS so CORS is outermost and a rejected request still carries CORS headers.
+app.add_middleware(CsrfOriginMiddleware, allowed_origins=lambda: get_settings().cors_origins)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origins,
-    allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -69,6 +92,7 @@ app.include_router(jobs_router)
 app.include_router(events_router)
 app.include_router(tiles_router)
 app.include_router(claims_router)
+app.include_router(auth_router)
 
 # The frontend's TypeScript types are generated from this schema (issue #17); the served
 # /openapi.json and the committed snapshot are built by the same function.
@@ -162,6 +186,7 @@ def get_case_detail(case_id: str) -> CaseDetail:
     "/cases/{case_id}/verify",
     response_model=VerificationResponse,
     tags=["verification"],
+    dependencies=[Depends(require_role("user"))],
     responses={
         404: {"model": MessageErrorBody, "description": "Unknown case."},
         409: {**_ENGINE_FAILURE, "description": "Unsupported contract version."},

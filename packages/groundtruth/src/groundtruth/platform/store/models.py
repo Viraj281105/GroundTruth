@@ -310,3 +310,41 @@ def load_bundle(
         row.contract_version, row.run_id, what="bundle", consumer_version=consumer_version
     )
     return EvidenceBundle.model_validate(row.bundle)
+
+
+USER_ROLES: tuple[str, ...] = ("user", "dev", "admin")
+"""Account roles, lowest to highest. See ``docs/security/auth.md``."""
+
+
+class UserRow(Base):
+    """An account. ``password_hash`` is a salted scrypt string, never the password."""
+
+    __tablename__ = "users"
+    __table_args__ = (
+        sa.CheckConstraint(_in_list("role", USER_ROLES), name="role_valid"),
+        sa.UniqueConstraint("email"),
+    )
+
+    id: Mapped[str] = mapped_column(sa.String(36), primary_key=True)
+    email: Mapped[str] = mapped_column(sa.String(254))
+    """Stored lowercased."""
+    password_hash: Mapped[str] = mapped_column(sa.String(300))
+    role: Mapped[str] = mapped_column(sa.String(16))
+    is_active: Mapped[bool] = mapped_column(sa.Boolean)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    last_login_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+
+
+class SessionRow(Base):
+    """A sign-in. Only the SHA-256 of the cookie token is stored."""
+
+    __tablename__ = "sessions"
+    __table_args__ = (sa.UniqueConstraint("token_hash"), sa.Index("ix_sessions_user_id", "user_id"))
+
+    id: Mapped[str] = mapped_column(sa.String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(sa.ForeignKey("users.id", ondelete="CASCADE"))
+    token_hash: Mapped[str] = mapped_column(sa.String(64))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    user_agent: Mapped[str | None] = mapped_column(sa.String(300))
