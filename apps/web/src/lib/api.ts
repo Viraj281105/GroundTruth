@@ -1,3 +1,4 @@
+import { notifySessionExpired } from './session-events';
 import {
   CaseDetail,
   CaseSummary,
@@ -145,6 +146,7 @@ export async function verifyCase(
   try {
     const res = await fetch(`${API_BASE_URL}/cases/${caseId}/verify`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(options),
     });
@@ -153,6 +155,7 @@ export async function verifyCase(
       const data = await res.json();
       return { success: true, data };
     }
+    if (res.status === 401) notifySessionExpired();
 
     const errJson = await res.json().catch(() => null);
     const detail = errJson?.detail;

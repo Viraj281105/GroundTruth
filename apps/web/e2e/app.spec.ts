@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 
 const ROUTES = [
   '/',
+  '/login',
+  '/register',
   '/cases',
   '/cases/kariba-redd',
   '/cases/kariba-redd/evidence',
