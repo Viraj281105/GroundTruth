@@ -62,6 +62,7 @@ export function CounterfactualHero() {
   const sectionRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const progress = useRef(1);
+  const figureRef = useRef<HTMLElement>(null);
   const frame = useRef(0);
 
   const render = useCallback(() => {
@@ -89,6 +90,7 @@ export function CounterfactualHero() {
         const r = el.getBoundingClientRect();
         progress.current = scrollProgress(r.top, r.height, window.innerHeight);
       }
+      if (figureRef.current) figureRef.current.style.transform = reduce.matches ? '' : `translateY(${(progress.current * -18).toFixed(1)}px)`;
       schedule();
     };
     update();
@@ -120,7 +122,7 @@ export function CounterfactualHero() {
             <LinkButton href="/method" variant="secondary" size="lg">{c.secondary}</LinkButton>
           </div>
         </div>
-        <figure className={styles.figure}>
+        <figure ref={figureRef} className={styles.figure}>
           <canvas ref={canvasRef} className={styles.canvas} role="img" aria-label={c.heroAlt} />
           <figcaption className={styles.caption}>
             <span className={styles.badge}>{c.illustrative}</span>
