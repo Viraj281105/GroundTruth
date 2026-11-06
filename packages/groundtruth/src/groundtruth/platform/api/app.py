@@ -20,6 +20,7 @@ from groundtruth.contracts import CONTRACT_VERSION
 from groundtruth.contracts.errors import CaseDefinitionError, DataUnavailableError
 from groundtruth.contracts.result import AnalysisResult, EngineStatus, ErrorCode
 from groundtruth.engine import ENGINE_VERSION, describe_engine, run_analysis
+from groundtruth.platform.api.events import router as events_router
 from groundtruth.platform.api.jobs import router as jobs_router
 from groundtruth.platform.api.openapi_schema import install_openapi
 from groundtruth.platform.api.runs import router as runs_router
@@ -32,6 +33,7 @@ from groundtruth.platform.api.schemas import (
     VerificationRequest,
     VerificationResponse,
 )
+from groundtruth.platform.api.tiles import router as tiles_router
 from groundtruth.platform.cases.registry import get_case, load_all_cases
 from groundtruth.platform.config import get_settings
 from groundtruth.platform.datasets.access import earth_engine_access, synthetic_access
@@ -60,6 +62,8 @@ app.add_middleware(
 # below keep working with no database configured.
 app.include_router(runs_router)
 app.include_router(jobs_router)
+app.include_router(events_router)
+app.include_router(tiles_router)
 
 # The frontend's TypeScript types are generated from this schema (issue #17); the served
 # /openapi.json and the committed snapshot are built by the same function.

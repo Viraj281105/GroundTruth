@@ -159,7 +159,7 @@ class TestTheSchemaGeneratesGoodTypes:
             for method, operation in operations.items()
             for code, response in operation["responses"].items()
             if code.startswith("2")
-            and not response.get("content", {}).get("application/json", {}).get("schema")
+            and not any(m.get("schema") for m in response.get("content", {}).values())
         ]
         assert not untyped, untyped
 
