@@ -7,6 +7,8 @@ import { sig } from '../../../lib/evidence';
 import type { ChartDataPoint } from '../../../lib/fixtures/simulated-data';
 import type { CaseDetail, Evidence } from '../../../lib/types';
 import { Term } from '../evidence/Term';
+import { LineChart } from '../../../components/charts';
+import { gapSeries } from '../evidence/viz-model';
 import {
   derivePlaygroundView,
   deriveDonorWeights,
@@ -38,6 +40,9 @@ export function Playground({
   );
   const view = useMemo(() => derivePlaygroundView(state, series, donors, items), [state, series, donors, items]);
   const shaded = useMemo(() => reshadeSeries(series, state.year), [series, state.year]);
+
+  const gap = useMemo(() => gapSeries(series), [series]);
+  const postCount = shaded.filter((p) => p.isPost).length;
 
   if (series.length === 0 || engineYear === null) return null;
 
@@ -98,6 +103,15 @@ export function Playground({
         indicatorUnit={caseDetail?.indicator ?? ''}
         evidence={items}
       />
+
+      {gap.length > 0 && (
+        <div>
+          <LineChart series={gap} refX={state.year} refLabel={`intervention ${state.year}`} height={170} label={`Gap by year with the intervention marked at ${state.year}`} />
+          <p className={styles.muted}>
+            {postCount} of {series.length} periods are counted as after the intervention at {state.year}.
+          </p>
+        </div>
+      )}
 
       <div className={styles.readout} aria-live="polite">
         {view.point && (
