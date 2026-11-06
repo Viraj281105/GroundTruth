@@ -1,9 +1,9 @@
-.section { height: 170vh; position: relative; }
+/* The divergence plays on load, so the hero no longer needs to be pinned for scroll-driven playback. */
+.section { position: relative; }
 .sticky {
-  position: sticky; top: var(--header-height);
-  min-height: calc(100vh - var(--header-height));
+  min-height: min(44rem, calc(100vh - var(--header-height)));
   display: grid; align-content: center; gap: var(--space-8);
-  padding-block: var(--space-8);
+  padding-block: var(--space-10) var(--space-12);
 }
 @media (min-width: 60rem) { .sticky { grid-template-columns: 1fr 1fr; align-items: center; gap: var(--space-12); } }
 .copy h1 { font-size: clamp(var(--text-3xl), 5vw + 1rem, var(--text-5xl)); margin-bottom: var(--space-4); }

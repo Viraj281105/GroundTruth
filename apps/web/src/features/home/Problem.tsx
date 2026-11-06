@@ -31,9 +31,9 @@ export function Problem() {
             <path className={`${styles.obs} ${styles.draw}`} pathLength={1} d="M20 150 L160 150 L370 60" />
             <g className={styles.pop}>
               <text className={styles.label} x="166" y="34">Project starts</text>
-              <text className={styles.label} x="250" y="40">Claimed path</text>
-              <text className={styles.label} x="230" y="212">Would have happened anyway</text>
-              <text className={styles.label} x="262" y="132">The gap to be estimated</text>
+              <text className={styles.label} x="372" y="40" textAnchor="end">Claimed path</text>
+              <text className={styles.label} x="372" y="212" textAnchor="end">Would have happened anyway</text>
+              <text className={styles.label} x="372" y="132" textAnchor="end">The gap to be estimated</text>
             </g>
           </svg>
           <span className={styles.sim}>Illustration only, not data</span>

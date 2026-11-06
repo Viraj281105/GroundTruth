@@ -83,17 +83,28 @@ export function CounterfactualHero() {
 
   useEffect(() => {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // Intro: the divergence plays by itself on load, so the first screen already shows the idea.
+    // Scrolling can only move it further along, never back.
+    const INTRO_MS = 2600;
+    const introStart = Date.now();
+    let intro = 0;
     const update = () => {
       const el = sectionRef.current;
       if (reduce.matches || !el) progress.current = 1;
       else {
         const r = el.getBoundingClientRect();
-        progress.current = scrollProgress(r.top, r.height, window.innerHeight);
+        progress.current = Math.max(scrollProgress(r.top, r.height, window.innerHeight), intro);
       }
       if (figureRef.current) figureRef.current.style.transform = reduce.matches ? '' : `translateY(${(progress.current * -18).toFixed(1)}px)`;
       schedule();
     };
     update();
+    const introTimer = window.setInterval(() => {
+      const t = Math.min((Date.now() - introStart) / INTRO_MS, 1);
+      intro = 1 - (1 - t) ** 3;
+      update();
+      if (t >= 1) window.clearInterval(introTimer);
+    }, 50);
     window.addEventListener('scroll', update, { passive: true });
     window.addEventListener('resize', update);
     reduce.addEventListener('change', update);
@@ -102,6 +113,7 @@ export function CounterfactualHero() {
     const dark = window.matchMedia('(prefers-color-scheme: dark)');
     dark.addEventListener('change', schedule);
     return () => {
+      window.clearInterval(introTimer);
       window.removeEventListener('scroll', update);
       window.removeEventListener('resize', update);
       reduce.removeEventListener('change', update);
