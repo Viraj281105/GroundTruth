@@ -36,7 +36,7 @@ export default function HealthPage() {
 
   return (
     <div className="gt-container" style={{ paddingTop: '24px', paddingBottom: '60px' }}>
-      <Link href="/" className={styles.backLink}>
+      <Link href="/cases" className={styles.backLink}>
         <ArrowLeft size={16} />
         <span>Back to Project Cases</span>
       </Link>

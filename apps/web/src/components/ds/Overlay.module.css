@@ -1,0 +1,12 @@
+.dialog { margin: auto; padding: 0; border: 1px solid var(--border-default); border-radius: var(--radius-xl); background: var(--surface-raised); color: var(--text-primary); box-shadow: var(--shadow-3); width: min(92vw, 36rem); max-height: 85vh; overflow: auto; }
+.dialog::backdrop { background: rgb(8 12 10 / 0.5); backdrop-filter: blur(4px); }
+.dialogBody { padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-4); }
+.dialogHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.close { border: 0; background: transparent; color: var(--text-muted); font-size: var(--text-2xl); line-height: 1; cursor: pointer; border-radius: var(--radius-sm); padding: 0 var(--space-2); }
+.close:hover { color: var(--text-primary); background: var(--accent-soft); }
+
+.toasts { position: fixed; z-index: var(--z-toast); right: var(--space-5); bottom: var(--space-5); display: flex; flex-direction: column; gap: var(--space-2); max-width: min(92vw, 22rem); }
+.toast { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--border-default); background: var(--surface-raised); box-shadow: var(--shadow-3); font-size: var(--text-sm); animation: toastIn var(--duration-slow) var(--ease-spring); }
+.success { border-color: var(--ok-border); color: var(--ok-text); }
+.error { border-color: var(--danger-border); color: var(--danger-text); }
+@keyframes toastIn { from { opacity: 0; transform: translateY(0.75rem) scale(0.98); } to { opacity: 1; transform: none; } }

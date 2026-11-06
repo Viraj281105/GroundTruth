@@ -553,7 +553,7 @@ export default function CaseAnalysisPage() {
 
       {/* Breadcrumbs Navigation */}
       <nav className={styles.breadcrumbs} aria-label="Breadcrumb">
-        <Link href="/" className={styles.breadcrumbLink}>Projects</Link>
+        <Link href="/cases" className={styles.breadcrumbLink}>Projects</Link>
         <ChevronRight size={13} className={styles.breadcrumbSep} />
         <span className={styles.breadcrumbActive}>{caseDetail.name}</span>
       </nav>
