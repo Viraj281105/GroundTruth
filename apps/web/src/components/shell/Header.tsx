@@ -35,6 +35,9 @@ export function Header() {
 
   useEffect(() => setOpen(false), [pathname]);
 
+  // The detail level only changes case pages and comparisons, so it only appears there.
+  const showLens = pathname.startsWith('/cases/') || pathname.startsWith('/compare');
+
   return (
     <header className={styles.header}>
       <div className={`gt-container ${styles.bar}`}>
@@ -52,6 +55,11 @@ export function Header() {
               </Link>
             );
           })}
+          {showLens && (
+            <div className={styles.lensMobile}>
+              <LensSwitch />
+            </div>
+          )}
         </nav>
 
         <div className={styles.tools}>
@@ -63,9 +71,11 @@ export function Header() {
             <span className={styles.searchLabel}>Search</span>
             <kbd>⌘K</kbd>
           </button>
-          <div className={styles.lens}>
-            <LensSwitch />
-          </div>
+          {showLens && (
+            <div className={styles.lens}>
+              <LensSwitch />
+            </div>
+          )}
           <ThemeToggle />
           <button type="button" className={styles.menu} onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label="Menu">
             {open ? <X size={20} /> : <Menu size={20} />}

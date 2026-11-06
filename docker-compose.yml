@@ -26,6 +26,9 @@ services:
   worker:
     build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
     command: ["python", "-m", "apps.worker.main", "--migrate"]
+    # The image's HTTP health check is for the API; the worker serves no HTTP.
+    healthcheck:
+      disable: true
     env_file: [{ path: .env, required: false }]
     environment:
       DATABASE_URL: postgresql+psycopg://groundtruth:groundtruth@postgres/groundtruth
