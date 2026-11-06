@@ -34,5 +34,5 @@ True live scrubbing needs the API to return, or compute on request:
   weight only when a feature carries `properties.role = "donor"` and a numeric `properties.weight`;
   no donor geometry exists in the data today, and the map says so.
 - Basemap tiles are not requested (no external tile dependency); the map is boundary-only.
-- `maplibre-gl` 4.7.1 is declared in `package.json`; until the lockfile is refreshed the map shows a
-  text summary (bounding box, centre) instead of a canvas.
+- `maplibre-gl` 4.7.1 is a dependency; if it cannot load, the map falls back to a text summary
+  (bounding box, centre).

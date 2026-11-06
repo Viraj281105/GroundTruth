@@ -151,10 +151,27 @@ has been run, and none of these paths has been exercised against real data.
 | Redis (arq) job queue, Temporal workflow | Implemented, **not verified live** | Off unless `REDIS_URL` is set; transitions are not atomic |
 | SSE job progress, boundary GeoJSON, PostGIS vector tiles | Implemented | Tiles need a `case_boundaries` PostGIS table that no migration creates yet |
 | Anthropic narrator provider | Implemented, **not verified live** | Mocked HTTP only; output still passes the grounding verifier (R4) |
-| Claim extraction, retrieval and comparison (`claims/`) | Implemented | Heuristic text extraction; not wired to the API or UI |
+| Claim extraction, retrieval and comparison (`claims/`) | Implemented | Heuristic text extraction; served by `POST /claims/analyze` and the `/claims` page. Only project area is compared against a case record today; other claim kinds show no estimate |
 | Evidence-bundle manifests, cosign signing, DVC config | Implemented, signing **not verified live** | Needs the cosign binary |
 | OpenTelemetry, Grafana/Tempo/Prometheus stack, Helm chart | Implemented, **not verified live** | Compose overlay and chart never started; no job-duration metric yet |
 | Docker images and compose stack | Implemented | Built and run locally |
+
+## UI rework (apps/web)
+
+Light/dark design system, multi-page flow and lenses. All numbers still come from the simulated
+fixture or the API; nothing is computed in the browser (R6). See `docs/ui-data-gaps.md`.
+
+| Capability | Status | Notes |
+| --- | --- | --- |
+| Design tokens, light and dark themes (no flash), `system` default | Implemented | Three-tier tokens with a `--gt-*` compatibility layer |
+| Story / Explorer / Auditor detail levels, shared glossary | Implemented | Persisted locally; `?lens=` override |
+| Routes: home, cases, case overview / evidence / robustness / method / report / run, compare, claims, method, status | Implemented | Results and charts need `NEXT_PUBLIC_DEMO_MODE=true`: the API serves no series, placebo or donor geometry |
+| Run Theatre (stepper, live stage progress) | Implemented, **not verified live** | SSE with polling fallback; tested against fakes only |
+| Counterfactual Playground | Partly implemented | Scrubs only data the API returns; true re-fitting needs API support |
+| Donor map (MapLibre) | Implemented | Boundary only; donor shading needs donor geometry the data does not have |
+| Command palette, shortcuts, tour, recently viewed, web manifest | Implemented | Hindi and Marathi cover navigation and core labels only |
+| Offline service worker, Pyodide in-browser reproduction, shareable evidence cards | **Not built** | Cut from the first pass |
+| Playwright e2e and visual specs | Written, **not run** | Needs a browser download; baselines are not committed |
 
 ---
 

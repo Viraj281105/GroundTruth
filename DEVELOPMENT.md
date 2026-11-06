@@ -5,6 +5,19 @@ bug in this document — fix it in the same PR.
 
 ---
 
+## One-command run
+
+```powershell
+.un.ps1            # Windows: venv + deps + API (:8000) + web (:3000)
+.un.ps1 docker     # Docker: Postgres, API, worker, web
+.un.ps1 test       # Python tests
+```
+
+On macOS/Linux use `./run.sh [local|docker|test|setup]`. The Docker web image is built with
+`NEXT_PUBLIC_DEMO_MODE=true` by default so the UI can show its simulated charts; set
+`NEXT_PUBLIC_DEMO_MODE=false` to see the honest "no result yet" states instead. To let a second
+dev origin call the API, set `CORS_ALLOWED_ORIGINS` (comma separated) before `docker compose up`.
+
 ## Setup
 
 Requires Python 3.11+ and git. Nothing else: the full pipeline runs offline with

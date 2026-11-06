@@ -11,6 +11,8 @@ export default async function CaseOverviewPage({ params }: { params: { id: strin
   // The layout already shows the not-found / unreachable state.
   if (load.status !== 'ok') return null;
   // Fixtures are non-null only when NEXT_PUBLIC_DEMO_MODE is explicitly on.
-  const model = buildOverviewModel(load.detail, getVisualizationFixture(params.id), getRefusalFixture(params.id));
+  // A completed fixture is the headline; the refusal demo only stands in when there is none.
+  const fixture = getVisualizationFixture(params.id);
+  const model = buildOverviewModel(load.detail, fixture, fixture ? null : getRefusalFixture(params.id));
   return <OverviewView caseId={params.id} model={model} />;
 }

@@ -83,7 +83,7 @@ describe('layout helpers', () => {
     const links = caseTabLinks('kariba-redd');
     expect(activeTabHref(links, '/cases/kariba-redd')).toBe('/cases/kariba-redd');
     expect(activeTabHref(links, '/cases/kariba-redd/evidence/')).toBe('/cases/kariba-redd/evidence');
-    expect(activeTabHref(links, '/cases/kariba-redd/run')).toBe('/cases/kariba-redd');
+    expect(activeTabHref(links, '/cases/kariba-redd/run')).toBe('');
   });
   it('tells a 404 from an unreachable API', () => {
     const notFound = new ApiUnreachableError('http://x', new Error('API responded with 404'));

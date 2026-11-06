@@ -69,7 +69,15 @@ export function CounterfactualHero() {
     if (canvasRef.current) draw(canvasRef.current, progress.current);
   }, []);
   const schedule = useCallback(() => {
-    if (!frame.current) frame.current = requestAnimationFrame(render);
+    if (frame.current) return;
+    frame.current = requestAnimationFrame(render);
+    // Throttled or hidden tabs may never deliver a frame: draw directly so the hero is never blank.
+    window.setTimeout(() => {
+      if (frame.current) {
+        cancelAnimationFrame(frame.current);
+        render();
+      }
+    }, 120);
   }, [render]);
 
   useEffect(() => {

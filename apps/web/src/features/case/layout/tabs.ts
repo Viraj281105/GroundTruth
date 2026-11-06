@@ -11,12 +11,17 @@ export function caseTabLinks(caseId: string): TabLink[] {
   return CASE_TABS.map((t) => ({ href: t.slug ? `${base}/${t.slug}` : base, label: t.label }));
 }
 
-/** The tab whose href is the longest prefix of the pathname; Overview when nothing deeper matches. */
+/**
+ * The tab whose href is the longest prefix of the pathname. Pages that are not tabs (such as
+ * `/run`) highlight no tab, so Overview is active only on its own route.
+ */
 export function activeTabHref(links: TabLink[], pathname: string): string {
   const clean = pathname.replace(/\/+$/, '') || '/';
-  let best = links[0]?.href ?? '';
-  for (const l of links) {
-    if ((clean === l.href || clean.startsWith(`${l.href}/`)) && l.href.length >= best.length) best = l.href;
-  }
+  let best = '';
+  links.forEach((l, i) => {
+    // The first link is Overview (the case root): it must not claim every sub-route as its own.
+    const matches = clean === l.href || (i > 0 && clean.startsWith(`${l.href}/`));
+    if (matches && l.href.length >= best.length) best = l.href;
+  });
   return best;
 }

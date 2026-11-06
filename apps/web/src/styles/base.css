@@ -8,6 +8,9 @@
 }
 
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+/* Hidden tooltips and wide figures must never create a horizontal page scroll. `clip`, unlike
+   `hidden`, does not make a scroll container, so sticky positioning keeps working. */
+html, body { overflow-x: clip; }
 body {
   min-height: 100vh;
   background: var(--surface-base);
