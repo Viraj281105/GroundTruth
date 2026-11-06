@@ -5,6 +5,11 @@ import { Button, Card, Chip, LinkButton } from "../../components/ds";
 import { ApiUnreachableError } from "../../lib/api";
 import { createJobsApi, failureFrom, type JobView } from "../../lib/jobs";
 import { watchJob } from "../../lib/jobs-stream";
+import { BarList, RangeBar } from "../../components/charts";
+import { Lens } from "../../lib/lens";
+import { LensCaption } from "../case/overview/LensCaption";
+import { effectRange, type RangeFigure } from "../case/overview/figures";
+import { stageDurationBars } from "./durations";
 import { runCopy } from "./copy";
 import { initialState, reduce, stepIndex, STEP_ORDER, type Outcome } from "./machine";
 import { Theatre } from "./Theatre";
@@ -50,6 +55,7 @@ function OutcomeCard({ outcome, caseId, onRetry }: { outcome: Outcome; caseId: s
 export function RunFlow({ caseId }: { caseId: string }) {
   const [state, dispatch] = useReducer(reduce, initialState);
   const [headline, setHeadline] = useState<string | null>(null);
+  const [range, setRange] = useState<RangeFigure | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
 
   useEffect(() => () => stopRef.current?.(), []);
@@ -71,6 +77,7 @@ export function RunFlow({ caseId }: { caseId: string }) {
   const start = async () => {
     dispatch({ type: "start" });
     setHeadline(null);
+    setRange(null);
     try {
       const sub = await jobsApi.submit({ case_id: caseId, synthetic: true });
       dispatch({ type: "submitted", job: sub.job });
@@ -100,7 +107,11 @@ export function RunFlow({ caseId }: { caseId: string }) {
     let live = true;
     jobsApi
       .result(measuredRunId, false)
-      .then((r) => live && setHeadline(r.verdict_label ?? null))
+      .then((r) => {
+        if (!live) return;
+        setHeadline(r.verdict_label ?? null);
+        setRange(effectRange(r.bundle?.items));
+      })
       .catch(() => undefined);
     return () => {
       live = false;
@@ -116,6 +127,7 @@ export function RunFlow({ caseId }: { caseId: string }) {
     <div className={styles.wrap}>
       <h1 className={styles.title}>{runCopy.title}</h1>
       <Stepper index={stepIndex(state.step)} />
+      {state.step !== "run" && <LensCaption />}
 
       {state.step === "configure" && (
         <Card>
@@ -161,6 +173,25 @@ export function RunFlow({ caseId }: { caseId: string }) {
               {runCopy.results.headline}: {headline}
             </p>
           )}
+          {range && (
+            <RangeBar
+              estimate={range.estimate}
+              low={range.low}
+              high={range.high}
+              unit={range.unit}
+              label={`Headline effect with its ${range.kind} interval`}
+            />
+          )}
+          <Lens show="explorer">
+            {state.job && stageDurationBars(state.job.stages).length > 0 && (
+              <BarList items={stageDurationBars(state.job.stages)} label="Time taken by each stage" />
+            )}
+          </Lens>
+          <Lens show="auditor">
+            <p className={styles.stamps}>
+              Run id <code>{state.runId}</code>
+            </p>
+          </Lens>
           <div className={styles.row}>
             <LinkButton href={`/cases/${caseId}/evidence`}>{runCopy.results.evidence}</LinkButton>
             <LinkButton variant="secondary" href={`/cases/${caseId}`}>

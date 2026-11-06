@@ -2,6 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { Button, Card, Chip } from "../../components/ds";
+import { BarList } from "../../components/charts";
+import { Lens } from "../../lib/lens";
+import { LensCaption } from "../case/overview/LensCaption";
+import { stageDurationBars } from "./durations";
 import type { JobView } from "../../lib/jobs";
 import { runCopy } from "./copy";
 import { formatElapsed, stageLabel } from "./machine";
@@ -26,8 +30,10 @@ export function Theatre({
     return () => clearInterval(t);
   }, []);
 
+  const bars = stageDurationBars(job.stages);
   return (
     <Card aria-live="polite">
+      <LensCaption />
       <div className={styles.row}>
         <h2 className={styles.heading}>{runCopy.run.heading}</h2>
         {job.is_simulated && <Chip tone="sim">{runCopy.run.simulatedBadge}</Chip>}
@@ -64,6 +70,25 @@ export function Theatre({
           })}
         </ol>
       )}
+      <Lens show="explorer">
+        {bars.length > 0 && (
+          <div className={styles.durations}>
+            <h3 className={styles.heading}>Time per stage</h3>
+            <BarList items={bars} label="Time taken by each finished stage" />
+          </div>
+        )}
+      </Lens>
+      <Lens show="auditor">
+        <ul className={styles.stamps}>
+          {job.stages.map((s) => (
+            <li key={s.name}>
+              <code>{s.name}</code> {s.state}
+              {s.started_at ? `, started ${s.started_at}` : ""}
+              {s.finished_at ? `, finished ${s.finished_at}` : ""}
+            </li>
+          ))}
+        </ul>
+      </Lens>
       <Button variant="secondary" onClick={onCancel} disabled={cancelling} loading={cancelling}>
         {cancelling ? runCopy.run.cancelling : runCopy.run.cancel}
       </Button>

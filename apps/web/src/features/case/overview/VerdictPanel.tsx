@@ -4,6 +4,7 @@ import { RefusalDetails } from '../../../components/ui/RefusalDetails';
 import { refusalStageLabel } from '../../../lib/refusal';
 import type { OverviewModel } from './model';
 import { overviewCopy as c } from './copy';
+import { NotStory } from './LensCaption';
 import styles from './overview.module.css';
 
 /** The verdict, or the designed explanation when there is none (refused / not yet run). */
@@ -58,9 +59,11 @@ export function VerdictPanel({ model }: { model: OverviewModel }) {
         </div>
       )}
       {model.rationale && (
-        <p>
-          <strong>{c.rationaleTitle}.</strong> {model.rationale}
-        </p>
+        <NotStory>
+          <p>
+            <strong>{c.rationaleTitle}.</strong> {model.rationale}
+          </p>
+        </NotStory>
       )}
     </Card>
   );

@@ -11,4 +11,13 @@
 .dl { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, 1fr); gap: var(--space-2) var(--space-6); font-size: var(--text-sm); }
 .dl dt { color: var(--text-muted); overflow-wrap: anywhere; min-width: 0; }
 .dl dd { overflow-wrap: anywhere; min-width: 0; }
+.ladder { display: block; width: 100%; max-width: 32rem; height: auto; }
+.ladderNum { fill: var(--text-on-accent); font-size: 11px; font-weight: 600; }
+.ladderLabel { fill: var(--text-primary); font-size: 13px; text-transform: capitalize; }
+.ladderCount { fill: var(--text-muted); font-size: 10px; }
+.bigNums { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--space-4); }
+.bigStat { text-align: center; }
+.bigNum { font-family: var(--font-display); font-size: var(--text-2xl); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: var(--space-6); }
+.donuts { display: flex; gap: var(--space-6); flex-wrap: wrap; align-items: center; }
 @media (max-width: 30rem) { .dl { grid-template-columns: 1fr; gap: 0; } .dl dd { margin-bottom: var(--space-2); } }
