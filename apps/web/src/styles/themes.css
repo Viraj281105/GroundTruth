@@ -7,7 +7,7 @@
   --surface-raised: #ffffff;
   --surface-sunken: var(--ref-paper-100);
   --surface-hover: #f8f6f0;
-  --surface-overlay: rgb(251 249 245 / 0.82);
+  --surface-overlay: rgb(251 249 245 / 0.94);
   --border-subtle: var(--ref-paper-200);
   --border-default: var(--ref-paper-300);
   --border-strong: #b9b1a0;
@@ -55,7 +55,7 @@
   --surface-raised: var(--ref-night-900);
   --surface-sunken: #0a0e0c;
   --surface-hover: var(--ref-night-850);
-  --surface-overlay: rgb(13 18 16 / 0.82);
+  --surface-overlay: rgb(13 18 16 / 0.94);
   --border-subtle: var(--ref-night-800);
   --border-default: var(--ref-night-700);
   --border-strong: var(--ref-night-600);

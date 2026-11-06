@@ -274,7 +274,7 @@ export const CounterfactualChart: React.FC<CounterfactualChartProps> = ({
               y={padTop + 18}
               className={styles.phaseLabel}
             >
-              PRE-INTERVENTION // CALIBRATION & PARALLEL TRENDS
+              Before the project: does the twin follow the project area?
             </text>
           )}
           {treatmentYear < maxYear && (
@@ -283,7 +283,7 @@ export const CounterfactualChart: React.FC<CounterfactualChartProps> = ({
               y={padTop + 18}
               className={styles.phaseLabel}
             >
-              POST-INTERVENTION // CAUSAL DIVERGENCE TRACKING
+              After the project: the gap to the twin
             </text>
           )}
 
@@ -415,7 +415,7 @@ export const CounterfactualChart: React.FC<CounterfactualChartProps> = ({
                 textAnchor="middle"
                 className={styles.treatmentBadgeText}
               >
-                INTERVENTION BOUNDARY ({treatmentYear})
+                Project start ({treatmentYear})
               </text>
             </g>
           )}

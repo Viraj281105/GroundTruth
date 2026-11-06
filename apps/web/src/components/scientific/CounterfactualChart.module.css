@@ -48,7 +48,7 @@
 }
 
 .keyboardHint {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   color: var(--gt-text-subtle);
 }
@@ -84,7 +84,7 @@
 }
 
 .filterLabel {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
   font-weight: 600;
   color: var(--gt-text-subtle);
@@ -94,7 +94,7 @@
 .filterBtn {
   background: transparent;
   border: none;
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   color: var(--gt-text-muted);
   padding: 4px 8px;
@@ -124,7 +124,7 @@
 }
 
 .sensorActivePill {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
   color: var(--gt-accent-cyan-glow);
@@ -213,11 +213,11 @@
 }
 
 .phaseLabel {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-size: 9px;
   font-weight: 600;
   fill: var(--gt-text-subtle);
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
 .gridLine {
@@ -236,14 +236,14 @@
 }
 
 .tickLabelY {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   fill: var(--gt-text-subtle);
   text-anchor: end;
 }
 
 .tickLabelX {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
   fill: var(--gt-text-subtle);
   text-anchor: middle;
@@ -315,11 +315,11 @@
 }
 
 .treatmentBadgeText {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-size: 9px;
   font-weight: 700;
   fill: var(--caution-text);
-  letter-spacing: 0.06em;
+  letter-spacing: 0;
 }
 
 .crosshairLine {
@@ -357,7 +357,7 @@
 }
 
 .tooltipYear {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-size: 13px;
   color: var(--gt-text-primary);
 }
@@ -380,19 +380,19 @@
 }
 
 .tooltipValObs {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-weight: 600;
   color: var(--gt-series-observed);
 }
 
 .tooltipValSyn {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-weight: 600;
   color: var(--gt-series-synthetic);
 }
 
 .tooltipValGap {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-weight: 600;
   color: var(--caution-text);
 }
@@ -409,7 +409,7 @@
 }
 
 .tooltipValEnv {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   color: var(--gt-series-synthetic);
 }
 
@@ -433,14 +433,14 @@
 }
 
 .diagLabel {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-size: 10px;
   color: var(--gt-text-subtle);
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
 }
 
 .diagVal {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-sans);
   font-weight: 600;
   color: var(--gt-text-secondary);
 }

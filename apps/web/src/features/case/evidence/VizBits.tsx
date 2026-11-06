@@ -72,7 +72,7 @@ export function FitAndPDonuts({ items, viz }: { items: Evidence[]; viz: Verifica
           max={1}
           tone={p.significant === false ? 'caution' : 'accent'}
           label={`Placebo p-value ${p.p}`}
-          caption={p.level === undefined ? 'Placebo p-value' : `Placebo p-value (level ${p.level})`}
+          caption={p.level === undefined ? 'Placebo p-value' : `Placebo p-value (level ${Number(p.level.toFixed(3))})`}
         />
       )}
     </div>
