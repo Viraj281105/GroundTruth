@@ -14,10 +14,12 @@ baseline. That evaluation has not been run; no comparative claim is made here.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Protocol, runtime_checkable
 
 from groundtruth.contracts.errors import ConfigurationError
 from groundtruth.platform.config import Settings
+from groundtruth.platform.reports.anthropic_provider import AnthropicNarrator
 
 
 @runtime_checkable
@@ -95,12 +97,6 @@ class OpenAINarrator(_HttpNarrator):
     name = "openai"
 
 
-class AnthropicNarrator(_HttpNarrator):
-    """Anthropic narrator."""
-
-    name = "anthropic"
-
-
 def build_narrator(settings: Settings) -> Narrator | None:
     """Construct the configured narrator, or ``None`` if narration is disabled.
 
@@ -126,7 +122,7 @@ def build_narrator(settings: Settings) -> Narrator | None:
         "openai": "https://api.openai.com/v1",
         "anthropic": "https://api.anthropic.com/v1",
     }
-    classes: dict[str, type[_HttpNarrator]] = {
+    classes: dict[str, Callable[..., Narrator]] = {
         "nugen": NugenNarrator,
         "openai": OpenAINarrator,
         "anthropic": AnthropicNarrator,
