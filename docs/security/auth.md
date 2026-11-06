@@ -28,3 +28,5 @@ Run migrations (`0006` adds `users`, `sessions`) before starting. With no databa
 - `GET /auth/me` answers 200 `auth_required=false` when auth is off and no database exists (instead of 503), so the web app can start.
 - The CSRF check rejects an unsafe request that has the session cookie and no `Origin`/`Referer`.
 - A signed-in admin can create accounts through `POST /auth/register` when registration is closed.
+- The login limiter is keyed per (email, IP). One IP can still try a few passwords against many different accounts (password spraying) without hitting a limit; add a per-IP limiter or put a reverse-proxy rate limit in front before exposing this publicly.
+- Sign-in and sign-up requests carry no session cookie, so the origin check does not apply to them. That leaves "login CSRF" (an attacker's page signing a victim into the attacker's account) to `SameSite=Lax` and CORS alone. Acceptable for this stage; consider an `Origin` check on `/auth/login` too.
