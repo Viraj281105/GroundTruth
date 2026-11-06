@@ -230,6 +230,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/claims/analyze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extract quantitative claims from text
+         * @description Extract claims with spans; set them beside the case's figures when available.
+         */
+        post: operations["analyze_claims_claims_analyze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -429,6 +449,42 @@ export interface components {
             status: string;
             /** Has Known Reference */
             has_known_reference: boolean;
+        };
+        /** ClaimComparison */
+        ClaimComparison: {
+            /** Claim Kind */
+            claim_kind: string;
+            /** Claimed */
+            claimed: number;
+            /** Estimated */
+            estimated: number | null;
+            /** Note */
+            note: string;
+        };
+        /** ClaimSpan */
+        ClaimSpan: {
+            /** Start */
+            start: number;
+            /** End */
+            end: number;
+            /** Text */
+            text: string;
+        };
+        /** ClaimsRequest */
+        ClaimsRequest: {
+            /** Text */
+            text: string;
+            /** Case Id */
+            case_id?: string | null;
+        };
+        /** ClaimsResponse */
+        ClaimsResponse: {
+            /** Claims */
+            claims: components["schemas"]["ExtractedClaim"][];
+            /** Comparisons */
+            comparisons: components["schemas"]["ClaimComparison"][];
+            /** Disclaimer */
+            disclaimer: string;
         };
         /**
          * Confidence
@@ -664,6 +720,16 @@ export interface components {
             provenance_method: string;
             /** Provenance Fingerprint */
             provenance_fingerprint: string;
+        };
+        /** ExtractedClaim */
+        ExtractedClaim: {
+            /** Kind */
+            kind: string;
+            /** Value */
+            value: number;
+            /** Unit */
+            unit: string;
+            span: components["schemas"]["ClaimSpan"];
         };
         /**
          * FieldChange
@@ -1946,6 +2012,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    analyze_claims_claims_analyze_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimsResponse"];
+                };
+            };
+            /** @description Unknown case. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -21,6 +21,7 @@ from groundtruth.contracts.errors import CaseDefinitionError, DataUnavailableErr
 from groundtruth.contracts.result import AnalysisResult, EngineStatus, ErrorCode
 from groundtruth.engine import ENGINE_VERSION, describe_engine, run_analysis
 from groundtruth.observability import setup_telemetry
+from groundtruth.platform.api.claims import router as claims_router
 from groundtruth.platform.api.events import router as events_router
 from groundtruth.platform.api.jobs import router as jobs_router
 from groundtruth.platform.api.openapi_schema import install_openapi
@@ -67,6 +68,7 @@ app.include_router(runs_router)
 app.include_router(jobs_router)
 app.include_router(events_router)
 app.include_router(tiles_router)
+app.include_router(claims_router)
 
 # The frontend's TypeScript types are generated from this schema (issue #17); the served
 # /openapi.json and the committed snapshot are built by the same function.

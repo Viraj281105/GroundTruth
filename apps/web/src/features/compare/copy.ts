@@ -1,0 +1,26 @@
+/** English copy for the compare view. Neutral wording (R2). */
+export const COMPARE_COPY = {
+  title: 'Compare two cases',
+  intro: 'Place two cases side by side. Only values the API returned are shown; anything else reads "not available".',
+  caseA: 'Case A',
+  caseB: 'Case B',
+  choose: 'Choose a case',
+  swap: 'Swap',
+  share: 'Copy link',
+  copied: 'Link copied',
+  notAvailable: 'not available',
+  notAvailableHint: 'No stored run is attached to this view.',
+  loadError: 'The case service could not be reached. Nothing is shown rather than guessing.',
+  unknownCase: 'This case was not found.',
+  emptyTitle: 'Pick two cases',
+  emptyBody: 'Choose a case in each selector to compare them. The address updates so you can share the pair.',
+  rows: {
+    effect: 'Effect',
+    uncertainty: 'Uncertainty',
+    donors: 'Donor pool size',
+    fit: 'Pre-period fit',
+    placebo: 'Placebo p-value',
+    verdict: 'Verdict',
+    area: 'Registered project area',
+  },
+} as const;

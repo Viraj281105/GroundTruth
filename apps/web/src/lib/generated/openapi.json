@@ -818,6 +818,58 @@
         }
       }
     },
+    "/claims/analyze": {
+      "post": {
+        "tags": [
+          "claims"
+        ],
+        "summary": "Extract quantitative claims from text",
+        "description": "Extract claims with spans; set them beside the case's figures when available.",
+        "operationId": "analyze_claims_claims_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -1307,6 +1359,119 @@
         ],
         "title": "CaseSummary",
         "description": "A case as listed by the API."
+      },
+      "ClaimComparison": {
+        "properties": {
+          "claim_kind": {
+            "type": "string",
+            "title": "Claim Kind"
+          },
+          "claimed": {
+            "type": "number",
+            "title": "Claimed"
+          },
+          "estimated": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "claim_kind",
+          "claimed",
+          "estimated",
+          "note"
+        ],
+        "title": "ClaimComparison"
+      },
+      "ClaimSpan": {
+        "properties": {
+          "start": {
+            "type": "integer",
+            "title": "Start"
+          },
+          "end": {
+            "type": "integer",
+            "title": "End"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "end",
+          "text"
+        ],
+        "title": "ClaimSpan"
+      },
+      "ClaimsRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ClaimsRequest"
+      },
+      "ClaimsResponse": {
+        "properties": {
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedClaim"
+            },
+            "type": "array",
+            "title": "Claims"
+          },
+          "comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/ClaimComparison"
+            },
+            "type": "array",
+            "title": "Comparisons"
+          },
+          "disclaimer": {
+            "type": "string",
+            "title": "Disclaimer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "claims",
+          "comparisons",
+          "disclaimer"
+        ],
+        "title": "ClaimsResponse"
       },
       "Confidence": {
         "properties": {
@@ -1800,6 +1965,33 @@
         ],
         "title": "EvidenceSnapshot",
         "description": "An evidence item as one side of the diff saw it."
+      },
+      "ExtractedClaim": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "span": {
+            "$ref": "#/components/schemas/ClaimSpan"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "value",
+          "unit",
+          "span"
+        ],
+        "title": "ExtractedClaim"
       },
       "FieldChange": {
         "properties": {
