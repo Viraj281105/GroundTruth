@@ -1,0 +1,46 @@
+name: security
+
+on:
+  pull_request:
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+      - name: pip-audit
+        continue-on-error: true
+        run: |
+          pip install pip-audit==2.7.3
+          pip install ./packages/groundtruth
+          pip-audit
+      - uses: actions/setup-node@v4.1.0
+        with:
+          node-version: "20"
+      - name: npm audit
+        continue-on-error: true
+        working-directory: apps/web
+        run: npm audit --omit=dev
+      - name: Trivy fs scan
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+      - name: Syft SBOM
+        continue-on-error: true
+        uses: anchore/sbom-action@v0.17.7
+        with:
+          path: .
+          format: spdx-json
+          artifact-name: sbom.spdx.json
