@@ -8,12 +8,13 @@ neutral: a difference warrants accredited review and is not a finding about any 
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from groundtruth.claims import Claim, ClaimKind, compare_claims, extract_claims
 from groundtruth.contracts.errors import CaseDefinitionError
 from groundtruth.platform.api.schemas import MessageErrorBody
+from groundtruth.platform.auth.deps import require_role
 from groundtruth.platform.cases.registry import get_case
 
 router = APIRouter(tags=["claims"])
@@ -72,6 +73,7 @@ def _to_model(claim: Claim) -> ExtractedClaim:
     "/claims/analyze",
     response_model=ClaimsResponse,
     summary="Extract quantitative claims from text",
+    dependencies=[Depends(require_role("user"))],
     responses={404: {"model": MessageErrorBody, "description": "Unknown case."}},
 )
 def analyze_claims(body: ClaimsRequest) -> ClaimsResponse:

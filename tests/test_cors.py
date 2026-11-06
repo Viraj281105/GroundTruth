@@ -65,7 +65,9 @@ class TestMiddleware:
         [cors] = [m for m in app.user_middleware if m.cls is CORSMiddleware]
         assert cors.kwargs["allow_origins"] == get_settings().cors_origins
         assert "*" not in cors.kwargs["allow_origins"]
-        assert cors.kwargs["allow_credentials"] is False
+        assert (
+            cors.kwargs["allow_credentials"] is True
+        )  # cookie auth (docs/security/auth.md); origins stay exact
 
     def _preflight(self, origin: str, method: str = "POST") -> tuple[int, dict[str, str]]:
         with TestClient(app) as client:
