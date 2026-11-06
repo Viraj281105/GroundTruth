@@ -1,0 +1,13 @@
+.section { padding-block: var(--space-16); }
+.section h2 { margin-bottom: var(--space-8); }
+.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-5); }
+@media (min-width: 48rem) { .steps { grid-template-columns: repeat(3, 1fr); } }
+.steps h3 { font-size: var(--text-xl); margin: var(--space-3) 0 var(--space-2); }
+.steps p { color: var(--text-secondary); line-height: var(--leading-normal); }
+.num { display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: var(--radius-full); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.term { margin-top: var(--space-3); font-size: var(--text-sm); }
+.row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); flex-wrap: wrap; }
+.row h2 { margin-bottom: var(--space-8); }
+.grid { display: grid; gap: var(--space-5); grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); }
+.fail { color: var(--text-secondary); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-4); }
+.status { color: var(--text-muted); font-size: var(--text-sm); padding-block: var(--space-8) var(--space-16); border-top: 1px solid var(--border-subtle); }
