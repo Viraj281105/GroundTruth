@@ -1,6 +1,7 @@
 import React from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
+import { ShellOverlays } from './ShellOverlays';
 
 /** App chrome: skip link, sticky header (with the permanent simulated-data chip), page, footer. */
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -14,6 +15,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <Footer />
+      <ShellOverlays />
     </>
   );
 }

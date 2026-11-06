@@ -13,6 +13,8 @@ const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', dis
 const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-plex-mono', display: 'swap' });
 
 export const metadata: Metadata = {
+  manifest: '/manifest.webmanifest',
+  icons: { icon: '/icon.svg' },
   title: { default: 'GroundTruth — Independent causal verification', template: '%s · GroundTruth' },
   description:
     'Independent causal screening of carbon-credit and ecosystem restoration claims, with full provenance. Every number is traceable; divergence is a reason for review, never a finding of wrongdoing.',

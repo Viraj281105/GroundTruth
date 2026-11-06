@@ -1,0 +1,10 @@
+{
+  "name": "GroundTruth",
+  "short_name": "GroundTruth",
+  "description": "Independent causal screening of carbon-credit and restoration claims.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf9f5",
+  "theme_color": "#1b6a4c",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

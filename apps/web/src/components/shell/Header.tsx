@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { Menu, Search, X } from 'lucide-react';
+import { OPEN_PALETTE_EVENT } from './ShellOverlays';
 import { Chip } from '../ds/Chip';
 import { ThemeToggle } from './ThemeToggle';
 import { LensSwitch } from './LensSwitch';
@@ -57,6 +58,11 @@ export function Header() {
           <Chip tone="sim" dot title={t('sim.explain')}>
             {t('sim.chip')}
           </Chip>
+          <button type="button" className={styles.search} onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))} aria-label="Open command palette">
+            <Search size={16} aria-hidden="true" />
+            <span className={styles.searchLabel}>Search</span>
+            <kbd>⌘K</kbd>
+          </button>
           <div className={styles.lens}>
             <LensSwitch />
           </div>
