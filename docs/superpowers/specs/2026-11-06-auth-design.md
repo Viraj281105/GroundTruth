@@ -18,8 +18,10 @@ runs (needs a schema change to jobs; recorded as a follow-up), multi-factor auth
 
 `users(id uuid pk, email text unique (stored lowercased), password_hash text, role text, is_active bool, created_at, last_login_at)`
 `sessions(id uuid pk, user_id fk, token_hash text unique, created_at, expires_at, revoked_at null, user_agent text null)`
-Roles: `viewer` (can sign in, cannot run), `analyst` (default for new accounts: can run analyses and use claims),
-`admin` (analyst + manage users). **The first registered account becomes `admin`.** New migration `0006`.
+Roles (three): `user` (default for new accounts: can run analyses and use claims), `dev` (everything a user can do,
+plus developer areas: System status, API docs link, engine/worker health and job internals), `admin` (dev + manage users
+and roles). Rank: user < dev < admin. **The first registered account becomes `admin`.** New migration `0006`.
+No separate read-only role: browsing is public.
 
 ## Security rules
 
@@ -54,19 +56,19 @@ Roles: `viewer` (can sign in, cannot run), `analyst` (default for new accounts: 
 | `GET /auth/me` | any | → `{auth_required: bool, registration_open: bool, user: UserView\|null}` |
 | `POST /auth/change-password` | signed in | `{current_password, new_password}` → 204 |
 | `GET /auth/users` | admin | → `UserView[]` |
-| `PATCH /auth/users/{id}` | admin | `{role?, is_active?}` → `UserView`; cannot demote/deactivate the last active admin |
+| `PATCH /auth/users/{id}` | admin | `{role?: 'user'|'dev'|'admin', is_active?}` → `UserView`; cannot demote/deactivate the last active admin |
 
 `UserView = {id, email, role, is_active, created_at, last_login_at}`.
 Errors use the existing `ApiErrorBody` shape with codes: `invalid_credentials`, `email_taken`,
 `weak_password`, `too_many_attempts`, `unauthenticated` (401), `forbidden` (403),
 `csrf_origin_rejected`, `registration_closed`.
-Protected (require role ≥ analyst when `AUTH_REQUIRED`): `POST /jobs`, `POST /jobs/{id}/cancel`,
+Protected (require role ≥ user, i.e. any signed-in account, when `AUTH_REQUIRED`): `POST /jobs`, `POST /jobs/{id}/cancel`,
 `POST /cases/{id}/verify`, `POST /claims/analyze`. Everything else is unchanged and public.
 
 ## Web
 
 `AuthProvider` loads `/auth/me` (credentials included) on start. Header shows **Sign in** or a user
-menu (initial, email, role Chip, Account, Admin if admin, Sign out). Pages: `/login`, `/register`,
+menu (initial, email, role Chip, Account, How it works, System status for dev/admin, Admin for admin, Sign out). Method and Status are no longer in the main navigation. Pages: `/login`, `/register`,
 `/account` (profile, change password, sign out), `/admin/users` (admin only: role and active
 toggles). A `RequireAuth` gate on `/cases/[id]/run` and `/claims` shows a clear "Sign in to run
 analyses" card with a link to `/login?next=…`; after login the user returns to `next` (same-origin
