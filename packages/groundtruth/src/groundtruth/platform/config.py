@@ -95,6 +95,21 @@ class Settings(BaseSettings):
         ),
     )
 
+    # --- authentication (docs/security/auth.md) ----------------------------
+    auth_required: bool = Field(
+        default=False,
+        description="Enforce sign-in on protected endpoints (env AUTH_REQUIRED).",
+    )
+    auth_allow_registration: bool = Field(
+        default=True, description="Allow POST /auth/register (env AUTH_ALLOW_REGISTRATION)."
+    )
+    auth_cookie_secure: bool = Field(
+        default=False,
+        description="Set the Secure flag on the session cookie (env AUTH_COOKIE_SECURE). "
+        "Must be true behind HTTPS.",
+    )
+    auth_session_days: int = Field(default=7, ge=1, le=90)
+
     # --- analysis defaults -------------------------------------------------
     min_pre_periods: int = Field(
         default=5, description="Minimum pre-treatment periods required for a synthetic control."

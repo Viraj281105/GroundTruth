@@ -34,7 +34,7 @@
 
 .svgWrapper {
   width: 100%;
-  background-color: #070c17;
+  background-color: var(--surface-sunken);
   border: 1px solid var(--gt-border-subtle);
   border-radius: var(--gt-radius-md);
   padding: 8px 4px 4px 4px;
@@ -47,7 +47,7 @@
 }
 
 .gridLine {
-  stroke: rgba(255, 255, 255, 0.05);
+  stroke: color-mix(in srgb, var(--text-muted) 5%, transparent);
   stroke-dasharray: 4 4;
 }
 
@@ -66,38 +66,38 @@
 }
 
 .bar {
-  fill: rgba(129, 140, 248, 0.35);
-  stroke: rgba(129, 140, 248, 0.6);
+  fill: color-mix(in srgb, var(--series-synthetic) 35%, transparent);
+  stroke: color-mix(in srgb, var(--series-synthetic) 60%, transparent);
   stroke-width: 1;
   rx: 2;
   transition: fill 0.2s ease;
 }
 
 .bar:hover {
-  fill: rgba(129, 140, 248, 0.6);
+  fill: color-mix(in srgb, var(--series-synthetic) 60%, transparent);
 }
 
 .barWithProject {
-  fill: rgba(245, 158, 11, 0.25);
-  stroke: rgba(245, 158, 11, 0.5);
+  fill: color-mix(in srgb, var(--caution-text) 25%, transparent);
+  stroke: color-mix(in srgb, var(--caution-text) 50%, transparent);
 }
 
 .projectLine {
-  stroke: #f59e0b;
+  stroke: var(--caution-text);
   stroke-width: 2.5;
   stroke-dasharray: 4 2;
 }
 
 .projectPin {
-  fill: #f59e0b;
-  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
+  fill: var(--caution-text);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--caution-text) 60%, transparent));
 }
 
 .projectLabel {
   font-family: var(--gt-font-mono);
   font-size: 10px;
   font-weight: 700;
-  fill: #fbbf24;
+  fill: var(--caution-text);
   letter-spacing: 0.04em;
 }
 

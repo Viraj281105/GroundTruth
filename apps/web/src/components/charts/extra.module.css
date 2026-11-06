@@ -1,0 +1,7 @@
+.svg { display: block; width: 100%; height: auto; overflow: visible; }
+.axis { stroke: var(--border-default); stroke-width: 1; }
+.zero { stroke: var(--border-strong); stroke-dasharray: 3 3; }
+.tick { fill: var(--text-muted); font-size: 10px; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+.mark { fill: var(--accent); font-size: 11px; font-weight: 600; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+.empty { color: var(--text-muted); font-size: var(--text-sm); }
+.lbl { fill: var(--text-secondary); font-size: 11px; font-family: var(--font-sans); }

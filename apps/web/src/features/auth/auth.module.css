@@ -1,0 +1,47 @@
+.page { max-width: 34rem; margin: 0 auto; padding: var(--space-8) 0 var(--space-12); display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+.wide { max-width: 64rem; }
+.title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 600; letter-spacing: var(--tracking-tight); margin: 0; }
+.muted { color: var(--text-muted); font-size: var(--text-sm); margin: 0; }
+.gate { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-6) 0; }
+.gateCard { display: flex; flex-direction: column; gap: var(--space-4); max-width: 36rem; margin: var(--space-8) auto; }
+.gateTitle { font-family: var(--font-display); font-size: var(--text-xl); margin: 0; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); }
+.link { color: var(--accent-strong); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; border-radius: var(--radius-sm); }
+.link:focus-visible, .toggle:focus-visible, .input:focus-visible, .select:focus-visible, .switch:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.form { display: flex; flex-direction: column; gap: var(--space-4); }
+.field { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.label { font-size: var(--text-sm); font-weight: 600; color: var(--text-secondary); }
+.inputWrap { position: relative; display: flex; }
+.input { width: 100%; min-width: 0; padding: 0.7rem 0.85rem; font: inherit; font-size: var(--text-base); color: var(--text-primary); background: var(--surface-base); border: 1px solid var(--border-strong); border-radius: var(--radius-md); }
+.inputWrap .input { padding-right: 4.5rem; }
+.invalid { border-color: var(--danger-border); }
+.toggle { position: absolute; right: var(--space-2); top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: var(--accent-strong); font: inherit; font-size: var(--text-sm); font-weight: 600; cursor: pointer; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); }
+.hint { font-size: var(--text-xs); color: var(--text-muted); margin: 0; }
+.error { color: var(--danger-text); background: var(--danger-bg); border: 1px solid var(--danger-border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); font-size: var(--text-sm); margin: 0; overflow-wrap: anywhere; }
+.fieldError { color: var(--danger-text); font-size: var(--text-xs); margin: 0; }
+.meter { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-1); }
+.meter span { height: 0.3rem; border-radius: var(--radius-full); background: var(--surface-sunken); border: 1px solid var(--border-subtle); }
+.meter .on1 { background: var(--danger-text); }
+.meter .on2 { background: var(--caution-text); }
+.meter .on3, .meter .on4 { background: var(--ok-text); }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); font-size: var(--text-xs); color: var(--text-muted); }
+.checks .ok { color: var(--ok-text); }
+.dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-2) var(--space-5); margin: 0; font-size: var(--text-sm); }
+.dl dt { color: var(--text-muted); }
+.dl dd { margin: 0; overflow-wrap: anywhere; }
+.roles { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.roles li { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-sm); color: var(--text-secondary); }
+.table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.table th { text-align: left; color: var(--text-muted); font-weight: 600; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border-default); }
+.table td { padding: var(--space-3); border-bottom: 1px solid var(--border-subtle); vertical-align: middle; overflow-wrap: anywhere; }
+.cards { display: none; }
+.userCard { display: flex; flex-direction: column; gap: var(--space-3); }
+.select { padding: 0.45rem 0.6rem; font: inherit; font-size: var(--text-sm); color: var(--text-primary); background: var(--surface-base); border: 1px solid var(--border-strong); border-radius: var(--radius-md); }
+.switch { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); cursor: pointer; }
+.switch input { width: 1.1rem; height: 1.1rem; accent-color: var(--accent); }
+@media (max-width: 720px) {
+  .table { display: none; }
+  .cards { display: grid; gap: var(--space-3); }
+  .dl { grid-template-columns: 1fr; gap: var(--space-1); }
+  .dl dd { margin-bottom: var(--space-2); }
+}

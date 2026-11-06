@@ -16,6 +16,7 @@ import createClient from "openapi-fetch";
 
 import { API_BASE_URL } from "./api";
 import type { components, paths } from "./generated/schema";
+import { withSessionWatch } from "./session-events";
 
 /** Every schema the API declares, by name: `Schemas["RunDetail"]`, `Schemas["JobView"]`. */
 export type Schemas = components["schemas"];
@@ -33,7 +34,9 @@ export interface ApiClientOptions {
 export function createApiClient(options: ApiClientOptions = {}) {
   return createClient<paths>({
     baseUrl: options.baseUrl ?? API_BASE_URL,
-    ...(options.fetch ? { fetch: options.fetch } : {}),
+    // Cookie sessions: send the HttpOnly session cookie. A 401 announces an expired session.
+    credentials: "include",
+    fetch: options.fetch ?? withSessionWatch((...a) => globalThis.fetch(...a)),
   });
 }
 

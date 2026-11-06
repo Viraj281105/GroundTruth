@@ -25,6 +25,7 @@ from groundtruth.contracts.result import AnalysisStatus
 from groundtruth.platform.api.dependencies import get_jobs, store_errors
 from groundtruth.platform.api.errors import ApiErrorBody, ApiErrorCode, api_error
 from groundtruth.platform.api.schemas import JobSubmission, JobView, SubmitJobRequest
+from groundtruth.platform.auth.deps import require_role
 from groundtruth.platform.cases.registry import get_case
 from groundtruth.platform.config import get_settings
 from groundtruth.platform.jobs.interface import JobControl
@@ -51,6 +52,7 @@ def _not_found(run_id: str):  # type: ignore[no-untyped-def]
     response_model=JobSubmission,
     status_code=202,
     summary="Queue an analysis",
+    dependencies=[Depends(require_role("user"))],
     responses={
         200: {"model": JobSubmission, "description": "An existing result or job answers it."},
         404: {"model": ApiErrorBody, "description": "Unknown case."},
@@ -129,6 +131,7 @@ def get_job(run_id: str, response: Response, jobs: Jobs) -> JobView:
     "/{run_id}/cancel",
     response_model=JobView,
     summary="Cancel a job",
+    dependencies=[Depends(require_role("user"))],
     responses={
         200: {"model": JobView, "description": "Cancelled (or already cancelled)."},
         202: {"model": JobView, "description": "Running: cancel requested, not yet honoured."},

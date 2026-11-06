@@ -1,0 +1,86 @@
+.figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mapWrap {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+
+.map {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 20rem;
+}
+
+/* maplibre's own stylesheet is not bundled; these are the rules the canvas needs. */
+.map :global(.maplibregl-canvas-container),
+.map :global(.maplibregl-canvas) {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.map :global(.maplibregl-canvas) {
+  outline: none;
+}
+
+.map:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.caption {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.empty,
+.error {
+  margin: 0;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.empty {
+  background: var(--neutral-bg);
+  border: 1px solid var(--neutral-border);
+  color: var(--neutral-text);
+}
+
+.error {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
+}
+
+.fallback {
+  margin: 0;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+}
+
+.fallback dt {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+.fallback dd {
+  margin: 0;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}

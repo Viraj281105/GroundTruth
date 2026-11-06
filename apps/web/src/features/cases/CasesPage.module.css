@@ -1,0 +1,10 @@
+.page { padding-block: var(--space-12) var(--space-16); }
+.intro { color: var(--text-secondary); max-width: var(--reading-width); margin: var(--space-3) 0 var(--space-8); line-height: var(--leading-relaxed); }
+.demo { color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-6); }
+.error { border: 1px solid var(--border-default); border-left: 4px solid var(--danger, var(--border-strong)); background: var(--surface-raised); border-radius: var(--radius-lg); padding: var(--space-6); }
+.error h2 { font-size: var(--text-xl); margin-bottom: var(--space-2); }
+.error p { color: var(--text-secondary); margin-bottom: var(--space-4); }
+.retry { color: var(--accent); font-weight: 600; text-underline-offset: 0.2em; }
+.retry:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.skelGrid { display: grid; gap: var(--space-5); grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); }
+.skelCard { background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: var(--space-5); display: grid; gap: var(--space-3); }

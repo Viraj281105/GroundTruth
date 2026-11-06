@@ -1,99 +1,110 @@
-/* GroundTruth Visual Design System Tokens
- * Orbital Causal Intelligence Console
- * Synthesizing Orbital Intelligence, Scientific Observatory, and Evidence Command Center.
+/* GroundTruth design tokens — three tiers.
+ *   1. Reference   (--ref-*)   raw palette and scales; never used by components.
+ *   2. Semantic    (--*)       meaning-based, switched per theme in themes.css.
+ *   3. Compat      (--gt-*)    legacy names mapped onto the semantic tokens so
+ *                              not-yet-migrated components follow the theme too.
+ * Components use tier 2 only. No raw hex or px magic numbers in component CSS.
  */
 
 :root {
-  /* Canvas Base & Void Backgrounds */
-  --gt-bg-root: #06090e;              /* Abyssal void baseline */
-  --gt-bg-surface: #0b111a;           /* Tier 0 sub-canvas */
-  --gt-bg-card: rgba(15, 23, 36, 0.85);/* Tier 1 slate glass (85% opacity) */
-  --gt-bg-card-hover: rgba(19, 29, 46, 0.90);
-  --gt-bg-subtle: #101726;            /* Recessed telemetry inputs/rows */
-  --gt-bg-overlay: rgba(6, 9, 14, 0.88);/* Backdrop blur overlay */
+  /* ---- Tier 1: reference scales ---------------------------------------- */
+  --ref-paper-50: #fbf9f5;  --ref-paper-100: #f4f1ea;  --ref-paper-200: #e8e3d8;
+  --ref-paper-300: #d6cfbf; --ref-paper-500: #8b8577;
+  --ref-ink-900: #19211d;   --ref-ink-700: #424d47;    --ref-ink-600: #5a655f;
+  --ref-night-950: #0d1210; --ref-night-900: #131a17;  --ref-night-850: #19221e;
+  --ref-night-800: #1f2a25; --ref-night-700: #2b3832;  --ref-night-600: #3b4a43;
+  --ref-mist-100: #edf0ea;  --ref-mist-300: #b7c1ba;   --ref-mist-400: #8f9b94;
+  --ref-green-700: #1b6a4c; --ref-green-600: #237f5d;  --ref-green-300: #62c79d;
+  --ref-amber-700: #a64b06; --ref-amber-300: #e8a653;
+  --ref-red-700: #b42318;   --ref-red-300: #f2897e;
+  --ref-violet-700: #6d3fd1; --ref-violet-300: #b9a2ff;
+  --ref-slate-700: #4b5a6b; --ref-slate-300: #a9b8c9;
 
-  /* Hair-Thin Optical Borders */
-  --gt-border-subtle: rgba(30, 41, 59, 0.5);     /* 1px structural container divider */
-  --gt-border-default: rgba(148, 163, 184, 0.14); /* 1px glass card perimeter */
-  --gt-border-strong: rgba(148, 163, 184, 0.25);  /* 1px highlighted container */
-  --gt-border-cyan-trace: rgba(6, 182, 212, 0.25);/* 1px telemetry highlight */
-  --gt-border-focus: #06b6d4;                     /* Cyan focus ring */
+  /* ---- Scales (theme independent) -------------------------------------- */
+  --space-0: 0;
+  --space-1: 0.25rem; --space-2: 0.5rem;  --space-3: 0.75rem; --space-4: 1rem;
+  --space-5: 1.25rem; --space-6: 1.5rem;  --space-8: 2rem;    --space-10: 2.5rem;
+  --space-12: 3rem;   --space-16: 4rem;   --space-20: 5rem;   --space-24: 6rem;
 
-  /* Typography Colors */
-  --gt-text-primary: #f1f5f9;           /* Pure optical white for headers */
-  --gt-text-secondary: #cbd5e1;         /* Silver-gray for analytical body */
-  --gt-text-muted: #94a3b8;             /* Dim telemetry labels */
-  --gt-text-subtle: #64748b;             /* Subdued structural text */
-  --gt-text-mono: #94a3b8;              /* Telemetry numbers & coordinates */
-  --gt-text-inverse: #06090e;
+  --text-xs: 0.75rem;   --text-sm: 0.875rem; --text-base: 1rem;    --text-lg: 1.125rem;
+  --text-xl: 1.375rem;  --text-2xl: 1.75rem; --text-3xl: 2.25rem;  --text-4xl: 3rem;
+  --text-5xl: 4rem;
+  --leading-tight: 1.15; --leading-snug: 1.3; --leading-normal: 1.55; --leading-relaxed: 1.7;
+  --tracking-tight: -0.02em; --tracking-wide: 0.04em;
 
-  /* Scientific Accents & Domain Colors */
-  --gt-accent-cyan: #06b6d4;            /* Primary telemetry vector */
-  --gt-accent-cyan-glow: #22d3ee;       /* Active observed satellite line */
-  --gt-accent-cyan-dim: #083344;
-  --gt-accent-cyan-alpha: rgba(34, 211, 238, 0.12);
+  --radius-sm: 0.375rem; --radius-md: 0.625rem; --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;  --radius-full: 999px;
 
-  --gt-accent-forest: #10b981;          /* Biomass, counterfactual, verified */
-  --gt-accent-forest-dim: #064e3b;
-  --gt-accent-forest-glow: rgba(16, 185, 129, 0.22);
+  --duration-fast: 120ms; --duration-base: 200ms; --duration-slow: 360ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 
-  /* Series Colors (Load-bearing: clearly distinguish observed vs counterfactual) */
-  --gt-series-observed: #22d3ee;        /* Cyan: Observed real-world satellite line */
-  --gt-series-synthetic: #34d399;       /* Emerald: Synthetic counterfactual spline */
-  --gt-series-envelope: rgba(52, 211, 153, 0.12); /* Shaded 95% sensitivity envelope polygon */
-  --gt-series-gap: rgba(245, 158, 11, 0.14);      /* Shaded post-period divergence (amber) */
-  --gt-series-pre-bg: rgba(6, 182, 212, 0.025);   /* Pre-intervention calibration zone */
-  --gt-series-post-bg: rgba(52, 211, 153, 0.035); /* Post-intervention causal divergence zone */
+  --content-width: 72rem;     /* reading + dashboard container */
+  --reading-width: 42rem;     /* long-form prose */
+  --header-height: 3.75rem;
+  --z-header: 40; --z-overlay: 60; --z-toast: 80;
 
-  /* Verdict & Status Tones
-   * RULE: INCONCLUSIVE is neutral (slate/cyan-tinted).
-   * RULE: DIVERGENT is amber (warrants review, NEVER alarm red).
-   * RULE: Red is reserved solely for system errors.
-   */
-  --gt-verdict-consistent-bg: rgba(16, 185, 129, 0.10);
-  --gt-verdict-consistent-border: rgba(52, 211, 153, 0.4);
-  --gt-verdict-consistent-text: #34d399;
-
-  --gt-verdict-divergent-bg: rgba(245, 158, 11, 0.10);
-  --gt-verdict-divergent-border: rgba(245, 158, 11, 0.4);
-  --gt-verdict-divergent-text: #fbbf24;
-
-  --gt-verdict-inconclusive-bg: rgba(148, 163, 184, 0.10);
-  --gt-verdict-inconclusive-border: rgba(148, 163, 184, 0.4);
-  --gt-verdict-inconclusive-text: #cbd5e1;
-
-  /* Simulated Banner (Unmissable warning) */
-  --gt-banner-simulated-bg: rgba(69, 26, 3, 0.85);
-  --gt-banner-simulated-border: #f59e0b;
-  --gt-banner-simulated-text: #fef3c7;
-  --gt-banner-simulated-badge: #d97706;
-
-  /* System Error (Malfunction only) */
-  --gt-error-bg: rgba(239, 68, 68, 0.12);
-  --gt-error-border: rgba(239, 68, 68, 0.4);
-  --gt-error-text: #f87171;
-
-  /* Typography Stacks */
-  --gt-font-display: 'Space Grotesk', 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-  --gt-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --gt-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, monospace;
-
-  /* Sizing & Radius (Soft-Rectilinear Level 1) */
-  --gt-radius-xs: 2px;
-  --gt-radius-sm: 4px;
-  --gt-radius-md: 6px;
-  --gt-radius-lg: 8px;
-  --gt-radius-xl: 12px;
-  --gt-radius-full: 9999px;
-
-  /* Shadows & Highlights */
-  --gt-shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--gt-border-default);
-  --gt-shadow-elevated: 0 16px 40px -4px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--gt-border-strong);
-  --gt-shadow-glow-cyan: 0 0 16px rgba(6, 182, 212, 0.25);
-  --gt-shadow-glow-amber: 0 0 16px rgba(245, 158, 11, 0.25);
-
-  /* Transitions */
-  --gt-transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
-  --gt-transition-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
-  --gt-transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* ---- Tier 3: legacy --gt-* names -> semantic tokens ------------------- */
+  --gt-bg-root: var(--surface-base);
+  --gt-bg-surface: var(--surface-sunken);
+  --gt-bg-card: var(--surface-raised);
+  --gt-bg-card-hover: var(--surface-hover);
+  --gt-bg-subtle: var(--surface-sunken);
+  --gt-bg-overlay: var(--surface-overlay);
+  --gt-border-subtle: var(--border-subtle);
+  --gt-border-default: var(--border-default);
+  --gt-border-strong: var(--border-strong);
+  --gt-border-cyan-trace: var(--accent-soft-border);
+  --gt-border-focus: var(--focus-ring);
+  --gt-text-primary: var(--text-primary);
+  --gt-text-secondary: var(--text-secondary);
+  --gt-text-muted: var(--text-muted);
+  --gt-text-subtle: var(--text-muted);
+  --gt-text-mono: var(--text-muted);
+  --gt-text-inverse: var(--text-on-accent);
+  --gt-accent-cyan: var(--accent);
+  --gt-accent-cyan-glow: var(--accent-strong);
+  --gt-accent-cyan-dim: var(--accent-soft);
+  --gt-accent-cyan-alpha: var(--accent-soft);
+  --gt-accent-forest: var(--accent);
+  --gt-accent-forest-dim: var(--accent-soft);
+  --gt-accent-forest-glow: var(--accent-soft);
+  --gt-series-observed: var(--series-observed);
+  --gt-series-synthetic: var(--series-synthetic);
+  --gt-series-envelope: var(--series-envelope);
+  --gt-series-gap: var(--series-gap);
+  --gt-series-pre-bg: var(--series-pre);
+  --gt-series-post-bg: var(--series-post);
+  --gt-verdict-consistent-bg: var(--ok-bg);
+  --gt-verdict-consistent-border: var(--ok-border);
+  --gt-verdict-consistent-text: var(--ok-text);
+  --gt-verdict-divergent-bg: var(--caution-bg);
+  --gt-verdict-divergent-border: var(--caution-border);
+  --gt-verdict-divergent-text: var(--caution-text);
+  --gt-verdict-inconclusive-bg: var(--neutral-bg);
+  --gt-verdict-inconclusive-border: var(--neutral-border);
+  --gt-verdict-inconclusive-text: var(--neutral-text);
+  --gt-banner-simulated-bg: var(--sim-bg);
+  --gt-banner-simulated-border: var(--sim-border);
+  --gt-banner-simulated-text: var(--sim-text);
+  --gt-banner-simulated-badge: var(--sim-solid);
+  --gt-error-bg: var(--danger-bg);
+  --gt-error-border: var(--danger-border);
+  --gt-error-text: var(--danger-text);
+  --gt-font-display: var(--font-display);
+  --gt-font-sans: var(--font-sans);
+  --gt-font-mono: var(--font-mono);
+  --gt-radius-xs: 0.25rem;
+  --gt-radius-sm: var(--radius-sm);
+  --gt-radius-md: var(--radius-md);
+  --gt-radius-lg: var(--radius-lg);
+  --gt-radius-xl: var(--radius-xl);
+  --gt-radius-full: var(--radius-full);
+  --gt-shadow-card: var(--shadow-1);
+  --gt-shadow-elevated: var(--shadow-3);
+  --gt-shadow-glow-cyan: var(--shadow-2);
+  --gt-shadow-glow-amber: var(--shadow-2);
+  --gt-transition-fast: var(--duration-fast) var(--ease-out);
+  --gt-transition-normal: var(--duration-base) var(--ease-out);
+  --gt-transition-slow: var(--duration-slow) var(--ease-out);
 }

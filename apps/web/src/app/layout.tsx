@@ -1,68 +1,50 @@
 import React from 'react';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import { Fraunces, Inter, IBM_Plex_Mono } from 'next/font/google';
 import '../styles/globals.css';
-import { AppHeader } from '../components/layout/AppHeader';
-import { SimulatedBanner } from '../components/ui/SimulatedBanner';
+import { AppShell } from '../components/shell/AppShell';
+import { ThemeProvider } from '../lib/theme';
+import { LensProvider } from '../lib/lens';
+import { AuthProvider } from '../lib/auth';
+import { ToastProvider } from '../components/ds/Overlay';
+import { themeInitScript } from '../lib/theme-core';
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', display: 'swap' });
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-plex-mono', display: 'swap' });
 
 export const metadata: Metadata = {
-  title: 'GroundTruth — Independent Causal Verification for Climate Restoration',
+  manifest: '/manifest.webmanifest',
+  icons: { icon: '/icon.svg' },
+  title: { default: 'GroundTruth — Independent causal verification', template: '%s · GroundTruth' },
   description:
-    'Evidence-based causal impact verification for carbon-credit and ecosystem restoration projects. Generates verified evidence bundles with complete provenance.',
+    'Independent causal screening of carbon-credit and ecosystem restoration claims, with full provenance. Every number is traceable; divergence is a reason for review, never a finding of wrongdoing.',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#fbf9f5' },
+    { media: '(prefers-color-scheme: dark)', color: '#0d1210' },
+  ],
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${fraunces.variable} ${plexMono.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Sets data-theme before first paint so dark-mode visitors never see a light flash. */}
+        <script dangerouslySetInnerHTML={{ __html: `${themeInitScript}document.documentElement.classList.add('js');` }} />
+      </head>
       <body>
-        {/* UNMISSABLE, NON-DISMISSIBLE SIMULATED DATA BANNER (Strict Rule 1) */}
-        <SimulatedBanner />
-
-        {/* Global Navigation Header */}
-        <AppHeader />
-
-        {/* Main Application Content */}
-        <main className="gt-main-content">{children}</main>
-
-        {/* Scientific Grounding Footer */}
-        <footer style={{
-          borderTop: '1px solid var(--gt-border-subtle)',
-          padding: '32px 20px',
-          marginTop: '64px',
-          backgroundColor: 'var(--gt-bg-surface)',
-          fontSize: '12px',
-          color: 'var(--gt-text-subtle)',
-        }}>
-          <div className="gt-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-              <div>
-                <strong style={{ color: 'var(--gt-text-secondary)' }}>GroundTruth Causal Impact Verifier</strong>
-                <p style={{ marginTop: '2px' }}>
-                  An open, reproducible screening and decision-support system. Benchmarked against third-party registry investigations.
-                </p>
-              </div>
-              <div style={{ fontFamily: 'var(--gt-font-mono)', fontSize: '11px', color: 'var(--gt-text-muted)' }}>
-                CONTRACT: v0.2.0 · ENGINE: v0.2.0 · SOLVER: FISTA
-              </div>
-            </div>
-            <div style={{
-              borderTop: '1px solid var(--gt-border-subtle)',
-              paddingTop: '12px',
-              display: 'flex',
-              gap: '24px',
-              flexWrap: 'wrap',
-              fontSize: '11px',
-              color: 'var(--gt-text-muted)'
-            }}>
-              <span>• NDVI is not carbon stock</span>
-              <span>• Observed change is not causal effect without identifying assumptions</span>
-              <span>• Model divergence is a trigger for accredited review, never a finding of fraud</span>
-            </div>
-          </div>
-        </footer>
+        <ThemeProvider>
+          <LensProvider>
+            <ToastProvider>
+              <AuthProvider>
+                <AppShell>{children}</AppShell>
+              </AuthProvider>
+            </ToastProvider>
+          </LensProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

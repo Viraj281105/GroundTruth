@@ -133,6 +133,53 @@ moves, update this table in the same change.
 
 ---
 
+## Extensions added in the platform-expansion pass
+
+"Implemented" here means written, unit-tested offline and in CI. Anything that needs
+an external service is marked **Not verified live**: no analysis of a real project
+has been run, and none of these paths has been exercised against real data.
+
+| Capability | Status | Notes |
+| --- | --- | --- |
+| STAC scene search and odc-stac loader (`data_access/stac.py`) | Implemented, **not verified live** | Tested against a fake client only; not wired into the engine |
+| DuckDB/Parquet store, Zarr I/O (`data_access/`) | Implemented | Needs the `eo` extra; tests skip without it |
+| Dagster asset definitions (`data_access/pipelines.py`) | Implemented, **not verified live** | Needs the `pipelines` extra; test skipped without it |
+| Augmented synthetic control, conformal intervals, E-value / sensitivity bounds | Implemented, **not wired into the verdict** | Available as library functions; the assembler's gate chain is unchanged. `full_sample` conformal is not jackknife+ |
+| pysyncon / DoWhy cross-check adapters | Implemented, **not verified live** | Optional deps not exercised in CI |
+| Parallel placebo executor (serial, process pool, Dask, Ray) | Implemented (serial, process); Dask/Ray **not verified live** | Not yet used by the placebo suite |
+| Embedding-based donor similarity | Implemented | Needs user-supplied vectors; no embedding model is bundled |
+| Redis (arq) job queue, Temporal workflow | Implemented, **not verified live** | Off unless `REDIS_URL` is set; transitions are not atomic |
+| SSE job progress, boundary GeoJSON, PostGIS vector tiles | Implemented | Tiles need a `case_boundaries` PostGIS table that no migration creates yet |
+| Anthropic narrator provider | Implemented, **not verified live** | Mocked HTTP only; output still passes the grounding verifier (R4) |
+| Claim extraction, retrieval and comparison (`claims/`) | Implemented | Heuristic text extraction; served by `POST /claims/analyze` and the `/claims` page. Only project area is compared against a case record today; other claim kinds show no estimate |
+| Evidence-bundle manifests, cosign signing, DVC config | Implemented, signing **not verified live** | Needs the cosign binary |
+| OpenTelemetry, Grafana/Tempo/Prometheus stack, Helm chart | Implemented, **not verified live** | Compose overlay and chart never started; no job-duration metric yet |
+| Docker images and compose stack | Implemented | Built and run locally |
+
+## UI rework (apps/web)
+
+Light/dark design system, multi-page flow and lenses. All numbers still come from the simulated
+fixture or the API; nothing is computed in the browser (R6). See `docs/ui-data-gaps.md`.
+
+| Capability | Status | Notes |
+| --- | --- | --- |
+| Design tokens, light and dark themes (no flash), `system` default | Implemented | Three-tier tokens with a `--gt-*` compatibility layer |
+| Story / Explorer / Auditor detail levels, shared glossary | Implemented | Persisted locally; `?lens=` override |
+| Routes: home, cases, case overview / evidence / robustness / method / report / run, compare, claims, method, status | Implemented | Results and charts need `NEXT_PUBLIC_DEMO_MODE=true`: the API serves no series, placebo or donor geometry |
+| Run Theatre (stepper, live stage progress) | Implemented, **not verified live** | SSE with polling fallback; tested against fakes only |
+| Counterfactual Playground | Partly implemented | Scrubs only data the API returns; true re-fitting needs API support |
+| Donor map (MapLibre) | Implemented | Boundary only; donor shading needs donor geometry the data does not have |
+| Command palette, shortcuts, tour, recently viewed, web manifest | Implemented | Hindi and Marathi cover navigation and core labels only |
+| Landing page (problem, how it works, features, AI flow, FAQ) with scroll reveals | Implemented | Illustrative SVGs are labelled; the Verra/Kariba figure is attributed to Verra |
+| Chart kit (token-based SVG) and charts on cases, overview, evidence, robustness, compare, status, claims, method, run | Implemented | Only values the API or fixtures return are drawn; Kariba is the only case with fixture series |
+| Floating navigation; Method and Status moved into the account menu | Implemented | Status link shown to developers and admins |
+| Accounts: email + password, cookie sessions, roles `user` / `dev` / `admin`, admin user management | Implemented | `AUTH_REQUIRED` is on in `docker-compose.yml` and off by default in code. No password reset, no per-user run ownership; see `docs/security/auth.md` |
+| Sign-in required to run analyses and use the claims workbench; Status limited to developers | Implemented | The Status gate is client-side only; `/health` and `/runs` stay public API endpoints |
+| Offline service worker, Pyodide in-browser reproduction, shareable evidence cards | **Not built** | Cut from the first pass |
+| Playwright e2e and visual specs | Written, **not run** | Needs a browser download; baselines are not committed |
+
+---
+
 ## Deliberately not building
 
 | | Why |
