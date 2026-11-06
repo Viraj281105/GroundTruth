@@ -1,8 +1,8 @@
 import React from 'react';
-import { PageStub } from '../../../../components/shell/PageStub';
+import { RunFlow } from '../../../../features/run/RunFlow';
 
-export const metadata = { title: 'run' };
+export const metadata = { title: 'Run an analysis' };
 
-export default function Page() {
-  return <PageStub title="run" summary="This section is being built." />;
+export default function Page({ params }: { params: { id: string } }) {
+  return <RunFlow caseId={params.id} />;
 }

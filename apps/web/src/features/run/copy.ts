@@ -1,0 +1,66 @@
+/** English copy for the run flow. Wording stays neutral: no certainty, no accusation. */
+export const runCopy = {
+  title: "Run an analysis",
+  steps: ["Configure", "Run", "Results"],
+  configure: {
+    heading: "What will be run",
+    case: "Case",
+    dataMode: "Data mode",
+    simulated: "Simulated. No real satellite data is used.",
+    seed: "Seed",
+    seedNote: "Fixed by the server, so the same inputs give the same result.",
+    spec: "Specification",
+    donors: "Minimum comparison areas",
+    start: "Start analysis",
+    starting: "Starting",
+  },
+  run: {
+    heading: "Run in progress",
+    elapsed: "Elapsed",
+    cancel: "Cancel run",
+    cancelling: "Cancelling",
+    simulatedBadge: "Simulated run",
+    waiting: "Waiting for the first stage to report.",
+  },
+  stageLabels: {
+    ingest: "Load data",
+    load: "Load data",
+    donor_pool: "Choose comparison areas",
+    donors: "Choose comparison areas",
+    fit: "Fit the comparison",
+    synthetic_control: "Fit the comparison",
+    placebo: "Placebo checks",
+    robustness: "Robustness checks",
+    report: "Write the report",
+  } as Record<string, string>,
+  results: {
+    heading: "Analysis complete",
+    headline: "Headline",
+    evidence: "Open the evidence",
+    overview: "Back to overview",
+    again: "Run again",
+  },
+  outcomes: {
+    refused: {
+      title: "The engine declined to produce an estimate",
+      fallback: "The inputs did not meet the conditions needed for a trustworthy comparison.",
+      next: "Review the evidence and method pages, adjust the inputs, then run again.",
+    },
+    failed: {
+      title: "The run did not finish",
+      fallback: "Something went wrong while the analysis was running.",
+      next: "Try again. If it keeps happening, check the status page.",
+    },
+    cancelled: {
+      title: "The run was cancelled",
+      fallback: "You stopped this run before it finished. No result was recorded.",
+      next: "Start a new run whenever you are ready.",
+    },
+    unreachable: {
+      title: "The analysis service could not be reached",
+      fallback: "No analysis was run and nothing was changed.",
+      next: "Check that the API is running, then try again.",
+    },
+  },
+  retry: "Try again",
+} as const;
