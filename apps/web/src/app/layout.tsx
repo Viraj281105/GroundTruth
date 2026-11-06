@@ -5,6 +5,7 @@ import '../styles/globals.css';
 import { AppShell } from '../components/shell/AppShell';
 import { ThemeProvider } from '../lib/theme';
 import { LensProvider } from '../lib/lens';
+import { AuthProvider } from '../lib/auth';
 import { ToastProvider } from '../components/ds/Overlay';
 import { themeInitScript } from '../lib/theme-core';
 
@@ -32,13 +33,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${inter.variable} ${fraunces.variable} ${plexMono.variable}`} suppressHydrationWarning>
       <head>
         {/* Sets data-theme before first paint so dark-mode visitors never see a light flash. */}
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: `${themeInitScript}document.documentElement.classList.add('js');` }} />
       </head>
       <body>
         <ThemeProvider>
           <LensProvider>
             <ToastProvider>
-              <AppShell>{children}</AppShell>
+              <AuthProvider>
+                <AppShell>{children}</AppShell>
+              </AuthProvider>
             </ToastProvider>
           </LensProvider>
         </ThemeProvider>

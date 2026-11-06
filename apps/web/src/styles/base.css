@@ -61,6 +61,16 @@ kbd { padding: 0.1em 0.45em; border: 1px solid var(--border-default); border-bot
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: var(--radius-full); border: 2px solid var(--surface-base); }
 
+/* Scroll reveal: hidden only when JS is on and motion is allowed, so no-JS and reduced-motion users see everything. */
+@media (prefers-reduced-motion: no-preference) {
+  .js [data-reveal] { transition: opacity 700ms var(--ease-out) var(--reveal-delay, 0ms), transform 800ms var(--ease-out) var(--reveal-delay, 0ms); will-change: opacity, transform; }
+  .js [data-reveal]:not([data-in]) { opacity: 0; }
+  .js [data-reveal="up"]:not([data-in]) { transform: translateY(1.75rem); }
+  .js [data-reveal="left"]:not([data-in]) { transform: translateX(-2rem); }
+  .js [data-reveal="right"]:not([data-in]) { transform: translateX(2rem); }
+  .js [data-reveal="scale"]:not([data-in]) { transform: scale(0.94); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
