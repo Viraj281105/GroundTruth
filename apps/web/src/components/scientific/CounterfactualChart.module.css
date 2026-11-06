@@ -165,7 +165,7 @@
   width: 12px;
   height: 12px;
   background-color: var(--gt-series-gap);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  border: 1px solid color-mix(in srgb, var(--caution-text) 40%, transparent);
   border-radius: 2px;
 }
 
@@ -173,14 +173,14 @@
   width: 12px;
   height: 12px;
   background-color: var(--gt-series-envelope);
-  border: 1px solid rgba(52, 211, 153, 0.4);
+  border: 1px solid color-mix(in srgb, var(--ok-text) 40%, transparent);
   border-radius: 2px;
 }
 
 .legendTreatmentLine {
   width: 14px;
   height: 2px;
-  background-color: #f59e0b;
+  background-color: var(--caution-text);
 }
 
 .legendText {
@@ -194,7 +194,7 @@
   width: 100%;
   overflow: hidden;
   border-radius: var(--gt-radius-md);
-  background-color: #06090e;
+  background-color: var(--surface-sunken);
   border: 1px solid var(--gt-border-subtle);
 }
 
@@ -221,17 +221,17 @@
 }
 
 .gridLine {
-  stroke: rgba(255, 255, 255, 0.05);
+  stroke: color-mix(in srgb, var(--text-muted) 5%, transparent);
   stroke-dasharray: 4 4;
 }
 
 .gridLineV {
-  stroke: rgba(255, 255, 255, 0.04);
+  stroke: color-mix(in srgb, var(--text-muted) 4%, transparent);
   stroke-dasharray: 2 4;
 }
 
 .treatmentGrid {
-  stroke: rgba(245, 158, 11, 0.35);
+  stroke: color-mix(in srgb, var(--caution-text) 35%, transparent);
   stroke-dasharray: 3 3;
 }
 
@@ -250,7 +250,7 @@
 }
 
 .treatmentTick {
-  fill: #f59e0b;
+  fill: var(--caution-text);
   font-weight: 600;
 }
 
@@ -261,7 +261,7 @@
 
 .envelopePolygon {
   fill: var(--gt-series-envelope);
-  stroke: rgba(52, 211, 153, 0.35);
+  stroke: color-mix(in srgb, var(--ok-text) 35%, transparent);
   stroke-width: 1;
   stroke-dasharray: 3 3;
 }
@@ -277,7 +277,7 @@
   fill: none;
   stroke: var(--gt-series-observed);
   stroke-width: 2.6;
-  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.35));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 35%, transparent));
 }
 
 .hitArea {
@@ -295,7 +295,7 @@
 }
 
 .dotHover {
-  filter: drop-shadow(0 0 8px #fff);
+  filter: drop-shadow(0 0 8px var(--text-primary));
 }
 
 .treatmentBoundaryGroup {
@@ -303,14 +303,14 @@
 }
 
 .treatmentLine {
-  stroke: #f59e0b;
+  stroke: var(--caution-text);
   stroke-width: 2;
   stroke-dasharray: 5 4;
 }
 
 .treatmentBadgeBg {
-  fill: rgba(245, 158, 11, 0.15);
-  stroke: rgba(245, 158, 11, 0.5);
+  fill: color-mix(in srgb, var(--caution-text) 15%, transparent);
+  stroke: color-mix(in srgb, var(--caution-text) 50%, transparent);
   stroke-width: 1;
 }
 
@@ -318,12 +318,12 @@
   font-family: var(--gt-font-mono);
   font-size: 9px;
   font-weight: 700;
-  fill: #fbbf24;
+  fill: var(--caution-text);
   letter-spacing: 0.06em;
 }
 
 .crosshairLine {
-  stroke: rgba(255, 255, 255, 0.4);
+  stroke: color-mix(in srgb, var(--text-muted) 40%, transparent);
   stroke-width: 1;
   stroke-dasharray: 3 3;
 }
@@ -332,13 +332,13 @@
 .hoverTooltip {
   position: absolute;
   transform: translate(-50%, -120%);
-  background-color: rgba(11, 17, 26, 0.94);
+  background-color: color-mix(in srgb, var(--surface-overlay) 94%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--gt-border-default);
   border-radius: var(--gt-radius-md);
   padding: 10px 14px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 12px 36px color-mix(in srgb, var(--text-primary) 65%, transparent);
   pointer-events: none;
   z-index: 50;
   display: flex;
@@ -394,7 +394,7 @@
 .tooltipValGap {
   font-family: var(--gt-font-mono);
   font-weight: 600;
-  color: #fbbf24;
+  color: var(--caution-text);
 }
 
 .tooltipEnvelope {

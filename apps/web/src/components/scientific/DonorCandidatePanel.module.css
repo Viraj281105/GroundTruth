@@ -78,7 +78,7 @@
   letter-spacing: 0.02em;
   color: var(--gt-text-muted);
   border-bottom: 1px solid var(--gt-border-subtle);
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: color-mix(in srgb, var(--text-primary) 20%, transparent);
   white-space: nowrap;
 }
 

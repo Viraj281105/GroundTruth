@@ -1,8 +1,8 @@
 import React from 'react';
-import { PageStub } from '../../../../components/shell/PageStub';
+import { EvidenceView } from '../../../../features/case/evidence/EvidenceView';
 
-export const metadata = { title: 'evidence' };
+export const metadata = { title: 'Evidence' };
 
 export default function Page() {
-  return <PageStub title="evidence" summary="This section is being built." />;
+  return <EvidenceView />;
 }

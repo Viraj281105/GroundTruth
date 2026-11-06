@@ -1,8 +1,8 @@
 import React from 'react';
-import { PageStub } from '../../../../components/shell/PageStub';
+import { RobustnessView } from '../../../../features/case/robustness/RobustnessView';
 
-export const metadata = { title: 'robustness' };
+export const metadata = { title: 'Robustness' };
 
 export default function Page() {
-  return <PageStub title="robustness" summary="This section is being built." />;
+  return <RobustnessView />;
 }
