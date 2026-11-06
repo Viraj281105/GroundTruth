@@ -1,0 +1,72 @@
+import type { VerdictLabel } from '../../../lib/types';
+
+/** English UI copy for the case overview. Wording follows R2: screening, never accusation. */
+export const overviewCopy = {
+  verdictKicker: 'Screening outcome',
+  verdict: {
+    consistent_with_claim: {
+      title: 'Consistent with the developer claim',
+      plain: 'The independent estimate agrees with the registered claim within the screening tolerance.',
+      tone: 'accent',
+    },
+    divergent_from_claim: {
+      title: 'Divergent from the developer claim',
+      plain: 'The independent estimate differs from the registered claim by more than the screening tolerance. This warrants accredited review.',
+      tone: 'caution',
+    },
+    inconclusive: {
+      title: 'Inconclusive',
+      plain: 'An effect was estimated, but this screening cannot compare it with the registered claim.',
+      tone: 'neutral',
+    },
+    not_assessed: {
+      title: 'Not assessed',
+      plain: 'No completed analysis is available for this case yet.',
+      tone: 'neutral',
+    },
+  } satisfies Record<VerdictLabel, { title: string; plain: string; tone: 'accent' | 'caution' | 'neutral' }>,
+  divergenceLabel: 'Estimate relative to claim',
+  headlineTitle: 'Headline effect',
+  chartTitle: 'Observed against counterfactual',
+  chartDesc: 'Observed values and the estimated counterfactual over time. The dashed line marks the start of the project.',
+  chartObserved: 'Observed',
+  chartCounterfactual: 'Counterfactual',
+  chartNone: 'No time series was returned for this case, so no chart is shown.',
+  factsTitle: 'Three things to check first',
+  factDonors: 'Donor pool size',
+  factFit: 'Pre-period fit (RMSPE)',
+  factPlacebo: 'Placebo p-value',
+  factDonorsHint: 'comparable regions',
+  factFitHint: 'lower is a closer match',
+  factPlaceboHint: 'smaller stands out more',
+  whatIsThis: 'What is this?',
+  notMeasured: 'Not measured',
+  meaningTitle: 'What this does and does not mean',
+  meaning: [
+    'This is a screening estimate of what the project achieved beyond what likely would have happened anyway.',
+    'It is not a finding about intent or conduct, and it is not a substitute for accredited field review.',
+    'Satellite greenness is not carbon. Any carbon figure needs a separate biomass model with its own uncertainty.',
+  ],
+  nextTitle: 'Next steps',
+  nextRun: 'Run analysis',
+  nextEvidence: 'See the evidence',
+  nextMethod: 'Read the method',
+  caveatsTitle: 'Caveats that travel with this result',
+  rationaleTitle: 'Why',
+  inconclusiveTitle: 'Why this is inconclusive',
+  inconclusiveBody:
+    'This is a legitimate outcome, not a failure. The effect was estimated on a satellite index, and the registered claim is in carbon. The system does not convert one into the other without a biomass model.',
+  refusedTitle: 'The analysis was not run',
+  refusedLead:
+    'The engine refused to produce an estimate rather than fit one on data that cannot support it. This is a designed outcome, not an error.',
+  refusedFix: 'What would unblock it',
+  notRunTitle: 'No result to show yet',
+  notRunBody: 'No stored analysis result is available for this case. Run the analysis to produce one.',
+  provenanceTitle: 'Provenance',
+  runId: 'Run id',
+  specHash: 'Specification hash',
+  dataMode: 'Data mode',
+  engineVersion: 'Engine version',
+  contractVersion: 'Contract version',
+  evidenceCount: 'Evidence items',
+} as const;
