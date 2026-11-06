@@ -1,0 +1,38 @@
+name: sign-evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Run id that uploaded the evidence bundle artifact"
+        required: true
+      artifact:
+        description: "Artifact name containing manifest.json"
+        required: true
+        default: evidence-bundle
+
+permissions:
+  contents: read
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/download-artifact@v4.1.8
+        with:
+          name: ${{ inputs.artifact }}
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: bundle
+      - uses: sigstore/cosign-installer@v3.7.0
+      - name: Keyless sign (OIDC)
+        run: cosign sign-blob --yes --bundle bundle/manifest.sigstore.json bundle/manifest.json
+      - uses: actions/upload-artifact@v4.4.3
+        with:
+          name: signed-evidence
+          path: bundle/
