@@ -1,7 +1,20 @@
 /** English copy for "How it works". Neutral wording (R2): no accusation, no certainty. */
 export const METHOD_COPY = {
   title: 'How it works',
-  intro: 'GroundTruth estimates what would likely have happened to a piece of land without a project, then sets that estimate beside what the project reports. This page explains each step, what the AI does and does not do, and where the method stops being reliable.',
+  intro: 'From satellite data to a verified report, in seven stages.',
+  pipeline: {
+    alt: 'Pipeline in seven stages: data, donor pool, synthetic twin, estimate, placebo and robustness checks, evidence bundle, narration verified against the evidence.',
+    caption: 'Every number in the final report is traced to the evidence bundle; narration cannot add one.',
+    nodes: [
+      { label: 'Data', sub: 'satellite series' },
+      { label: 'Donor pool', sub: 'similar land' },
+      { label: 'Synthetic twin', sub: 'weighted blend' },
+      { label: 'Estimate', sub: 'gap + uncertainty' },
+      { label: 'Stress tests', sub: 'placebo, robustness' },
+      { label: 'Evidence', sub: 'bundle of numbers' },
+      { label: 'Narration', sub: 'verified' },
+    ],
+  },
   steps: {
     title: 'The method in three steps',
     items: [

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, EmptyState, Skeleton } from '../../components/ds';
+import { BarList } from '../../components/charts';
+import { claimPairs } from './pairs';
 import { getCases } from '../../lib/api';
 import type { CaseSummary } from '../../lib/types';
 import { CLAIMS_COPY as C } from './copy';
@@ -155,7 +157,33 @@ function Panel({ state, active, setActive }: { state: State; active: number | nu
           );
         })}
       </ul>
+      <PairChart data={data} />
       <p className={styles.hint}>{data.disclaimer}</p>
     </div>
+  );
+}
+
+function PairChart({ data }: { data: ClaimsResponse }) {
+  const pairs = claimPairs(data);
+  if (pairs.length === 0) return <p className={styles.note}>{C.pairsNone}</p>;
+  return (
+    <Card tone="sunken">
+      <h3 style={{ fontSize: 'var(--text-base)', margin: '0 0 var(--space-3)' }}>{C.pairsTitle}</h3>
+      <div className={styles.field}>
+        {pairs.map((p) => (
+          <div key={p.index}>
+            <p className={styles.pairLabel}>{C.kinds[p.kind] ?? p.kind} ({p.unit})</p>
+            <BarList
+              label={`${C.kinds[p.kind] ?? p.kind}: stated ${fmt(p.claimed)} ${p.unit}, comparison ${fmt(p.estimated)} ${p.unit}`}
+              items={[
+                { label: C.pairClaimed, value: p.claimed, tone: 'caution', display: fmt(p.claimed) },
+                { label: C.pairEstimated, value: p.estimated, tone: 'synthetic', display: fmt(p.estimated) },
+              ]}
+            />
+          </div>
+        ))}
+      </div>
+      <p className={styles.hint}>{C.pairsScale}</p>
+    </Card>
   );
 }

@@ -11,3 +11,13 @@
 .grid { display: grid; gap: var(--space-5); grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); }
 .fail { color: var(--text-secondary); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-4); }
 .status { color: var(--text-muted); font-size: var(--text-sm); padding-block: var(--space-8) var(--space-16); border-top: 1px solid var(--border-subtle); }
+
+.strip { display: grid; gap: var(--space-6); padding-block: var(--space-8); align-items: center; }
+@media (min-width: 48rem) { .strip { grid-template-columns: 1fr 1fr; } }
+.strip h2 { margin: 0 0 var(--space-4); }
+.stripBody, .stripChart { background: var(--surface-raised); border: 1px solid var(--border-default); border-radius: var(--radius-lg); padding: var(--space-5); min-width: 0; }
+.stripKicker { color: var(--sim-text); font-size: var(--text-sm); margin: 0 0 var(--space-2); font-weight: 600; }
+.stripNums { display: flex; flex-wrap: wrap; gap: var(--space-6); margin: 0 0 var(--space-4); }
+.stripNums dt { color: var(--text-muted); font-size: var(--text-sm); }
+.stripNums dd { margin: 0; font-size: var(--text-xl); font-weight: 700; }
+.stripNote { color: var(--text-muted); font-size: var(--text-xs); margin: var(--space-2) 0 0; }

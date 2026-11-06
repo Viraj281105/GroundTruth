@@ -12,3 +12,16 @@
 .sim p { margin: var(--space-2) 0 0; }
 .error { background: var(--danger-bg); border: 1px solid var(--danger-border); color: var(--danger-text); padding: var(--space-4); border-radius: var(--radius-md); }
 .error p { margin: var(--space-2) 0 0; }
+
+.caps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); gap: var(--space-4); }
+.cap { display: grid; gap: var(--space-2); justify-items: start; padding: var(--space-4); background: var(--surface-raised); border: 1px solid var(--border-default); border-radius: var(--radius-lg); color: var(--text-muted); }
+.capOn { color: var(--accent); border-color: var(--accent); }
+.capLabel { color: var(--text-primary); font-weight: 600; overflow-wrap: anywhere; }
+.runs { display: grid; gap: var(--space-5); }
+.h3 { font-size: var(--text-base); margin: 0 0 var(--space-2); color: var(--text-secondary); }
+.cols { list-style: none; margin: 0; padding: 0; display: flex; align-items: stretch; gap: var(--space-2); height: 9rem; overflow: hidden; }
+.colItem { flex: 1 1 0; min-width: 0; max-width: 3rem; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; }
+.colBar { width: 100%; background: var(--accent); border-radius: var(--radius-sm) var(--radius-sm) 0 0; min-height: 4px; }
+.colNum, .colDay { font-size: var(--text-xs); color: var(--text-muted); }
+.rowMeta { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; justify-content: flex-end; color: var(--text-muted); font-size: var(--text-sm); }
+.colTrack { flex: 1 1 auto; width: 100%; display: flex; align-items: flex-end; }

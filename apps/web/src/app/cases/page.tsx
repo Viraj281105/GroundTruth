@@ -1,8 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
-import { getCases } from '../../lib/api';
+import { getCases, getVisualizationFixture } from '../../lib/api';
 import type { CaseSummary } from '../../lib/types';
 import { Chip } from '../../components/ds';
+import { observedSeriesMap } from '../../features/cases/viz';
 import { CasesBrowser } from '../../features/cases/CasesBrowser';
 import { casesCopy as c } from '../../features/cases/copy';
 import styles from '../../features/cases/CasesPage.module.css';
@@ -33,7 +34,7 @@ export default async function CasesPage() {
           <Link href="/cases" className={styles.retry}>{c.retry}</Link>
         </div>
       ) : (
-        <CasesBrowser cases={cases} />
+        <CasesBrowser cases={cases} series={observedSeriesMap(cases.map((x) => x.case_id), getVisualizationFixture)} />
       )}
     </div>
   );
