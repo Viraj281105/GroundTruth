@@ -1,0 +1,46 @@
+# One command: docker compose up --build   (or ./run.ps1 docker / ./run.sh docker)
+# Web  -> http://localhost:3000     API -> http://localhost:8000/docs
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: groundtruth
+      POSTGRES_PASSWORD: groundtruth
+      POSTGRES_DB: groundtruth
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U groundtruth"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
+    env_file: [{ path: .env, required: false }]
+    environment:
+      DATABASE_URL: postgresql+psycopg://groundtruth:groundtruth@postgres/groundtruth
+      FRONTEND_URL: http://localhost:3000
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+    ports: ["8000:8000"]
+    depends_on: { postgres: { condition: service_healthy } }
+
+  worker:
+    build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
+    command: ["python", "-m", "apps.worker.main", "--migrate"]
+    env_file: [{ path: .env, required: false }]
+    environment:
+      DATABASE_URL: postgresql+psycopg://groundtruth:groundtruth@postgres/groundtruth
+    depends_on: { postgres: { condition: service_healthy } }
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_DEMO_MODE: "false"
+    ports: ["3000:3000"]
+    depends_on: [api]
+
+volumes:
+  pgdata:

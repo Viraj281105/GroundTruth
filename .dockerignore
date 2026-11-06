@@ -1,0 +1,16 @@
+.git
+.venv
+.claude
+.mypy_cache
+.pytest_cache
+.ruff_cache
+**/__pycache__
+**/node_modules
+**/.next
+**/*.tsbuildinfo
+.env
+data/raw
+data/interim
+data/processed
+notebooks
+experiments
