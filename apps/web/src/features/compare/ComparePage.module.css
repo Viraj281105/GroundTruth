@@ -20,3 +20,10 @@
 .chartsTitle { font-size: var(--text-2xl); margin: 0; }
 .h3 { font-size: var(--text-base); margin: 0 0 var(--space-3); }
 .charts .cols { grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
+
+.rowsList { display: flex; flex-direction: column; }
+.rowItem { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-5); border-bottom: 1px solid var(--border-subtle); }
+.rowItem:last-child { border-bottom: 0; }
+.rowItem dt { color: var(--text-muted); font-size: var(--text-sm); }
+.rowItem dd { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 600; text-align: right; }
+.note { color: var(--text-muted); font-size: var(--text-sm); max-width: var(--reading-width); }

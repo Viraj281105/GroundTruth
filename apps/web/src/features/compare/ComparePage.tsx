@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Button, Card, EmptyState, Skeleton, Stat } from '../../components/ds';
+import { Button, Card, EmptyState, Skeleton } from '../../components/ds';
 import { getCaseDetail, getCases, getVisualizationFixture } from '../../lib/api';
 import type { CaseDetail, CaseSummary } from '../../lib/types';
 import { buildCaseViz } from '../cases/viz';
@@ -38,19 +38,22 @@ function Column({ id, load }: { id: string; load: Load }) {
   if (load.phase === 'loading') return <Skeleton height="14rem" />;
   if (load.phase === 'error') return <div className={styles.error} role="alert">{C.loadError}</div>;
   if (!load.detail) return <div className={styles.error} role="alert">{C.unknownCase}</div>;
+  const rows = compareRows(load.detail);
   return (
     <div className={styles.col}>
       <h2 className={styles.colTitle}>{load.detail.name}</h2>
       <p className={styles.meta}>{load.detail.country} · {load.detail.standard} · {id}</p>
-      {compareRows(load.detail).map((row) => (
-        <Card key={row.key} tone="sunken">
-          <Stat
-            label={row.label}
-            value={row.value ?? <span className={styles.missing}>{C.notAvailable}</span>}
-            hint={row.value === null ? C.notAvailableHint : undefined}
-          />
-        </Card>
-      ))}
+      <Card tone="raised" padded={false}>
+        <dl className={styles.rowsList}>
+          {rows.map((row) => (
+            <div key={row.key} className={styles.rowItem}>
+              <dt>{row.label}</dt>
+              <dd className="num">{row.value ?? <span className={styles.missing} aria-label={C.notAvailable}>—</span>}</dd>
+            </div>
+          ))}
+        </dl>
+      </Card>
+      {rows.some((r) => r.value === null) && <p className={styles.note}>{C.notAvailableNote}</p>}
     </div>
   );
 }

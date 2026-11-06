@@ -10,6 +10,7 @@ export const COMPARE_COPY = {
   copied: 'Link copied',
   notAvailable: 'not available',
   notAvailableHint: 'No stored run is attached to this view.',
+  notAvailableNote: 'A dash means the API returned no value for this case. Open the case and run an analysis to see its results here.',
   loadError: 'The case service could not be reached. Nothing is shown rather than guessing.',
   unknownCase: 'This case was not found.',
   emptyTitle: 'Pick two cases',
