@@ -170,6 +170,11 @@ fixture or the API; nothing is computed in the browser (R6). See `docs/ui-data-g
 | Counterfactual Playground | Partly implemented | Scrubs only data the API returns; true re-fitting needs API support |
 | Donor map (MapLibre) | Implemented | Boundary only; donor shading needs donor geometry the data does not have |
 | Command palette, shortcuts, tour, recently viewed, web manifest | Implemented | Hindi and Marathi cover navigation and core labels only |
+| Landing page (problem, how it works, features, AI flow, FAQ) with scroll reveals | Implemented | Illustrative SVGs are labelled; the Verra/Kariba figure is attributed to Verra |
+| Chart kit (token-based SVG) and charts on cases, overview, evidence, robustness, compare, status, claims, method, run | Implemented | Only values the API or fixtures return are drawn; Kariba is the only case with fixture series |
+| Floating navigation; Method and Status moved into the account menu | Implemented | Status link shown to developers and admins |
+| Accounts: email + password, cookie sessions, roles `user` / `dev` / `admin`, admin user management | Implemented | `AUTH_REQUIRED` is on in `docker-compose.yml` and off by default in code. No password reset, no per-user run ownership; see `docs/security/auth.md` |
+| Sign-in required to run analyses and use the claims workbench; Status limited to developers | Implemented | The Status gate is client-side only; `/health` and `/runs` stay public API endpoints |
 | Offline service worker, Pyodide in-browser reproduction, shareable evidence cards | **Not built** | Cut from the first pass |
 | Playwright e2e and visual specs | Written, **not run** | Needs a browser download; baselines are not committed |
 
