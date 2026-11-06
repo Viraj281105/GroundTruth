@@ -2,12 +2,11 @@
 
 Deployment and runtime infrastructure. **Owner: Bhumi.**
 
-| Planned contents | | Status |
+| Path | Contents | Status |
 | --- | --- | --- |
-| `docker/` | Container images for the API and worker | Planned |
-| `deploy/` | Environment manifests and deployment configuration | Planned |
+| `observability/` | Compose override: OTel collector, Tempo, Prometheus, Grafana + starter dashboard | Implemented (not run) |
+| `helm/groundtruth/` | Helm chart: api, worker, web, ingress, configmap, `existingSecret` reference | Implemented (`helm` not installed; lint/template unverified) |
+| `docker/` | Container images for API, worker, web | Planned |
 
-Nothing here is implemented. The architecture and the chosen targets are
-documented in [`ADR-010: Containerised API and worker`](../docs/decisions/ADR-010-deployment.md);
-this directory stays empty until that decision is executed, rather than holding
-placeholder manifests that would rot.
+See [`docs/observability.md`](../docs/observability.md) for telemetry wiring and
+[`ADR-010`](../docs/decisions/ADR-010-deployment.md) for deployment decisions.
