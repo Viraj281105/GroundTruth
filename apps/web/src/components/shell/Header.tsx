@@ -82,10 +82,12 @@ export function Header() {
           <Chip tone="sim" dot title={t('sim.explain')} className={styles.sim}>
             {t('sim.chip')}
           </Chip>
-          <button type="button" className={styles.iconBtn} onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))} aria-label="Search (Ctrl or Command K)" title="Search · Ctrl/⌘ K">
+          <button type="button" className={`${styles.iconBtn} ${styles.hideSm}`} onClick={() => window.dispatchEvent(new Event(OPEN_PALETTE_EVENT))} aria-label="Search (Ctrl or Command K)" title="Search · Ctrl/⌘ K">
             <Search size={17} aria-hidden="true" />
           </button>
-          <ThemeToggle />
+          <span className={styles.hideSm}>
+            <ThemeToggle />
+          </span>
           <UserMenu />
           <button type="button" className={`${styles.iconBtn} ${styles.menuBtn}`} onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label="Menu">
             {open ? <X size={18} /> : <Menu size={18} />}
@@ -100,6 +102,12 @@ export function Header() {
               {t(item.key)}
             </Link>
           ))}
+          <div className={styles.sheetTools}>
+            <button type="button" className={styles.sheetSearch} onClick={() => { setOpen(false); window.dispatchEvent(new Event(OPEN_PALETTE_EVENT)); }}>
+              <Search size={16} aria-hidden="true" /> Search
+            </button>
+            <ThemeToggle />
+          </div>
         </nav>
       )}
     </header>

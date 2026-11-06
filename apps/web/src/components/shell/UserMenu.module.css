@@ -14,3 +14,5 @@
 .item { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-3); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-sm); text-decoration: none; cursor: pointer; text-align: left; }
 .item:hover { background: var(--accent-soft); color: var(--text-primary); text-decoration: none; }
 .danger:hover { background: var(--danger-bg); color: var(--danger-text); }
+
+@media (max-width: 560px) { .more { display: none; } .menu { right: -2.5rem; } }

@@ -33,3 +33,7 @@
   .wordmark { display: none; }
   .bar { padding-left: var(--space-3); }
 }
+
+.sheetTools { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-2); padding: var(--space-3) var(--space-4) var(--space-2); border-top: 1px solid var(--border-subtle); }
+.sheetSearch { display: inline-flex; align-items: center; gap: var(--space-2); border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-sunken); color: var(--text-secondary); font: inherit; font-size: var(--text-sm); padding: var(--space-2) var(--space-4); cursor: pointer; }
+@media (max-width: 560px) { .hideSm { display: none; } }
