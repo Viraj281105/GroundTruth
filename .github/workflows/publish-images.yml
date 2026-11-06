@@ -21,10 +21,10 @@ jobs:
         include:
           - name: backend
             context: .
-            file: apps/api/Dockerfile
+            file: infrastructure/docker/backend.Dockerfile
           - name: web
-            context: apps/web
-            file: apps/web/Dockerfile
+            context: .
+            file: infrastructure/docker/web.Dockerfile
     steps:
       - uses: actions/checkout@v4.2.2
       - uses: docker/setup-buildx-action@v3.7.1

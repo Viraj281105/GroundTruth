@@ -14,7 +14,7 @@ COPY cases ./cases
 COPY configs ./configs
 COPY data ./data
 
-RUN useradd --create-home app && chown -R app /app
+RUN useradd --create-home --uid 1000 app && chown -R app /app
 USER app
 EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=3s --retries=5 \

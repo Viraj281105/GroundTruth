@@ -133,6 +133,31 @@ moves, update this table in the same change.
 
 ---
 
+## Extensions added in the platform-expansion pass
+
+"Implemented" here means written, unit-tested offline and in CI. Anything that needs
+an external service is marked **Not verified live**: no analysis of a real project
+has been run, and none of these paths has been exercised against real data.
+
+| Capability | Status | Notes |
+| --- | --- | --- |
+| STAC scene search and odc-stac loader (`data_access/stac.py`) | Implemented, **not verified live** | Tested against a fake client only; not wired into the engine |
+| DuckDB/Parquet store, Zarr I/O (`data_access/`) | Implemented | Needs the `eo` extra; tests skip without it |
+| Dagster asset definitions (`data_access/pipelines.py`) | Implemented, **not verified live** | Needs the `pipelines` extra; test skipped without it |
+| Augmented synthetic control, conformal intervals, E-value / sensitivity bounds | Implemented, **not wired into the verdict** | Available as library functions; the assembler's gate chain is unchanged. `full_sample` conformal is not jackknife+ |
+| pysyncon / DoWhy cross-check adapters | Implemented, **not verified live** | Optional deps not exercised in CI |
+| Parallel placebo executor (serial, process pool, Dask, Ray) | Implemented (serial, process); Dask/Ray **not verified live** | Not yet used by the placebo suite |
+| Embedding-based donor similarity | Implemented | Needs user-supplied vectors; no embedding model is bundled |
+| Redis (arq) job queue, Temporal workflow | Implemented, **not verified live** | Off unless `REDIS_URL` is set; transitions are not atomic |
+| SSE job progress, boundary GeoJSON, PostGIS vector tiles | Implemented | Tiles need a `case_boundaries` PostGIS table that no migration creates yet |
+| Anthropic narrator provider | Implemented, **not verified live** | Mocked HTTP only; output still passes the grounding verifier (R4) |
+| Claim extraction, retrieval and comparison (`claims/`) | Implemented | Heuristic text extraction; not wired to the API or UI |
+| Evidence-bundle manifests, cosign signing, DVC config | Implemented, signing **not verified live** | Needs the cosign binary |
+| OpenTelemetry, Grafana/Tempo/Prometheus stack, Helm chart | Implemented, **not verified live** | Compose overlay and chart never started; no job-duration metric yet |
+| Docker images and compose stack | Implemented | Built and run locally |
+
+---
+
 ## Deliberately not building
 
 | | Why |

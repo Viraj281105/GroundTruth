@@ -124,7 +124,11 @@ def _build_services() -> _Services:
         )
     sessions = create_session_factory(create_db_engine(url))
     store = SqlEvidenceStore(sessions)
-    return _Services(store=store, jobs=SqlJobService(store, JobQueue(sessions)))
+    from groundtruth.platform.jobs.redis_queue import select_job_control
+
+    # REDIS_URL unset (the default) returns the SQL service unchanged.
+    jobs = select_job_control(lambda: SqlJobService(store, JobQueue(sessions)))
+    return _Services(store=store, jobs=jobs)
 
 
 def database_error_types() -> tuple[type[Exception], ...]:

@@ -41,7 +41,7 @@ def test_conformal_coverage() -> None:
     for s in range(n):
         rng = np.random.default_rng(s)
         ci = conformal_gap_interval(
-            rng.normal(size=40), rng.normal(size=1), alpha=0.1, method="jackknife+"
+            rng.normal(size=40), rng.normal(size=1), alpha=0.1, method="full_sample"
         )
         hits += int(ci.per_period_lower[0] <= 0.0 <= ci.per_period_upper[0])
     assert hits / n > 0.8

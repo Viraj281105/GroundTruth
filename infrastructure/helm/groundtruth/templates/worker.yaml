@@ -16,5 +16,10 @@ spec:
         - name: worker
           image: {{ include "gt.image" (dict "root" . "name" .Values.worker.image "tag" .Values.worker.tag) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
           {{- include "gt.env" . | nindent 10 }}
           resources: {{- toYaml .Values.resources | nindent 12 }}

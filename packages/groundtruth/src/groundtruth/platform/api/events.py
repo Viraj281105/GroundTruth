@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from collections.abc import AsyncIterator
 from typing import Annotated, Any
 
@@ -26,6 +27,9 @@ Jobs = Annotated[JobControl, Depends(get_jobs)]
 
 POLL_INTERVAL_SECONDS = 0.5
 """How often the server looks at the store for a change."""
+
+MAX_STREAM_SECONDS = 900.0
+"""A stream is closed after this long; clients reconnect. Bounds the DB polling per client."""
 
 
 def _view(jobs: JobControl, job_id: str) -> JobView | None:
@@ -49,7 +53,11 @@ async def _stream(jobs: JobControl, job_id: str, first: JobView) -> AsyncIterato
     view = first
     last = _fingerprint(view)
     yield _frame("progress", view)
+    deadline = time.monotonic() + MAX_STREAM_SECONDS
     while not view.terminal:
+        if time.monotonic() > deadline:
+            yield 'event: timeout\ndata: {"code": "stream_timeout"}\n\n'
+            return
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
         try:
             current = await asyncio.to_thread(_view, jobs, job_id)

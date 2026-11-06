@@ -7,9 +7,9 @@ unless the `opentelemetry-*` packages are installed **and**
 Packages: `opentelemetry-sdk`, `opentelemetry-exporter-otlp-proto-http`,
 `opentelemetry-instrumentation-fastapi`.
 
-## Wiring (platform/api/app.py)
+## Wiring
 
-After the `app` is created, add these two lines:
+`platform/api/app.py` already calls `setup_telemetry(app)`. For reference, it is:
 
 ```python
 from groundtruth.observability import setup_telemetry
@@ -27,5 +27,4 @@ docker compose -f docker-compose.yml -f infrastructure/observability/docker-comp
 
 Grafana http://localhost:3001 (anonymous viewer), Prometheus :9090, Tempo :3200.
 Set `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318` on api and worker.
-The dashboard's job-duration panel expects a `groundtruth_job_duration_milliseconds`
-histogram, which the worker must record separately.
+The worker does not emit a job-duration metric yet, so the dashboard has no job-duration panel.

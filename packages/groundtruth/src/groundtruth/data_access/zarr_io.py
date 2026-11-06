@@ -21,6 +21,7 @@ def write_zarr(
     _need("xarray", "xarray")
     _need("zarr", "zarr")
     if chunks:
+        _need("dask", "dask")  # xarray chunking needs dask
         ds = ds.chunk(chunks)
     ds.to_zarr(str(path), mode=mode)
     return Path(path)
@@ -30,6 +31,7 @@ def read_zarr(path: str | Path) -> Any:
     """Open a Zarr store lazily as an xarray Dataset."""
     xr = _need("xarray", "xarray")
     _need("zarr", "zarr")
+    _need("dask", "dask")  # open_zarr reads lazily through dask
     if not Path(path).exists():
         raise FileNotFoundError(f"zarr store not found: {path}")
     return xr.open_zarr(str(path))

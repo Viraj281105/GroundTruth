@@ -46,8 +46,8 @@ def conformal_gap_interval(
     """Conformal interval for the post-period gap using pre-period residuals.
 
     ``method`` is ``"split"`` (random half used for calibration, deterministic in
-    ``seed``) or ``"jackknife+"`` (all pre residuals as calibration scores; a fixed
-    counterfactual has no leave-one-out refits, so this is the full-sample variant).
+    ``seed``) or ``"full_sample"`` (all pre residuals as calibration scores; this is NOT jackknife+,
+    which needs leave-one-out refits of the counterfactual).
     """
     r = np.asarray(pre_residuals, dtype=float)
     g = np.asarray(post_gap, dtype=float)
@@ -58,10 +58,10 @@ def conformal_gap_interval(
     if method == "split":
         idx = np.random.default_rng(seed).permutation(r.size)
         cal = np.abs(r[idx[: max(r.size // 2, 2)]])
-    elif method == "jackknife+":
+    elif method == "full_sample":
         cal = np.abs(r)
     else:
-        raise ValueError("method must be 'split' or 'jackknife+'")
+        raise ValueError("method must be 'split' or 'full_sample'")
     q = _quantile(cal, alpha)
     if not np.isfinite(q):
         raise InsufficientDataError("too few residuals for the requested alpha")

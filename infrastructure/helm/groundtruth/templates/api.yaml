@@ -16,6 +16,11 @@ spec:
         - name: api
           image: {{ include "gt.image" (dict "root" . "name" .Values.api.image "tag" .Values.api.tag) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
           ports:
             - containerPort: {{ .Values.api.port }}
           {{- include "gt.env" . | nindent 10 }}

@@ -20,6 +20,7 @@ from groundtruth.contracts import CONTRACT_VERSION
 from groundtruth.contracts.errors import CaseDefinitionError, DataUnavailableError
 from groundtruth.contracts.result import AnalysisResult, EngineStatus, ErrorCode
 from groundtruth.engine import ENGINE_VERSION, describe_engine, run_analysis
+from groundtruth.observability import setup_telemetry
 from groundtruth.platform.api.events import router as events_router
 from groundtruth.platform.api.jobs import router as jobs_router
 from groundtruth.platform.api.openapi_schema import install_openapi
@@ -49,6 +50,8 @@ app = FastAPI(
         "review, never a finding of fraud."
     ),
 )
+
+setup_telemetry(app)  # no-op unless OpenTelemetry is installed and an endpoint is set
 
 app.add_middleware(
     CORSMiddleware,

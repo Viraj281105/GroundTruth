@@ -17,7 +17,15 @@ from groundtruth.platform.cases.registry import get_case
 from groundtruth.platform.datasets.access import synthetic_access
 
 GOLDEN = Path(__file__).parent / "golden" / "kariba_synthetic.json"
-VOLATILE = {"run_id", "started_at", "finished_at", "created_at", "timestamp", "retrieved_at", "metrics"}
+VOLATILE = {
+    "run_id",
+    "started_at",
+    "finished_at",
+    "created_at",
+    "timestamp",
+    "retrieved_at",
+    "metrics",
+}
 DECIMALS = 6
 
 
