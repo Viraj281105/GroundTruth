@@ -1,0 +1,12 @@
+.controls { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); align-items: end; }
+.search { grid-column: 1 / -1; }
+@media (min-width: 48rem) { .search { grid-column: span 2; } }
+.label { display: block; font-size: var(--text-sm); color: var(--text-muted); margin-bottom: var(--space-1); }
+.input {
+  width: 100%; min-height: 2.75rem; padding: var(--space-2) var(--space-3);
+  background: var(--surface-raised); color: var(--text-primary);
+  border: 1px solid var(--border-default); border-radius: var(--radius-md); font: inherit;
+}
+.input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.count { color: var(--text-muted); font-size: var(--text-sm); margin: var(--space-5) 0 var(--space-4); }
+.grid { display: grid; gap: var(--space-5); grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr)); }
