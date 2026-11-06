@@ -26,3 +26,17 @@
 .keyObserved::before, .keySynthetic::before { content: ''; display: inline-block; width: 1.25rem; height: 0; margin-right: var(--space-2); vertical-align: middle; border-top: 2px solid var(--series-observed); }
 .keySynthetic::before { border-top: 2px dashed var(--series-synthetic); }
 @media (max-width: 30rem) { .dl { grid-template-columns: 1fr; } }
+.lensCaption { font-size: var(--text-sm); color: var(--text-muted); border-left: 3px solid var(--accent); padding-left: var(--space-3); }
+.bigNums { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: var(--space-4); }
+.bigStat { text-align: center; }
+.bigStat .bigNum { font-size: var(--text-2xl); margin-top: 0; }
+.donuts { display: flex; flex-wrap: wrap; gap: var(--space-6); justify-content: space-around; align-items: flex-start; }
+.timeline { list-style: none; padding: 0 0 0 var(--space-4); margin: 0; display: flex; flex-direction: column; gap: var(--space-3); border-left: 2px solid var(--border-default); }
+.timeline li { position: relative; color: var(--text-secondary); }
+.timeline li::before { content: ''; position: absolute; left: calc(-1 * var(--space-4) - 6px); top: 0.4em; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.tlYear { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--text-muted); margin-right: var(--space-2); }
+.tableWrap { overflow-x: auto; max-width: 100%; }
+.table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.table th, .table td { text-align: left; padding: var(--space-2); border-bottom: 1px solid var(--border-subtle); overflow-wrap: anywhere; vertical-align: top; }
+.table code { font-family: var(--font-mono); }
+.figCaption { font-size: var(--text-sm); color: var(--text-muted); margin-top: var(--space-2); }

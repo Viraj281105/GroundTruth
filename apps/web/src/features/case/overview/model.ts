@@ -5,6 +5,7 @@ import { formatConfidenceInterval, formatDivergenceRatio, formatEvidenceValue, f
 import type { CaseDetail, Confidence, VerdictLabel } from '../../../lib/types';
 import { overviewCopy as c } from './copy';
 import { buildSparkline, type Sparkline } from './sparkline';
+import { buildFigures, NO_FIGURES, type OverviewFigures } from './figures';
 
 export type OverviewKind = 'measured' | 'inconclusive' | 'refused' | 'not_run';
 
@@ -25,6 +26,7 @@ export interface OverviewModel {
   headline: HeadlineEffect | null;
   facts: { donors: string; fit: string; placebo: string };
   chart: Sparkline | null;
+  figures: OverviewFigures;
   refusal: RefusalInfo | null;
   provenance: { runId: string; specHash: string; dataMode: string; engineVersion: string; contractVersion: string; evidenceCount: number } | null;
 }
@@ -63,6 +65,7 @@ export function buildOverviewModel(
     headline: null,
     facts: { donors, fit: c.notMeasured, placebo: c.notMeasured },
     chart: null,
+    figures: NO_FIGURES,
     refusal: null,
     provenance: null,
   };
@@ -96,6 +99,7 @@ export function buildOverviewModel(
       placebo: pValue !== undefined ? formatPValue(pValue) : c.notMeasured,
     },
     chart: buildSparkline(fixture.chartSeries, treatmentYearOf(detail, fixture)),
+    figures: buildFigures(fixture, treatmentYearOf(detail, fixture)),
     refusal: null,
     provenance: {
       runId: v.run_id,

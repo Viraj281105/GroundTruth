@@ -25,7 +25,20 @@ export interface SourceRow {
   retrievedAt: string | null;
 }
 
+export interface SourceCount {
+  source: string;
+  count: number;
+}
+
+export interface StageSummary {
+  stage: string;
+  methods: number;
+  items: number;
+}
+
 export interface MethodModel {
+  /** Evidence items contributed per distinct source. */
+  sourceCounts: SourceCount[];
   design: { label: string; value: string }[];
   stages: MethodStage[];
   sources: SourceRow[];
@@ -61,6 +74,7 @@ export function buildMethodModel(detail: CaseDetail, items: Evidence[] | null, v
   const byStage = new Map<string, Map<string, MethodStep>>();
   const sources = new Map<string, SourceRow>();
   const assumptions = new Set<string>(verdictCaveats);
+  const sourceCounts = new Map<string, number>();
 
   for (const e of items ?? []) {
     const p = e.provenance;
@@ -82,6 +96,7 @@ export function buildMethodModel(detail: CaseDetail, items: Evidence[] | null, v
       methods.set(p.method, step);
     }
     step.produces.push(e.label);
+    sourceCounts.set(p.source, (sourceCounts.get(p.source) ?? 0) + 1);
     byStage.set(p.stage, methods);
     const key = `${p.source}|${p.source_uri ?? ''}`;
     if (!sources.has(key)) sources.set(key, { source: p.source, uri: p.source_uri, retrievedAt: p.retrieved_at });
@@ -90,5 +105,23 @@ export function buildMethodModel(detail: CaseDetail, items: Evidence[] | null, v
   const stages = [...byStage.entries()]
     .sort((a, b) => stageRank(a[0]) - stageRank(b[0]))
     .map(([stage, m]) => ({ stage, steps: [...m.values()] }));
-  return { design: designRows(detail), stages, sources: [...sources.values()], assumptions: [...assumptions] };
+  const counts = [...sourceCounts.entries()].map(([source, count]) => ({ source, count })).sort((a, b) => b.count - a.count);
+  return { sourceCounts: counts, design: designRows(detail), stages, sources: [...sources.values()], assumptions: [...assumptions] };
+}
+
+/** Per-stage method and evidence counts for the ladder, in pipeline order. */
+export function stageSummary(stages: MethodStage[]): StageSummary[] {
+  return stages.map((st) => ({ stage: st.stage, methods: st.steps.length, items: st.steps.reduce((n, s) => n + s.produces.length, 0) }));
+}
+
+/** Short label for a long source id: a URL's host, or the last two dotted segments. */
+export function shortSource(source: string): string {
+  if (/^https?:\/\//.test(source)) {
+    try {
+      return new URL(source).hostname;
+    } catch {
+      return source;
+    }
+  }
+  return source.split('.').filter(Boolean).slice(-2).join('.') || source;
 }
