@@ -1,8 +1,12 @@
-import React from 'react';
-import { PageStub } from '../../components/shell/PageStub';
+import React, { Suspense } from 'react';
+import { ComparePage } from '../../features/compare/ComparePage';
 
-export const metadata = { title: 'Compare' };
+export const metadata = { title: 'Compare cases' };
 
 export default function Page() {
-  return <PageStub title="Compare" summary="Side-by-side comparison of cases." />;
+  return (
+    <Suspense fallback={null}>
+      <ComparePage />
+    </Suspense>
+  );
 }
