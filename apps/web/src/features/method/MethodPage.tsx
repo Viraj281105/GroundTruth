@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../../components/ds';
 import { GLOSSARY_TERMS, glossary } from '../../lib/glossary';
+import { PipelineDiagram } from './PipelineDiagram';
 import { METHOD_COPY as C } from './copy';
 import styles from './MethodPage.module.css';
 
@@ -11,6 +12,8 @@ export function MethodPage() {
         <h1 className={styles.title}>{C.title}</h1>
         <p className={styles.lead}>{C.intro}</p>
       </header>
+
+      <PipelineDiagram />
 
       <section aria-labelledby="steps">
         <h2 id="steps" className={styles.h2}>{C.steps.title}</h2>

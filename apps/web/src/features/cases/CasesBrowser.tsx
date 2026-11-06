@@ -14,7 +14,7 @@ function isTyping(el: Element | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (el as HTMLElement).isContentEditable;
 }
 
-export function CasesBrowser({ cases }: { cases: CaseSummary[] }) {
+export function CasesBrowser({ cases, series = {} }: { cases: CaseSummary[]; series?: Record<string, number[]> }) {
   const [query, setQuery] = useState<CaseQuery>(DEFAULT_QUERY);
   const searchRef = useRef<HTMLInputElement>(null);
   const standards = useMemo(() => distinct(cases, 'standard'), [cases]);
@@ -79,7 +79,7 @@ export function CasesBrowser({ cases }: { cases: CaseSummary[] }) {
         />
       ) : (
         <div className={styles.grid}>
-          {shown.map((x) => <CaseCard key={x.case_id} item={x} />)}
+          {shown.map((x) => <CaseCard key={x.case_id} item={x} series={series[x.case_id]} />)}
         </div>
       )}
     </div>

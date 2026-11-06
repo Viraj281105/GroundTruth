@@ -3,8 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button, Card, EmptyState, Skeleton, Stat } from '../../components/ds';
-import { getCaseDetail, getCases } from '../../lib/api';
+import { getCaseDetail, getCases, getVisualizationFixture } from '../../lib/api';
 import type { CaseDetail, CaseSummary } from '../../lib/types';
+import { buildCaseViz } from '../cases/viz';
+import { CompareCharts } from './CompareCharts';
 import { buildCompareUrl, compareRows, parseCompareParams, swapIds } from './compare';
 import { COMPARE_COPY as C } from './copy';
 import styles from './ComparePage.module.css';
@@ -66,6 +68,16 @@ export function ComparePage() {
     getCases().then((r) => setCases(r.data), () => setCases([]));
   }, []);
 
+  const vizA = a.phase === 'ok' && a.detail ? buildCaseViz(getVisualizationFixture(ids.a)) : null;
+  const vizB = b.phase === 'ok' && b.detail ? buildCaseViz(getVisualizationFixture(ids.b)) : null;
+  const bothLoaded = a.phase === 'ok' && a.detail && b.phase === 'ok' && b.detail;
+  const charts =
+    a.phase === 'ok' && a.detail && b.phase === 'ok' && b.detail && vizA && vizB ? (
+      <CompareCharts a={{ name: a.detail.name, viz: vizA }} b={{ name: b.detail.name, viz: vizB }} />
+    ) : bothLoaded ? (
+      <p className={styles.missing}>{C.chartsMissing}</p>
+    ) : null;
+
   const go = (next: { a: string; b: string }) => router.replace(buildCompareUrl(next));
 
   async function share() {
@@ -109,6 +121,7 @@ export function ComparePage() {
         <Column id={ids.a} load={a} />
         <Column id={ids.b} load={b} />
       </div>
+      {charts}
     </div>
   );
 }

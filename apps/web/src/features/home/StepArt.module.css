@@ -1,0 +1,11 @@
+.art { display: block; width: 100%; height: auto; max-height: 7rem; margin-bottom: var(--space-3); background: var(--surface-sunken); border-radius: var(--radius-md); }
+.donor { stroke: var(--text-muted); opacity: 0.7; }
+.dot { fill: var(--text-muted); }
+.flow { stroke: var(--text-muted); }
+.twin { stroke: var(--series-synthetic); stroke-dasharray: 5 4; }
+.obs { stroke: var(--series-observed); }
+.marker { stroke: var(--border-strong, var(--text-muted)); stroke-dasharray: 3 4; stroke-width: 1; }
+.markerSolid { stroke: var(--accent); stroke-width: 2; }
+.gap { stroke: var(--accent); stroke-width: 1.5; }
+.bar { fill: var(--text-muted); opacity: 0.45; }
+.hit { fill: var(--accent); }

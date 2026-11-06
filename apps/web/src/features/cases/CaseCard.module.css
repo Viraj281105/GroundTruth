@@ -10,3 +10,5 @@
 .meta { display: flex; flex-wrap: wrap; gap: var(--space-6); margin: var(--space-3) 0 0; font-size: var(--text-sm); }
 .meta dt { color: var(--text-muted); }
 .meta dd { margin: 0; font-variant-numeric: tabular-nums; }
+.spark { margin: var(--space-2) 0 0; display: grid; gap: var(--space-1); }
+.spark figcaption { color: var(--text-muted); font-size: var(--text-xs); }
