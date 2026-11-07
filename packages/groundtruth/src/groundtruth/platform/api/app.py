@@ -33,6 +33,7 @@ from groundtruth.platform.api.runs import router as runs_router
 from groundtruth.platform.api.schemas import (
     CaseDetail,
     CaseSummary,
+    CreateCaseRequest,
     EngineFailureBody,
     HealthResponse,
     MessageErrorBody,
@@ -42,6 +43,7 @@ from groundtruth.platform.api.schemas import (
 from groundtruth.platform.api.tiles import router as tiles_router
 from groundtruth.platform.auth.csrf import CsrfOriginMiddleware
 from groundtruth.platform.auth.deps import require_role
+from groundtruth.platform.cases.creator import create_and_register_case
 from groundtruth.platform.cases.registry import get_case, load_all_cases
 from groundtruth.platform.config import get_settings
 from groundtruth.platform.datasets.access import earth_engine_access, synthetic_access
@@ -180,6 +182,36 @@ def get_case_detail(case_id: str) -> CaseDetail:
         known_reference=case.known_reference,
         notes=case.notes.strip(),
     )
+
+
+@app.post(
+    "/cases",
+    response_model=CaseDetail,
+    tags=["cases"],
+    dependencies=[Depends(require_role("user"))],
+)
+def create_case(body: CreateCaseRequest) -> CaseDetail:
+    """Create, calibrate and register a new project case."""
+    case = create_and_register_case(
+        name=body.name,
+        country=body.country,
+        ecosystem=body.ecosystem,
+        standard=body.standard,
+        registry_id=body.registry_id,
+        area_ha=body.area_ha,
+        crediting_period_start=body.crediting_period_start,
+        crediting_period_end=body.crediting_period_end,
+        claimed_credits_tco2e=body.claimed_credits_tco2e,
+        indicator=body.indicator,
+        donor_pool_size=body.donor_pool_size,
+        pre_start=body.pre_start,
+        pre_end=body.pre_end,
+        post_start=body.post_start,
+        post_end=body.post_end,
+        boundary_geojson=body.boundary_geojson,
+        custom_case_id=body.case_id,
+    )
+    return get_case_detail(case.case_id)
 
 
 @app.post(

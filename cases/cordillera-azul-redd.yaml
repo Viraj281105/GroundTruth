@@ -1,0 +1,33 @@
+case_id: cordillera-azul-redd
+project:
+  name: Cordillera Azul National Park REDD+ Project
+  country: Peru
+  ecosystem: sub-montane and lowland Amazon rainforest
+  standard: VCS
+  registry_id: VCS 985
+  area_ha: 1351963
+  crediting_period_start: '2008-08-01'
+  crediting_period_end: '2038-07-31'
+  claimed_credits_tco2e: 31000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/985
+  boundary_path: cases/boundaries/cordillera-azul.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2007
+  post_start: 2008
+  post_end: 2022
+analysis:
+  indicator: evi
+  donor_search_region: Upper Amazon montane-lowland transition zone outside protected
+    areas
+  donor_pool_size: 80
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Mega-scale national park avoided deforestation buffer zone in the Peruvian
+  Amazon.

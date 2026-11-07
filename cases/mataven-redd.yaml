@@ -1,0 +1,32 @@
+case_id: mataven-redd
+project:
+  name: Resguardo Indigena Unificado Selva de Mataven REDD+ Project
+  country: Colombia
+  ecosystem: Orinoco-Amazon transition rainforest
+  standard: VCS
+  registry_id: VCS 1565
+  area_ha: 1150000
+  crediting_period_start: '2013-01-01'
+  crediting_period_end: '2042-12-31'
+  claimed_credits_tco2e: 60000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/1565
+  boundary_path: cases/boundaries/mataven.geojson
+analysis_window:
+  pre_start: 2003
+  pre_end: 2012
+  post_start: 2013
+  post_end: 2022
+analysis:
+  indicator: evi
+  donor_search_region: Vichada and Guainia savannah-forest boundary outside indigenous
+    reserves
+  donor_pool_size: 80
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Colombia largest REDD+ project, managed across indigenous council territories.

@@ -14,7 +14,7 @@
 
 import createClient from "openapi-fetch";
 
-import { API_BASE_URL } from "./api";
+import { API_BASE_URL, getApiBaseUrl } from "./api";
 import type { components, paths } from "./generated/schema";
 import { withSessionWatch } from "./session-events";
 
@@ -24,7 +24,7 @@ export type Schemas = components["schemas"];
 export type { components, paths };
 
 export interface ApiClientOptions {
-  /** Defaults to `API_BASE_URL` (`NEXT_PUBLIC_API_URL`, or localhost:8000). */
+  /** Defaults to `getApiBaseUrl()` (`INTERNAL_API_URL` during SSR, `NEXT_PUBLIC_API_URL` in browser, or localhost:8000). */
   baseUrl?: string;
   /** Defaults to the global `fetch`. Tests pass a stand-in. */
   fetch?: typeof globalThis.fetch;
@@ -33,7 +33,7 @@ export interface ApiClientOptions {
 /** A client bound to one API base URL. */
 export function createApiClient(options: ApiClientOptions = {}) {
   return createClient<paths>({
-    baseUrl: options.baseUrl ?? API_BASE_URL,
+    baseUrl: options.baseUrl ?? getApiBaseUrl(),
     // Cookie sessions: send the HttpOnly session cookie. A 401 announces an expired session.
     credentials: "include",
     fetch: options.fetch ?? withSessionWatch((...a) => globalThis.fetch(...a)),

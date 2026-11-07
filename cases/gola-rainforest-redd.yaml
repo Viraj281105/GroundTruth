@@ -1,0 +1,31 @@
+case_id: gola-rainforest-redd
+project:
+  name: Gola Rainforest National Park REDD+ Project
+  country: Sierra Leone
+  ecosystem: Upper Guinean tropical moist forest
+  standard: VCS
+  registry_id: VCS 1409
+  area_ha: 68515
+  crediting_period_start: '2012-08-01'
+  crediting_period_end: '2042-07-31'
+  claimed_credits_tco2e: 5000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/1409
+  boundary_path: cases/boundaries/gola.geojson
+analysis_window:
+  pre_start: 2002
+  pre_end: 2011
+  post_start: 2012
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Sierra Leone and Liberia Upper Guinean forest fragments
+  donor_pool_size: 50
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Biodiversity hotspot protecting endangered pygmy hippos and western chimpanzees.

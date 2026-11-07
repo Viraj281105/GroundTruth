@@ -1,0 +1,31 @@
+case_id: alto-mayo-redd
+project:
+  name: Alto Mayo Protected Forest REDD+ Project
+  country: Peru
+  ecosystem: montane cloud forest
+  standard: VCS
+  registry_id: VCS 944
+  area_ha: 182000
+  crediting_period_start: '2008-01-01'
+  crediting_period_end: '2027-12-31'
+  claimed_credits_tco2e: 7000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/944
+  boundary_path: cases/boundaries/alto-mayo.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2007
+  post_start: 2008
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Peruvian yungas and sub-Andean montane forest
+  donor_pool_size: 60
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Protected cloud forest facing pressure from migrant coffee cultivation.

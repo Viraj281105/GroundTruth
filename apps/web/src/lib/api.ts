@@ -15,6 +15,13 @@ import {
 } from './fixtures/simulated-data';
 import { AlignmentRefusalDetail, KARIBA_REFUSED_ALIGNMENT } from './fixtures/generated';
 
+export function getApiBaseUrl(): string {
+  if (typeof window === 'undefined') {
+    return process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+}
+
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 /**
@@ -53,8 +60,9 @@ export interface DemoResult<T> {
  * mode is off.
  */
 export async function getCases(): Promise<DemoResult<CaseSummary[]>> {
+  const baseUrl = getApiBaseUrl();
   try {
-    const res = await fetch(`${API_BASE_URL}/cases`, {
+    const res = await fetch(`${baseUrl}/cases`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       next: { revalidate: 60 },
@@ -67,7 +75,7 @@ export async function getCases(): Promise<DemoResult<CaseSummary[]>> {
     if (isDemoMode()) {
       return { data: MOCK_CASES_SUMMARY, isDemo: true };
     }
-    throw new ApiUnreachableError(API_BASE_URL, err);
+    throw new ApiUnreachableError(baseUrl, err);
   }
 }
 
@@ -78,8 +86,9 @@ export async function getCases(): Promise<DemoResult<CaseSummary[]>> {
  * mode is off.
  */
 export async function getCaseDetail(caseId: string): Promise<DemoResult<CaseDetail | null>> {
+  const baseUrl = getApiBaseUrl();
   try {
-    const res = await fetch(`${API_BASE_URL}/cases/${caseId}`, {
+    const res = await fetch(`${baseUrl}/cases/${caseId}`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       next: { revalidate: 60 },
@@ -92,7 +101,7 @@ export async function getCaseDetail(caseId: string): Promise<DemoResult<CaseDeta
     if (isDemoMode()) {
       return { data: MOCK_CASE_DETAILS[caseId] || null, isDemo: true };
     }
-    throw new ApiUnreachableError(API_BASE_URL, err);
+    throw new ApiUnreachableError(baseUrl, err);
   }
 }
 
@@ -143,8 +152,9 @@ export async function verifyCase(
   refusal?: RefusalInfo;
   isDemo?: boolean;
 }> {
+  const baseUrl = getApiBaseUrl();
   try {
-    const res = await fetch(`${API_BASE_URL}/cases/${caseId}/verify`, {
+    const res = await fetch(`${baseUrl}/cases/${caseId}/verify`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -197,7 +207,7 @@ export async function verifyCase(
     }
     return {
       success: false,
-      error: `Backend API is unreachable at ${API_BASE_URL}. No verification was executed.`,
+      error: `Backend API is unreachable at ${baseUrl}. No verification was executed.`,
       code: 'api_unreachable',
       isRefusal: false,
     };
@@ -240,8 +250,9 @@ export function getVisualizationFixture(caseId: string): VerificationFixtureData
  * fabricated capability claim.
  */
 export async function getHealth(): Promise<HealthResponse> {
+  const baseUrl = getApiBaseUrl();
   try {
-    const res = await fetch(`${API_BASE_URL}/health`, {
+    const res = await fetch(`${baseUrl}/health`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
     });

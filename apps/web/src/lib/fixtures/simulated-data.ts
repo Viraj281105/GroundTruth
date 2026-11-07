@@ -1,5 +1,6 @@
 import { CaseDetail, CaseSummary, Evidence, VerificationResponse } from '../types';
 import { GeneratedCompletedFixture, GeneratedDonorCandidate, KARIBA_COMPLETED } from './generated';
+import allCasesCompletedJson from './generated/all_cases.completed.json';
 
 /**
  * SIMULATED FIXTURE DATA
@@ -242,7 +243,12 @@ export function placeboDistributionFrom(
   };
 }
 
+const allCases = { ...(allCasesCompletedJson as unknown as Record<string, VerificationFixtureData>) };
+// mikoko-pamoja is the negative control case; tests assert it has no completed fixture.
+delete allCases['mikoko-pamoja'];
+
 export const MOCK_VERIFICATION_RESULTS: Record<string, VerificationFixtureData> = {
+  ...allCases,
   'kariba-redd': {
     // Engine-generated: see ./generated.ts and apps/web/scripts/generate_fixtures.py.
     verification: KARIBA_COMPLETED.verification,

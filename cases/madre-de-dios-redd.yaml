@@ -1,0 +1,32 @@
+case_id: madre-de-dios-redd
+project:
+  name: Madre de Dios Amazon REDD+ Project
+  country: Peru
+  ecosystem: humid subtropical Amazon forest
+  standard: VCS
+  registry_id: VCS 844
+  area_ha: 100000
+  crediting_period_start: '2009-12-01'
+  crediting_period_end: '2039-11-30'
+  claimed_credits_tco2e: 11000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/844
+  boundary_path: cases/boundaries/madre-de-dios.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2008
+  post_start: 2009
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Interoceanic Highway buffer zone in eastern Peru
+  donor_pool_size: 65
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Timber concessions managed for sustainable FSC-certified harvesting and carbon
+  storage.

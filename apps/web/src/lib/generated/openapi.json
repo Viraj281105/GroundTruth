@@ -818,6 +818,48 @@
         }
       }
     },
+    "/claims/extract-pdf": {
+      "post": {
+        "tags": [
+          "claims"
+        ],
+        "summary": "Extract raw text from an uploaded PDF document",
+        "description": "Extract plain text from base64 PDF bytes (PDD or monitoring report).",
+        "operationId": "extract_pdf_claims_extract_pdf_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PdfExtractRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PdfExtractResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/claims/analyze": {
       "post": {
         "tags": [
@@ -1312,6 +1354,46 @@
                   },
                   "type": "array",
                   "title": "Response List Case Summaries Cases Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Create Case",
+        "description": "Create, calibrate and register a new project case.",
+        "operationId": "create_case_cases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1927,6 +2009,128 @@
         ],
         "title": "Confidence",
         "description": "An interval estimate with an explicit interpretation.\n\n``kind`` records whether the interval is a classical confidence interval, a\npermutation-based range, or a sensitivity envelope. Reporting these as if\nthey were interchangeable would be misleading."
+      },
+      "CreateCaseRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Name"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Country"
+          },
+          "ecosystem": {
+            "type": "string",
+            "title": "Ecosystem",
+            "default": "forest / woodland"
+          },
+          "standard": {
+            "type": "string",
+            "title": "Standard",
+            "default": "VCS"
+          },
+          "registry_id": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 2,
+            "title": "Registry Id"
+          },
+          "area_ha": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Area Ha"
+          },
+          "crediting_period_start": {
+            "type": "string",
+            "title": "Crediting Period Start",
+            "default": "2015-01-01"
+          },
+          "crediting_period_end": {
+            "type": "string",
+            "title": "Crediting Period End",
+            "default": "2045-12-31"
+          },
+          "claimed_credits_tco2e": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed Credits Tco2E"
+          },
+          "indicator": {
+            "type": "string",
+            "title": "Indicator",
+            "default": "ndvi"
+          },
+          "donor_pool_size": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 10.0,
+            "title": "Donor Pool Size",
+            "default": 50
+          },
+          "pre_start": {
+            "type": "integer",
+            "title": "Pre Start",
+            "default": 2005
+          },
+          "pre_end": {
+            "type": "integer",
+            "title": "Pre End",
+            "default": 2014
+          },
+          "post_start": {
+            "type": "integer",
+            "title": "Post Start",
+            "default": 2015
+          },
+          "post_end": {
+            "type": "integer",
+            "title": "Post End",
+            "default": 2022
+          },
+          "boundary_geojson": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boundary Geojson"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "country",
+          "registry_id",
+          "area_ha"
+        ],
+        "title": "CreateCaseRequest",
+        "description": "Request to define and register a new project case."
       },
       "DatasetRef": {
         "properties": {
@@ -2979,6 +3183,47 @@
         ],
         "title": "NotComparable",
         "description": "One reason two runs cannot be compared."
+      },
+      "PdfExtractRequest": {
+        "properties": {
+          "file_base64": {
+            "type": "string",
+            "title": "File Base64"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "default": "uploaded.pdf"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_base64"
+        ],
+        "title": "PdfExtractRequest"
+      },
+      "PdfExtractResponse": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "num_pages": {
+            "type": "integer",
+            "title": "Num Pages"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "num_pages",
+          "filename"
+        ],
+        "title": "PdfExtractResponse"
       },
       "Provenance": {
         "properties": {

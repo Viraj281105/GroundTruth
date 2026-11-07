@@ -1,0 +1,32 @@
+case_id: communi-tree-carbon
+project:
+  name: CommuniTree Carbon Program
+  country: Nicaragua
+  ecosystem: tropical dry and premontane forest
+  standard: PlanVivo
+  registry_id: PlanVivo 1002
+  area_ha: 8500
+  crediting_period_start: '2010-01-01'
+  crediting_period_end: '2059-12-31'
+  claimed_credits_tco2e: 1500000
+  source_uri: https://www.planvivo.org/communitree
+  boundary_path: cases/boundaries/communitree.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2009
+  post_start: 2010
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: San Juan de Limay watershed agricultural frontier
+  donor_pool_size: 45
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Smallholder community reforestation and agroforestry initiative in northern
+  Nicaragua.
