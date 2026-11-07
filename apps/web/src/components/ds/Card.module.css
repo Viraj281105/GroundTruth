@@ -1,0 +1,17 @@
+.card { border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); }
+.padded { padding: var(--space-6); }
+.raised { background: var(--surface-raised); box-shadow: var(--shadow-1); }
+.sunken { background: var(--surface-sunken); }
+.interactive { background: var(--surface-raised); box-shadow: var(--shadow-1); transition: transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out); }
+.interactive:hover { transform: translateY(-2px); box-shadow: var(--shadow-3); border-color: var(--border-default); }
+
+.stat { display: flex; flex-direction: column; gap: var(--space-1); }
+.statLabel { font-size: var(--text-sm); color: var(--text-muted); font-weight: 500; }
+.statValue { font-family: var(--font-display); font-size: var(--text-3xl); font-weight: 600; line-height: var(--leading-tight); letter-spacing: var(--tracking-tight); }
+.statHint { font-size: var(--text-sm); color: var(--text-muted); }
+
+.empty { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-12) var(--space-6); text-align: center; color: var(--text-secondary); }
+.empty p { max-width: var(--reading-width); color: var(--text-muted); }
+
+.skeleton { display: block; background: linear-gradient(90deg, var(--surface-sunken) 25%, var(--surface-hover) 50%, var(--surface-sunken) 75%); background-size: 200% 100%; border-radius: var(--radius-sm); animation: shimmer 1.4s ease-in-out infinite; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }

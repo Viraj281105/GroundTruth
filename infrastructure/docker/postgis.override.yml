@@ -1,0 +1,5 @@
+# Switch the database image to PostGIS so /tiles/{z}/{x}/{y}.mvt can serve vector tiles.
+# Usage: docker compose -f <base compose file> -f infrastructure/docker/postgis.override.yml up
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine

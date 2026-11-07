@@ -1,0 +1,132 @@
+"""Screening aid: extract quantitative claims from document text.
+
+Rule-based extraction only (no language model). Every claim carries the character span it
+was read from. When a case is named, a claim is set beside a figure only where the case
+actually holds one; otherwise ``estimated`` is ``null`` and the note says so. Wording is
+neutral: a difference warrants accredited review and is not a finding about any party.
+"""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+
+from groundtruth.claims import Claim, ClaimKind, compare_claims, extract_claims
+from groundtruth.contracts.errors import CaseDefinitionError
+from groundtruth.platform.api.schemas import MessageErrorBody
+from groundtruth.platform.auth.deps import require_role
+from groundtruth.platform.cases.registry import get_case
+
+router = APIRouter(tags=["claims"])
+
+MAX_TEXT_CHARS = 200_000
+
+DISCLAIMER_BASE = (
+    "Screening aid only. Extracted figures are read from the text by fixed patterns and may be "
+    "incomplete or misread. A difference between two figures warrants accredited review; it is "
+    "not a finding about any person or organisation."
+)
+NO_CASE_NOTE = " No case was selected, so no figure was set beside the extracted claims."
+
+
+class ClaimsRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=MAX_TEXT_CHARS)
+    case_id: str | None = None
+
+
+class ClaimSpan(BaseModel):
+    start: int
+    end: int
+    text: str
+
+
+class ExtractedClaim(BaseModel):
+    kind: str
+    value: float
+    unit: str
+    span: ClaimSpan
+
+
+class ClaimComparison(BaseModel):
+    claim_kind: str
+    claimed: float
+    estimated: float | None
+    note: str
+
+
+class ClaimsResponse(BaseModel):
+    claims: list[ExtractedClaim]
+    comparisons: list[ClaimComparison]
+    disclaimer: str
+
+
+def _to_model(claim: Claim) -> ExtractedClaim:
+    return ExtractedClaim(
+        kind=claim.kind.value,
+        value=claim.value,
+        unit=claim.unit,
+        span=ClaimSpan(start=claim.start, end=claim.end, text=claim.quote),
+    )
+
+
+@router.post(
+    "/claims/analyze",
+    response_model=ClaimsResponse,
+    summary="Extract quantitative claims from text",
+    dependencies=[Depends(require_role("user"))],
+    responses={404: {"model": MessageErrorBody, "description": "Unknown case."}},
+)
+def analyze_claims(body: ClaimsRequest) -> ClaimsResponse:
+    """Extract claims with spans; set them beside the case's figures when available."""
+    if not body.text.strip():
+        raise HTTPException(status_code=422, detail="text must not be blank")
+    claims = extract_claims(body.text)
+    models = [_to_model(c) for c in claims]
+    if body.case_id is None:
+        return ClaimsResponse(
+            claims=models, comparisons=[], disclaimer=DISCLAIMER_BASE + NO_CASE_NOTE
+        )
+
+    try:
+        case = get_case(body.case_id)
+    except CaseDefinitionError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    area = case.claim.project_area_ha
+    reference: dict[str, float] = {"area_ha": float(area)} if area is not None else {}
+    differing = {d.citation for d in compare_claims(claims, reference)}
+    comparisons: list[ClaimComparison] = []
+    for claim in claims:
+        if claim.kind is ClaimKind.AREA_HECTARES and area is not None:
+            verdict = (
+                "differs from the registered area; the difference warrants review"
+                if claim.citation() in differing
+                else "is within 5% of the registered area"
+            )
+            note = (
+                f"The documented area {verdict}. The comparison figure is the project area in "
+                "the case definition, not an Earth-observation estimate."
+            )
+            comparisons.append(
+                ClaimComparison(
+                    claim_kind=claim.kind.value,
+                    claimed=claim.value,
+                    estimated=float(area),
+                    note=note,
+                )
+            )
+        else:
+            comparisons.append(
+                ClaimComparison(
+                    claim_kind=claim.kind.value,
+                    claimed=claim.value,
+                    estimated=None,
+                    note="No independent estimate is available for this quantity, so nothing "
+                    "is compared.",
+                )
+            )
+    return ClaimsResponse(
+        claims=models,
+        comparisons=comparisons,
+        disclaimer=DISCLAIMER_BASE + " Only figures the case actually holds are compared.",
+    )

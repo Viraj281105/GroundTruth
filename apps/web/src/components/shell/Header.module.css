@@ -1,0 +1,39 @@
+.header { position: sticky; top: 0; z-index: var(--z-header); padding-block: var(--space-3); transition: padding var(--duration-base) var(--ease-out); }
+.bar { position: relative; display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: 3.5rem; padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); border: 1px solid transparent; border-radius: var(--radius-full); transition: background-color var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out), backdrop-filter var(--duration-base) var(--ease-out); }
+.scrolled .bar { background: var(--surface-overlay); border-color: var(--border-subtle); box-shadow: var(--shadow-2); backdrop-filter: saturate(1.5) blur(16px); -webkit-backdrop-filter: saturate(1.5) blur(16px); }
+
+.brand { display: inline-flex; align-items: center; gap: var(--space-3); color: var(--text-primary); text-decoration: none; flex: 0 0 auto; }
+.brand:hover { color: var(--text-primary); text-decoration: none; }
+.mark { transition: transform var(--duration-slow) var(--ease-spring); }
+.brand:hover .mark { transform: rotate(-8deg) scale(1.06); }
+.wordmark { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 600; letter-spacing: var(--tracking-tight); }
+
+.pill { position: absolute; left: 50%; transform: translateX(-50%); display: flex; padding: 0.25rem; border: 1px solid var(--border-subtle); border-radius: var(--radius-full); background: var(--surface-sunken); }
+.slider { position: absolute; top: 0.25rem; bottom: 0.25rem; left: 0; border-radius: var(--radius-full); background: var(--surface-raised); box-shadow: var(--shadow-1); transition: transform var(--duration-slow) var(--ease-spring), width var(--duration-slow) var(--ease-spring); }
+.link { position: relative; z-index: 1; padding: 0.4rem var(--space-4); border-radius: var(--radius-full); color: var(--text-muted); font-size: var(--text-sm); font-weight: 500; text-decoration: none; transition: color var(--duration-fast) var(--ease-out); }
+.link:hover { color: var(--text-primary); text-decoration: none; }
+.active { color: var(--text-primary); }
+
+.tools { display: flex; align-items: center; gap: var(--space-2); flex: 0 0 auto; }
+.iconBtn { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border: 0; border-radius: var(--radius-full); background: transparent; color: var(--text-secondary); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out); }
+.iconBtn:hover { background: var(--accent-soft); color: var(--text-primary); }
+.menuBtn { display: none; }
+
+.sheet { margin: var(--space-2) var(--space-4) 0; padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-1); border: 1px solid var(--border-default); border-radius: var(--radius-xl); background: var(--surface-raised); box-shadow: var(--shadow-3); animation: sheetIn var(--duration-base) var(--ease-out); }
+.sheetLink { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); color: var(--text-secondary); font-weight: 500; text-decoration: none; }
+.sheetLink:hover { background: var(--accent-soft); color: var(--text-primary); text-decoration: none; }
+.sheetActive { background: var(--accent-soft); color: var(--text-primary); }
+@keyframes sheetIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 960px) {
+  .pill { display: none; }
+  .menuBtn { display: inline-flex; }
+}
+@media (max-width: 560px) {
+  .wordmark { display: none; }
+  .bar { padding-left: var(--space-3); }
+}
+
+.sheetTools { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-2); padding: var(--space-3) var(--space-4) var(--space-2); border-top: 1px solid var(--border-subtle); }
+.sheetSearch { display: inline-flex; align-items: center; gap: var(--space-2); border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-sunken); color: var(--text-secondary); font: inherit; font-size: var(--text-sm); padding: var(--space-2) var(--space-4); cursor: pointer; }
+@media (max-width: 560px) { .hideSm { display: none; } }

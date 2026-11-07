@@ -49,7 +49,7 @@ from groundtruth.platform.store.models import (
     load_bundle,
 )
 
-TABLES = {"cases", "analysis_runs", "evidence_bundles", "datasets", "jobs"}
+TABLES = {"cases", "analysis_runs", "evidence_bundles", "datasets", "jobs", "users", "sessions"}
 STORE_DIR = (
     pathlib.Path(__file__).resolve().parents[1]
     / "packages"

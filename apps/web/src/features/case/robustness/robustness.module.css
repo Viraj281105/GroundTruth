@@ -1,0 +1,125 @@
+.multiverse {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  min-height: 2.75rem;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-default);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+}
+
+.chip:hover {
+  background: var(--surface-hover);
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft-border);
+  color: var(--text-primary);
+}
+
+.chip:focus-visible,
+.pt:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.chartBox {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.grid {
+  stroke: var(--border-subtle);
+  stroke-width: 1;
+}
+
+.tick {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.zero {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+}
+
+.median {
+  stroke: var(--series-synthetic);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.pt {
+  fill: var(--series-observed);
+  stroke: var(--surface-raised);
+  stroke-width: 2;
+  cursor: pointer;
+  transition: r var(--duration-fast) var(--ease-out);
+}
+
+.pt.flip {
+  fill: var(--caution-text);
+}
+
+.pt.centre {
+  stroke: var(--text-primary);
+}
+
+.readout {
+  min-height: 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.empty {
+  margin: 0;
+  background: var(--neutral-bg);
+  border: 1px solid var(--neutral-border);
+  color: var(--neutral-text);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip,
+  .pt {
+    transition: none;
+  }
+}

@@ -1,0 +1,25 @@
+.caption { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: baseline; padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-left: 3px solid var(--accent); border-radius: var(--radius-md); background: var(--surface-sunken); font-size: var(--text-sm); color: var(--text-secondary); margin: 0; }
+.caption strong { color: var(--text-primary); }
+.card { border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-raised); padding: var(--space-4); min-width: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.cardTitle { margin: 0; font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); }
+.cardNote { margin: 0; font-size: var(--text-xs); color: var(--text-muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: var(--space-4); }
+.donuts { display: flex; flex-wrap: wrap; justify-content: space-around; gap: var(--space-4); }
+.big { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: var(--space-4); }
+.bigItem { border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-raised); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.bigValue { font-family: var(--font-display); font-size: var(--text-3xl); line-height: 1.1; color: var(--text-primary); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.bigLabel { font-size: var(--text-sm); color: var(--text-secondary); }
+.sentence { font-size: var(--text-lg); line-height: var(--leading-relaxed); color: var(--text-primary); margin: 0; max-width: var(--reading-width); }
+.strip { list-style: none; margin: 0; padding: var(--space-4) 0 0; display: flex; gap: var(--space-4); overflow-x: auto; border-top: 2px solid var(--border-default); }
+.stripItem { position: relative; flex: 0 0 auto; min-width: 9rem; max-width: 12rem; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-xs); color: var(--text-secondary); }
+.stripItem::before { content: ''; position: absolute; top: calc(-1 * var(--space-4) - 7px); left: 0; width: 12px; height: 12px; border-radius: var(--radius-full); background: var(--accent); border: 2px solid var(--surface-base); }
+.stripYear { font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.mapSvg { display: block; width: 100%; height: auto; max-height: 20rem; }
+.mapGrid { stroke: var(--border-subtle); }
+.mapRect { fill: var(--accent); fill-opacity: 0.2; stroke: var(--accent); stroke-width: 2; }
+.mapText { fill: var(--text-muted); font-size: 10px; font-family: var(--font-sans); font-variant-numeric: tabular-nums; }
+.mapLabel { fill: var(--text-primary); font-size: 11px; font-weight: 600; font-family: var(--font-sans); }
+.mapDot { fill: var(--accent); }
+.table { width: 100%; border-collapse: collapse; font-size: var(--text-xs); }
+.table th, .table td { text-align: left; padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--border-subtle); font-variant-numeric: tabular-nums; }
+.tableWrap { overflow-x: auto; max-width: 100%; }

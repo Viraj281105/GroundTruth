@@ -1,0 +1,28 @@
+image:
+  registry: ""
+  pullPolicy: IfNotPresent
+api:
+  image: groundtruth-api
+  tag: latest
+  replicas: 1
+  port: 8000
+worker:
+  image: groundtruth-worker
+  tag: latest
+  replicas: 1
+web:
+  image: groundtruth-web
+  tag: latest
+  replicas: 1
+  port: 3000
+config:
+  OTEL_SERVICE_NAME: groundtruth
+  # OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+# Name of a pre-created Secret (e.g. DATABASE_URL). No secrets are stored in the chart.
+existingSecret: groundtruth-secrets
+ingress:
+  enabled: false
+  className: ""
+  host: groundtruth.example.com
+  tls: []
+resources: {}

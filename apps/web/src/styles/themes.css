@@ -1,0 +1,98 @@
+/* Tier 2: semantic tokens per theme. Contrast targets WCAG AA (4.5:1 text, 3:1 UI). */
+
+:root,
+:root[data-theme="light"] {
+  color-scheme: light;
+  --surface-base: var(--ref-paper-50);
+  --surface-raised: #ffffff;
+  --surface-sunken: var(--ref-paper-100);
+  --surface-hover: #f8f6f0;
+  --surface-overlay: rgb(251 249 245 / 0.94);
+  --border-subtle: var(--ref-paper-200);
+  --border-default: var(--ref-paper-300);
+  --border-strong: #b9b1a0;
+  --text-primary: var(--ref-ink-900);
+  --text-secondary: var(--ref-ink-700);
+  --text-muted: var(--ref-ink-600);
+  --text-on-accent: #ffffff;
+  --accent: var(--ref-green-700);
+  --accent-strong: var(--ref-green-600);
+  --accent-soft: rgb(27 106 76 / 0.09);
+  --accent-soft-border: rgb(27 106 76 / 0.28);
+  --focus-ring: #2a7de1;
+  --ok-bg: rgb(27 106 76 / 0.09);
+  --ok-border: rgb(27 106 76 / 0.35);
+  --ok-text: var(--ref-green-700);
+  --caution-bg: rgb(166 75 6 / 0.09);
+  --caution-border: rgb(166 75 6 / 0.35);
+  --caution-text: var(--ref-amber-700);
+  --neutral-bg: rgb(75 90 107 / 0.09);
+  --neutral-border: rgb(75 90 107 / 0.3);
+  --neutral-text: var(--ref-slate-700);
+  --danger-bg: rgb(180 35 24 / 0.08);
+  --danger-border: rgb(180 35 24 / 0.35);
+  --danger-text: var(--ref-red-700);
+  --sim-bg: rgb(109 63 209 / 0.09);
+  --sim-border: rgb(109 63 209 / 0.4);
+  --sim-text: var(--ref-violet-700);
+  --sim-solid: var(--ref-violet-700);
+  --series-observed: var(--ref-green-700);
+  --series-synthetic: var(--ref-amber-700);
+  --series-envelope: rgb(166 75 6 / 0.12);
+  --series-gap: rgb(166 75 6 / 0.1);
+  --series-pre: rgb(25 33 29 / 0.025);
+  --series-post: rgb(27 106 76 / 0.04);
+  --shadow-1: 0 1px 2px rgb(25 33 29 / 0.05), 0 1px 1px rgb(25 33 29 / 0.03);
+  --shadow-2: 0 4px 12px rgb(25 33 29 / 0.07), 0 1px 3px rgb(25 33 29 / 0.05);
+  --shadow-3: 0 16px 40px rgb(25 33 29 / 0.12), 0 4px 10px rgb(25 33 29 / 0.06);
+  --ambient: radial-gradient(60rem 30rem at 15% -10%, rgb(27 106 76 / 0.07), transparent 60%),
+    radial-gradient(40rem 24rem at 95% 0%, rgb(166 75 6 / 0.05), transparent 60%);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-base: var(--ref-night-950);
+  --surface-raised: var(--ref-night-900);
+  --surface-sunken: #0a0e0c;
+  --surface-hover: var(--ref-night-850);
+  --surface-overlay: rgb(13 18 16 / 0.94);
+  --border-subtle: var(--ref-night-800);
+  --border-default: var(--ref-night-700);
+  --border-strong: var(--ref-night-600);
+  --text-primary: var(--ref-mist-100);
+  --text-secondary: var(--ref-mist-300);
+  --text-muted: var(--ref-mist-400);
+  --text-on-accent: #07140e;
+  --accent: var(--ref-green-300);
+  --accent-strong: #86dbb7;
+  --accent-soft: rgb(98 199 157 / 0.12);
+  --accent-soft-border: rgb(98 199 157 / 0.32);
+  --focus-ring: #6cb0ff;
+  --ok-bg: rgb(98 199 157 / 0.12);
+  --ok-border: rgb(98 199 157 / 0.4);
+  --ok-text: var(--ref-green-300);
+  --caution-bg: rgb(232 166 83 / 0.12);
+  --caution-border: rgb(232 166 83 / 0.4);
+  --caution-text: var(--ref-amber-300);
+  --neutral-bg: rgb(169 184 201 / 0.1);
+  --neutral-border: rgb(169 184 201 / 0.32);
+  --neutral-text: var(--ref-slate-300);
+  --danger-bg: rgb(242 137 126 / 0.12);
+  --danger-border: rgb(242 137 126 / 0.4);
+  --danger-text: var(--ref-red-300);
+  --sim-bg: rgb(185 162 255 / 0.12);
+  --sim-border: rgb(185 162 255 / 0.45);
+  --sim-text: var(--ref-violet-300);
+  --sim-solid: var(--ref-violet-300);
+  --series-observed: var(--ref-green-300);
+  --series-synthetic: var(--ref-amber-300);
+  --series-envelope: rgb(232 166 83 / 0.14);
+  --series-gap: rgb(232 166 83 / 0.12);
+  --series-pre: rgb(237 240 234 / 0.02);
+  --series-post: rgb(98 199 157 / 0.05);
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-2: 0 6px 16px rgb(0 0 0 / 0.35), 0 1px 3px rgb(0 0 0 / 0.4);
+  --shadow-3: 0 20px 48px rgb(0 0 0 / 0.5), 0 4px 12px rgb(0 0 0 / 0.4);
+  --ambient: radial-gradient(60rem 30rem at 15% -10%, rgb(98 199 157 / 0.08), transparent 60%),
+    radial-gradient(40rem 24rem at 95% 0%, rgb(232 166 83 / 0.05), transparent 60%);
+}
