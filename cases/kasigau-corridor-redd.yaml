@@ -1,0 +1,31 @@
+case_id: kasigau-corridor-redd
+project:
+  name: Kasigau Corridor REDD+ Project Phase II
+  country: Kenya
+  ecosystem: dryland acacia-commiphora bushland
+  standard: VCS
+  registry_id: VCS 612
+  area_ha: 169741
+  crediting_period_start: '2010-01-01'
+  crediting_period_end: '2039-12-31'
+  claimed_credits_tco2e: 39000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/612
+  boundary_path: cases/boundaries/kasigau-corridor.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2009
+  post_start: 2010
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Southeastern Kenya dryland bushland outside national parks
+  donor_pool_size: 60
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Dryland forest corridor connecting Tsavo East and Tsavo West National Parks.

@@ -1,0 +1,32 @@
+case_id: tambopata-bahuaja-redd
+project:
+  name: Tambopata-Bahuaja Biodiversity Reserve
+  country: Peru
+  ecosystem: sub-tropical humid Amazon forest
+  standard: VCS
+  registry_id: VCS 1067
+  area_ha: 591119
+  crediting_period_start: '2010-01-01'
+  crediting_period_end: '2030-12-31'
+  claimed_credits_tco2e: 9000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/1067
+  boundary_path: cases/boundaries/tambopata.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2009
+  post_start: 2010
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Madre de Dios moist forest outside mining corridors and concessions
+  donor_pool_size: 75
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Buffer zone conservation project countering illegal gold mining and slash-and-burn
+  agriculture.

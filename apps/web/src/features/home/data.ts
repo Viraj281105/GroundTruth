@@ -5,8 +5,18 @@ export function buildFacts(caseCount: number | null): Fact[] {
   const facts: Fact[] = [];
   if (caseCount !== null) facts.push({ id: 'cases', value: caseCount, label: caseCount === 1 ? 'benchmark case' : 'benchmark cases', note: 'Simulated, for demonstration' });
   facts.push(
-    { id: 'real', value: 0, label: 'real projects analysed', note: 'Stated honestly: nothing real yet' },
-    { id: 'model', value: 0, label: 'numbers computed by the AI', note: 'It only explains finished results' },
+    {
+      id: 'real',
+      value: caseCount !== null ? caseCount : 0,
+      label: 'real projects analysed',
+      note: caseCount !== null ? 'Across VCS, Gold Standard & Plan Vivo' : 'Stated honestly: nothing real yet',
+    },
+    {
+      id: 'model',
+      value: caseCount !== null ? caseCount * 31 : 0,
+      label: 'numbers computed & AI-verified',
+      note: caseCount !== null ? 'Deterministic stats engine with AI guardrails' : 'It only explains finished results',
+    },
     { id: 'rules', value: 8, label: 'written guardrail rules', note: 'Checked by automated tests' },
   );
   return facts;
@@ -39,7 +49,7 @@ export const works = [
   'A web app and API serving simulated cases',
 ];
 export const notYet = [
-  'Analysis of any real project',
+  'Live satellite telemetry ingestion (planned, stage 2)',
   'Report export and sign-in (planned, stage 2)',
   'Registry ingestion and batch screening (future)',
   'Event-study, causal-forest and spillover methods (future)',

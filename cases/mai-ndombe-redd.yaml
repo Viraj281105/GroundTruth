@@ -1,0 +1,31 @@
+case_id: mai-ndombe-redd
+project:
+  name: Mai Ndombe REDD+ Project
+  country: Democratic Republic of the Congo
+  ecosystem: equatorial lowland tropical rainforest
+  standard: VCS
+  registry_id: VCS 934
+  area_ha: 299645
+  crediting_period_start: '2011-03-14'
+  crediting_period_end: '2041-03-13'
+  claimed_credits_tco2e: 100000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/934
+  boundary_path: cases/boundaries/mai-ndombe.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2010
+  post_start: 2011
+  post_end: 2022
+analysis:
+  indicator: evi
+  donor_search_region: Congo Basin moist dense forest outside logging concessions
+  donor_pool_size: 80
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Large-scale avoided deforestation in the Congo Basin peatland and swamp forest.

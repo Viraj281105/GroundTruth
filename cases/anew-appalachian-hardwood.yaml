@@ -1,0 +1,32 @@
+case_id: anew-appalachian-hardwood
+project:
+  name: Anew Appalachian Hardwood Improved Forest Management
+  country: United States
+  ecosystem: temperate mixed mesophytic deciduous forest
+  standard: VCS
+  registry_id: VCS 1383
+  area_ha: 40500
+  crediting_period_start: '2012-06-01'
+  crediting_period_end: '2052-05-31'
+  claimed_credits_tco2e: 4200000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/1383
+  boundary_path: cases/boundaries/appalachian.geojson
+analysis_window:
+  pre_start: 2002
+  pre_end: 2011
+  post_start: 2012
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Central Appalachian commercial timberland
+  donor_pool_size: 50
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Improved Forest Management (IFM) extending rotation cycles on Appalachian working
+  forests.

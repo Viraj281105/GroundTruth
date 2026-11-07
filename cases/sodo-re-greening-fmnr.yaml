@@ -1,0 +1,31 @@
+case_id: sodo-re-greening-fmnr
+project:
+  name: Sodo Community-Managed Reforestation Project
+  country: Ethiopia
+  ecosystem: Afromontane hillside woodland
+  standard: GoldStandard
+  registry_id: GoldStandard 201
+  area_ha: 5034
+  crediting_period_start: '2008-01-01'
+  crediting_period_end: '2037-12-31'
+  claimed_credits_tco2e: 1100000
+  source_uri: https://registry.goldstandard.org/projects/details/201
+  boundary_path: cases/boundaries/sodo.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2007
+  post_start: 2008
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Wolayita zone degraded slopes outside agricultural settlements
+  donor_pool_size: 40
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Restoring indigenous broadleaf species via Farmer Managed Natural Regeneration.

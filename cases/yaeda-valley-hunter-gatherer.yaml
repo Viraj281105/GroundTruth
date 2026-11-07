@@ -1,0 +1,32 @@
+case_id: yaeda-valley-hunter-gatherer
+project:
+  name: Yaeda Valley Hadza and Datooga Community REDD
+  country: Tanzania
+  ecosystem: dry Acacia-Commiphora savanna woodland
+  standard: PlanVivo
+  registry_id: PlanVivo 1003
+  area_ha: 32000
+  crediting_period_start: '2011-01-01'
+  crediting_period_end: '2040-12-31'
+  claimed_credits_tco2e: 800000
+  source_uri: https://www.planvivo.org/yaeda-valley
+  boundary_path: cases/boundaries/yaeda.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2010
+  post_start: 2011
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Rift Valley dry woodlands outside national parks
+  donor_pool_size: 50
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Securing communal land rights and traditional foraging territory for the Hadza
+  hunter-gatherers.
