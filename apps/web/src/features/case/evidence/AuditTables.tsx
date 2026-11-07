@@ -9,32 +9,53 @@ import styles from './viz.module.css';
 
 /** Auditor-only tables: the per-period residual series, per-candidate donors and the evidence ids. */
 export function AuditTables({ items, viz, onSelect }: { items: Evidence[]; viz: VerificationFixtureData | null; onSelect: (e: Evidence) => void }) {
+  function downloadCsv() {
+    if (!viz || !viz.chartSeries.length) return;
+    const header = 'Year,Observed,Counterfactual,Gap\n';
+    const rows = viz.chartSeries
+      .map((p) => `${p.year},${p.observed},${p.synthetic},${p.gap ?? (p.observed - p.synthetic)}`)
+      .join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'groundtruth-timeseries.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   return (
     <div className={styles.grid}>
       <Card title="Residual series (observed minus counterfactual)">
         {viz && viz.chartSeries.length > 0 ? (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Year</th>
-                  <th>Observed</th>
-                  <th>Counterfactual</th>
-                  <th>Gap</th>
-                </tr>
-              </thead>
-              <tbody>
-                {viz.chartSeries.map((p) => (
-                  <tr key={p.year}>
-                    <td>{p.year}</td>
-                    <td>{sig(p.observed, 4)}</td>
-                    <td>{sig(p.synthetic, 4)}</td>
-                    <td>{sig(p.gap, 4)}</td>
+          <>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th>Observed</th>
+                    <th>Counterfactual</th>
+                    <th>Gap</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {viz.chartSeries.map((p) => (
+                    <tr key={p.year}>
+                      <td>{p.year}</td>
+                      <td>{sig(p.observed, 4)}</td>
+                      <td>{sig(p.synthetic, 4)}</td>
+                      <td>{sig(p.gap, 4)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button type="button" onClick={downloadCsv} className={styles.csvBtn}>
+              Export Raw Series (CSV)
+            </button>
+          </>
         ) : (
           <p className={styles.cardNote}>Not available: no per-period series was provided.</p>
         )}

@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { getCases, getVisualizationFixture } from '../../lib/api';
 import type { CaseSummary } from '../../lib/types';
-import { Chip } from '../../components/ds';
+import { Chip, LinkButton } from '../../components/ds';
 import { observedSeriesMap } from '../../features/cases/viz';
 import { CasesBrowser } from '../../features/cases/CasesBrowser';
 import { casesCopy as c } from '../../features/cases/copy';
@@ -24,8 +24,15 @@ export default async function CasesPage() {
 
   return (
     <div className={`gt-container ${styles.page}`}>
-      <h1>{c.title}</h1>
-      <p className={styles.intro}>{c.intro}</p>
+      <div className={styles.headerRow}>
+        <div>
+          <h1>{c.title}</h1>
+          <p className={styles.intro}>{c.intro}</p>
+        </div>
+        <LinkButton href="/cases/new" size="md">
+          + Ingest Real Project
+        </LinkButton>
+      </div>
       {isDemo && <p className={styles.demo}><Chip tone="sim">Demo mode</Chip> {c.demo}</p>}
       {failed ? (
         <div role="alert" className={styles.error}>

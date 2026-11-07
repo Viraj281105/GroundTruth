@@ -4,12 +4,54 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, EmptyState, Skeleton } from '../../components/ds';
 import { BarList } from '../../components/charts';
 import { claimPairs } from './pairs';
-import { getCases } from '../../lib/api';
+import { getApiBaseUrl, getCases } from '../../lib/api';
 import type { CaseSummary } from '../../lib/types';
 import { CLAIMS_COPY as C } from './copy';
 import { analyzeClaims, MAX_TEXT_CHARS, type AnalyzeResult, type ClaimsResponse } from './client';
 import { segmentText } from './highlight';
 import styles from './ClaimsWorkbench.module.css';
+
+const REAL_DOCUMENTS = [
+  {
+    label: 'Kariba REDD+ (VCS 902)',
+    caseId: 'kariba-redd',
+    text: `Project Name: Kariba REDD+ Project
+Registry: Verra VCS 902
+Proponent: Carbon Green Investments (Guernsey)
+Country: Zimbabwe
+Ecosystem: Miombo woodland / dry forest
+Project Area: 784,987 hectares inside the four Rural District Councils (Binga, Nyaminyami, Hurungwe, and Mbire).
+Crediting Period: 2011-07-01 to 2041-06-30 (30-year crediting period).
+Credits Claimed: Over the initial monitoring cycles, the project claimed and issued 26,822,953 credits (tCO2e) of verified emissions reductions.
+Baseline emissions avoided: 1,450,000 tCO2e per year across the project accounting area.`,
+  },
+  {
+    label: 'Kasigau Corridor (VCS 562)',
+    caseId: 'kasigau-corridor-redd',
+    text: `Project Name: The Kasigau Corridor REDD Project Phase II - The Community Ranches
+Registry: Verra VCS 562
+Proponent: Wildlife Works Carbon LLC
+Country: Kenya
+Ecosystem: Dryland acacia-commiphora forest
+Project Area: 169,741 hectares connecting Tsavo East and Tsavo West National Parks.
+Crediting Period: 2011-01-01 to 2040-12-31.
+Credits Claimed: Total claimed credits issued: 13,800,000 tCO2e.
+Estimated annual avoided deforestation reduction: 1,350,000 tCO2e per year.`,
+  },
+  {
+    label: 'Rimba Raya (VCS 641)',
+    caseId: 'rimba-raya-redd',
+    text: `Project Name: Rimba Raya Biodiversity Reserve Project
+Registry: Verra VCS 641
+Proponent: InfiniteEARTH Limited
+Country: Indonesia
+Ecosystem: Tropical peat swamp forest
+Project Area: 64,977 hectares adjacent to Tanjung Puting National Park in Central Kalimantan.
+Crediting Period: 2009-01-01 to 2038-12-31.
+Credits Claimed: Total claimed and verified carbon credits issued: 33,200,000 tCO2e.
+Average annual emission reductions avoided: 3,520,000 tCO2e.`,
+  },
+];
 
 const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 });
 
@@ -47,6 +89,37 @@ export function ClaimsWorkbench() {
     setDragging(false);
     const file = e.dataTransfer.files[0];
     if (!file) return;
+
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      setLocalError(null);
+      setState({ phase: 'loading' });
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const resultStr = reader.result as string;
+        const base64 = resultStr.includes(',') ? resultStr.split(',')[1] : resultStr;
+        try {
+          const res = await fetch(`${getApiBaseUrl()}/claims/extract-pdf`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file_base64: base64, filename: file.name }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setText(data.text);
+            setState({ phase: 'idle' });
+          } else {
+            setLocalError('Failed to extract text from PDF.');
+            setState({ phase: 'idle' });
+          }
+        } catch {
+          setLocalError('API unreachable for PDF text extraction.');
+          setState({ phase: 'idle' });
+        }
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
     if (!(file.type.startsWith('text/') || /\.(txt|md)$/i.test(file.name))) {
       setLocalError(C.notFileType);
       return;
@@ -69,6 +142,24 @@ export function ClaimsWorkbench() {
       <div className={styles.banner} role="note">{C.banner}</div>
       <div className={styles.layout}>
         <div className={styles.field}>
+          <div className={styles.sampleBar}>
+            <span className={styles.sampleLabel}>Load real document:</span>
+            {REAL_DOCUMENTS.map((doc) => (
+              <button
+                key={doc.caseId}
+                type="button"
+                className={styles.sampleBtn}
+                onClick={() => {
+                  setText(doc.text);
+                  setCaseId(doc.caseId);
+                  setLocalError(null);
+                  setState({ phase: 'idle' });
+                }}
+              >
+                {doc.label}
+              </button>
+            ))}
+          </div>
           <label className={styles.label} htmlFor="claims-text">{C.textLabel}</label>
           <textarea
             id="claims-text"
