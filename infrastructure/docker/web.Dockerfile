@@ -18,10 +18,10 @@ RUN npm run build
 FROM node:20-alpine AS run
 WORKDIR /web
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
-COPY --from=build /web/package.json /web/package-lock.json ./
-COPY --from=build /web/node_modules ./node_modules
-COPY --from=build /web/.next ./.next
-COPY --from=build /web/next.config.mjs ./
+COPY --chown=node:node --from=build /web/package.json /web/package-lock.json ./
+COPY --chown=node:node --from=build /web/node_modules ./node_modules
+COPY --chown=node:node --from=build /web/.next ./.next
+COPY --chown=node:node --from=build /web/next.config.mjs ./
 USER node
 EXPOSE 3000
 CMD ["npx", "next", "start", "-p", "3000"]
