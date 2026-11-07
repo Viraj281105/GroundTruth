@@ -96,8 +96,9 @@ def extract_pdf(body: PdfExtractRequest) -> PdfExtractResponse:
             if t.strip():
                 extracted.append(t.strip())
         text = "\n\n".join(extracted)
+        fallback = "No selectable text found in the PDF. Scanned pages require OCR."
         return PdfExtractResponse(
-            text=text if text else "No selectable text found in the PDF. Scanned pages require OCR.",
+            text=text if text else fallback,
             num_pages=len(reader.pages),
             filename=body.filename,
         )

@@ -3,21 +3,19 @@
 from __future__ import annotations
 
 import json
-import math
+import logging
 import re
 from pathlib import Path
 from typing import Any
+
 import yaml
 
-from groundtruth.contracts.errors import CaseDefinitionError
-from groundtruth.contracts.request import AnalysisRequest
-from groundtruth.contracts.result import AnalysisResult, EngineStatus
-from groundtruth.contracts.types import TimeSeries
 from groundtruth.engine.run import run_analysis
-from groundtruth.platform.cases.registry import CaseDefinition, cases_directory, get_case, load_case
-from groundtruth.platform.config import get_settings
+from groundtruth.platform.cases.registry import CaseDefinition, cases_directory, get_case
 from groundtruth.platform.datasets.access import synthetic_access
 from groundtruth.platform.reports.narrative import generate_report
+
+logger = logging.getLogger("groundtruth.cases.creator")
 
 
 def slugify(text: str) -> str:
@@ -156,38 +154,41 @@ def _generate_and_store_fixture(case: CaseDefinition) -> None:
         orig_placebo = engine_run.in_space_placebo
         orig_align = engine_run.align_panel
 
-        def wrap_fit(*a, **kw):
+        def wrap_fit(*a: Any, **kw: Any) -> Any:
             r = orig_fit(*a, **kw)
             recorded["fit"] = r
             return r
 
-        def wrap_match(*a, **kw):
+        def wrap_match(*a: Any, **kw: Any) -> Any:
             r = orig_match(*a, **kw)
             recorded["match"] = r
             return r
 
-        def wrap_placebo(*a, **kw):
+        def wrap_placebo(*a: Any, **kw: Any) -> Any:
             r = orig_placebo(*a, **kw)
             recorded["placebo"] = r
             return r
 
-        def wrap_align(*a, **kw):
+        def wrap_align(*a: Any, **kw: Any) -> Any:
             r = orig_align(*a, **kw)
             recorded["align"] = r
             return r
 
-        setattr(engine_run, "fit_synthetic_control", wrap_fit)
-        setattr(engine_run, "match_donors", wrap_match)
-        setattr(engine_run, "in_space_placebo", wrap_placebo)
-        setattr(engine_run, "align_panel", wrap_align)
+        engine_run.fit_synthetic_control = wrap_fit
+        engine_run.match_donors = wrap_match
+        engine_run.in_space_placebo = wrap_placebo
+        engine_run.align_panel = wrap_align
 
         try:
             result = run_analysis(req, access)
         finally:
-            setattr(engine_run, "fit_synthetic_control", orig_fit)
-            setattr(engine_run, "match_donors", orig_match)
-            setattr(engine_run, "in_space_placebo", orig_placebo)
-            setattr(engine_run, "align_panel", orig_align)
+            engine_run.fit_synthetic_control = orig_fit
+            engine_run.match_donors = orig_match
+            engine_run.in_space_placebo = orig_placebo
+            engine_run.align_panel = orig_align
+
+        if result.bundle is None:
+            return
 
         report = generate_report(result.bundle)
 
@@ -200,47 +201,38 @@ def _generate_and_store_fixture(case: CaseDefinition) -> None:
             synthetic = [*fit.synthetic_pre.tolist(), *fit.synthetic_post.tolist()]
             periods = list(panel.periods)
             boundary = panel.post_periods[0]
-            for yr, obs, syn in zip(periods, observed, synthetic):
-                chart_series.append({
-                    "year": int(yr),
-                    "observed": round(float(obs), 4),
-                    "synthetic": round(float(syn), 4),
-                    "gap": round(float(obs - syn), 4),
-                    "isPost": bool(yr >= boundary),
-                })
+            for yr, obs, syn in zip(periods, observed, synthetic, strict=False):
+                chart_series.append(
+                    {
+                        "year": int(yr),
+                        "observed": round(float(obs), 4),
+                        "synthetic": round(float(syn), 4),
+                        "gap": round(float(obs - syn), 4),
+                        "isPost": bool(yr >= boundary),
+                    }
+                )
 
         # Build donor pool
         match = recorded.get("match")
         donor_pool = []
         if match is not None:
             for m in match.matches:
-                donor_pool.append({
-                    "unit_id": m.unit_id,
-                    "admitted": m.admitted,
-                    "distance": round(float(m.distance), 4) if m.distance is not None else None,
-                    "exclusion_reason": m.exclusion_reason,
-                })
+                donor_pool.append(
+                    {
+                        "unit_id": m.unit_id,
+                        "admitted": m.admitted,
+                        "distance": round(float(m.distance), 4) if m.distance is not None else None,
+                        "exclusion_reason": m.exclusion_reason,
+                    }
+                )
 
         # Build placebos
         placebo = recorded.get("placebo")
-        obs_stat = float(placebo.observed_statistic) if placebo else 0.05
-        placebo_stats = [round(float(s), 4) for s in getattr(placebo, "placebo_statistics", [])] if placebo else [0.01, 0.02, 0.03]
-        bin_width = 1.0
-        upper = math.ceil(max(obs_stat, *placebo_stats) / bin_width) + 1
-        bins = [{"min": i * bin_width, "max": (i + 1) * bin_width, "count": 0} for i in range(upper)]
-        for s in placebo_stats:
-            b_idx = min(int(math.floor(s / bin_width)), len(bins) - 1)
-            bins[b_idx]["count"] += 1
-
-        placebos = {
-            "bins": bins,
-            "projectStatistic": obs_stat,
-            "pValue": 0.042,
-            "rank": 2,
-            "totalUnits": len(placebo_stats) + 1,
-            "significanceLevel": 0.05,
-            "pValueFloor": 0.024,
-        }
+        placebo_stats = (
+            [round(float(s), 4) for s in getattr(placebo, "placebo_statistics", [])]
+            if placebo
+            else [0.01, 0.02, 0.03]
+        )
 
         fixture_data = {
             "verification": {
@@ -266,42 +258,61 @@ def _generate_and_store_fixture(case: CaseDefinition) -> None:
                 "placebo_statistics": placebo_stats or [0.01, 0.02, 0.03, 0.04, 0.05],
             },
             "timeline": [
-                {"year": case.window.pre_start, "title": "Baseline monitoring starts", "description": "Pre-period calibration begins.", "type": "baseline"},
-                {"year": case.window.post_start, "title": "Project crediting start", "description": "Intervention starts.", "type": "crediting"},
-                {"year": case.window.post_end, "title": "Evaluation window ends", "description": "Post-intervention cutoff.", "type": "baseline"},
+                {
+                    "year": case.window.pre_start,
+                    "title": "Baseline monitoring starts",
+                    "description": "Pre-period calibration begins.",
+                    "type": "baseline",
+                },
+                {
+                    "year": case.window.post_start,
+                    "title": "Project crediting start",
+                    "description": "Intervention starts.",
+                    "type": "crediting",
+                },
+                {
+                    "year": case.window.post_end,
+                    "title": "Evaluation window ends",
+                    "description": "Post-intervention cutoff.",
+                    "type": "baseline",
+                },
             ],
         }
 
-        fixtures_path = Path("GroundTruth/apps/web/src/lib/fixtures/generated/all_cases.completed.json")
-        if not fixtures_path.exists():
-            fixtures_path = Path(r"d:\Hackathons\PCCOEIGC\GroundTruth\apps\web\src\lib\fixtures\generated\all_cases.completed.json")
+        # Resolve path to completed fixtures json
+        cand_paths = [
+            Path("apps/web/src/lib/fixtures/generated/all_cases.completed.json"),
+            Path("GroundTruth/apps/web/src/lib/fixtures/generated/all_cases.completed.json"),
+        ]
+        target_path = None
+        for cp in cand_paths:
+            if cp.exists():
+                target_path = cp
+                break
 
-        if fixtures_path.exists():
-            with open(fixtures_path, "r", encoding="utf-8") as f:
+        if target_path and target_path.exists():
+            with open(target_path, encoding="utf-8") as f:
                 all_fixtures = json.load(f)
             all_fixtures[case.case_id] = fixture_data
-            with open(fixtures_path, "w", encoding="utf-8") as f:
+            with open(target_path, "w", encoding="utf-8") as f:
                 json.dump(all_fixtures, f, indent=2)
     except Exception as exc:
-        import logging
-        logging.getLogger("groundtruth.cases.creator").warning("Could not auto-generate fixture: %s", exc)
+        logger.warning("Could not auto-generate fixture: %s", exc)
 
 
 def _queue_initial_run(case: CaseDefinition) -> None:
-    """Queue initial run in PostgreSQL if available."""
+    """Queue initial run in database if configured."""
     try:
         from groundtruth.platform.config import get_settings
-        from groundtruth.platform.store.sql import SqlEvidenceStore
+        from groundtruth.platform.jobs.queue import JobQueue
+        from groundtruth.platform.store.database import create_db_engine, create_session_factory
+
         settings = get_settings()
         if not settings.database_url:
             return
-        store = SqlEvidenceStore(settings.database_url)
-        from groundtruth.platform.jobs.queue import JobQueue
-        from groundtruth.platform.jobs.worker import run_job_synchronously
-
-        queue = JobQueue(store)
-        job = queue.enqueue(case.case_id)
-        run_job_synchronously(job.job_id, queue)
+        engine = create_db_engine(settings.database_url)
+        sessions = create_session_factory(engine)
+        req = case.to_request(seed=20260101)
+        JobQueue(sessions).submit(req)
     except Exception:
         pass
-
