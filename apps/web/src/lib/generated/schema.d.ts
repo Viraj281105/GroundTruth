@@ -230,6 +230,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/claims/extract-pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extract raw text from an uploaded PDF document
+         * @description Extract plain text from base64 PDF bytes (PDD or monitoring report).
+         */
+        post: operations["extract_pdf_claims_extract_pdf_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/claims/analyze": {
         parameters: {
             query?: never;
@@ -414,7 +434,11 @@ export interface paths {
          */
         get: operations["list_case_summaries_cases_get"];
         put?: never;
-        post?: never;
+        /**
+         * Create Case
+         * @description Create, calibrate and register a new project case.
+         */
+        post: operations["create_case_cases_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -648,6 +672,78 @@ export interface components {
              * @default permutation
              */
             kind: string;
+        };
+        /**
+         * CreateCaseRequest
+         * @description Request to define and register a new project case.
+         */
+        CreateCaseRequest: {
+            /** Name */
+            name: string;
+            /** Country */
+            country: string;
+            /**
+             * Ecosystem
+             * @default forest / woodland
+             */
+            ecosystem?: string;
+            /**
+             * Standard
+             * @default VCS
+             */
+            standard?: string;
+            /** Registry Id */
+            registry_id: string;
+            /** Area Ha */
+            area_ha: number;
+            /**
+             * Crediting Period Start
+             * @default 2015-01-01
+             */
+            crediting_period_start?: string;
+            /**
+             * Crediting Period End
+             * @default 2045-12-31
+             */
+            crediting_period_end?: string;
+            /** Claimed Credits Tco2E */
+            claimed_credits_tco2e?: number | null;
+            /**
+             * Indicator
+             * @default ndvi
+             */
+            indicator?: string;
+            /**
+             * Donor Pool Size
+             * @default 50
+             */
+            donor_pool_size?: number;
+            /**
+             * Pre Start
+             * @default 2005
+             */
+            pre_start?: number;
+            /**
+             * Pre End
+             * @default 2014
+             */
+            pre_end?: number;
+            /**
+             * Post Start
+             * @default 2015
+             */
+            post_start?: number;
+            /**
+             * Post End
+             * @default 2022
+             */
+            post_end?: number;
+            /** Boundary Geojson */
+            boundary_geojson?: {
+                [key: string]: unknown;
+            } | null;
+            /** Case Id */
+            case_id?: string | null;
         };
         /**
          * DatasetRef
@@ -1115,6 +1211,25 @@ export interface components {
             side: "baseline" | "candidate" | "both";
             /** Message */
             message: string;
+        };
+        /** PdfExtractRequest */
+        PdfExtractRequest: {
+            /** File Base64 */
+            file_base64: string;
+            /**
+             * Filename
+             * @default uploaded.pdf
+             */
+            filename?: string;
+        };
+        /** PdfExtractResponse */
+        PdfExtractResponse: {
+            /** Text */
+            text: string;
+            /** Num Pages */
+            num_pages: number;
+            /** Filename */
+            filename: string;
         };
         /**
          * Provenance
@@ -2204,6 +2319,39 @@ export interface operations {
             };
         };
     };
+    extract_pdf_claims_extract_pdf_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PdfExtractRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PdfExtractResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     analyze_claims_claims_analyze_post: {
         parameters: {
             query?: never;
@@ -2625,6 +2773,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaseSummary"][];
+                };
+            };
+        };
+    };
+    create_case_cases_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

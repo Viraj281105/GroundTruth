@@ -8,6 +8,9 @@ neutral: a difference warrants accredited review and is not a finding about any 
 
 from __future__ import annotations
 
+import base64
+import io
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -60,6 +63,48 @@ class ClaimsResponse(BaseModel):
     disclaimer: str
 
 
+class PdfExtractRequest(BaseModel):
+    file_base64: str
+    filename: str = "uploaded.pdf"
+
+
+class PdfExtractResponse(BaseModel):
+    text: str
+    num_pages: int
+    filename: str
+
+
+@router.post(
+    "/claims/extract-pdf",
+    response_model=PdfExtractResponse,
+    summary="Extract raw text from an uploaded PDF document",
+    dependencies=[Depends(require_role("user"))],
+)
+def extract_pdf(body: PdfExtractRequest) -> PdfExtractResponse:
+    """Extract plain text from base64 PDF bytes (PDD or monitoring report)."""
+    import pypdf
+
+    try:
+        raw_b64 = body.file_base64
+        if "," in raw_b64:
+            raw_b64 = raw_b64.split(",", 1)[1]
+        contents = base64.b64decode(raw_b64)
+        reader = pypdf.PdfReader(io.BytesIO(contents))
+        extracted = []
+        for page in reader.pages:
+            t = page.extract_text() or ""
+            if t.strip():
+                extracted.append(t.strip())
+        text = "\n\n".join(extracted)
+        return PdfExtractResponse(
+            text=text if text else "No selectable text found in the PDF. Scanned pages require OCR.",
+            num_pages=len(reader.pages),
+            filename=body.filename,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid PDF: {exc}") from exc
+
+
 def _to_model(claim: Claim) -> ExtractedClaim:
     return ExtractedClaim(
         kind=claim.kind.value,
@@ -93,7 +138,13 @@ def analyze_claims(body: ClaimsRequest) -> ClaimsResponse:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     area = case.claim.project_area_ha
-    reference: dict[str, float] = {"area_ha": float(area)} if area is not None else {}
+    credits = case.claim.claimed_credits_tco2e
+    reference: dict[str, float] = {}
+    if area is not None:
+        reference["area_ha"] = float(area)
+    if credits is not None:
+        reference["credits_issued"] = float(credits)
+
     differing = {d.citation for d in compare_claims(claims, reference)}
     comparisons: list[ClaimComparison] = []
     for claim in claims:
@@ -112,6 +163,23 @@ def analyze_claims(body: ClaimsRequest) -> ClaimsResponse:
                     claim_kind=claim.kind.value,
                     claimed=claim.value,
                     estimated=float(area),
+                    note=note,
+                )
+            )
+        elif claim.kind is ClaimKind.CREDITS_ISSUED and credits is not None:
+            verdict = (
+                "differs from the registered credit count; the difference warrants review"
+                if claim.citation() in differing
+                else "matches the registered credit count"
+            )
+            note = (
+                f"The documented credit volume {verdict}. Registered figure: {credits:,.0f} tCO2e."
+            )
+            comparisons.append(
+                ClaimComparison(
+                    claim_kind=claim.kind.value,
+                    claimed=claim.value,
+                    estimated=float(credits),
                     note=note,
                 )
             )

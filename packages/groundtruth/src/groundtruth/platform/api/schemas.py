@@ -79,6 +79,28 @@ class CaseDetail(CaseSummary):
     notes: str = ""
 
 
+class CreateCaseRequest(BaseModel):
+    """Request to define and register a new project case."""
+
+    name: str = Field(min_length=2, max_length=120)
+    country: str = Field(min_length=2, max_length=80)
+    ecosystem: str = Field(default="forest / woodland")
+    standard: str = Field(default="VCS")
+    registry_id: str = Field(min_length=2, max_length=60)
+    area_ha: float = Field(gt=0)
+    crediting_period_start: str = Field(default="2015-01-01")
+    crediting_period_end: str = Field(default="2045-12-31")
+    claimed_credits_tco2e: float | None = None
+    indicator: str = Field(default="ndvi")
+    donor_pool_size: int = Field(default=50, ge=10, le=100)
+    pre_start: int = Field(default=2005)
+    pre_end: int = Field(default=2014)
+    post_start: int = Field(default=2015)
+    post_end: int = Field(default=2022)
+    boundary_geojson: dict[str, Any] | None = None
+    case_id: str | None = None
+
+
 class VerificationRequest(BaseModel):
     """Options for a verification run."""
 
