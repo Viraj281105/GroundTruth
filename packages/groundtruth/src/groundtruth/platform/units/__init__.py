@@ -24,7 +24,13 @@ upstream of every number the pipeline produces.
 
 from __future__ import annotations
 
-from groundtruth.platform.units.boundary import RegistryBoundary, load_registry_boundary
+from groundtruth.platform.units.boundary import (
+    DonorBoundaryCollection,
+    DonorBoundaryRecord,
+    RegistryBoundary,
+    load_donor_boundaries,
+    load_registry_boundary,
+)
 from groundtruth.platform.units.generator import (
     Adr011DonorCandidates,
     UnitSet,
@@ -61,6 +67,8 @@ __all__ = [
     "Adr011DonorCandidates",
     "Adr011Thresholds",
     "DistrictFacts",
+    "DonorBoundaryCollection",
+    "DonorBoundaryRecord",
     "EarthEngineUnitConstruction",
     "Exclusion",
     "ExclusionCategory",
@@ -78,6 +86,7 @@ __all__ = [
     "climb_ladder",
     "evaluate_district",
     "generate_unit_set",
+    "load_donor_boundaries",
     "load_registry_boundary",
     "screen_rung",
 ]

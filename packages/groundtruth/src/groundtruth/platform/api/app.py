@@ -27,6 +27,7 @@ from groundtruth.observability import setup_telemetry
 from groundtruth.platform.api.auth import router as auth_router
 from groundtruth.platform.api.claims import router as claims_router
 from groundtruth.platform.api.events import router as events_router
+from groundtruth.platform.api.exports import router as exports_router
 from groundtruth.platform.api.jobs import router as jobs_router
 from groundtruth.platform.api.openapi_schema import install_openapi
 from groundtruth.platform.api.runs import router as runs_router
@@ -95,6 +96,7 @@ app.include_router(events_router)
 app.include_router(tiles_router)
 app.include_router(claims_router)
 app.include_router(auth_router)
+app.include_router(exports_router, include_in_schema=False)
 
 # The frontend's TypeScript types are generated from this schema (issue #17); the served
 # /openapi.json and the committed snapshot are built by the same function.

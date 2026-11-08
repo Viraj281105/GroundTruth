@@ -23,6 +23,121 @@ def slugify(text: str) -> str:
     return slug[:50] or "custom-project"
 
 
+def validate_project_aoi(boundary_geojson: dict[str, Any]) -> dict[str, Any]:
+    """Validate an uploaded project AOI GeoJSON structure and coordinate geometry.
+
+    Raises:
+        ValueError: If any structural, coordinate range, ring closure, or
+            positive bounding-box area check fails.
+    """
+    if not isinstance(boundary_geojson, dict):
+        raise ValueError("boundary_geojson must be a JSON object (dict).")
+
+    geo_type = boundary_geojson.get("type")
+    valid_top_types = ("FeatureCollection", "Feature", "Polygon", "MultiPolygon")
+    if geo_type not in valid_top_types:
+        raise ValueError(
+            f"Unsupported GeoJSON type {geo_type!r}; must be one of {valid_top_types}."
+        )
+
+    geometries: list[ Any] = []
+    if geo_type == "FeatureCollection":
+        features = boundary_geojson.get("features")
+        if not isinstance(features, list) or len(features) == 0:
+            raise ValueError("FeatureCollection must contain a non-empty 'features' list.")
+        for idx, feat in enumerate(features):
+            if not isinstance(feat, dict) or feat.get("type") != "Feature":
+                raise ValueError(f"Element {idx} in FeatureCollection is not a valid Feature.")
+            geometries.append(feat.get("geometry"))
+    elif geo_type == "Feature":
+        geometries.append(boundary_geojson.get("geometry"))
+    else:
+        geometries.append(boundary_geojson)
+
+    polygons: list[Any] = []
+    for geom in geometries:
+        if not isinstance(geom, dict):
+            raise ValueError("Feature geometry must be a valid GeoJSON geometry dict.")
+        gtype = geom.get("type")
+        coords = geom.get("coordinates")
+        if not isinstance(coords, list) or len(coords) == 0:
+            raise ValueError("Geometry 'coordinates' must be a non-empty list.")
+        if gtype == "Polygon":
+            polygons.append(coords)
+        elif gtype == "MultiPolygon":
+            for poly in coords:
+                if not isinstance(poly, list) or len(poly) == 0:
+                    raise ValueError("MultiPolygon contains an empty or invalid polygon entry.")
+                polygons.append(poly)
+        else:
+            raise ValueError(
+                f"Unsupported geometry type {gtype!r}; expected 'Polygon' or 'MultiPolygon'."
+            )
+
+    if not polygons:
+        raise ValueError("GeoJSON AOI must contain at least one Polygon.")
+
+    all_lons: list[float] = []
+    all_lats: list[float] = []
+
+    for poly_idx, poly in enumerate(polygons):
+        if not isinstance(poly, list) or len(poly) == 0:
+            raise ValueError(f"Polygon {poly_idx} must contain at least one linear ring.")
+        for ring_idx, ring in enumerate(poly):
+            if not isinstance(ring, list) or len(ring) < 4:
+                raise ValueError(
+                    f"Polygon {poly_idx} ring {ring_idx} must have at least 4 coordinate pairs."
+                )
+            ring_lons: list[float] = []
+            ring_lats: list[float] = []
+            for pt_idx, pt in enumerate(ring):
+                if (
+                    not isinstance(pt, (list, tuple))
+                    or len(pt) < 2
+                    or isinstance(pt[0], bool)
+                    or isinstance(pt[1], bool)
+                    or not isinstance(pt[0], (int, float))
+                    or not isinstance(pt[1], (int, float))
+                ):
+                    raise ValueError(
+                        f"Invalid coordinate pair at polygon {poly_idx}, ring {ring_idx}, "
+                        f"vertex {pt_idx}."
+                    )
+                lon = float(pt[0])
+                lat = float(pt[1])
+                if not (-180.0 <= lon <= 180.0):
+                    raise ValueError(
+                        f"Longitude {lon} out of bounds [-180, 180] at vertex {pt_idx}."
+                    )
+                if not (-90.0 <= lat <= 90.0):
+                    raise ValueError(
+                        f"Latitude {lat} out of bounds [-90, 90] at vertex {pt_idx}."
+                    )
+                ring_lons.append(lon)
+                ring_lats.append(lat)
+
+            if ring_lons[0] != ring_lons[-1] or ring_lats[0] != ring_lats[-1]:
+                raise ValueError(
+                    f"Polygon {poly_idx} ring {ring_idx} is not closed "
+                    "(first and last coordinate must match)."
+                )
+
+            if max(ring_lons) <= min(ring_lons) or max(ring_lats) <= min(ring_lats):
+                raise ValueError(
+                    f"Polygon {poly_idx} ring {ring_idx} has degenerate zero-area bounding box."
+                )
+
+            all_lons.extend(ring_lons)
+            all_lats.extend(ring_lats)
+
+    if max(all_lons) <= min(all_lons) or max(all_lats) <= min(all_lats):
+        raise ValueError(
+            "AOI bounding box must have positive area (max_lon > min_lon and max_lat > min_lat)."
+        )
+
+    return boundary_geojson
+
+
 def create_and_register_case(
     *,
     name: str,
@@ -44,6 +159,9 @@ def create_and_register_case(
     custom_case_id: str | None = None,
 ) -> CaseDefinition:
     """Create a new case definition on disk, calibrate its fixture, and register it."""
+    if boundary_geojson is not None:
+        validate_project_aoi(boundary_geojson)
+
     root = cases_directory()
     base_slug = custom_case_id or slugify(name)
     case_id = base_slug
@@ -243,6 +361,8 @@ def _generate_and_store_fixture(case: CaseDefinition) -> None:
                     "seed": 20260101,
                     "pipeline_hash": "a1b2c3d4e5f67890",
                     "timestamp": "2026-11-07T12:00:00Z",
+                    "data_mode": "simulated",
+                    "is_simulated": True,
                 },
                 "audit": {
                     "engine_version": "0.1.0",
