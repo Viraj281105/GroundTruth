@@ -1,3 +1,15 @@
+/** Methodological notes on causal identification, inference, and covariate balance. */
+export const METHODOLOGICAL_NOTES = {
+  sutvaDonorEligibility:
+    'SUTVA donor pool eligibility requires that host districts and adjacent leakage belts be excluded from untreated controls so spillover cannot contaminate the counterfactual.',
+  weightIdentification:
+    'Weight identification: weights_identified is False when the number of donors J exceeds pre-treatment periods T_0 (J > T_0), because the convex hull system is underdetermined and simplex weights may not be unique.',
+  permutationPValueFloor:
+    'Finite-sample permutation inference over N untreated placebos has a strict p-value floor of 1 / (N + 1); p-values cannot be zero in finite donor pools.',
+  smdCovariateBalance:
+    'Standardized Mean Difference (SMD) measures static baseline covariate balance between the treated unit and the weighted donor pool rather than Difference-in-Differences (DiD) estimation error.',
+} as const;
+
 /** English copy for "How it works". Neutral wording (R2): no accusation, no certainty. */
 export const METHOD_COPY = {
   title: 'How it works',
@@ -48,10 +60,10 @@ export const METHOD_COPY = {
   assumptions: {
     title: 'Assumptions',
     items: [
-      'Comparison areas were not themselves affected by the project (no spill-over).',
-      'The blend that tracks the project area before the project would have kept tracking it afterwards.',
+      'Comparison areas were not themselves affected by the project (no spill-over): under SUTVA donor pool eligibility, host districts and leakage belts must be excluded from untreated controls.',
+      'The blend that tracks the project area before the project would have kept tracking it afterwards; weights_identified is False when donors J exceed pre-treatment periods T_0.',
       'Satellite measures such as a vegetation index are consistent over time and across sensors.',
-      'The set of comparison areas covers the conditions the project area faced.',
+      'The set of comparison areas covers the conditions the project area faced; Standardized Mean Difference (SMD) summarizes static baseline covariate balance rather than DiD estimation error.',
     ],
   },
   limits: {
@@ -60,10 +72,11 @@ export const METHOD_COPY = {
       'Analyses currently run on simulated data and are labelled as simulated wherever they appear.',
       'Retrieval of real satellite data is not implemented yet; such requests are refused rather than filled in.',
       'A vegetation index is not carbon. Conversion to tonnes of CO2 is not implemented, because it needs site-specific allometry and an error budget.',
-      'A result depends on its comparison areas. A thin or poorly matched set weakens it, and the engine says so.',
+      'A result depends on its comparison areas. A thin or poorly matched set weakens it, and the engine says so. Finite-sample permutation p-values have a floor of 1 / (N + 1).',
       'A divergence between the estimate and a project claim warrants accredited review. It is a screening signal, not a finding about any person or organisation.',
     ],
   },
+  methodologicalNotes: METHODOLOGICAL_NOTES,
   glossary: {
     title: 'Glossary',
     intro: 'Every term the interface explains, in plain language first and technical wording second.',

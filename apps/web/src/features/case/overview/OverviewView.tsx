@@ -9,6 +9,7 @@ import type { OverviewModel } from './model';
 import { VerdictPanel } from './VerdictPanel';
 import { LensCaption, NotStory, StoryOnly } from './LensCaption';
 import { overviewCopy as c } from './copy';
+import { EvidenceScope, SourceBanner } from '../evidence/EvidenceProvenance';
 import styles from './overview.module.css';
 
 /** Hint text plus a glossary tooltip explaining the term in plain language. */
@@ -35,6 +36,7 @@ export function OverviewView({ caseId, model }: { caseId: string; model: Overvie
     <div className={`gt-container ${styles.page}`}>
       <LensCaption />
       <VerdictPanel model={model} />
+      {hasResult && <SourceBanner origin="precomputed-fixture" runId={null} />}
 
       {hasResult && (
         <StoryOnly>
@@ -159,6 +161,8 @@ export function OverviewView({ caseId, model }: { caseId: string; model: Overvie
           </ul>
         </Card>
       )}
+
+      {hasResult && <EvidenceScope caseId={caseId} withReconciliation />}
 
       <NotStory>
         <Card tone="sunken">

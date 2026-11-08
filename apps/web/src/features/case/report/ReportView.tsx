@@ -9,6 +9,8 @@ import type { OverviewModel } from '../overview/model';
 import { overviewCopy } from '../overview/copy';
 import { LensCaption, NotStory, StoryOnly } from '../overview/LensCaption';
 import { CopyCitation } from './CopyCitation';
+import { DownloadReport } from './DownloadReport';
+import { EvidenceScope, SourceBanner } from '../evidence/EvidenceProvenance';
 import { PRINT_CSS } from './citation';
 import styles from './report.module.css';
 
@@ -19,7 +21,7 @@ export const reportCopy = {
   citationTitle: 'Cite this report',
   figures: 'Figures for this report',
   noFigures: 'No figures are available for this report: the run returned no effect interval or time series.',
-  print: 'Use your browser print dialog (Ctrl or Cmd + P) to save this page as a PDF.',
+  print: 'You can also use your browser print dialog (Ctrl or Cmd + P) to save this page.',
 };
 
 export interface ReportData {
@@ -89,6 +91,7 @@ export function ReportView({ caseId, report }: { caseId: string; report: ReportD
           body={c.noRunBody}
           action={<LinkButton href={`/cases/${encodeURIComponent(caseId)}/run`}>{c.runAction}</LinkButton>}
         />
+        <DownloadReport caseId={caseId} />
       </div>
     );
   }
@@ -96,7 +99,10 @@ export function ReportView({ caseId, report }: { caseId: string; report: ReportD
     <div className={`gt-container ${styles.page}`}>
       <style>{PRINT_CSS}</style>
       <LensCaption />
+      <SourceBanner origin="precomputed-fixture" runId={null} />
       <FigureStrip overview={report.overview} />
+      <DownloadReport caseId={caseId} />
+      <EvidenceScope caseId={caseId} />
       <Lens show="explorer">
         <NarrativeReport markdown={report.markdown} generator={report.generator} />
         <Card tone="sunken">

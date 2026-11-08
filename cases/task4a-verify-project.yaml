@@ -1,0 +1,28 @@
+case_id: task4a-verify-project
+status: scaffolded
+project:
+  name: Task4A Verify Project
+  country: Zimbabwe
+  ecosystem: miombo
+  standard: VCS
+  registry_id: VCS 9999
+  area_ha: 1000
+  crediting_period_start: '2011-01-01'
+  crediting_period_end: '2040-12-31'
+  claimed_credits_tco2e: null
+  boundary_path: cases/boundaries/task4a-verify-project.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2010
+  post_start: 2011
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Zimbabwe miombo outside protected areas
+  donor_pool_size: 50
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density

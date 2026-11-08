@@ -1,0 +1,13 @@
+.banner { border: 1px solid var(--border-default); border-left: 4px solid var(--accent); border-radius: var(--radius-md); background: var(--surface-sunken); padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-sm); color: var(--text-secondary); }
+.banner p { margin: 0; }
+.bannerHead { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; color: var(--text-primary); }
+.limit { margin: 0; padding: var(--space-3) var(--space-4); border: 1px dashed var(--border-default); border-radius: var(--radius-md); font-size: var(--text-sm); color: var(--text-secondary); }
+.scope { border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-raised); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.scopeTitle { margin: 0; font-size: var(--text-base); font-weight: 600; color: var(--text-primary); }
+.scopeList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.scopeList li { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: baseline; font-size: var(--text-sm); color: var(--text-secondary); }
+.recon { font-size: var(--text-sm); color: var(--text-secondary); }
+.recon summary { cursor: pointer; color: var(--text-primary); font-weight: 500; }
+.recon dt { font-weight: 600; color: var(--text-primary); margin-top: var(--space-2); }
+.recon dd { margin: 0; }
+

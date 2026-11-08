@@ -39,6 +39,9 @@ export function describeEffect(valueText: string, confidence: Confidence | null,
   if (confidence.kind === 'sensitivity-envelope') {
     return `The best estimate of the project's effect is ${valueText}. Across the analysis choices tried, it ranged from ${confidence.lower.toFixed(4)} to ${confidence.upper.toFixed(4)}. This is a range of estimates, not a confidence interval.`;
   }
+  if (confidence.kind === 'assumed-1sigma-interval') {
+    return `The best estimate is ${valueText}. Under an assumed model error, a one-sigma range (about 68%, not a 95% confidence interval) runs from ${confidence.lower.toFixed(4)} to ${confidence.upper.toFixed(4)}.`;
+  }
   const pct = Math.round(confidence.level * 100);
   return `The best estimate of the project's effect is ${valueText}. Allowing for uncertainty, the ${pct}% ${confidence.kind} interval runs from ${confidence.lower.toFixed(4)} to ${confidence.upper.toFixed(4)}.`;
 }

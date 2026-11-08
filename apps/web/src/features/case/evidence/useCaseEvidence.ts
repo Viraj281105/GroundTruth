@@ -5,6 +5,7 @@ import { ApiUnreachableError, getCaseDetail, getVisualizationFixture } from '../
 import { createJobsApi, failureFrom, type ApiFailure } from '../../../lib/jobs';
 import type { VerificationFixtureData } from '../../../lib/fixtures/simulated-data';
 import type { CaseDetail, Evidence } from '../../../lib/types';
+import { chooseEvidenceSource, type EvidenceOrigin } from './provenance';
 
 export type CaseEvidenceState =
   | { status: 'loading' }
@@ -18,12 +19,16 @@ export type CaseEvidenceState =
       viz: VerificationFixtureData | null;
       isDemo: boolean;
       runId: string | null;
+      /** Which source produced the items: the precomputed fixture, or the run the reader named. */
+      origin: EvidenceOrigin;
     };
 
 /**
  * Loads what the evidence and robustness pages show. Sources, in order:
- * the demo fixture (only when NEXT_PUBLIC_DEMO_MODE is on), then a stored run
- * named by `?run=<id>`. With neither, the state is `no-run`, never a guess.
+ * a stored run named by `?run=<id>` (always wins, so a newly completed run is
+ * never replaced by an older fixture), then the precomputed demo fixture (only
+ * when NEXT_PUBLIC_DEMO_MODE is on). With neither, the state is `no-run`, never
+ * a guess. A named run that cannot be loaded is an `error`, never the fixture.
  * An unreachable API with demo off is an `error` the page must display.
  */
 export function useCaseEvidence(caseId: string): CaseEvidenceState {
@@ -36,28 +41,27 @@ export function useCaseEvidence(caseId: string): CaseEvidenceState {
     };
     (async () => {
       let caseDetail: CaseDetail | null = null;
-      let isDemo = false;
       try {
         const res = await getCaseDetail(caseId);
         caseDetail = res.data;
-        isDemo = res.isDemo;
       } catch (err) {
         set({ status: 'error', failure: failureFrom(err, window.location.origin) });
         return;
       }
       const fixture = getVisualizationFixture(caseId);
-      if (fixture) {
-        set({ status: 'ready', caseDetail, items: fixture.verification.bundle.items, viz: fixture, isDemo: true, runId: null });
+      const runId = new URLSearchParams(window.location.search).get('run');
+      const source = chooseEvidenceSource(runId, fixture !== null);
+      if (source === 'precomputed-fixture' && fixture) {
+        set({ status: 'ready', caseDetail, items: fixture.verification.bundle.items, viz: fixture, isDemo: true, runId: null, origin: 'precomputed-fixture' });
         return;
       }
-      const runId = new URLSearchParams(window.location.search).get('run');
-      if (!runId) {
+      if (source === 'none' || !runId) {
         set({ status: 'no-run', caseDetail });
         return;
       }
       try {
         const run = await createJobsApi().result(runId, false);
-        set({ status: 'ready', caseDetail, items: run.bundle?.items ?? [], viz: null, isDemo, runId });
+        set({ status: 'ready', caseDetail, items: run.bundle?.items ?? [], viz: null, isDemo: false, runId, origin: 'fresh-run' });
       } catch (err) {
         set({
           status: 'error',

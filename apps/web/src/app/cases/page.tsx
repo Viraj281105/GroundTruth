@@ -30,7 +30,7 @@ export default async function CasesPage() {
           <p className={styles.intro}>{c.intro}</p>
         </div>
         <LinkButton href="/cases/new" size="md">
-          + Ingest Real Project
+          + Register project
         </LinkButton>
       </div>
       {isDemo && <p className={styles.demo}><Chip tone="sim">Demo mode</Chip> {c.demo}</p>}

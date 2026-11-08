@@ -220,7 +220,7 @@ export const CounterfactualChart: React.FC<CounterfactualChartProps> = ({
             </div>
             <div className={styles.legendItem}>
               <span className={styles.legendEnvelopeBox} />
-              <span className={styles.legendText}>95% Sensitivity Envelope</span>
+              <span className={styles.legendText}>Sensitivity range (not a confidence interval)</span>
             </div>
             <div className={styles.legendItem}>
               <span className={styles.legendTreatmentLine} />
@@ -470,7 +470,7 @@ export const CounterfactualChart: React.FC<CounterfactualChartProps> = ({
             </div>
             {hoveredPoint.ciLower !== undefined && hoveredPoint.ciUpper !== undefined && (
               <div className={styles.tooltipEnvelope}>
-                <span className={styles.tooltipKey}>95% Sensitivity:</span>
+                <span className={styles.tooltipKey}>Sensitivity range:</span>
                 <span className={styles.tooltipValEnv}>
                   [-{(hoveredPoint.ciLower ?? 0).toFixed(4)}, +{(hoveredPoint.ciUpper ?? 0).toFixed(4)}]
                 </span>
