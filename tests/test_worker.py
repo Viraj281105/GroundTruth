@@ -329,7 +329,8 @@ class TestLeaseLostMidRun:
 
         def another_worker_takes_over():
             clock.tick(DEFAULT_LEASE + timedelta(seconds=1))
-            thief.reap_expired()
+            while thief.reap_expired() == 0:
+                clock.tick(DEFAULT_LEASE + timedelta(seconds=1))
             clock.tick(timedelta(seconds=30))
             assert thief.claim("thief") is not None
 

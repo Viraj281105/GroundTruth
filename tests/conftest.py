@@ -21,6 +21,14 @@ from groundtruth.engine.uncertainty.robustness import leave_one_out
 from groundtruth.platform.cases.registry import get_case
 
 
+@pytest.fixture(autouse=True)
+def _isolate_auth_settings(monkeypatch):
+    """Ensure tests run unauthenticated by default, regardless of ambient .env."""
+    from groundtruth.platform.config import get_settings
+    s = get_settings()
+    monkeypatch.setattr(s, "auth_required", False)
+
+
 @pytest.fixture
 def rng() -> np.random.Generator:
     return np.random.default_rng(20260101)

@@ -209,7 +209,7 @@ class TestDocumentedErrorsMatchWhatIsSent:
             MessageErrorBody.model_validate(response.json())
 
     def test_observed_data_sends_the_documented_501_body(self):
-        response = TestClient(app).post("/cases/kariba-redd/verify", json={"synthetic": False})
+        response = TestClient(app).post("/cases/mikoko-pamoja/verify", json={"synthetic": False})
         assert response.status_code == 501
         MessageErrorBody.model_validate(response.json())
 
