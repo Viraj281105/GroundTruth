@@ -64,28 +64,36 @@ show a system that declines to produce one and explains precisely why.
 ## Handling hard questions
 
 **"Did you reproduce the 57% figure?"**
-No. That figure is Verra's, recorded as a validation target the pipeline never
-reads. Reproducing it requires a biomass conversion layer with propagated error,
-which is scoped as the next milestone. The comparison we *can* make today is on
-direction and relative magnitude of the observed indicator.
+No. GroundTruth has not reproduced or contradicted Verra's published figure. Verra's
+~57% finding is recorded in `cases/kariba-redd.yaml` as a third-party validation target
+and is never an input to the pipeline. An earlier version of this document claimed an
+independent 57.04% recovery; the independent audit
+(`INDEPENDENT_POST_EXECUTION_AUDIT.md`) showed that number came from a hard-coded NDVI
+value back-calculated from the published result, and it has been withdrawn. Converting an
+NDVI effect to tCO2e needs a site-calibrated biomass model, and none is shipped, so the
+pipeline reports **INCONCLUSIVE / NOT CALIBRATED** for Kariba. The honest position is that
+the benchmark is open, and the refusal is the feature.
 
 **"Aren't you accusing projects of fraud?"**
 No, and the system is built so it cannot. `VerdictLabel` has no value that reads
-as an accusation, the standard caveats are enforced by a validator, and the
-grounding layer blocks fraud and legal language in generated text. Divergence
-triggers accredited review.
+as an accusation (`divergent_from_claim` vs `fraud`). Standard caveats are enforced by a
+schema validator, and the grounding layer blocks accusatory and legal language in
+generated text. Divergence triggers accredited review, not condemnation.
 
-**"Your numbers are synthetic."**
-Yes, and every one of them says so — in the provenance, in the run warnings, in
-the verdict caveats and in a banner on stderr. The API returns 501 rather than
-serving simulated data under a real-data label. What is demonstrated today is
-that the machinery is correct: the estimator recovers a known injected effect,
-and the placebo suite distinguishes it from a null.
+**"Are your numbers synthetic or real?"**
+Today every end-to-end run uses **SYNTHETIC** data. The repository ships a precomputed
+Kariba benchmark fixture (`data/synthetic_fixtures/kariba_synthetic_benchmark.json`); it
+is not satellite data, no Sentinel-2 or Landsat scenes were retrieved to produce it, and
+it is labelled `synthetic` in its dataset reference, provenance and every report. The
+real-data path (`groundtruth verify <case>` without a synthetic flag) refuses with an
+explicit error for every case, because real Earth-observation ingestion is scaffolded but
+has not been executed end to end. The platform never substitutes fixtures for real data.
 
 **"Why not just use a neural network on the imagery?"**
-Because the question is counterfactual, not predictive. A classifier can tell
-you what the land cover *is*. It cannot tell you what it *would have been*. That
-requires a comparison group and an identification strategy.
+Because the question is counterfactual, not predictive. A convolutional net or
+vision transformer can tell you what the land cover *is*. It cannot tell you what it
+*would have been* in the absence of the carbon project. That requires a causal
+identification strategy (Abadie-style synthetic control with placebo inference).
 
 **"How is this different from Global Forest Watch?"**
 GFW reports observed forest loss. GroundTruth estimates the difference between

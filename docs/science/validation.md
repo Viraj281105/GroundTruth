@@ -43,6 +43,12 @@ Home News, September 2025.*
 
 ### Pre-registered criteria
 
+> **Status note (scientific-integrity remediation):** no validation against Verra's
+> Kariba finding has been performed. Any agreement criterion below requires genuine
+> satellite observations and a site-calibrated biomass model; neither exists in this
+> repository yet. Earlier claims of a 57% recovery were withdrawn (see
+> `docs/competition/INDEPENDENT_POST_EXECUTION_AUDIT.md`).
+
 | Outcome | Interpretation |
 | --- | --- |
 | **Strong** | Independent estimate implies substantial over-issuance, placebo p < 0.10, sign stable under leave-one-out, and the implied excess share is within a factor of two of 57% |
