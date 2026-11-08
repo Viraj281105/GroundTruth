@@ -97,6 +97,11 @@ class EvidenceBundle(BaseModel):
     def __contains__(self, evidence_id: object) -> bool:
         return any(item.id == evidence_id for item in self.items)
 
+    @property
+    def is_simulated(self) -> bool:
+        """True if this bundle was produced from simulated data."""
+        return any("SIMULATED DATA" in w for w in self.warnings)
+
     def get(self, evidence_id: str) -> Evidence | None:
         """Return the evidence item with this id, or ``None``."""
         return next((item for item in self.items if item.id == evidence_id), None)

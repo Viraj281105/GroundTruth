@@ -7,9 +7,9 @@
     groundtruth submit kariba-redd --synthetic   queue a job for the worker
     groundtruth job run_...               show a job's status
 
-``verify`` refuses to run against real providers until they are implemented, and
-``--synthetic`` makes the simulated-data path explicit rather than a silent
-default.
+``verify`` refuses to run against real providers until they are implemented. The
+simulated paths (``--synthetic``, ``--synthetic-fixture``) are explicit opt-ins,
+never a silent default, and every output from them is labelled SYNTHETIC.
 """
 
 from __future__ import annotations
@@ -22,19 +22,34 @@ from pathlib import Path
 from typing import Any
 
 from groundtruth import __version__
-from groundtruth.contracts.errors import GroundTruthError
+from groundtruth.contracts.errors import DataUnavailableError, GroundTruthError
 from groundtruth.contracts.result import EngineStatus
 from groundtruth.engine import ENGINE_VERSION, describe_engine, run_analysis
 from groundtruth.logging import configure_logging
 from groundtruth.platform.cases.registry import get_case, load_all_cases
 from groundtruth.platform.config import get_settings
-from groundtruth.platform.datasets.access import synthetic_access
+from groundtruth.platform.datasets.access import (
+    SYNTHETIC_FIXTURE_CASES,
+    SYNTHETIC_KARIBA_FIXTURE_DATASET,
+    earth_engine_access,
+    real_observation_cases,
+    synthetic_access,
+    synthetic_fixture_access,
+    synthetic_fixture_available,
+)
 from groundtruth.platform.reports.narrative import generate_report
 
 SYNTHETIC_BANNER = (
     "=" * 78 + "\nSIMULATED DATA RUN\n"
     "This run uses the synthetic fixture provider. The numbers below describe a\n"
     "test fixture and say nothing about any real project.\n" + "=" * 78
+)
+
+SYNTHETIC_FIXTURE_BANNER = (
+    "=" * 78 + "\nSYNTHETIC FIXTURE RUN - NOT SATELLITE OBSERVATIONS\n"
+    "This run replays a precomputed SYNTHETIC series from disk. No imagery was\n"
+    "retrieved or processed. Results describe a test fixture, not any real project.\n"
+    + "=" * 78
 )
 
 
@@ -95,21 +110,42 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     settings = get_settings()
     case = get_case(args.case_id)
 
-    if not args.synthetic:
-        print(
-            "Real Earth-observation providers are not implemented yet, so this case cannot be "
-            "verified against real data.\n"
-            "Re-run with --synthetic to exercise the pipeline on simulated data, or see "
-            "docs/product/roadmap-detail.md milestone M1.",
-            file=sys.stderr,
+    if args.synthetic_fixture:
+        print(SYNTHETIC_FIXTURE_BANNER, file=sys.stderr)
+        request = case.to_request(
+            data_mode="simulated",
+            seed=settings.random_seed,
+            min_donors=args.min_donors,
+            datasets=(SYNTHETIC_KARIBA_FIXTURE_DATASET,),
         )
-        return 2
-
-    print(SYNTHETIC_BANNER, file=sys.stderr)
-    request = case.to_request(
-        data_mode="simulated", seed=settings.random_seed, min_donors=args.min_donors
-    )
-    result = run_analysis(request, synthetic_access(request, true_effect=args.true_effect))
+        try:
+            data = synthetic_fixture_access(request)
+        except DataUnavailableError as exc:
+            print(f"{exc}", file=sys.stderr)
+            return 2
+        result = run_analysis(request, data)
+    elif not args.synthetic:
+        request = case.to_request(
+            data_mode="observed", seed=settings.random_seed, min_donors=args.min_donors
+        )
+        try:
+            data = earth_engine_access(request)
+        except DataUnavailableError as exc:
+            print(
+                "Real Earth-observation providers are not implemented yet for this case.\n"
+                f"{exc}\n"
+                "Re-run with --synthetic (or --synthetic-fixture) to exercise the pipeline on "
+                "SYNTHETIC data, or see docs/product/roadmap-detail.md milestone M1.",
+                file=sys.stderr,
+            )
+            return 2
+        result = run_analysis(request, data)
+    else:
+        print(SYNTHETIC_BANNER, file=sys.stderr)
+        request = case.to_request(
+            data_mode="simulated", seed=settings.random_seed, min_donors=args.min_donors
+        )
+        result = run_analysis(request, synthetic_access(request, true_effect=args.true_effect))
 
     if result.status is not EngineStatus.COMPLETED:
         assert result.error is not None
@@ -240,21 +276,136 @@ def _cmd_job(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_ingest_stac(args: argparse.Namespace) -> int:
+    from groundtruth.data_access.aoi_pipeline import (
+        AOIObservationCache,
+        ingest_live_aoi_observations,
+    )
+    from groundtruth.data_access.stac import DEFAULT_STAC_URL
+
+    settings = get_settings()
+    case = get_case(args.case_id)
+    if not case.claim.boundary_path:
+        print(f"error: case {args.case_id!r} has no boundary_path configured", file=sys.stderr)
+        return 1
+    boundary_file = settings.cases_dir.parent / case.claim.boundary_path
+    if not boundary_file.is_file():
+        print(f"error: boundary file not found at {boundary_file}", file=sys.stderr)
+        return 1
+
+    aoi_geojson = json.loads(boundary_file.read_text(encoding="utf-8"))
+    cache_dir = (
+        Path(args.cache_dir)
+        if args.cache_dir
+        else (settings.data_dir / "processed" / "stac_cache")
+    )
+    cache = AOIObservationCache(cache_dir)
+
+    indicators = tuple(args.indicators) if args.indicators else ("ndvi", "evi", "ndmi", "nbr")
+    years = [int(y) for y in args.years]
+
+    bundles = ingest_live_aoi_observations(
+        unit_id=case.case_id,
+        aoi_geojson=aoi_geojson,
+        years=years,
+        indicators=indicators,
+        platform=args.platform,
+        max_cloud_cover=args.max_cloud_cover,
+        date_window=(args.start_mmdd, args.end_mmdd),
+        max_scenes_per_year=args.max_scenes_per_year,
+        tile_id=args.tile_id,
+        resolution_m=args.resolution_m,
+        catalog_url=args.catalog_url or DEFAULT_STAC_URL,
+        cache=cache,
+    )
+
+    saved_paths = {
+        ind: str(cache.cache_path(case.case_id, ind))
+        for ind in bundles
+    }
+    reloaded_origins = {
+        ind: cache.get(case.case_id, ind, require_real=True).data_origin.value
+        for ind in bundles
+    }
+
+    primary_bundle = bundles[indicators[0]]
+    summary_payload = {
+        "case_id": case.case_id,
+        "boundary_path": str(boundary_file),
+        "aoi_bbox": list(primary_bundle.bbox),
+        "catalog_url": primary_bundle.catalog_url,
+        "live_data_origin": primary_bundle.data_origin.value,
+        "cached_data_origins": reloaded_origins,
+        "saved_files": saved_paths,
+        "raster_grid": primary_bundle.provenance.parameters.get("raster_grid"),
+        "scenes_metadata": primary_bundle.provenance.parameters.get("scenes_metadata"),
+        "records_by_year": [r.to_dict() for r in primary_bundle.records],
+    }
+
+    if args.json:
+        print(json.dumps(summary_payload, indent=2, sort_keys=True))
+    else:
+        print(f"case_id          : {case.case_id}")
+        print(f"catalog_url      : {primary_bundle.catalog_url}")
+        print(f"live origin      : {primary_bundle.data_origin.value}")
+        print(f"cached origin    : {reloaded_origins[indicators[0]]}")
+        print(f"aoi_bbox         : {primary_bundle.bbox}")
+        for r in primary_bundle.records:
+            print(
+                f"year {r.year}        : scenes={r.n_scenes} {list(r.scene_ids)} "
+                f"dates={list(r.acquisition_dates)} valid_px={r.n_valid_pixels}/{r.n_total_pixels} "
+                f"clear_frac={r.clear_pixel_fraction:.4f} indices={r.indices}"
+            )
+        for ind, path_str in saved_paths.items():
+            print(f"saved [{ind:<4}]     : {path_str}")
+    return 0
+
+
 def _cmd_doctor(_: argparse.Namespace) -> int:
     settings = get_settings()
     capabilities = describe_engine()
+    real_cases = real_observation_cases()
+    fixture_cases = [cid for cid in SYNTHETIC_FIXTURE_CASES if synthetic_fixture_available(cid)]
+    genai_configured = (
+        bool(settings.gemini_api_key)
+        if settings.genai_provider == "gemini"
+        else settings.genai_configured
+    )
+    genai_narration_implemented = (
+        "yes"
+        if settings.genai_provider in ("anthropic", "gemini")
+        else "no - deterministic renderer is used"
+    )
     rows = [
         ("version", __version__),
         ("engine version", ENGINE_VERSION),
         ("contract version", capabilities["contract_version"]),
         ("environment", settings.app_env),
         ("cases found", str(len(load_all_cases()))),
-        ("earth observation configured", str(settings.earth_observation_configured)),
-        ("earth observation implemented", "no - see docs/product/roadmap-detail.md M1"),
+        ("earth observation credentials present", str(settings.earth_observation_configured)),
+        (
+            "earth observation ingestion implemented",
+            "no - STAC scaffolding exists but has never been executed end to end",
+        ),
+        (
+            "real observation data available",
+            ", ".join(real_cases) if real_cases else "none (no satellite data for any case)",
+        ),
+        (
+            "synthetic fixtures available",
+            (", ".join(fixture_cases) + " (SYNTHETIC - not satellite data)")
+            if fixture_cases
+            else "none",
+        ),
+        (
+            "biomass-to-carbon calibration",
+            "NOT CALIBRATED - no validated parameters shipped; carbon estimates are "
+            "INCONCLUSIVE unless a sourced calibration is supplied",
+        ),
         ("genai provider", settings.genai_provider),
-        ("genai configured", str(settings.genai_configured)),
-        ("genai narration implemented", "no - deterministic renderer is used"),
-        ("synthetic pipeline", "yes"),
+        ("genai configured", str(genai_configured)),
+        ("genai narration implemented", genai_narration_implemented),
+        ("synthetic pipeline", "yes (simulated data only; results are labelled SYNTHETIC)"),
     ]
     rows += [
         (f"engine: {name.replace('_', ' ')}", "yes" if ok else "no")
@@ -292,6 +443,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run against simulated data. Required until real providers are implemented.",
     )
     verify.add_argument(
+        "--synthetic-fixture",
+        action="store_true",
+        help="Replay the precomputed SYNTHETIC benchmark fixture (kariba-redd only). "
+        "Not satellite data.",
+    )
+    verify.add_argument(
         "--true-effect",
         type=float,
         default=0.06,
@@ -323,6 +480,37 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = subparsers.add_parser("doctor", help="Report what is configured and implemented.")
     doctor.set_defaults(func=_cmd_doctor)
+
+    ingest = subparsers.add_parser(
+        "ingest-stac",
+        help="Search a live STAC catalog, retrieve real satellite rasters over a case AOI, "
+        "apply cloud masking, compute NDVI/EVI/NDMI/NBR, and save to AOIObservationCache.",
+    )
+    ingest.add_argument("case_id", help="Case slug (e.g. kariba-redd).")
+    ingest.add_argument(
+        "--years",
+        nargs="+",
+        type=int,
+        default=[2021, 2022, 2023],
+        help="Calendar years to ingest.",
+    )
+    ingest.add_argument(
+        "--indicators",
+        nargs="+",
+        default=["ndvi", "evi", "ndmi", "nbr"],
+        help="Spectral indices to compute and cache.",
+    )
+    ingest.add_argument("--platform", default="sentinel-2", choices=["sentinel-2", "landsat"])
+    ingest.add_argument("--max-cloud-cover", type=float, default=25.0)
+    ingest.add_argument("--start-mmdd", default="06-01")
+    ingest.add_argument("--end-mmdd", default="06-30")
+    ingest.add_argument("--max-scenes-per-year", type=int, default=2)
+    ingest.add_argument("--tile-id", default="36LTH")
+    ingest.add_argument("--resolution-m", type=float, default=100.0)
+    ingest.add_argument("--catalog-url", default=None)
+    ingest.add_argument("--cache-dir", default=None)
+    ingest.add_argument("--json", action="store_true")
+    ingest.set_defaults(func=_cmd_ingest_stac)
 
     return parser
 

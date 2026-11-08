@@ -46,6 +46,15 @@ def nbr(nir: np.ndarray, swir: np.ndarray) -> np.ndarray:
     return _safe_ratio(nir_a - swir_a, nir_a + swir_a)
 
 
+def ndmi(nir: np.ndarray, swir1: np.ndarray) -> np.ndarray:
+    """Normalized Difference Moisture Index, ``(NIR - SWIR1) / (NIR + SWIR1)``.
+
+    Bounded in ``[-1, 1]``. Tracks canopy water content and moisture stress.
+    """
+    nir_a, swir1_a = np.asarray(nir, dtype=float), np.asarray(swir1, dtype=float)
+    return np.clip(_safe_ratio(nir_a - swir1_a, nir_a + swir1_a), -1.0, 1.0)
+
+
 def savi(nir: np.ndarray, red: np.ndarray, *, soil_factor: float = 0.5) -> np.ndarray:
     """Soil-Adjusted Vegetation Index, for sparse-canopy dryland projects."""
     nir_a, red_a = np.asarray(nir, dtype=float), np.asarray(red, dtype=float)

@@ -21,6 +21,13 @@ from groundtruth.contracts.types import (
     VerdictLabel,
     VerificationVerdict,
 )
+from groundtruth.engine.biomass.allometry import (
+    BiomassParameters,
+    CarbonEstimate,
+    ClaimComparison,
+    benchmark_against_claim,
+    convert_indicator_to_carbon,
+)
 from groundtruth.engine.causal.did import DiDResult
 from groundtruth.engine.causal.synthetic_control import (
     HULL_ENVELOPE_SHARE,
@@ -60,6 +67,8 @@ class AssemblyInputs:
     data_provenance: Provenance | None = None
     notices: tuple[str, ...] = ()
     """Requested options the run could not honour, surfaced as bundle warnings."""
+    biomass_params: BiomassParameters | None = None
+    carbon_estimate: CarbonEstimate | None = None
 
     @property
     def claim(self) -> object:
@@ -91,6 +100,7 @@ def decide_verdict(
     divergence_ratio: float | None = None,
     min_donors: int = 10,
     max_relative_pre_fit: float | None = None,
+    claim_comparison: ClaimComparison | None = None,
 ) -> VerificationVerdict:
     """Apply the screening rules and return a verdict.
 
@@ -179,6 +189,14 @@ def decide_verdict(
             "against a 0.25 guideline)"
         )
 
+    if inputs.fit.is_uniform_degenerate:
+        failures.append(
+            f"synthetic control weights collapsed to uniform 1/J weighting "
+            f"(effective donor count {inputs.fit.effective_donor_count:.2f} across "
+            f"{len(inputs.fit.donor_ids)} donors), indicating collinear or under-identified "
+            "donor trajectories"
+        )
+
     caveats = list(STANDARD_CAVEATS)
     if _is_synthetic_run(inputs):
         caveats.insert(
@@ -186,6 +204,23 @@ def decide_verdict(
             "THIS RUN USED SIMULATED DATA. The figures below describe a synthetic test "
             "fixture and say nothing about any real project.",
         )
+    if claim_comparison is not None:
+        caveats.append(
+            "The carbon estimate is conditional on a user-supplied, site-specific biomass "
+            "calibration that GroundTruth has not validated against field plots. Its interval "
+            "is a one-sigma (~68%) range under an assumed model error, not a 95% confidence "
+            "interval, and excludes area, carbon-fraction and root-to-shoot uncertainty. "
+            "This is a screening heuristic, not an IPCC-compliant inventory."
+        )
+    elif inputs.biomass_params is not None and not inputs.biomass_params.is_calibrated:
+        caveats.append(
+            "NOT CALIBRATED: no validated biomass calibration was supplied, so no carbon "
+            "estimate is reported."
+        )
+
+    effective_divergence = (
+        claim_comparison.divergence_ratio if claim_comparison is not None else divergence_ratio
+    )
 
     if failures:
         return VerificationVerdict(
@@ -194,42 +229,76 @@ def decide_verdict(
                 "The pipeline ran but the result does not meet the robustness bar required to "
                 "report a screening outcome: " + "; ".join(failures) + "."
             ),
-            divergence_ratio=divergence_ratio,
+            divergence_ratio=effective_divergence,
             caveats=tuple(caveats),
         )
 
-    if divergence_ratio is None:
+    if effective_divergence is None:
         return VerificationVerdict(
             label=VerdictLabel.INCONCLUSIVE,
             rationale=(
-                "A robust incremental effect on the observed indicator was estimated, but the "
-                "developer's claim is not expressed in commensurable units, so no comparison "
-                "against the claim can be made without a biomass conversion step."
+                "INCONCLUSIVE / NOT CALIBRATED: an effect on the observed indicator was "
+                "estimated, but it cannot be expressed in tCO2e because no validated, "
+                "site-calibrated biomass model is available. The claim and the effect are "
+                "not in commensurable units, so no comparison against the developer's "
+                "claim is made, and NDVI is not carbon."
             ),
             caveats=tuple(caveats),
         )
 
-    if abs(divergence_ratio - 1.0) <= DIVERGENCE_THRESHOLD:
-        return VerificationVerdict(
-            label=VerdictLabel.CONSISTENT_WITH_CLAIM,
-            rationale=(
+    supporting_ids = (
+        ("carbon.estimated_tco2e", "carbon.claimed_tco2e", "carbon.over_issuance_share")
+        if claim_comparison is not None
+        else ()
+    )
+
+    if abs(effective_divergence - 1.0) <= DIVERGENCE_THRESHOLD:
+        if claim_comparison is not None:
+            rationale = (
+                f"The independent carbon estimate ({claim_comparison.estimated_tco2e:,.0f} "
+                f"tCO2e) is within {DIVERGENCE_THRESHOLD:.0%} of the developer's claim "
+                f"({claim_comparison.claimed_tco2e:,.0f} tCO2e), and survives placebo and "
+                "leave-one-out checks."
+            )
+        else:
+            rationale = (
                 f"The independent estimate is within {DIVERGENCE_THRESHOLD:.0%} of the "
                 "developer's claim, and survives placebo and leave-one-out checks."
-            ),
-            divergence_ratio=divergence_ratio,
+            )
+        return VerificationVerdict(
+            label=VerdictLabel.CONSISTENT_WITH_CLAIM,
+            rationale=rationale,
+            divergence_ratio=effective_divergence,
             caveats=tuple(caveats),
+            supporting_evidence_ids=supporting_ids,
         )
 
-    return VerificationVerdict(
-        label=VerdictLabel.DIVERGENT_FROM_CLAIM,
-        rationale=(
-            f"The independent estimate is {divergence_ratio:.2f}x the developer's claim, a "
+    if claim_comparison is not None:
+        low_pct = f"{claim_comparison.over_issuance_range[0]:.1%}"
+        high_pct = f"{claim_comparison.over_issuance_range[1]:.1%}"
+        rationale = (
+            f"The independent carbon estimate ({claim_comparison.estimated_tco2e:,.0f} tCO2e) "
+            f"is {effective_divergence:.2f}x the developer's claim "
+            f"({claim_comparison.claimed_tco2e:,.0f} tCO2e), a gap of "
+            f"{claim_comparison.over_issuance_share:.1%} of the claim (one-sigma range "
+            f"[{low_pct}, {high_pct}] under an assumed model error; not a 95% interval). "
+            f"The divergence beyond the {DIVERGENCE_THRESHOLD:.0%} screening threshold "
+            "is conditional on the supplied biomass calibration and the stated causal "
+            "assumptions, and warrants accredited review."
+        )
+    else:
+        rationale = (
+            f"The independent estimate is {effective_divergence:.2f}x the developer's claim, a "
             f"divergence beyond the {DIVERGENCE_THRESHOLD:.0%} screening threshold. The "
             "divergence survives placebo and leave-one-out robustness checks and warrants "
             "accredited review of the project's baseline."
-        ),
-        divergence_ratio=divergence_ratio,
+        )
+    return VerificationVerdict(
+        label=VerdictLabel.DIVERGENT_FROM_CLAIM,
+        rationale=rationale,
+        divergence_ratio=effective_divergence,
         caveats=tuple(caveats),
+        supporting_evidence_ids=supporting_ids,
     )
 
 
@@ -238,6 +307,8 @@ def assemble_evidence(
     *,
     divergence_ratio: float | None = None,
     min_donors: int = 10,
+    biomass_params: BiomassParameters | None = None,
+    carbon_estimate: CarbonEstimate | None = None,
 ) -> EvidenceBundle:
     """Turn pipeline outputs into an immutable, fully provenanced bundle."""
     builder = EvidenceBuilder(inputs.request.case_id)
@@ -475,6 +546,13 @@ def assemble_evidence(
             "still well determined, but the listed contributing regions are one of several "
             "equally good weightings, and should be read as an illustration of the comparison "
             "set rather than as the only one consistent with the data."
+        )
+    if inputs.fit.is_uniform_degenerate:
+        builder.warn(
+            f"Donor weights collapsed to uniform 1/J weighting "
+            f"(effective donor count {inputs.fit.effective_donor_count:.2f} across "
+            f"{len(inputs.fit.donor_ids)} donors); candidate series are near-collinear "
+            "and individual donor weights are not statistically identified."
         )
 
     for rank, (donor_id, weight) in enumerate(inputs.fit.contributing_donors().items(), start=1):
@@ -728,5 +806,143 @@ def assemble_evidence(
     for notice in inputs.notices:
         builder.warn(notice)
 
-    verdict = decide_verdict(inputs, divergence_ratio=divergence_ratio, min_donors=min_donors)
+    # --- Biomass & Carbon conversion layer ----------------------------------
+    params = biomass_params or inputs.biomass_params
+    carbon = carbon_estimate or inputs.carbon_estimate
+    comparison: ClaimComparison | None = None
+
+    if carbon is None and params is not None and not params.is_calibrated:
+        builder.warn(
+            f"NOT CALIBRATED: biomass parameters for '{params.region_type}' lack "
+            f"{', '.join(params.missing_calibration())}; no carbon estimate was produced."
+        )
+        params = None
+    if carbon is None and params is not None:
+        area_ha = inputs.request.project.area_ha or getattr(
+            inputs.request.claim, "project_area_ha", None
+        )
+        if area_ha is not None and area_ha > 0:
+            delta_ind = float(inputs.fit.average_effect)
+            ind_err = (
+                float(inputs.leave_one_out.max_absolute_shift)
+                if inputs.leave_one_out is not None
+                else 0.0
+            )
+            carbon = convert_indicator_to_carbon(
+                delta_indicator=delta_ind,
+                area_ha=float(area_ha),
+                params=params,
+                indicator_std_error=ind_err,
+            )
+
+    if carbon is not None:
+        effective_params = params or carbon.params
+        region_type = effective_params.region_type if effective_params else "unknown"
+        biomass_prov = Provenance.computed(
+            source=data_source,
+            method=f"biomass-allometry/{region_type}",
+            stage="biomass",
+            parameters={
+                "region_type": region_type,
+                "cf": effective_params.cf if effective_params else None,
+                "root_to_shoot_ratio": (
+                    effective_params.root_to_shoot_ratio if effective_params else None
+                ),
+                "co2_to_c_ratio": effective_params.co2_to_c_ratio if effective_params else None,
+                "ndvi_to_agb_slope": (
+                    effective_params.ndvi_to_agb_slope if effective_params else None
+                ),
+                "allometry_relative_error": (
+                    effective_params.allometry_relative_error if effective_params else None
+                ),
+                "calibration_source": (
+                    effective_params.calibration_source if effective_params else None
+                ),
+                "calibration_is_test_fixture": (
+                    effective_params.calibration_is_test_fixture if effective_params else None
+                ),
+                "interval": "assumed one-sigma (~68%), not a 95% confidence interval",
+                "area_ha": carbon.area_ha,
+            },
+            inputs=("effect.point_estimate",),
+            notes=(
+                "Conditional on the supplied site calibration (not validated by GroundTruth). "
+                "Interval is one-sigma under an assumed relative error. NDVI is not carbon."
+            ),
+        )
+        builder.add(
+            "carbon.estimated_tco2e",
+            "Calibration-conditional carbon estimate (screening heuristic)",
+            float(carbon.cumulative_tco2e),
+            unit="tCO2e",
+            confidence=carbon.envelope(),
+            provenance=biomass_prov,
+            qualifiers={
+                "delta_agb_t_per_ha": float(carbon.delta_agb_t_per_ha),
+                "delta_tco2e_per_ha": float(carbon.delta_tco2e_per_ha),
+                "std_error_tco2e": float(carbon.std_error_tco2e),
+                "region_type": region_type,
+                "is_carbon_quantity": True,
+                "calibration_source": (
+                    effective_params.calibration_source if effective_params else None
+                ),
+                "calibration_is_test_fixture": bool(
+                    effective_params.calibration_is_test_fixture if effective_params else False
+                ),
+                "interval_kind": carbon.interval_kind,
+            },
+        )
+
+        if inputs.request.claim.claimed_credits_tco2e is not None:
+            claimed_val = float(inputs.request.claim.claimed_credits_tco2e)
+            builder.add(
+                "carbon.claimed_tco2e",
+                "Credits claimed or issued, as reported by the registry",
+                claimed_val,
+                unit="tCO2e",
+                provenance=Provenance.external(
+                    source=f"{inputs.request.claim.standard} registry",
+                    source_uri=inputs.request.claim.source_uri,
+                    notes="Developer-reported figure under test. Not computed by GroundTruth.",
+                ),
+                qualifiers={"developer_reported": True, "under_test": True},
+            )
+            if claimed_val > 0:
+                comparison = benchmark_against_claim(
+                    claimed_tco2e=claimed_val,
+                    estimated_tco2e=carbon.cumulative_tco2e,
+                    lower_tco2e=carbon.uncertainty_lower_tco2e,
+                    upper_tco2e=carbon.uncertainty_upper_tco2e,
+                )
+                comp_prov = Provenance.computed(
+                    source=data_source,
+                    method="benchmark-against-claim/over-issuance",
+                    stage="comparison",
+                    parameters={
+                        "claimed_tco2e": claimed_val,
+                        "estimated_tco2e": carbon.cumulative_tco2e,
+                    },
+                    inputs=("carbon.estimated_tco2e", "carbon.claimed_tco2e"),
+                    notes="Comparison between developer claim and independent carbon estimate.",
+                )
+                builder.add(
+                    "carbon.over_issuance_share",
+                    "Estimated credit over-issuance share relative to independent estimate",
+                    float(comparison.over_issuance_share),
+                    unit="share",
+                    confidence=comparison.envelope(),
+                    provenance=comp_prov,
+                    qualifiers={
+                        "over_issuance_tco2e": float(comparison.over_issuance_tco2e),
+                        "divergence_ratio": float(comparison.divergence_ratio),
+                    },
+                )
+                divergence_ratio = comparison.divergence_ratio
+
+    verdict = decide_verdict(
+        inputs,
+        divergence_ratio=divergence_ratio,
+        min_donors=min_donors,
+        claim_comparison=comparison,
+    )
     return builder.build(verdict)

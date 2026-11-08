@@ -17,7 +17,14 @@ from groundtruth.data_access.store import ParquetStore
 
 
 def scenes_to_frame(scenes: list[SceneDescriptor]) -> pd.DataFrame:
-    rows = [{**asdict(s), "bbox": list(s.bbox), "assets": list(s.assets)} for s in scenes]
+    rows = []
+    for s in scenes:
+        d = asdict(s)
+        d.pop("asset_hrefs", None)
+        d.pop("geometry", None)
+        d["bbox"] = list(s.bbox)
+        d["assets"] = list(s.assets)
+        rows.append(d)
     return pd.DataFrame(rows)
 
 
