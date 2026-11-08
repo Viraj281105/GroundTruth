@@ -16,6 +16,7 @@ spec:
         - name: worker
           image: {{ include "gt.image" (dict "root" . "name" .Values.worker.image "tag" .Values.worker.tag) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["python", "-m", "apps.worker.main"]
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
