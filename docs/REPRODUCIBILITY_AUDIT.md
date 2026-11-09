@@ -8,7 +8,7 @@
 
 ## 1. The Reproducibility Mandate
 
-In environmental credit verification, legal due diligence, and carbon audits, an analytical conclusion is worthless if it cannot be independently reproduced by a third party.
+In environmental credit verification, legal due diligence, and carbon audits, an analytical conclusion is worthless if a third party cannot reproduce it without the author's help.
 
 GroundTruth 2.0 guarantees **deterministic mathematical reproducibility**:
 > *Given the identical input geometry, identical dataset hashes, identical analytical parameters, and identical software commit revision, GroundTruth will produce bit-for-bit identical numerical findings.*

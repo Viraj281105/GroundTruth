@@ -232,8 +232,15 @@ def test_docker_compose_and_helm_chart_structure() -> None:
     compose_path = REPO_ROOT / "docker-compose.yml"
     compose_data = yaml.safe_load(compose_path.read_text(encoding="utf-8"))
     services = compose_data.get("services", {})
-    assert {"postgres", "api", "worker", "web"}.issubset(services.keys())
-    assert "--migrate" in services["worker"]["command"]
+    assert {"postgres", "api", "worker", "web", "migrate"}.issubset(services.keys())
+    # Schema changes are applied by one dedicated one-shot service, and neither the API nor the
+    # worker may start until it has finished successfully (so a new migration never races them).
+    assert "--migrate" in services["migrate"]["command"]
+    assert "--exit-when-idle" in services["migrate"]["command"]
+    for name in ("api", "worker"):
+        assert (
+            services[name]["depends_on"]["migrate"]["condition"] == "service_completed_successfully"
+        ), name
 
     helm_root = REPO_ROOT / "infrastructure" / "helm" / "groundtruth"
     chart_data = yaml.safe_load((helm_root / "Chart.yaml").read_text(encoding="utf-8"))

@@ -104,24 +104,28 @@ groundtruth verify kariba-redd --synthetic-fixture
 ```
 
 ```
-==============================================================================
-SYNTHETIC FIXTURE RUN — NOT REAL SATELLITE OBSERVATIONS
-This run replays a precomputed synthetic benchmark fixture from disk.
-All numbers describe a test fixture and say nothing about any real project.
-==============================================================================
-Simplex SCM Fit                   : CONVERGED (FISTA 42 iterations)
-Pre-Treatment RMSPE               : 0.0124 NDVI units (0.18 SD — PASSES Gate 2)
-Convex Hull Level Excess          : 0.0021 SD (PASSES Gate 3)
-Permutation In-Space Placebos     : R_treated = 28.56, Rank 1/29, p = 0.0345
-In-Time Placebo (t = 2006)        : τ_fake = -0.0018 (PASSES Gate 5)
-Leave-One-Out Sign Flips          : 0 of 28 jackknife refits (PASSES Gate 6)
-Difference-in-Differences τ       : 0.0414 (Parallel Trends Bias: -0.0082)
-Claimed Carbon Quantity           : 11,600,000 tCO2e
-Empirical Outcome Metric          : 0.0413 ΔNDVI
-Unit Conversion Gate              : INCOMMENSURABLE (assert_not_index_to_carbon)
-FINAL VERDICT                     : INCONCLUSIVE (Not Calibrated to Carbon)
-==============================================================================
+SIMULATED DATA: this bundle was produced from the synthetic fixture provider and must not be
+published as a finding about a real project.
+
+Outcome: Inconclusive: the available evidence does not support a screening outcome
+INCONCLUSIVE / NOT CALIBRATED: an effect on the observed indicator was estimated, but it cannot
+be expressed in tCO2e because no validated, site-calibrated biomass model is available.
+NDVI is not carbon.
+
+Estimated incremental effect on ndvi (mean post-treatment gap) : 0.05473  [0.05339, 0.05759]
+Pre-treatment root mean squared prediction error               : 0.002367 ndvi
+Permutation p-value from in-space placebo tests                : 0.01961  (50 placebo units)
+Estimate keeps its sign across all leave-one-out refits        : True
+Difference-in-differences cross-check estimate                 : 0.05206  (fails its parallel-trends
+                                                                 screen: treated as uninformative)
+Donor weights uniquely determined by the pre-treatment fit     : False
 ```
+
+*The block above is an excerpt of the real output of that command on the simulated fixture
+(regenerate it with the command; figures describe a test fixture only). The case file carries no
+claimed credit quantity (`claimed_credits_tco2e: null`), so the report makes no comparison
+against one. An earlier version of this document showed a claimed quantity and other figures that
+the system never produced; they were removed.*
 
 ---
 

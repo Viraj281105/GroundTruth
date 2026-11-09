@@ -67,8 +67,9 @@ In September 2025, following a comprehensive multi-year investigation, Verra det
    ┌─────────────────────────────────────────────────────────────────────────────┐
    │                          INDEPENDENT AUDIT NOTICE                           │
    │ GroundTruth DOES NOT hardcode or reverse-engineer Verra's 57% finding.     │
-   │ An earlier draft containing ΔNDVI = 0.0609 (back-calculated from 57%) has   │
-   │ been completely withdrawn (see docs/audits/INDEPENDENT_TASK_5B_AUDIT.md).    │
+   │ An earlier draft containing an ΔNDVI value back-calculated from Verra's    │
+   │ 57% finding has been completely withdrawn (see                              │
+   │ docs/audits/INDEPENDENT_TASK_5B_AUDIT.md).                                  │
    │ The reference figure sits in cases/kariba-redd.yaml as an unread validation │
    │ target. The pipeline never feeds reference figures forward.                 │
    └─────────────────────────────────────────────────────────────────────────────┘

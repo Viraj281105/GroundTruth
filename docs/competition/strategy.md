@@ -134,7 +134,7 @@ flowchart TD
 ## 6. Pitch Defence Strategy: Handling Hard Questions
 
 ### Q1: "Did you reproduce Verra's 57% Kariba over-issuance finding?"
-> *"No, and we are proud to say so. Verra's 57% finding is an unread external benchmark target in our YAML case definition. An earlier draft of our project contained a hardcoded NDVI value back-calculated from 57%; our independent audit caught this, and we formally retracted it. Converting NDVI to carbon requires site-calibrated, peer-reviewed destructive harvest plots. Because no such calibration is shipped, GroundTruth truthfully reports INCONCLUSIVE. The refusal to guess is our feature."*
+> *"No. GroundTruth has not reproduced Verra's 57% Kariba finding, and we are proud to say so. That finding is an unread external benchmark target in our YAML case definition. An earlier draft of our project contained a hardcoded NDVI value back-calculated from 57%; our independent audit caught this and the result was withdrawn. Converting NDVI to carbon requires site-calibrated, peer-reviewed destructive harvest plots. Because no such calibration is shipped, the outcome is reported as INCONCLUSIVE / NOT CALIBRATED. The refusal to guess is our feature."*
 
 ### Q2: "Are you accusing project developers of carbon fraud?"
 > *"Never. Our contract explicitly prohibits defamatory labels like 'fraud' or 'scam'. When a project baseline diverges from an independent counterfactual, there are five plausible scientific explanations: optimistic baseline projections, unobserved macroeconomic divergence in donors, regional leakage, sensor transition steps, or genuine over-issuance. A satellite time series cannot determine legal culpability. GroundTruth reports the divergence statistic and recommends accredited ground review."*
