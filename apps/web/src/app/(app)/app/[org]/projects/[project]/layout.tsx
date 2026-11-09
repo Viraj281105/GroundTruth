@@ -2,13 +2,14 @@ import React from 'react';
 import { SetDataMode } from '../../../../../../components/shell/data-mode';
 import { ProjectBadges } from '../../../../../../features/projects/ProjectBadges';
 import { ProjectTabs } from '../../../../../../features/projects/ProjectTabs';
+import { LifecycleProgress } from '../../../../../../components/panels/LifecycleProgress';
 import { projectDataMode } from '../../../../../../features/projects/model';
 import { loadProject } from '../../../../../../features/projects/server';
 import styles from '../../../../../../features/projects/projects.module.css';
 
 export const dynamic = 'force-dynamic';
 
-/** Project header, access badge, tabs and the data-mode banner trigger. Unknown or no-access projects 404. */
+/** Project header, access badge, tabs, lifecycle progress bar, and the data-mode banner trigger. Unknown or no-access projects 404. */
 export default async function ProjectLayout({ children, params }: { children: React.ReactNode; params: { org: string; project: string } }) {
   const project = await loadProject(params.project);
   return (
@@ -21,6 +22,7 @@ export default async function ProjectLayout({ children, params }: { children: Re
         </p>
         <ProjectBadges project={project} />
       </header>
+      <LifecycleProgress orgSlug={params.org} projectSlug={params.project} />
       <ProjectTabs base={`/app/${params.org}/projects/${params.project}`} level={project.access_level} />
       <div className={styles.stack}>{children}</div>
     </>

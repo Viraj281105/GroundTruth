@@ -59,3 +59,22 @@ def savi(nir: np.ndarray, red: np.ndarray, *, soil_factor: float = 0.5) -> np.nd
     """Soil-Adjusted Vegetation Index, for sparse-canopy dryland projects."""
     nir_a, red_a = np.asarray(nir, dtype=float), np.asarray(red, dtype=float)
     return _safe_ratio((nir_a - red_a) * (1.0 + soil_factor), nir_a + red_a + soil_factor)
+
+
+def gndvi(nir: np.ndarray, green: np.ndarray) -> np.ndarray:
+    """Green Normalized Difference Vegetation Index, ``(NIR - Green) / (NIR + Green)``.
+
+    Bounded in ``[-1, 1]``. Sensitive to chlorophyll concentration in mature canopy.
+    """
+    nir_a, green_a = np.asarray(nir, dtype=float), np.asarray(green, dtype=float)
+    return np.clip(_safe_ratio(nir_a - green_a, nir_a + green_a), -1.0, 1.0)
+
+
+def rvi(vh: np.ndarray, vv: np.ndarray) -> np.ndarray:
+    """Radar Vegetation Index for dual-polarization SAR, ``(4 * VH) / (VV + VH)``.
+
+    Bounded in ``[0, 1]`` (values outside are clipped). Sensitive to vegetation
+    volume scattering and biomass structure through all-weather radar monitoring.
+    """
+    vh_a, vv_a = np.asarray(vh, dtype=float), np.asarray(vv, dtype=float)
+    return np.clip(_safe_ratio(4.0 * vh_a, vv_a + vh_a), 0.0, 1.0)

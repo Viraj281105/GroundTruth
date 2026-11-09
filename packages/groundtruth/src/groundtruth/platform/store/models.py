@@ -488,3 +488,37 @@ class AuditEventRow(Base):
     ip: Mapped[str | None] = mapped_column(sa.String(64))
     user_agent: Mapped[str | None] = mapped_column(sa.String(300))
     details: Mapped[dict[str, Any]] = mapped_column(JsonDocument)
+
+
+class AuditRecordRow(Base):
+    """Cryptographic audit record for a scientific assessment.
+
+    Append-only and tamper-evident: binds input geometry, parameters, commit SHA,
+    intermediate hashes, and final findings into a Merkle root hash.
+    """
+
+    __tablename__ = "audit_records"
+    __table_args__ = (
+        sa.Index("ix_audit_records_project_id", "project_id"),
+        sa.Index("ix_audit_records_timestamp", "timestamp"),
+        sa.Index("ix_audit_records_merkle_root_hash", "merkle_root_hash"),
+    )
+
+    record_id: Mapped[str] = mapped_column(sa.String(64), primary_key=True)
+    project_id: Mapped[str] = mapped_column(sa.String(100), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    git_commit_sha: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    contract_version: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    engine_version: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    methodology_version: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    boundary_geometry_hash: Mapped[str] = mapped_column(sa.String(128), nullable=False)
+    input_files_hashes: Mapped[dict[str, str]] = mapped_column(JsonDocument, nullable=False)
+    dataset_versions_hashes: Mapped[dict[str, str]] = mapped_column(JsonDocument, nullable=False)
+    analytical_parameters: Mapped[dict[str, Any]] = mapped_column(JsonDocument, nullable=False)
+    intermediate_hashes: Mapped[dict[str, str]] = mapped_column(JsonDocument, nullable=False)
+    final_findings: Mapped[dict[str, Any]] = mapped_column(JsonDocument, nullable=False)
+    report_version: Mapped[str] = mapped_column(sa.String(32), nullable=False)
+    merkle_root_hash: Mapped[str] = mapped_column(sa.String(128), nullable=False)
+    deterministic_reproducible: Mapped[bool] = mapped_column(
+        sa.Boolean, default=True, nullable=False
+    )

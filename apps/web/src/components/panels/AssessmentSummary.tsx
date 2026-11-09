@@ -40,19 +40,30 @@ export function AssessmentSummary({ data, loading, persona }: AssessmentSummaryP
         </span>
         <span className={styles.muted}>Evidence confidence: {data.evidence_confidence}</span>
       </div>
-      <ol className={styles.ladder} aria-label="Assessment level ladder">
-        {ladder.steps.map((s) => (
-          <li key={s.level} className={`${styles.step} ${styles[s.state]}`} data-ladder-step={s.level} data-ladder-state={s.state}>
-            <span className={styles.stepMark} aria-hidden="true">
-              {s.level}
-            </span>
-            <span className={styles.stepName}>
-              {s.name}
-              <span className={styles.stepState}>{s.state === 'current' ? 'reached level' : s.state === 'reached' ? 'reached' : 'not reached'}</span>
-            </span>
-          </li>
-        ))}
-      </ol>
+      <details className={styles.ladderDetails}>
+        <summary className={styles.ladderSummary}>
+          <div className={styles.ladderSummaryLeft}>
+            <span>Level progression: <strong>{ladder.steps.find((s) => s.state === 'current')?.name ?? `Level ${ladder.level}`}</strong></span>
+            <span className={styles.ladderSummaryBadge}>{ladder.steps.filter((s) => s.state === 'reached' || s.state === 'current').length} of {ladder.steps.length} levels reached</span>
+          </div>
+          <span className={styles.ladderToggleText}>View ladder</span>
+        </summary>
+        <div className={styles.ladderContent}>
+          <ol className={styles.ladder} aria-label="Assessment level ladder">
+            {ladder.steps.map((s) => (
+              <li key={s.level} className={`${styles.step} ${styles[s.state]}`} data-ladder-step={s.level} data-ladder-state={s.state}>
+                <span className={styles.stepMark} aria-hidden="true">
+                  {s.level}
+                </span>
+                <span className={styles.stepName}>
+                  {s.name}
+                  <span className={styles.stepState}>{s.state === 'current' ? 'reached level' : s.state === 'reached' ? 'reached' : 'not reached'}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </details>
       <div className={styles.conclusions}>
         <Conclusion title="Observed outcome" c={data.observed_outcome} />
         <Conclusion title="Ecological assessment" c={data.ecological_assessment} />

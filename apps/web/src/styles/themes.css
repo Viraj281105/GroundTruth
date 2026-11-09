@@ -78,72 +78,76 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --surface-base: #0c1311;
-  --surface-raised: #131d19;
-  --surface-sunken: #101a16;
-  --surface-hover: #18241f;
-  --surface-overlay: rgb(12 19 17 / 0.94);
-  --border-subtle: #25332c;
-  --border-default: #33443b;
-  --border-strong: #46594e;
-  --text-primary: #e6ebe4;
-  --text-secondary: #b2bfb5;
-  --text-muted: #8c9a91;
+  /* GroundTruth 2.0 Inverted Dual-Theme Hierarchy:
+   * Reverses light surface/text roles systematically using the SAME palette.
+   * Avoids pure black voids; provides distinguishable, comfortable surface elevations.
+   */
+  --surface-base: #161d19;            /* Application canvas: soft charcoal / deep slate */
+  --surface-raised: #212c26;          /* Elevated cards: visibly lighter than background */
+  --surface-sunken: #121815;          /* Sunken wells, terminal trays */
+  --surface-hover: #2a3830;           /* Interactive hover elevation */
+  --surface-overlay: rgb(33 44 38 / 0.95);
+  --border-subtle: #2e3d34;           /* Subtle partition borders */
+  --border-default: #3e5246;          /* Card & container borders */
+  --border-strong: #546d5f;           /* High-emphasis borders */
+  --text-primary: #f2f6f3;            /* Primary typography: warm off-white */
+  --text-secondary: #c2cdc6;          /* Secondary typography: readable muted grey */
+  --text-muted: #8e9e93;              /* Caption & telemetry metadata */
   --text-on-accent: #07140e;
   --accent: #4fb383;
   --accent-strong: #6cc699;
   --accent-ink: #6cc699;
-  --accent-soft: #17362a;
-  --accent-soft-border: rgb(79 179 131 / 0.35);
+  --accent-soft: #19382b;
+  --accent-soft-border: rgb(79 179 131 / 0.45);
   --gold: #d2aa45;
   --gold-line: #b58e24;
   --gold-soft: #2e2812;
   --warn: #e0a44f;
   --warn-soft: #33250f;
   --warn-line: #6b4d1c;
-  --sidebar-bg: #0a100e;
-  --sidebar-ink: #e1e8e0;
+  --sidebar-bg: #121714;              /* Slightly differentiated charcoal rail */
+  --sidebar-ink: #e4eae3;
   --focus-ring: #6cb0ff;
-  --ok-bg: #17362a;
-  --ok-border: rgb(108 198 153 / 0.4);
+  --ok-bg: #19382b;
+  --ok-border: rgb(108 198 153 / 0.45);
   --ok-text: #6cc699;
   --caution-bg: #33250f;
   --caution-border: #6b4d1c;
   --caution-text: #e0a44f;
-  --neutral-bg: #18241f;
-  --neutral-border: #33443b;
-  --neutral-text: #b2bfb5;
-  --danger-bg: rgb(242 137 126 / 0.12);
-  --danger-border: rgb(242 137 126 / 0.4);
+  --neutral-bg: #212c26;
+  --neutral-border: #3e5246;
+  --neutral-text: #c2cdc6;
+  --danger-bg: rgb(242 137 126 / 0.14);
+  --danger-border: rgb(242 137 126 / 0.45);
   --danger-text: #f2897e;
   --danger: var(--danger-text);
   --sim-bg: #3a1530;
   --sim-border: #c3569f;
   --sim-text: #f6cde8;
   --sim-solid: #c3569f;
-  --ev-observed-fg: #6cc699;   --ev-observed-bg: #17362a;   --ev-observed-border: #6cc699;
-  --ev-derived-fg: #6aaedb;    --ev-derived-bg: #13273a;    --ev-derived-border: #6aaedb;
-  --ev-model-fg: #b197db;      --ev-model-bg: #261b3a;      --ev-model-border: #b197db;
+  --ev-observed-fg: #6cc699;   --ev-observed-bg: #19382b;   --ev-observed-border: #6cc699;
+  --ev-derived-fg: #6aaedb;    --ev-derived-bg: #152b3d;    --ev-derived-border: #6aaedb;
+  --ev-model-fg: #b197db;      --ev-model-bg: #281c3c;      --ev-model-border: #b197db;
   --ev-inferred-fg: #d2aa45;   --ev-inferred-bg: #2e2812;   --ev-inferred-border: #d2aa45;
-  --ev-unavailable-fg: #93a097; --ev-unavailable-bg: #18241f; --ev-unavailable-border: #93a097;
-  --status-improving-fg: #6cc699;   --status-improving-bg: #17362a;   --status-improving-border: #4fb383;
+  --ev-unavailable-fg: #9ba89f; --ev-unavailable-bg: #212c26; --ev-unavailable-border: #9ba89f;
+  --status-improving-fg: #6cc699;   --status-improving-bg: #19382b;   --status-improving-border: #4fb383;
   --status-deteriorating-fg: #e0a44f; --status-deteriorating-bg: #33250f; --status-deteriorating-border: #6b4d1c;
-  --status-stable-fg: #b2bfb5;      --status-stable-bg: #18241f;       --status-stable-border: #33443b;
-  --status-mixed-fg: #6aaedb;       --status-mixed-bg: #13273a;        --status-mixed-border: #6aaedb;
-  --status-risk-fg: #f2897e;        --status-risk-bg: #3a1714;         --status-risk-border: #f2897e;
-  --status-noclear-fg: #b2bfb5;     --status-noclear-bg: #18241f;      --status-noclear-border: #33443b;
-  --status-insufficient-fg: #93a097; --status-insufficient-bg: transparent; --status-insufficient-border: #93a097;
-  --series-observed: #3a9468;
-  --series-synthetic: #b58e24;
-  --series-envelope: rgb(181 142 36 / 0.16);
-  --series-gap: rgb(181 142 36 / 0.12);
-  --series-pre: rgb(230 235 228 / 0.02);
-  --series-post: rgb(79 179 131 / 0.06);
-  --chart-a: #3a9468; --chart-b: #b58e24; --chart-wet: #4a94c4; --chart-dry: #cf7f3c;
-  --chart-neutral: #6e8678; --chart-grid: #22302a;
-  --map-donor: #6e8678;
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-2: 0 6px 16px rgb(0 0 0 / 0.35), 0 1px 3px rgb(0 0 0 / 0.4);
-  --shadow-3: 0 20px 48px rgb(0 0 0 / 0.5), 0 4px 12px rgb(0 0 0 / 0.4);
-  --ambient: radial-gradient(60rem 30rem at 15% -10%, rgb(79 179 131 / 0.07), transparent 60%);
+  --status-stable-fg: #c2cdc6;      --status-stable-bg: #212c26;       --status-stable-border: #3e5246;
+  --status-mixed-fg: #6aaedb;       --status-mixed-bg: #152b3d;        --status-mixed-border: #6aaedb;
+  --status-risk-fg: #f2897e;        --status-risk-bg: #3c1916;         --status-risk-border: #f2897e;
+  --status-noclear-fg: #c2cdc6;     --status-noclear-bg: #212c26;      --status-noclear-border: #3e5246;
+  --status-insufficient-fg: #9ba89f; --status-insufficient-bg: transparent; --status-insufficient-border: #9ba89f;
+  --series-observed: #3ea070;
+  --series-synthetic: #c49b27;
+  --series-envelope: rgb(181 142 36 / 0.18);
+  --series-gap: rgb(181 142 36 / 0.14);
+  --series-pre: rgb(230 235 228 / 0.03);
+  --series-post: rgb(79 179 131 / 0.08);
+  --chart-a: #3ea070; --chart-b: #c49b27; --chart-wet: #52a0d2; --chart-dry: #d88947;
+  --chart-neutral: #779182; --chart-grid: #28372f;
+  --map-donor: #779182;
+  --shadow-1: 0 1px 3px rgb(0 0 0 / 0.35);
+  --shadow-2: 0 6px 18px rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.35);
+  --shadow-3: 0 20px 48px rgb(0 0 0 / 0.45), 0 4px 12px rgb(0 0 0 / 0.35);
+  --ambient: radial-gradient(60rem 30rem at 15% -10%, rgb(79 179 131 / 0.09), transparent 60%);
 }

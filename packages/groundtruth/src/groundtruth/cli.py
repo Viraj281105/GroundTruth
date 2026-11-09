@@ -416,7 +416,7 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
         ("earth observation credentials present", str(settings.earth_observation_configured)),
         (
             "earth observation ingestion implemented",
-            "no - STAC scaffolding exists but has never been executed end to end",
+            "no",
         ),
         (
             "real observation data available",
@@ -547,7 +547,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=["ndvi", "evi", "ndmi", "nbr"],
         help="Spectral indices to compute and cache.",
     )
-    ingest.add_argument("--platform", default="sentinel-2", choices=["sentinel-2", "landsat"])
+    ingest.add_argument(
+        "--platform",
+        default="sentinel-2",
+        choices=[
+            "sentinel-2",
+            "landsat",
+            "sentinel-1",
+            "sentinel-2-l2a",
+            "landsat-c2-l2",
+            "sentinel-1-rtc",
+        ],
+    )
     ingest.add_argument("--max-cloud-cover", type=float, default=25.0)
     ingest.add_argument("--start-mmdd", default="06-01")
     ingest.add_argument("--end-mmdd", default="06-30")

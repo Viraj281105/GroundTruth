@@ -46,6 +46,7 @@ from groundtruth.platform.api.schemas import (
 )
 from groundtruth.platform.api.scope import accessible_projects, audit, case_dependency
 from groundtruth.platform.api.tiles import router as tiles_router
+from groundtruth.platform.api.v2 import router as v2_router
 from groundtruth.platform.auth.authz import Action, Capability, Context, ProjectAccess
 from groundtruth.platform.auth.csrf import CsrfOriginMiddleware
 from groundtruth.platform.auth.deps import require_role
@@ -105,6 +106,7 @@ app.include_router(auth_router)
 app.include_router(orgs_router)
 app.include_router(portfolio_router)
 app.include_router(projects_router)
+app.include_router(v2_router)
 app.include_router(exports_router, include_in_schema=False)
 
 # The frontend's TypeScript types are generated from this schema (issue #17); the served

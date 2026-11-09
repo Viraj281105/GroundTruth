@@ -12,35 +12,53 @@ export function RecommendationList({ recommendations, persona }: { recommendatio
     );
   }
   const ordered = recommendationsFor(recommendations, persona);
-  return (
-    <ol className={styles.recs} aria-label="Recommendations">
-      {ordered.map((r) => (
-        <li key={r.id} className={styles.rec} data-recommendation-id={r.id}>
-          <span className={styles.pri}>
-            <b>{r.priority}</b>
-            priority
+  const initial = ordered.slice(0, 2);
+  const extra = ordered.slice(2);
+  const renderItem = (r: (typeof ordered)[0]) => (
+    <li key={r.id} className={styles.rec} data-recommendation-id={r.id}>
+      <span className={styles.pri}>
+        <b>{r.priority}</b>
+        priority
+      </span>
+      <div>
+        <h4>{r.text}</h4>
+        <div className={styles.why}>
+          <span>
+            <b>Why</b>
+            {r.rationale}
           </span>
-          <div>
-            <h4>{r.text}</h4>
-            <div className={styles.why}>
-              <span>
-                <b>Why</b>
-                {r.rationale}
-              </span>
-              {r.evidence_refs.length > 0 && (
-                <span className={styles.refs}>
-                  <b>Evidence</b>
-                  {r.evidence_refs.map((ref) => (
-                    <span key={ref} className={styles.ref}>
-                      {ref}
-                    </span>
-                  ))}
+          {r.evidence_refs.length > 0 && (
+            <span className={styles.refs}>
+              <b>Evidence</b>
+              {r.evidence_refs.map((ref) => (
+                <span key={ref} className={styles.ref}>
+                  {ref}
                 </span>
-              )}
-            </div>
+              ))}
+            </span>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+
+  return (
+    <>
+      <ol className={styles.recs} aria-label="Recommendations">
+        {initial.map(renderItem)}
+      </ol>
+      {extra.length > 0 && (
+        <details className={styles.collapsibleBlock}>
+          <summary className={styles.collapsibleSummary}>
+            <span>View {extra.length} more recommendation{extra.length > 1 ? 's' : ''}</span>
+          </summary>
+          <div className={styles.collapsibleContent}>
+            <ol className={styles.recs} aria-label="Additional recommendations">
+              {extra.map(renderItem)}
+            </ol>
           </div>
-        </li>
-      ))}
-    </ol>
+        </details>
+      )}
+    </>
   );
 }

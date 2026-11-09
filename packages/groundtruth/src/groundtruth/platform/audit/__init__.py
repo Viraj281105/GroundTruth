@@ -14,6 +14,13 @@ from sqlalchemy import event
 from sqlalchemy.orm import Session
 
 from groundtruth.contracts.errors import ProvenanceError
+from groundtruth.platform.audit.ledger import (
+    AuditLedger,
+    AuditRecord,
+    compute_sha256,
+    get_current_git_commit,
+    get_global_audit_ledger,
+)
 
 
 def _reject_audit_mutation(session: Session, flush_context: Any, instances: Any) -> None:
@@ -29,3 +36,11 @@ def _reject_audit_mutation(session: Session, flush_context: Any, instances: Any)
 
 if not event.contains(Session, "before_flush", _reject_audit_mutation):
     event.listen(Session, "before_flush", _reject_audit_mutation)
+
+__all__ = [
+    "AuditLedger",
+    "AuditRecord",
+    "compute_sha256",
+    "get_current_git_commit",
+    "get_global_audit_ledger",
+]

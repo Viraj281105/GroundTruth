@@ -95,11 +95,20 @@ export function PortfolioTable({ data, loading }: PanelProps<PortfolioView>) {
         {real.length > 0 ? <Table rows={real} heading="Projects" /> : <p className={styles.notice}>No real projects are shared with this organization.</p>}
       </div>
       {simulated.length > 0 && (
-        <div data-section="simulated" className={styles.simSection}>
-          <h3 className={styles.title}>Simulated projects</h3>
-          <p className={styles.lead}>SIMULATED DATA. These are never combined with the projects above.</p>
-          <Table rows={simulated} heading="Simulated projects" />
-        </div>
+        <details className={styles.collapsibleBlock}>
+          <summary className={styles.collapsibleSummary}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <strong>Simulated projects</strong> <Chip tone="sim">{simulated.length} projects</Chip>
+            </span>
+          </summary>
+          <div className={styles.collapsibleContent}>
+            <div data-section="simulated" className={styles.simSection}>
+              <h3 className={styles.title}>Simulated projects</h3>
+              <p className={styles.lead}>SIMULATED DATA. These are never combined with the projects above.</p>
+              <Table rows={simulated} heading="Simulated projects" />
+            </div>
+          </div>
+        </details>
       )}
     </section>
   );

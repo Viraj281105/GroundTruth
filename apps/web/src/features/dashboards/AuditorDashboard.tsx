@@ -32,16 +32,16 @@ export function AuditorDashboard({ data }: { data: DashboardData }) {
             <Slot panel={data.assessment} title="Assessment" render={(a) => <AssessmentSummary data={a} persona="auditor" />} />
           </Region>
           <div className={styles.grid}>
-            <Region id="evidence-inventory" label="Evidence inventory">
+            <Region id="evidence-inventory" title="Evidence inventory" collapsible badge="Indicators & files">
               <Slot panel={data.inventory} title="Evidence inventory" render={(inv) => <EvidenceInventoryTable data={inv} level={live.access_level} />} />
             </Region>
-            <Region id="verdict" label="Attribution, methodology and limitations">
+            <Region id="verdict" title="Attribution, methodology and limitations" collapsible badge="Screening outcome">
               <Slot panel={data.verification} title="Verification" render={(v) => <VerdictPanel data={v} />} />
             </Region>
-            <Region id="readiness" label="Attribution readiness">
+            <Region id="readiness" title="Attribution readiness" collapsible badge="Criteria checklist">
               <Slot panel={data.readiness} title="Readiness" render={(r) => <ReadinessChecklist data={r} />} />
             </Region>
-            <Region id="data-quality" title="Data quality">
+            <Region id="data-quality" title="Data quality" collapsible badge="Coverage & sensors">
               {dq && (
                 <ul className={styles.facts}>
                   <li>
@@ -54,7 +54,7 @@ export function AuditorDashboard({ data }: { data: DashboardData }) {
               )}
             </Region>
             {(live.access_level === 'audit' || live.access_level === 'owner') && (
-              <Region id="dossier" title="Audit dossier">
+              <Region id="dossier" title="Audit dossier" collapsible defaultOpen badge="Accredited review">
                 <p className={styles.muted}>The dossier bundles the evidence, hashes and methodology for accredited review.</p>
                 <LinkButton variant="secondary" href={`${getPublicApiUrl()}/projects/${encodeURIComponent(live.id)}/export/dossier`} data-dossier-link>
                   Export audit dossier
@@ -64,7 +64,7 @@ export function AuditorDashboard({ data }: { data: DashboardData }) {
           </div>
         </>
       )}
-      <Region id="activity" label="Recent activity">
+      <Region id="activity" label="Recent activity" collapsible badge="Audit trail">
         <Slot panel={data.activity} title="Recent activity" render={(items) => <ActivityFeed items={items} />} />
       </Region>
     </div>

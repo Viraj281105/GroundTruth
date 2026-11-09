@@ -112,6 +112,16 @@ class Settings(BaseSettings):
     )
     auth_session_days: int = Field(default=7, ge=1, le=90)
 
+    # --- rate limiting ----------------------------------------------------
+    rate_limit_enabled: bool = Field(
+        default=True, description="Enable API rate limiting for expensive and auth endpoints."
+    )
+    auth_rate_limit: int = Field(default=10, description="Max auth requests per window.")
+    intelligence_rate_limit: int = Field(
+        default=10, description="Max intelligence queries per window."
+    )
+    rate_limit_window_seconds: int = Field(default=60, description="Rate limit window in seconds.")
+
     # --- analysis defaults -------------------------------------------------
     min_pre_periods: int = Field(
         default=5, description="Minimum pre-treatment periods required for a synthetic control."

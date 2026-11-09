@@ -1,0 +1,186 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.title {
+  font-size: 1.75rem;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 54rem;
+  margin: 0;
+}
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+}
+
+.kpiCard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.kpiLabel {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.kpiValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.kpiSub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.supportedText {
+  color: var(--accent);
+}
+
+.warningText {
+  color: #f2897e;
+}
+
+.tableCard {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tableHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tableHeader h3 {
+  font-size: var(--text-base);
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.tableSub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+  text-align: left;
+}
+
+.table th {
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+  text-transform: uppercase;
+}
+
+.table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.table tr:hover td {
+  background: var(--surface-sunken);
+}
+
+.table td strong {
+  color: var(--text-primary);
+}
+
+.badgeSupported {
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+}
+
+.badgePartial {
+  background: rgba(210, 170, 69, 0.15);
+  color: #d2aa45;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+}
+
+.badgeContradicted {
+  background: rgba(242, 137, 126, 0.15);
+  color: #f2897e;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+}
+
+.statusLive {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.actionLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.actionLink:hover {
+  text-decoration: underline;
+}
+

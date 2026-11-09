@@ -19,7 +19,7 @@ export function FunderDashboard({ data }: { data: DashboardData }) {
       <Region id="portfolio" label="Portfolio" wide>
         <Slot panel={data.portfolio} title="Portfolio" render={(p) => <PortfolioTable data={p} />} />
       </Region>
-      <Region id="needs-attention" title="Needs attention" wide>
+      <Region id="needs-attention" title="Needs attention" wide collapsible badge="Action prompts">
         <Slot
           panel={data.portfolio}
           title="Needs attention"
@@ -49,7 +49,7 @@ export function FunderDashboard({ data }: { data: DashboardData }) {
           }}
         />
       </Region>
-      <Region id="activity" label="Recent activity">
+      <Region id="activity" label="Recent activity" collapsible badge="Audit trail">
         <Slot panel={data.activity} title="Recent activity" render={(items) => <ActivityFeed items={items} />} />
       </Region>
     </div>

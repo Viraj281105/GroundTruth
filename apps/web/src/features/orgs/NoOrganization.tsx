@@ -24,11 +24,20 @@ export function NoOrganization() {
         </div>
 
         <div style={{ marginTop: 'var(--space-8)', borderTop: '1px solid var(--border-subtle)', paddingTop: 'var(--space-6)' }}>
-          <h2 style={{ fontSize: 'var(--text-xl)', margin: '0 0 var(--space-2)' }}>Create an organization</h2>
-          <p style={{ color: 'var(--text-secondary)', margin: '0 0 var(--space-4)', fontSize: 'var(--text-sm)', lineHeight: 'var(--leading-relaxed)' }}>
-            Or create a new organization workspace to start analyzing projects. You will become its owner.
-          </p>
-          <CreateOrgForm />
+          <details style={{ cursor: 'pointer' }}>
+            <summary style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', listStyle: 'none', userSelect: 'none' }}>
+              <div>
+                <h2 style={{ fontSize: 'var(--text-xl)', margin: '0 0 var(--space-1)' }}>Create an organization</h2>
+                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: 'var(--text-sm)', lineHeight: 'var(--leading-relaxed)' }}>
+                  Or create a new organization workspace to start analyzing projects. You will become its owner.
+                </p>
+              </div>
+              <span style={{ fontSize: 'var(--text-lg)', color: 'var(--text-muted)', marginLeft: 'var(--space-3)' }} aria-hidden="true">▾</span>
+            </summary>
+            <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--border-subtle)' }}>
+              <CreateOrgForm />
+            </div>
+          </details>
         </div>
       </Card>
     </main>

@@ -39,23 +39,30 @@ export function DimensionCard({ dimension: d }: { dimension: DimensionView }) {
         <DimensionStatus dimension={d} />
       </div>
       <p className={styles.find}>{d.finding}</p>
-      <Items label="Known" items={d.known} />
-      <Items label="Suggested" items={d.suggested} />
-      <Items label="Cannot establish" items={d.cannot_establish} />
-      <div className={styles.foot}>
-        <div className={styles.row}>
-          <span className={styles.listLabel}>Limitation</span>
-          <span className={`${styles.kindChip} ${styles.tone_neutral}`} data-limitation={d.limitation}>
-            {limitationLabel(d.limitation)}
-          </span>
-          <span className={styles.confidence}>Confidence: {d.confidence}</span>
-        </div>
-        {d.evidence_needed && (
-          <div>
-            <span className={styles.listLabel}>Evidence needed</span> {d.evidence_needed}
+      <details className={styles.dimDetails}>
+        <summary className={styles.dimSummary}>
+          <span>Evidence breakdown & limitations</span>
+        </summary>
+        <div className={styles.dimContent}>
+          <Items label="Known" items={d.known} />
+          <Items label="Suggested" items={d.suggested} />
+          <Items label="Cannot establish" items={d.cannot_establish} />
+          <div className={styles.foot}>
+            <div className={styles.row}>
+              <span className={styles.listLabel}>Limitation</span>
+              <span className={`${styles.kindChip} ${styles.tone_neutral}`} data-limitation={d.limitation}>
+                {limitationLabel(d.limitation)}
+              </span>
+              <span className={styles.confidence}>Confidence: {d.confidence}</span>
+            </div>
+            {d.evidence_needed && (
+              <div>
+                <span className={styles.listLabel}>Evidence needed</span> {d.evidence_needed}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      </details>
     </Card>
   );
 }

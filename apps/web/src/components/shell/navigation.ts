@@ -4,7 +4,18 @@ import type { Schemas } from '../../lib/api-client';
 export type OrgType = Schemas['OrgView']['type'];
 export type MemberRole = Schemas['OrgView']['role'];
 
-export type NavIcon = 'dashboard' | 'projects' | 'new' | 'portfolio' | 'members' | 'sharing' | 'audit';
+export type NavIcon =
+  | 'dashboard'
+  | 'projects'
+  | 'new'
+  | 'portfolio'
+  | 'assessments'
+  | 'intelligence'
+  | 'evidence'
+  | 'reports'
+  | 'members'
+  | 'sharing'
+  | 'audit';
 
 export interface NavItem {
   id: string;
@@ -28,6 +39,10 @@ const IMPLEMENTED = new Set([
   'projects',
   'projects/new',
   'portfolio',
+  'assessments',
+  'intelligence',
+  'evidence-library',
+  'reports',
   'settings/members',
   'settings/sharing',
   'settings/audit',
@@ -63,7 +78,14 @@ export const MEMBER_ROLE_LABELS: Record<MemberRole, string> = {
  * Authorization itself is always enforced by the API; this only avoids offering dead ends.
  */
 export function navigationFor(orgType: OrgType, role: MemberRole): NavGroup[] {
-  const workspace: NavItem[] = [item('dashboard', 'Dashboard', 'dashboard', 'dashboard'), item('projects', 'Projects', 'projects', 'projects')];
+  const workspace: NavItem[] = [
+    item('dashboard', 'Overview', 'dashboard', 'dashboard'),
+    item('projects', 'Projects', 'projects', 'projects'),
+    item('assessments', 'Assessments', 'assessments', 'assessments'),
+    item('intelligence', 'Intelligence', 'intelligence', 'intelligence'),
+    item('evidence-library', 'Evidence Library', 'evidence-library', 'evidence'),
+    item('reports', 'Reports', 'reports', 'reports'),
+  ];
   if (orgType === 'funder' || orgType === 'government') workspace.push(item('portfolio', 'Portfolio', 'portfolio', 'portfolio'));
   if (orgType !== 'reference' && role !== 'viewer') workspace.push(item('new-project', 'New project', 'projects/new', 'new'));
   const groups: NavGroup[] = [{ id: 'workspace', label: 'Workspace', items: workspace }];

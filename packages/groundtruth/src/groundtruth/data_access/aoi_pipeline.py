@@ -40,7 +40,7 @@ from groundtruth.data_access.stac import (
     search_scenes,
     validate_aoi_geojson,
 )
-from groundtruth.engine.observation.indices import evi, nbr, ndmi, ndvi, savi
+from groundtruth.engine.observation.indices import evi, gndvi, nbr, ndmi, ndvi, rvi, savi
 from groundtruth.engine.observation.masking import SCL_INVALID_CLASSES, scl_cloud_mask
 from groundtruth.engine.observation.reduction import (
     SENSORS,
@@ -68,6 +68,11 @@ _SENSOR_ALIASES: dict[str, str] = {
     "landsat-7": "landsat7",
     "landsat-5": "landsat5",
     "landsat": "landsat8",
+    "landsat-c2-l2": "landsat8",
+    "sentinel-1": "sentinel1",
+    "sentinel-1-rtc": "sentinel1",
+    "s1": "sentinel1",
+    "s1-rtc": "sentinel1",
 }
 
 _SUPPORTED_INDICATORS: dict[str, tuple[str, ...]] = {
@@ -76,11 +81,14 @@ _SUPPORTED_INDICATORS: dict[str, tuple[str, ...]] = {
     "nbr": ("nir", "swir2"),
     "ndmi": ("nir", "swir1"),
     "savi": ("nir", "red"),
+    "gndvi": ("nir", "green"),
+    "rvi": ("vh", "vv"),
 }
 
 _ROLE_BAND_ALIASES: dict[str, dict[str, tuple[str, ...]]] = {
     "sentinel2": {
         "blue": ("blue", "B2", "B02"),
+        "green": ("green", "B3", "B03"),
         "red": ("red", "B4", "B04"),
         "nir": ("nir", "B8", "B08", "B8A"),
         "swir1": ("swir1", "B11"),
@@ -88,6 +96,7 @@ _ROLE_BAND_ALIASES: dict[str, dict[str, tuple[str, ...]]] = {
     },
     "landsat9": {
         "blue": ("blue", "SR_B2", "B2"),
+        "green": ("green", "SR_B3", "B3"),
         "red": ("red", "SR_B4", "B4"),
         "nir": ("nir", "SR_B5", "B5", "nir08"),
         "swir1": ("swir1", "SR_B6", "B6", "swir16"),
@@ -95,6 +104,7 @@ _ROLE_BAND_ALIASES: dict[str, dict[str, tuple[str, ...]]] = {
     },
     "landsat8": {
         "blue": ("blue", "SR_B2", "B2"),
+        "green": ("green", "SR_B3", "B3"),
         "red": ("red", "SR_B4", "B4"),
         "nir": ("nir", "SR_B5", "B5", "nir08"),
         "swir1": ("swir1", "SR_B6", "B6", "swir16"),
@@ -102,6 +112,7 @@ _ROLE_BAND_ALIASES: dict[str, dict[str, tuple[str, ...]]] = {
     },
     "landsat7": {
         "blue": ("blue", "SR_B1", "B1"),
+        "green": ("green", "SR_B2", "B2"),
         "red": ("red", "SR_B3", "B3"),
         "nir": ("nir", "SR_B4", "B4", "nir08"),
         "swir1": ("swir1", "SR_B5", "B5", "swir16"),
@@ -109,10 +120,17 @@ _ROLE_BAND_ALIASES: dict[str, dict[str, tuple[str, ...]]] = {
     },
     "landsat5": {
         "blue": ("blue", "SR_B1", "B1"),
+        "green": ("green", "SR_B2", "B2"),
         "red": ("red", "SR_B3", "B3"),
         "nir": ("nir", "SR_B4", "B4", "nir08"),
         "swir1": ("swir1", "SR_B5", "B5", "swir16"),
         "swir2": ("swir2", "SR_B7", "B7", "swir22"),
+    },
+    "sentinel1": {
+        "vv": ("vv", "VV"),
+        "vh": ("vh", "VH"),
+        "hh": ("hh", "HH"),
+        "hv": ("hv", "HV"),
     },
 }
 
@@ -185,6 +203,8 @@ class AnnualObservationRecord:
     harmonized_indices: Mapping[str, float] | None = None
     unharmonized_value: float | None = None
     evidence_state: str = ""
+    collection_ids: tuple[str, ...] = ()
+    source_urls: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.evidence_state:
@@ -249,6 +269,8 @@ class AnnualObservationRecord:
                 else float(self.unharmonized_value)
             ),
             "evidence_state": self.evidence_state,
+            "collection_ids": list(self.collection_ids),
+            "source_urls": list(self.source_urls),
         }
 
     @classmethod
@@ -287,6 +309,18 @@ class AnnualObservationRecord:
         )
         raw_unharm = data.get("unharmonized_value")
         unharm = float(raw_unharm) if raw_unharm is not None else None
+        raw_colls = data.get("collection_ids") or ()
+        collection_ids = (
+            tuple(str(c) for c in raw_colls)
+            if isinstance(raw_colls, Sequence) and not isinstance(raw_colls, (str, bytes))
+            else ()
+        )
+        raw_urls = data.get("source_urls") or ()
+        source_urls = (
+            tuple(str(u) for u in raw_urls)
+            if isinstance(raw_urls, Sequence) and not isinstance(raw_urls, (str, bytes))
+            else ()
+        )
         cov_pct = (
             float(data["aoi_coverage_pct"])
             if data.get("aoi_coverage_pct") is not None
@@ -334,6 +368,8 @@ class AnnualObservationRecord:
             harmonized_indices=parsed_harm,
             unharmonized_value=unharm,
             evidence_state=str(data.get("evidence_state") or ""),
+            collection_ids=collection_ids,
+            source_urls=source_urls,
         )
 
 
@@ -521,6 +557,18 @@ def validate_real_provenance(bundle: AOIObservationBundle) -> None:
 
 def _resolve_sensor(sensor: str) -> SensorSpec:
     key = _SENSOR_ALIASES.get(sensor.lower(), sensor.lower())
+    if key == "sentinel1":
+        return SensorSpec(
+            sensor="sentinel1",
+            collection="sentinel-1-rtc",
+            bands={"vv": "vv", "vh": "vh"},
+            reflectance_scale=1.0,
+            reflectance_offset=0.0,
+            mask="none",
+            mask_band="",
+            years=(2014, None),
+            notes="Sentinel-1 Radiometrically Terrain Corrected (RTC) SAR backscatter for all-weather radar monitoring.",
+        )
     if key not in SENSORS:
         raise ValueError(f"Unknown sensor {sensor!r}; supported sensors: {sorted(SENSORS)}")
     return SENSORS[key]
@@ -598,6 +646,10 @@ def _compute_index(indicator: str, reflectance: Mapping[str, np.ndarray]) -> np.
             return ndmi(reflectance["nir"], reflectance["swir1"])
         case "savi":
             return savi(reflectance["nir"], reflectance["red"])
+        case "gndvi":
+            return gndvi(reflectance["nir"], reflectance["green"])
+        case "rvi":
+            return rvi(reflectance["vh"], reflectance["vv"])
         case _:
             raise ValueError(f"Unsupported indicator: {indicator!r}")
 
@@ -806,6 +858,8 @@ def reduce_aoi_scenes_to_series(
 
         if year_sensor_spec.mask == "scl":
             usable = scl_cloud_mask(quality_stack)
+        elif year_sensor_spec.mask == "none":
+            usable = np.ones(quality_stack.shape, dtype=bool)
         else:
             usable = qa_pixel_mask(quality_stack, radsat_stack)
 
@@ -992,6 +1046,8 @@ def reduce_aoi_scenes_to_series(
                 tile_scene_counts=tile_scene_counts,
                 harmonized_indices=harm_indices,
                 unharmonized_value=raw_zone_value,
+                collection_ids=tuple(d.collection for d in descriptors),
+                source_urls=tuple(d.href for d in descriptors if d.href),
             )
         )
 
@@ -1056,6 +1112,7 @@ def fetch_aoi_chips_from_stac(
     bands: Sequence[str] | None = None,
     multi_tile: bool = True,
     max_scenes_per_tile: int = 2,
+    imagery_cache: AOIImageryCache | Path | str | None = None,
 ) -> tuple[dict[int, list[SceneRasterChip]], np.ndarray, RasterGridSpec, list[dict[str, Any]]]:
     """Search a live STAC catalog and retrieve windowed raster chips for an AOI across years.
 
@@ -1076,22 +1133,32 @@ def fetch_aoi_chips_from_stac(
     if client is None:
         client = open_stac_client(catalog_url)
 
-    if platform == "sentinel-2":
-        target_bands = tuple(bands) if bands is not None else ("B02", "B04", "B08", "B11", "B12")
-        quality_band = "SCL"
-        radsat_band: str | None = None
-    elif platform == "landsat":
+    canonical_platform = _SENSOR_ALIASES.get(platform.lower().strip(), platform.lower().strip())
+    if canonical_platform == "sentinel2":
         target_bands = (
-            tuple(bands) if bands is not None else ("SR_B2", "SR_B4", "SR_B5", "SR_B6", "SR_B7")
+            tuple(bands) if bands is not None else ("B02", "B03", "B04", "B08", "B11", "B12")
+        )
+        quality_band: str | None = "SCL"
+        radsat_band: str | None = None
+    elif canonical_platform in ("landsat8", "landsat9", "landsat7", "landsat5"):
+        target_bands = (
+            tuple(bands)
+            if bands is not None
+            else ("SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7")
         )
         quality_band = "QA_PIXEL"
         radsat_band = "QA_RADSAT"
+    elif canonical_platform == "sentinel1":
+        target_bands = tuple(bands) if bands is not None else ("vv", "vh")
+        quality_band = None
+        radsat_band = None
     else:
         raise ValueError(f"Unsupported platform {platform!r}")
 
     start_mmdd, end_mmdd = date_window
     raw_scenes_by_year: dict[int, list[SceneDescriptor]] = {}
     tile_counts: dict[str, int] = {}
+    is_radar = canonical_platform == "sentinel1"
 
     for yr in sorted({int(y) for y in years}):
         found = search_scenes(
@@ -1099,7 +1166,7 @@ def fetch_aoi_chips_from_stac(
             f"{yr}-{start_mmdd}",
             f"{yr}-{end_mmdd}",
             platform=platform,
-            max_cloud_cover=max_cloud_cover,
+            max_cloud_cover=None if is_radar else max_cloud_cover,
             catalog_url=catalog_url,
             limit=max(max_scenes_per_year * 6, 25),
             client=client,
@@ -1193,7 +1260,7 @@ def fetch_aoi_chips_from_stac(
             f"across years {sorted(raw_scenes_by_year)}. Refusing to substitute synthetic data."
         )
 
-    if platform == "landsat" and all_selected:
+    if canonical_platform in ("landsat8", "landsat9", "landsat7", "landsat5") and all_selected:
         sample_assets = all_selected[0].asset_hrefs
         if "qa_pixel" in sample_assets:
             quality_band = "qa_pixel"
@@ -1209,9 +1276,14 @@ def fetch_aoi_chips_from_stac(
 
         if bands is None:
             if "red" in sample_assets and "nir08" in sample_assets:
-                target_bands = ("blue", "red", "nir08", "swir16", "swir22")
+                target_bands = ("blue", "green", "red", "nir08", "swir16", "swir22")
             else:
-                target_bands = ("SR_B2", "SR_B4", "SR_B5", "SR_B6", "SR_B7")
+                target_bands = ("SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7")
+    elif canonical_platform == "sentinel1":
+        quality_band = None
+        radsat_band = None
+        if bands is None:
+            target_bands = ("vv", "vh")
 
     effective_multi_tile = multi_tile and (tile_id is None)
 
@@ -1219,9 +1291,15 @@ def fetch_aoi_chips_from_stac(
         aoi_geojson,
         all_selected,
         resolution_m=resolution_m,
-        quality_band=quality_band,
+        quality_band=quality_band or "vv",
         full_aoi_bounds=effective_multi_tile,
     )
+
+    img_cache: AOIImageryCache | None = None
+    if isinstance(imagery_cache, AOIImageryCache):
+        img_cache = imagery_cache
+    elif isinstance(imagery_cache, (Path, str)):
+        img_cache = AOIImageryCache(imagery_cache)
 
     chips_by_year: dict[int, list[SceneRasterChip]] = {}
     fetch_metadata_list: list[dict[str, Any]] = []
@@ -1229,6 +1307,19 @@ def fetch_aoi_chips_from_stac(
     for yr in sorted(selected_by_year):
         yr_chips: list[SceneRasterChip] = []
         for scene in selected_by_year[yr]:
+            if img_cache is not None and img_cache.has(scene.id, grid):
+                cached_chip = img_cache.get(scene.id, grid, scene)
+                if cached_chip is not None:
+                    yr_chips.append(cached_chip)
+                    f_meta = img_cache.get_meta(scene.id) or {
+                        "scene_id": scene.id,
+                        "collection_id": scene.collection,
+                        "datetime": scene.datetime,
+                        "cached": True,
+                    }
+                    fetch_metadata_list.append(f_meta)
+                    continue
+
             bands_dn, quality_arr, radsat_arr, fetch_meta = fetch_scene_raster_data(
                 scene,
                 grid,
@@ -1237,14 +1328,15 @@ def fetch_aoi_chips_from_stac(
                 radsat_band=radsat_band,
                 harmonize_s2_baseline=True,
             )
-            yr_chips.append(
-                SceneRasterChip(
-                    descriptor=scene,
-                    bands_dn=bands_dn,
-                    quality=quality_arr,
-                    radsat=radsat_arr,
-                )
+            chip = SceneRasterChip(
+                descriptor=scene,
+                bands_dn=bands_dn,
+                quality=quality_arr,
+                radsat=radsat_arr,
             )
+            if img_cache is not None:
+                img_cache.put(chip, grid, fetch_meta)
+            yr_chips.append(chip)
             fetch_metadata_list.append(fetch_meta)
         chips_by_year[yr] = yr_chips
 
@@ -1278,9 +1370,23 @@ def ingest_live_aoi_observations(
     NDMI, NBR), performs AOI-based zonal reduction, marks observations ``REAL_STAC``,
     and optionally persists them to :class:`AOIObservationCache`.
     """
-    if not indicators:
+    canonical_platform = _SENSOR_ALIASES.get(platform.lower().strip(), platform.lower().strip())
+    effective_indicators = tuple(indicators)
+    if canonical_platform == "sentinel1" and tuple(indicators) == ("ndvi", "evi", "ndmi", "nbr"):
+        effective_indicators = ("rvi",)
+
+    if not effective_indicators:
         raise ValueError("indicators must be a non-empty sequence")
-    resolved_inds = [_resolve_indicator(i) for i in indicators]
+    resolved_inds = [_resolve_indicator(i) for i in effective_indicators]
+
+    cache_obj: AOIObservationCache | None = None
+    img_cache_obj: AOIImageryCache | None = None
+    if isinstance(cache, AOIObservationCache):
+        cache_obj = cache
+        img_cache_obj = AOIImageryCache(cache.cache_dir / "imagery")
+    elif isinstance(cache, (Path, str)):
+        cache_obj = AOIObservationCache(cache)
+        img_cache_obj = AOIImageryCache(Path(cache) / "imagery")
 
     chips_by_year, zone_mask, grid, fetch_meta = fetch_aoi_chips_from_stac(
         aoi_geojson,
@@ -1294,13 +1400,8 @@ def ingest_live_aoi_observations(
         catalog_url=catalog_url,
         client=client,
         multi_tile=multi_tile,
+        imagery_cache=img_cache_obj,
     )
-
-    cache_obj: AOIObservationCache | None = None
-    if isinstance(cache, AOIObservationCache):
-        cache_obj = cache
-    elif isinstance(cache, (Path, str)):
-        cache_obj = AOIObservationCache(cache)
 
     effective_multi_tile = multi_tile and (tile_id is None)
     effective_min_cov = min_coverage_threshold if effective_multi_tile else 0.0
@@ -1347,6 +1448,86 @@ def ingest_live_aoi_observations(
 
 
 _SAFE_KEY_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+class AOIImageryCache:
+    """Disk cache for windowed satellite imagery raster chips and metadata.
+
+    Saves band arrays, quality masks, and metadata to compressed .npz and .json
+    files to prevent duplicate network downloads.
+    """
+
+    def __init__(self, cache_dir: Path | str) -> None:
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    def chip_path(self, scene_id: str, grid: RasterGridSpec) -> Path:
+        grid_key = (
+            f"{grid.crs.replace(':', '_')}_{grid.height}x{grid.width}_{round(grid.resolution_m)}m"
+        )
+        safe_scene = re.sub(r"[^A-Za-z0-9._-]", "_", scene_id)
+        return self.cache_dir / f"{safe_scene}__{grid_key}.npz"
+
+    def meta_path(self, scene_id: str) -> Path:
+        safe_scene = re.sub(r"[^A-Za-z0-9._-]", "_", scene_id)
+        return self.cache_dir / f"{safe_scene}__meta.json"
+
+    def has(self, scene_id: str, grid: RasterGridSpec) -> bool:
+        return self.chip_path(scene_id, grid).is_file()
+
+    def get_meta(self, scene_id: str) -> dict[str, Any] | None:
+        path = self.meta_path(scene_id)
+        if not path.is_file():
+            return None
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+
+    def get(
+        self, scene_id: str, grid: RasterGridSpec, descriptor: SceneDescriptor
+    ) -> SceneRasterChip | None:
+        path = self.chip_path(scene_id, grid)
+        if not path.is_file():
+            return None
+        try:
+            data = np.load(path)
+            bands_dn = {
+                k.replace("band_", "", 1): np.asarray(data[k], dtype=float)
+                for k in data.files
+                if k.startswith("band_")
+            }
+            quality = np.asarray(data["quality"])
+            radsat = np.asarray(data["radsat"]) if "radsat" in data.files else None
+            return SceneRasterChip(
+                descriptor=descriptor,
+                bands_dn=bands_dn,
+                quality=quality,
+                radsat=radsat,
+            )
+        except Exception:
+            return None
+
+    def put(
+        self,
+        chip: SceneRasterChip,
+        grid: RasterGridSpec,
+        meta: Mapping[str, Any] | None = None,
+    ) -> Path:
+        path = self.chip_path(chip.descriptor.id, grid)
+        save_dict: dict[str, Any] = {"quality": chip.quality}
+        if chip.radsat is not None:
+            save_dict["radsat"] = chip.radsat
+        for k, v in chip.bands_dn.items():
+            save_dict[f"band_{k}"] = v
+        np.savez_compressed(path, **save_dict)
+        if meta is not None:
+            meta_p = self.meta_path(chip.descriptor.id)
+            meta_p.write_text(
+                json.dumps(dict(meta), indent=2, sort_keys=True, default=str),
+                encoding="utf-8",
+            )
+        return path
 
 
 class AOIObservationCache:
@@ -1423,6 +1604,7 @@ class AOIObservationCache:
 
 __all__ = [
     "RECORD_EVIDENCE_STATES",
+    "AOIImageryCache",
     "AOIObservationBundle",
     "AOIObservationCache",
     "AnnualObservationRecord",

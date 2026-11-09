@@ -16,33 +16,40 @@ export function DiagnosticsSummary({ bundle }: { bundle: Schemas['EvidenceBundle
         {bundle.items.length} evidence items from the completed run. Values are as computed by the engine; none is a carbon quantity.
       </p>
       {bundle.verdict?.divergence_ratio != null && <p className={styles.muted}>Divergence ratio: {bundle.verdict.divergence_ratio}</p>}
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Evidence</th>
-              <th>Value</th>
-              <th>State</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bundle.items.map((it) => (
-              <tr key={it.id}>
-                <td>
-                  {it.label}
-                  <div className={styles.muted}>{it.id}</div>
-                </td>
-                <td>
-                  {String(it.value)} {it.unit}
-                </td>
-                <td>{it.state}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <details className={styles.collapsibleBlock}>
+        <summary className={styles.collapsibleSummary}>
+          <span>View {bundle.items.length} evidence diagnostic items</span>
+        </summary>
+        <div className={styles.collapsibleContent}>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Evidence</th>
+                  <th>Value</th>
+                  <th>State</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bundle.items.map((it) => (
+                  <tr key={it.id}>
+                    <td>
+                      {it.label}
+                      <div className={styles.muted}>{it.id}</div>
+                    </td>
+                    <td>
+                      {String(it.value)} {it.unit}
+                    </td>
+                    <td>{it.state}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </details>
       {bundle.warnings.length > 0 && (
-        <ul className={styles.muted}>
+        <ul className={styles.muted} style={{ marginTop: 'var(--space-2)' }}>
           {bundle.warnings.map((w, i) => (
             <li key={i}>{w}</li>
           ))}

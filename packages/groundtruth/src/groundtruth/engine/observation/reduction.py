@@ -224,6 +224,9 @@ def sensors_for_year(year: int) -> tuple[str, ...]:
 def to_reflectance(dn: np.ndarray, sensor: SensorSpec) -> np.ndarray:
     """Digital numbers to surface reflectance; out-of-range pixels become NaN."""
     rho = np.asarray(dn, dtype=float) * sensor.reflectance_scale + sensor.reflectance_offset
+    if sensor.sensor == "sentinel1":
+        rho[rho <= 0.0] = np.nan
+        return rho
     rho[(rho < 0.0) | (rho > 1.0)] = np.nan
     return rho
 
@@ -333,6 +336,7 @@ def describe_reduction() -> dict[str, Any]:
         "specs": [
             reduction_spec(indicator, sensor).as_dict()
             for sensor in SENSORS
+            if sensor != "sentinel1"
             for indicator in INDEX_BANDS
         ],
         "not_reduced_here": ["tree_cover_fraction", "forest_area_ha"],

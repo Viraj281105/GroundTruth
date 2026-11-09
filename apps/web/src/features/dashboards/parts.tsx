@@ -7,12 +7,51 @@ import styles from './dashboards.module.css';
 
 export const API_NEEDED = 'A reachable API and access to this resource. No substitute data is shown.';
 
-/** A titled dashboard region with a stable id so tests and anchors can find it. */
-export function Region({ id, title, label, children, wide }: { id: string; title?: string; label?: string; children: React.ReactNode; wide?: boolean }) {
+/** A titled dashboard region with a stable id so tests and anchors can find it. Supports collapsible progressive disclosure. */
+export function Region({
+  id,
+  title,
+  label,
+  children,
+  wide,
+  collapsible = false,
+  defaultOpen = false,
+  badge,
+}: {
+  id: string;
+  title?: string;
+  label?: string;
+  children: React.ReactNode;
+  wide?: boolean;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+  badge?: string;
+}) {
+  const headingText = title ?? label ?? id;
+  if (!collapsible) {
+    return (
+      <section className={`${styles.region} ${wide ? styles.wide : ''}`} data-panel={id} aria-label={headingText}>
+        {title ? <h2 className={styles.regionTitle}>{title}</h2> : label && <h2 className="sr-only">{label}</h2>}
+        {children}
+      </section>
+    );
+  }
+
   return (
-    <section className={`${styles.region} ${wide ? styles.wide : ''}`} data-panel={id} aria-label={title ?? label ?? id}>
+    <section className={`${styles.region} ${wide ? styles.wide : ''}`} data-panel={id} aria-label={headingText}>
       {title ? <h2 className={styles.regionTitle}>{title}</h2> : label && <h2 className="sr-only">{label}</h2>}
-      {children}
+      <details className={styles.regionDetails} open={defaultOpen}>
+        <summary className={styles.regionSummary}>
+          <div className={styles.regionSummaryLeft}>
+            <span className={styles.regionSummaryTitle}>{title ?? label ?? id}</span>
+            {badge && <span className={styles.regionBadge}>{badge}</span>}
+          </div>
+          <span className={styles.regionChevron} aria-hidden="true">▾</span>
+        </summary>
+        <div className={styles.regionBody}>
+          {children}
+        </div>
+      </details>
     </section>
   );
 }

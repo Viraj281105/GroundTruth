@@ -23,8 +23,72 @@ EARTH_SEARCH_URL = "https://earth-search.aws.element84.com/v1"
 
 COLLECTIONS: dict[str, str] = {
     "sentinel-2": "sentinel-2-l2a",
+    "sentinel-2-l2a": "sentinel-2-l2a",
+    "s2": "sentinel-2-l2a",
     "landsat": "landsat-c2-l2",
+    "landsat-c2-l2": "landsat-c2-l2",
+    "landsat-8": "landsat-c2-l2",
+    "landsat-9": "landsat-c2-l2",
+    "landsat-7": "landsat-c2-l2",
+    "landsat-5": "landsat-c2-l2",
+    "sentinel-1": "sentinel-1-rtc",
+    "sentinel-1-rtc": "sentinel-1-rtc",
+    "s1": "sentinel-1-rtc",
+    "s1-rtc": "sentinel-1-rtc",
 }
+
+_ASSET_ALIASES: dict[str, tuple[str, ...]] = {
+    "B02": ("B02", "B2", "blue", "SR_B2", "SR_B1"),
+    "B03": ("B03", "B3", "green", "SR_B3", "SR_B2"),
+    "B04": ("B04", "B4", "red", "SR_B4", "SR_B3"),
+    "B08": ("B08", "B8", "nir", "nir08", "SR_B5", "SR_B4", "B8A"),
+    "B11": ("B11", "swir1", "swir16", "SR_B6", "SR_B5"),
+    "B12": ("B12", "swir2", "swir22", "SR_B7"),
+    "SCL": ("SCL", "scl"),
+    "blue": ("blue", "B02", "B2", "SR_B2", "SR_B1"),
+    "green": ("green", "B03", "B3", "SR_B3", "SR_B2"),
+    "red": ("red", "B04", "B4", "SR_B4", "SR_B3"),
+    "nir": ("nir", "B08", "B8", "nir08", "SR_B5", "SR_B4", "B8A"),
+    "nir08": ("nir08", "B08", "B8", "nir", "SR_B5", "SR_B4"),
+    "swir1": ("swir1", "B11", "swir16", "SR_B6", "SR_B5"),
+    "swir2": ("swir2", "B12", "swir22", "SR_B7"),
+    "qa_pixel": ("qa_pixel", "QA_PIXEL"),
+    "QA_PIXEL": ("QA_PIXEL", "qa_pixel"),
+    "qa_radsat": ("qa_radsat", "QA_RADSAT"),
+    "QA_RADSAT": ("QA_RADSAT", "qa_radsat"),
+    "vv": ("vv", "VV"),
+    "vh": ("vh", "VH"),
+    "hh": ("hh", "HH"),
+    "hv": ("hv", "HV"),
+}
+
+
+def resolve_collection_id(platform_or_collection: str) -> str:
+    """Resolve a platform shorthand, alias, or full collection name to a STAC collection ID."""
+    clean = platform_or_collection.lower().strip()
+    if clean in COLLECTIONS:
+        return COLLECTIONS[clean]
+    known = set(COLLECTIONS.values())
+    if clean in known:
+        return clean
+    raise ValueError(
+        f"platform must be one of {sorted(COLLECTIONS)}, got {platform_or_collection!r}"
+    )
+
+
+def sign_asset_url(url: str) -> str:
+    """Sign or re-sign a Planetary Computer asset URL, stripping expired SAS tokens."""
+    if not url or not isinstance(url, str):
+        return url
+    lower = url.lower()
+    if "planetarycomputer" not in lower and "blob.core.windows.net" not in lower:
+        return url
+    clean_url = url.split("?")[0]
+    try:
+        pc = importlib.import_module("planetary_computer")
+        return str(pc.sign(clean_url))
+    except Exception:
+        return url
 
 
 def _configure_proj_env() -> None:
@@ -274,8 +338,14 @@ def open_stac_client(
     catalog_url: str = DEFAULT_STAC_URL,
     *,
     sign_planetary_computer: bool = True,
+    timeout: float | tuple[float, float] = 30.0,
+    max_retries: int = 5,
+    backoff_factor: float = 1.0,
 ) -> Any:
     """Open a real STAC API client with automatic SAS signing for Planetary Computer.
+
+    Supports configurable timeouts, automatic retries with exponential backoff,
+    and HTTP 429 rate-limit handling via urllib3.
 
     Raises:
         ConfigurationError: if ``catalog_url`` is malformed or credentials are rejected.
@@ -297,13 +367,184 @@ def open_stac_client(
             modifier = None
 
     try:
+        from urllib3.util.retry import Retry
+
+        retry_strategy = Retry(
+            total=max_retries,
+            backoff_factor=backoff_factor,
+            status_forcelist=[429, 500, 502, 503, 504],
+            raise_on_status=False,
+            respect_retry_after_header=True,
+        )
+        stac_io = pystac_client.stac_api_io.StacApiIO(
+            timeout=timeout,
+            max_retries=retry_strategy,
+        )
         if modifier is not None:
-            return pystac_client.Client.open(catalog_url, modifier=modifier)
-        return pystac_client.Client.open(catalog_url)
+            return pystac_client.Client.open(
+                catalog_url, modifier=modifier, stac_io=stac_io, timeout=timeout
+            )
+        return pystac_client.Client.open(catalog_url, stac_io=stac_io, timeout=timeout)
     except (ConfigurationError, DataUnavailableError):
         raise
     except Exception as exc:
         raise _classify_stac_exception(exc, f"Opening STAC catalog {catalog_url!r}") from exc
+
+
+def check_catalog_connectivity(
+    catalog_url: str = DEFAULT_STAC_URL,
+    *,
+    timeout: float = 15.0,
+) -> dict[str, Any]:
+    """Test STAC catalog connectivity and return catalog metadata without requiring credentials.
+
+    Args:
+        catalog_url: The root STAC API URL (defaults to Microsoft Planetary Computer).
+        timeout: Maximum seconds to wait for root catalog response.
+
+    Returns:
+        Dictionary containing catalog status, URL, id, title, description, stac_version,
+        and conforms_to classes.
+
+    Raises:
+        ConfigurationError: if catalog_url is malformed.
+        DataUnavailableError: if the endpoint is unreachable.
+    """
+    client = open_stac_client(catalog_url, sign_planetary_computer=False, timeout=timeout)
+    try:
+        conforms = (
+            client.get_conforms_to()
+            if hasattr(client, "get_conforms_to") and callable(client.get_conforms_to)
+            else []
+        )
+        stac_version = getattr(client, "stac_version", None)
+        if stac_version is None and hasattr(client, "to_dict"):
+            try:
+                stac_version = client.to_dict().get("stac_version")
+            except Exception:
+                stac_version = None
+
+        return {
+            "status": "connected",
+            "url": catalog_url,
+            "id": getattr(client, "id", None),
+            "title": getattr(client, "title", None),
+            "description": getattr(client, "description", None),
+            "stac_version": stac_version,
+            "conforms_to": conforms,
+        }
+    except Exception as exc:
+        raise _classify_stac_exception(exc, f"Connecting to STAC catalog {catalog_url!r}") from exc
+
+
+def discover_collections(
+    catalog_url: str = DEFAULT_STAC_URL,
+    *,
+    limit: int | None = None,
+    client: Any | None = None,
+) -> list[dict[str, Any]]:
+    """Discover available STAC collections from the catalog without credentials.
+
+    Args:
+        catalog_url: STAC API catalog URL.
+        limit: Optional maximum number of collections to return.
+        client: Optional pre-configured STAC client.
+
+    Returns:
+        List of collection summaries with id, title, description, license, keywords,
+        and available item assets.
+    """
+    if client is None:
+        client = open_stac_client(catalog_url, sign_planetary_computer=False)
+    try:
+        collections: list[dict[str, Any]] = []
+        for i, col in enumerate(client.get_collections()):
+            if limit is not None and i >= limit:
+                break
+            item_assets: list[str] = []
+            if hasattr(col, "item_assets") and col.item_assets:
+                item_assets = sorted(col.item_assets.keys())
+            elif hasattr(col, "extra_fields") and "item_assets" in col.extra_fields:
+                item_assets = sorted(col.extra_fields["item_assets"].keys())
+
+            spatial_extent = None
+            temporal_extent = None
+            if hasattr(col, "extent") and col.extent is not None:
+                if hasattr(col.extent, "spatial") and col.extent.spatial:
+                    spatial_extent = col.extent.spatial.bboxes
+                if hasattr(col.extent, "temporal") and col.extent.temporal:
+                    temporal_extent = [
+                        [str(t) if t is not None else None for t in interval]
+                        for interval in col.extent.temporal.intervals
+                    ]
+
+            collections.append(
+                {
+                    "id": col.id,
+                    "title": getattr(col, "title", None) or col.id,
+                    "description": getattr(col, "description", None),
+                    "license": getattr(col, "license", None),
+                    "keywords": list(getattr(col, "keywords", None) or []),
+                    "item_assets": item_assets,
+                    "spatial_extent": spatial_extent,
+                    "temporal_extent": temporal_extent,
+                }
+            )
+        return collections
+    except Exception as exc:
+        raise _classify_stac_exception(
+            exc, f"Discovering STAC collections on {catalog_url!r}"
+        ) from exc
+
+
+def get_stac_collection(
+    collection_id: str,
+    catalog_url: str = DEFAULT_STAC_URL,
+    *,
+    client: Any | None = None,
+) -> dict[str, Any]:
+    """Retrieve detailed metadata for one collection without credentials.
+
+    Supports sentinel-2-l2a, landsat-c2-l2, sentinel-1-rtc, and other public collections.
+    """
+    resolved_id = resolve_collection_id(collection_id)
+    if client is None:
+        client = open_stac_client(catalog_url, sign_planetary_computer=False)
+    try:
+        col = client.get_collection(resolved_id)
+        if col is None:
+            raise DataUnavailableError(
+                f"Collection {resolved_id!r} not found in catalog {catalog_url!r}"
+            )
+        item_assets: dict[str, Any] = {}
+        if hasattr(col, "item_assets") and col.item_assets:
+            for k, v in col.item_assets.items():
+                item_assets[k] = {
+                    "title": getattr(v, "title", None),
+                    "description": getattr(v, "description", None),
+                    "type": getattr(v, "media_type", getattr(v, "type", None)),
+                    "roles": getattr(v, "roles", None),
+                }
+        summaries: dict[str, Any] = {}
+        if hasattr(col, "summaries") and col.summaries:
+            raw_sums = getattr(col.summaries, "to_dict", None)
+            summaries = raw_sums() if callable(raw_sums) else dict(col.summaries)
+
+        return {
+            "id": col.id,
+            "title": getattr(col, "title", None) or col.id,
+            "description": getattr(col, "description", None),
+            "license": getattr(col, "license", None),
+            "keywords": list(getattr(col, "keywords", None) or []),
+            "item_assets": item_assets,
+            "summaries": summaries,
+        }
+    except (ConfigurationError, DataUnavailableError):
+        raise
+    except Exception as exc:
+        raise _classify_stac_exception(
+            exc, f"Getting STAC collection {resolved_id!r} on {catalog_url!r}"
+        ) from exc
 
 
 def deduplicate_scene_overpasses(scenes: Sequence[SceneDescriptor]) -> list[SceneDescriptor]:
@@ -356,24 +597,23 @@ def search_scenes(
     deduplicate_overpasses: bool = False,
 ) -> list[SceneDescriptor]:
     """Search a STAC API; ``client`` (a pystac_client.Client) may be injected."""
-    if platform not in COLLECTIONS:
-        raise ValueError(f"platform must be one of {sorted(COLLECTIONS)}, got {platform!r}")
+    collection_id = resolve_collection_id(platform)
     if bbox[0] >= bbox[2] or bbox[1] >= bbox[3]:
         raise ValueError(f"invalid bbox (min must be < max): {bbox}")
     if client is None:
         client = open_stac_client(catalog_url)
 
     query: dict[str, Any] = {}
-    if max_cloud_cover is not None:
+    if max_cloud_cover is not None and collection_id != "sentinel-1-rtc":
         query["eo:cloud_cover"] = {"lt": max_cloud_cover}
     if tile_id is not None:
-        if platform == "sentinel-2":
+        if collection_id == "sentinel-2-l2a":
             query["s2:mgrs_tile"] = {"eq": tile_id}
-        else:
+        elif collection_id == "landsat-c2-l2":
             query["landsat:wrs_path"] = {"eq": tile_id}
 
     search_kwargs: dict[str, Any] = {
-        "collections": [COLLECTIONS[platform]],
+        "collections": [collection_id],
         "datetime": f"{start}/{end}",
         "query": query if query else None,
         "max_items": limit,
@@ -545,7 +785,9 @@ def build_aoi_raster_grid(
         target_crs = f"EPSG:{dominant_epsg}"
 
     if target_crs is None:
-        first_href = scenes[0].asset_hrefs.get(quality_band)
+        first_href = scenes[0].asset_hrefs.get(quality_band) if quality_band else None
+        if not first_href and scenes[0].asset_hrefs:
+            first_href = next(iter(scenes[0].asset_hrefs.values()))
         if not first_href:
             raise DataUnavailableError(
                 f"Scene {scenes[0].id!r} missing quality asset {quality_band!r} and proj:epsg"
@@ -555,7 +797,7 @@ def build_aoi_raster_grid(
                 target_crs = str(src.crs)
         except Exception as exc:
             raise _classify_stac_exception(
-                exc, f"Reading CRS from asset {quality_band!r} of scene {scenes[0].id!r}"
+                exc, f"Reading CRS from asset of scene {scenes[0].id!r}"
             ) from exc
 
     utm_bounds = transform_bounds("EPSG:4326", target_crs, *wgs84_bounds)
@@ -598,17 +840,24 @@ def fetch_scene_raster_data(
     grid: RasterGridSpec,
     *,
     bands: Sequence[str] = ("B02", "B04", "B08", "B11", "B12"),
-    quality_band: str = "SCL",
+    quality_band: str | None = "SCL",
     radsat_band: str | None = None,
     harmonize_s2_baseline: bool = True,
+    max_retries: int = 3,
 ) -> tuple[dict[str, Any], Any, Any, dict[str, Any]]:
     """Fetch actual windowed raster arrays for one STAC scene aligned to ``grid``.
+
+    Reads only the required bounding-box window and only the requested band assets,
+    avoiding downloading entire scene archives. Handles SAS token expiration by
+    re-signing URLs using ``planetary_computer`` and retrying on authentication errors.
 
     Raises:
         DataUnavailableError: if a required band asset is missing or cannot be read.
         ConfigurationError: if asset access fails due to invalid credentials / 401 / 403.
     """
     _configure_proj_env()
+    import time
+
     import numpy as np
 
     rasterio = _require("rasterio", "rasterio")
@@ -617,7 +866,9 @@ def fetch_scene_raster_data(
     from rasterio.vrt import WarpedVRT
     from rasterio.windows import from_bounds as window_from_bounds
 
-    required_assets = [*bands, quality_band]
+    required_assets = list(bands)
+    if quality_band is not None:
+        required_assets.append(quality_band)
     if radsat_band is not None:
         required_assets.append(radsat_band)
 
@@ -627,6 +878,13 @@ def fetch_scene_raster_data(
         if not href or not isinstance(href, str) or not href.strip():
             for alt in (asset_name.lower(), asset_name.upper()):
                 alt_href = scene.asset_hrefs.get(alt)
+                if alt_href and isinstance(alt_href, str) and alt_href.strip():
+                    href = alt_href
+                    break
+        if not href or not isinstance(href, str) or not href.strip():
+            aliases = _ASSET_ALIASES.get(asset_name, ())
+            for alias in aliases:
+                alt_href = scene.asset_hrefs.get(alias)
                 if alt_href and isinstance(alt_href, str) and alt_href.strip():
                     href = alt_href
                     break
@@ -641,35 +899,75 @@ def fetch_scene_raster_data(
 
     def _read_asset(asset_key: str, resampling: Any, dtype: Any) -> Any:
         href = resolved_hrefs[asset_key]
-        try:
-            with rasterio.open(href) as src:
-                if str(src.crs) == grid.crs:
-                    win = window_from_bounds(*grid.bounds, transform=src.transform)
-                    return src.read(
-                        1,
-                        window=win,
-                        out_shape=(grid.height, grid.width),
-                        boundless=True,
-                        fill_value=0,
+        last_exc: Exception | None = None
+        for attempt in range(max_retries):
+            try:
+                with (
+                    rasterio.Env(
+                        GDAL_HTTP_TIMEOUT="30",
+                        GDAL_HTTP_MAX_RETRY="5",
+                        GDAL_HTTP_RETRY_DELAY="1",
+                        CPL_VSIL_CURL_ALLOWED_EXTENSIONS=".tif,.tiff,.jp2",
+                        GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR",
+                    ),
+                    rasterio.open(href) as src,
+                ):
+                    if str(src.crs) == grid.crs:
+                        win = window_from_bounds(*grid.bounds, transform=src.transform)
+                        return src.read(
+                            1,
+                            window=win,
+                            out_shape=(grid.height, grid.width),
+                            boundless=True,
+                            fill_value=0,
+                            resampling=resampling,
+                        ).astype(dtype)
+                    with WarpedVRT(
+                        src,
+                        crs=grid.crs,
+                        transform=grid_transform,
+                        width=grid.width,
+                        height=grid.height,
                         resampling=resampling,
-                    ).astype(dtype)
-                with WarpedVRT(
-                    src,
-                    crs=grid.crs,
-                    transform=grid_transform,
-                    width=grid.width,
-                    height=grid.height,
-                    resampling=resampling,
-                ) as vrt:
-                    return vrt.read(1).astype(dtype)
-        except (ConfigurationError, DataUnavailableError):
-            raise
-        except Exception as exc:
-            raise _classify_stac_exception(
-                exc, f"Fetching raster asset {asset_key!r} for scene {scene.id!r}"
-            ) from exc
+                    ) as vrt:
+                        return vrt.read(1).astype(dtype)
+            except Exception as exc:
+                last_exc = exc
+                err_msg = str(exc).lower()
+                # Check for expired SAS token / authorization failure
+                if any(
+                    x in err_msg
+                    for x in (
+                        "401",
+                        "403",
+                        "auth",
+                        "sas",
+                        "forbidden",
+                        "unauthorized",
+                        "signature",
+                        "expired",
+                    )
+                ):
+                    fresh_href = sign_asset_url(href)
+                    if fresh_href != href:
+                        href = fresh_href
+                        resolved_hrefs[asset_key] = fresh_href
+                        continue
+                if attempt < max_retries - 1:
+                    time.sleep(0.5 * (2**attempt))
+                    continue
+                break
 
-    quality_arr = _read_asset(quality_band, Resampling.nearest, np.int64)
+        if last_exc is not None:
+            raise _classify_stac_exception(
+                last_exc, f"Fetching raster asset {asset_key!r} for scene {scene.id!r}"
+            ) from last_exc
+
+    quality_arr = (
+        _read_asset(quality_band, Resampling.nearest, np.int64)
+        if quality_band is not None
+        else np.ones((grid.height, grid.width), dtype=np.int64)
+    )
     radsat_arr = (
         _read_asset(radsat_band, Resampling.nearest, np.int64) if radsat_band is not None else None
     )
@@ -702,10 +1000,13 @@ def fetch_scene_raster_data(
 
     meta = {
         "scene_id": scene.id,
+        "collection_id": scene.collection,
         "datetime": scene.datetime,
         "sensor": scene.sensor,
         "tile_id": scene.tile_id,
         "cloud_cover": scene.cloud_cover,
+        "source_url": scene.href,
+        "asset_source_urls": {k: v.split("?")[0] for k, v in resolved_hrefs.items()},
         "processing_baseline": scene.processing_baseline,
         "s2_boa_offset_harmonized": s2_offset_applied,
         "crs": grid.crs,
@@ -745,3 +1046,26 @@ def load_scenes(
         crs=crs,
         chunks=chunks or {"x": 1024, "y": 1024},
     )
+
+
+__all__ = [
+    "COLLECTIONS",
+    "DEFAULT_STAC_URL",
+    "EARTH_SEARCH_URL",
+    "RasterGridSpec",
+    "SceneDescriptor",
+    "build_aoi_raster_grid",
+    "calculate_spatial_coverage",
+    "check_catalog_connectivity",
+    "deduplicate_scene_overpasses",
+    "discover_collections",
+    "fetch_scene_raster_data",
+    "get_stac_collection",
+    "load_scenes",
+    "open_stac_client",
+    "resolve_collection_id",
+    "scenes_hash",
+    "search_scenes",
+    "sign_asset_url",
+    "validate_aoi_geojson",
+]

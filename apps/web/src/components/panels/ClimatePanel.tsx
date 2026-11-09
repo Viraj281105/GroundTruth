@@ -71,35 +71,42 @@ export function ClimatePanel({ data, loading, observedWindow }: ClimatePanelProp
         <span>Faded: outside the observed window (context only)</span>
       </div>
       {rows.length > 0 && (
-        <div className={styles.tableWrap} role="region" tabIndex={0} aria-label="Annual climate table, scrollable">
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Year</th>
-                <th>Rainfall (mm)</th>
-                <th>SPI-12</th>
-                <th>Flag</th>
-                <th>Months</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.year} className={r.context ? styles.contextRow : undefined} data-flag={r.flag}>
-                  <td>
-                    {r.year}
-                    {r.context ? ' (context only)' : ''}
-                  </td>
-                  <td className={styles.numcell}>{r.rainfallMm ?? 'no data'}</td>
-                  <td className={styles.numcell}>{r.spi12 ?? 'no data'}</td>
-                  <td>{r.flag === 'drought' ? `Drought (${r.droughtClass.replace(/_/g, ' ')})` : r.flag === 'wet' ? `Wet (${r.droughtClass.replace(/_/g, ' ')})` : r.droughtClass ? r.droughtClass.replace(/_/g, ' ') : 'Not classified'}</td>
-                  <td className={styles.numcell}>
-                    {r.validMonths}/12{r.complete ? '' : ' (incomplete)'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <details className={styles.collapsibleBlock}>
+          <summary className={styles.collapsibleSummary}>
+            <span>Annual climate breakdown table ({rows.length} years)</span>
+          </summary>
+          <div className={styles.collapsibleContent}>
+            <div className={styles.tableWrap} role="region" tabIndex={0} aria-label="Annual climate table, scrollable">
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th>Rainfall (mm)</th>
+                    <th>SPI-12</th>
+                    <th>Flag</th>
+                    <th>Months</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.year} className={r.context ? styles.contextRow : undefined} data-flag={r.flag}>
+                      <td>
+                        {r.year}
+                        {r.context ? ' (context only)' : ''}
+                      </td>
+                      <td className={styles.numcell}>{r.rainfallMm ?? 'no data'}</td>
+                      <td className={styles.numcell}>{r.spi12 ?? 'no data'}</td>
+                      <td>{r.flag === 'drought' ? `Drought (${r.droughtClass.replace(/_/g, ' ')})` : r.flag === 'wet' ? `Wet (${r.droughtClass.replace(/_/g, ' ')})` : r.droughtClass ? r.droughtClass.replace(/_/g, ' ') : 'Not classified'}</td>
+                      <td className={styles.numcell}>
+                        {r.validMonths}/12{r.complete ? '' : ' (incomplete)'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
       )}
       <div aria-label="Missing months">
         <span className={styles.listLabel}>Missing months</span>

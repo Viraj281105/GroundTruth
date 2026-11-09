@@ -57,30 +57,37 @@ export function EvidenceInventoryTable({ data, loading, level }: EvidenceInvento
         </p>
       )}
       {m.items.length > 0 && (
-        <div className={styles.tableWrap} role="region" tabIndex={0} aria-label="Scene and checksum records, scrollable">
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Indicator</th>
-                <th>Year</th>
-                <th>Scenes</th>
-                {m.showSceneIds && <th>Scene ids</th>}
-                {m.showChecksum && <th>Checksum</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {m.items.map((i) => (
-                <tr key={`${i.indicator}-${i.year}`}>
-                  <td>{i.indicator}</td>
-                  <td>{i.year}</td>
-                  <td className={styles.numcell}>{i.nScenes}</td>
-                  {m.showSceneIds && <td className={styles.mono}>{i.sceneIds ? i.sceneIds.join(', ') : ''}</td>}
-                  {m.showChecksum && <td className={styles.mono}>{i.scenesSha256 ?? ''}</td>}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <details className={styles.collapsibleBlock}>
+          <summary className={styles.collapsibleSummary}>
+            <span>Cryptographic checksums & scene IDs ({m.items.length} records)</span>
+          </summary>
+          <div className={styles.collapsibleContent}>
+            <div className={styles.tableWrap} role="region" tabIndex={0} aria-label="Scene and checksum records, scrollable">
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Indicator</th>
+                    <th>Year</th>
+                    <th>Scenes</th>
+                    {m.showSceneIds && <th>Scene ids</th>}
+                    {m.showChecksum && <th>Checksum</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {m.items.map((i) => (
+                    <tr key={`${i.indicator}-${i.year}`}>
+                      <td>{i.indicator}</td>
+                      <td>{i.year}</td>
+                      <td className={styles.numcell}>{i.nScenes}</td>
+                      {m.showSceneIds && <td className={styles.mono}>{i.sceneIds ? i.sceneIds.join(', ') : ''}</td>}
+                      {m.showChecksum && <td className={styles.mono}>{i.scenesSha256 ?? ''}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
       )}
     </Card>
   );

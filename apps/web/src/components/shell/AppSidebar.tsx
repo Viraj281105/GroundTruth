@@ -3,7 +3,20 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Briefcase, FilePlus2, FolderKanban, LayoutDashboard, ScrollText, Share2, Users, type LucideIcon } from 'lucide-react';
+import {
+  Briefcase,
+  CheckCircle2,
+  Database,
+  FilePlus2,
+  FileText,
+  FolderKanban,
+  LayoutDashboard,
+  ScrollText,
+  Share2,
+  Sparkles,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import type { Schemas } from '../../lib/api-client';
 import { OrgSwitcher } from './OrgSwitcher';
 import { MEMBER_ROLE_LABELS, isNavActive, navHref, navigationFor, type NavGroup, type NavIcon } from './navigation';
@@ -14,6 +27,10 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   projects: FolderKanban,
   new: FilePlus2,
   portfolio: Briefcase,
+  assessments: CheckCircle2,
+  intelligence: Sparkles,
+  evidence: Database,
+  reports: FileText,
   members: Users,
   sharing: Share2,
   audit: ScrollText,
@@ -68,7 +85,7 @@ export function AppSidebar({ orgs, active }: { orgs: Schemas['OrgView'][]; activ
   const groups = navigationFor(active.type, active.role);
   return (
     <aside className={styles.side} aria-label="Sidebar">
-      <Link href={`/app/${active.slug}/dashboard`} className={styles.brand} aria-label="GroundTruth 2.0 dashboard">
+      <Link href="/" className={styles.brand} aria-label="GroundTruth home">
         <BrandMark />
         <div className={styles.brandtxt}>
           <b>GroundTruth</b>{' '}

@@ -35,7 +35,7 @@ export function GovernmentDashboard({ data }: { data: DashboardData }) {
         <Slot panel={data.portfolio} title="Portfolio" render={(p) => <PortfolioTable data={p} />} />
       </Region>
       <div className={styles.grid}>
-        <Region id="climate-headlines" title="Climate headline by project">
+        <Region id="climate-headlines" title="Climate headline by project" collapsible badge="Observed projects">
           <p className={styles.muted}>Observed projects only. Values are the latest served year; the drought class is the API&apos;s own.</p>
           {data.climate.length === 0 && <p className={styles.muted}>No accessible observed project has climate data.</p>}
           <ul className={styles.headlines}>
@@ -57,7 +57,7 @@ export function GovernmentDashboard({ data }: { data: DashboardData }) {
             })}
           </ul>
         </Region>
-        <Region id="regional-spi" label="District climate (SPI)">
+        <Region id="regional-spi" title="District climate (SPI)" collapsible badge="Regional summaries">
           <UnavailablePanel title="District climate summary" reason="Regional district climate summaries are not served by the API yet." evidenceNeeded="A regional climate endpoint (later sub-project)." />
         </Region>
       </div>

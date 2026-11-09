@@ -22,3 +22,12 @@
 .inline { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: end; }
 .inline select, .inline input { padding: var(--space-2) var(--space-3); border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--text-primary); font: inherit; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Collapsible Progressive Disclosure */
+.collapsibleBlock { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-raised); overflow: hidden; margin-top: var(--space-3); }
+.collapsibleSummary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); cursor: pointer; user-select: none; list-style: none; font-size: var(--text-sm); font-weight: 500; color: var(--text-secondary); }
+.collapsibleSummary::-webkit-details-marker { display: none; }
+.collapsibleSummary:hover { background: var(--surface-hover); color: var(--text-primary); }
+.collapsibleSummary::after { content: '▾'; font-size: 0.875rem; color: var(--text-muted); transition: transform var(--duration-fast, 150ms) ease; }
+.collapsibleBlock[open] .collapsibleSummary::after { transform: rotate(180deg); }
+.collapsibleContent { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border-subtle); }

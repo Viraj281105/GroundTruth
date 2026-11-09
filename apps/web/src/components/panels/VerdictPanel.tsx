@@ -38,22 +38,31 @@ export function VerdictPanel({ data, loading }: PanelProps<VerificationView>) {
         <Chip tone={v.tone === 'caution' ? 'caution' : 'neutral'}>{data.readiness.attribution_ready ? 'Attribution-ready' : 'Not attribution-ready'}</Chip>
         {data.run_id && <Chip>Run {data.run_id}</Chip>}
       </div>
-      {data.caveats.length > 0 && (
-        <div className={styles.lists}>
-          <span className={styles.listLabel}>{overviewCopy.caveatsTitle}</span>
-          <ul>
-            {data.caveats.map((c, i) => (
-              <li key={i}>{c}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {data.warnings.length > 0 && (
-        <ul className={styles.muted}>
-          {data.warnings.map((w, i) => (
-            <li key={i}>{w}</li>
-          ))}
-        </ul>
+      {(data.caveats.length > 0 || data.warnings.length > 0) && (
+        <details className={styles.collapsibleBlock}>
+          <summary className={styles.collapsibleSummary}>
+            <span>{overviewCopy.caveatsTitle} & warnings ({data.caveats.length + data.warnings.length})</span>
+          </summary>
+          <div className={styles.collapsibleContent}>
+            {data.caveats.length > 0 && (
+              <div className={styles.lists}>
+                <span className={styles.listLabel}>{overviewCopy.caveatsTitle}</span>
+                <ul>
+                  {data.caveats.map((c, i) => (
+                    <li key={i}>{c}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {data.warnings.length > 0 && (
+              <ul className={styles.muted} style={{ marginTop: 'var(--space-2)' }}>
+                {data.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </details>
       )}
     </Card>
   );

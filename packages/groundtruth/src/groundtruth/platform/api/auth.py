@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from groundtruth.platform.api.errors import ApiErrorBody
 from groundtruth.platform.api.orgs import org_view
+from groundtruth.platform.api.rate_limiting import RateLimiter
 from groundtruth.platform.api.schemas import OrgView
 from groundtruth.platform.audit.service import audit_throttled, note_audit_failure, record_event
 from groundtruth.platform.auth import service
@@ -141,7 +142,12 @@ def _current(sessions: sessionmaker[Session], request: Request) -> UserView:
     response_model=UserView,
     status_code=201,
     summary="Create an account",
-    responses={403: _ERRORS[403], 503: _ERRORS[503]},
+    responses={
+        403: _ERRORS[403],
+        429: {"model": ApiErrorBody, "description": "Rate limit exceeded."},
+        503: _ERRORS[503],
+    },
+    dependencies=[Depends(RateLimiter(limit=10, window_seconds=60, scope_prefix="auth"))],
 )
 def register(
     body: RegisterRequest, request: Request, response: Response, sessions: Sessions
@@ -191,9 +197,13 @@ def register(
     summary="Sign in",
     responses={
         401: _ERRORS[401],
-        429: {"model": ApiErrorBody, "description": "Too many failed attempts."},
+        429: {
+            "model": ApiErrorBody,
+            "description": "Too many failed attempts or rate limit exceeded.",
+        },
         503: _ERRORS[503],
     },
+    dependencies=[Depends(RateLimiter(limit=10, window_seconds=60, scope_prefix="auth"))],
 )
 def login(body: LoginRequest, request: Request, response: Response, sessions: Sessions) -> UserView:
     with sessions() as db:

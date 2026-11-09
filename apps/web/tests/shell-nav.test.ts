@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { describe, expect, it, vi } from 'vitest';
+import { AppSidebar } from '../src/components/shell/AppSidebar';
 import { isNavActive, mobileTabs, navHref, navigationFor, type MemberRole, type OrgType } from '../src/components/shell/navigation';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: () => undefined, replace: () => undefined }),
+  usePathname: () => '/app/demo-auditor/dashboard',
+}));
 
 const TYPES: OrgType[] = ['ngo', 'funder', 'auditor', 'government', 'reference'];
 const ROLES: MemberRole[] = ['owner', 'admin', 'member', 'viewer'];
@@ -43,7 +51,19 @@ describe('navigationFor', () => {
 
   it('points each item at its route', () => {
     const items = navigationFor('funder', 'owner').flatMap((g) => g.items);
-    expect(items.map((i) => i.segment)).toEqual(['dashboard', 'projects', 'portfolio', 'projects/new', 'settings/members', 'settings/sharing', 'settings/audit']);
+    expect(items.map((i) => i.segment)).toEqual([
+      'dashboard',
+      'projects',
+      'assessments',
+      'intelligence',
+      'evidence-library',
+      'reports',
+      'portfolio',
+      'projects/new',
+      'settings/members',
+      'settings/sharing',
+      'settings/audit',
+    ]);
   });
 });
 
@@ -66,5 +86,14 @@ describe('navigation helpers', () => {
   it('puts at most dashboard, projects and portfolio in the mobile tab bar', () => {
     expect(mobileTabs(navigationFor('funder', 'owner')).map((i) => i.id)).toEqual(['dashboard', 'projects', 'portfolio']);
     expect(mobileTabs(navigationFor('ngo', 'viewer')).map((i) => i.id)).toEqual(['dashboard', 'projects']);
+  });
+});
+
+describe('AppSidebar', () => {
+  it('links the brand logo to the home page', () => {
+    const org = { id: 'demo-auditor', slug: 'demo-auditor', name: 'Demo Auditor', type: 'auditor' as const, role: 'admin' as const };
+    const html = renderToStaticMarkup(React.createElement(AppSidebar, { orgs: [org], active: org }));
+    expect(html).toContain('href="/"');
+    expect(html).toContain('aria-label="GroundTruth home"');
   });
 });

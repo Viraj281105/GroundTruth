@@ -15,3 +15,15 @@
 .attention ul { margin: var(--space-2) 0 0; padding-left: var(--space-5); color: var(--text-secondary); }
 .facts { display: grid; gap: var(--space-2); margin: 0; padding-left: var(--space-5); }
 .headlines { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+
+/* Collapsible Progressive Disclosure Regions */
+.regionDetails { display: flex; flex-direction: column; background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; transition: border-color var(--duration-fast, 150ms) ease; }
+.regionDetails:hover { border-color: var(--border-default); }
+.regionSummary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); cursor: pointer; user-select: none; list-style: none; background: var(--surface-raised); }
+.regionSummary::-webkit-details-marker { display: none; }
+.regionSummaryLeft { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.regionSummaryTitle { font-size: var(--text-base); font-weight: 600; color: var(--text-primary); }
+.regionChevron { font-size: 0.875rem; color: var(--text-muted); transition: transform var(--duration-fast, 150ms) ease; }
+.regionDetails[open] .regionChevron { transform: rotate(180deg); }
+.regionBadge { font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.05em; padding: 2px var(--space-2); border-radius: var(--radius-xs); background: var(--surface-sunken); color: var(--text-secondary); border: 1px solid var(--border-subtle); }
+.regionBody { padding: var(--space-4); border-top: 1px solid var(--border-subtle); display: grid; gap: var(--space-3); }

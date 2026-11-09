@@ -28,6 +28,7 @@ def _isolate_auth_settings(monkeypatch):
 
     s = get_settings()
     monkeypatch.setattr(s, "auth_required", False)
+    monkeypatch.setattr(s, "rate_limit_enabled", False)
 
 
 @pytest.fixture

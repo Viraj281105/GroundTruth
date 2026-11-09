@@ -35,25 +35,25 @@ export function NgoDashboard({ data }: { data: DashboardData }) {
             <Region id="map" title="Project area and comparison areas">
               <ProjectMap boundaryUrl={boundaryUrlFor(sel.id)} donorsUrl={donorsUrlFor(sel.id)} />
             </Region>
-            <Region id="index-series" label="Vegetation indices">
+            <Region id="index-series" title="Vegetation indices" collapsible defaultOpen badge="Observations">
               <Slot panel={data.series} title="Vegetation indices" render={(series) => <IndexSeriesPanel series={series} />} />
             </Region>
-            <Region id="climate" label="Climate context">
+            <Region id="climate" title="Climate context" collapsible badge="Weather & drought">
               <Slot panel={data.climate} title="Climate" render={(c) => <ClimatePanel data={c} />} />
             </Region>
-            <Region id="readiness" label="Attribution readiness">
+            <Region id="readiness" title="Attribution readiness" collapsible badge="Criteria checklist">
               <Slot panel={data.readiness} title="Readiness" render={(r) => <ReadinessChecklist data={r} />} />
             </Region>
-            <Region id="field-tasks" label="Field tasks">
+            <Region id="field-tasks" title="Field tasks" collapsible badge="Operations">
               <UnavailablePanel title="Field tasks" reason="Available in a later release: requires the field-operations module." evidenceNeeded="The field-operations module (a later sub-project)." />
             </Region>
-            <Region id="risk-alerts" label="Risk alerts">
+            <Region id="risk-alerts" title="Risk alerts" collapsible badge="Intelligence">
               <UnavailablePanel title="Risk alerts" reason="Available in a later release: requires the risk-intelligence module." evidenceNeeded="The risk-intelligence module (a later sub-project)." />
             </Region>
           </div>
         </>
       )}
-      <Region id="activity" label="Recent activity">
+      <Region id="activity" label="Recent activity" collapsible badge="Audit trail">
         <Slot panel={data.activity} title="Recent activity" render={(items) => <ActivityFeed items={items} />} />
       </Region>
     </div>
