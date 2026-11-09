@@ -212,7 +212,7 @@ def test_persistence_across_new_sessions(tenant_world: World) -> None:
     from groundtruth.platform.store.database import create_db_engine, create_session_factory
 
     with tenant_world.sessions() as db:
-        url = str(db.get_bind().url)
+        url = db.get_bind().url.render_as_string(hide_password=False)
     fresh = create_session_factory(create_db_engine(url))
     with fresh() as db:
         row = db.get(ProjectDocumentRow, body["id"])

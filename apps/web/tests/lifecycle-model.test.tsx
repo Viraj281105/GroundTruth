@@ -57,6 +57,27 @@ describe('lifecycleSteps', () => {
     expect(byLabel(steps, 'Satellite data').description).toContain('NDVI');
   });
 
+  it('a verified ledger without a sealed report is not a finished report', () => {
+    const onlyIngestion = lifecycleSteps(
+      base({ ledger: { status: 'verified', record_count: 1, message: '', records: [{ record_kind: 'observation.ingested' }] } }),
+    );
+    const step = byLabel(onlyIngestion, 'Reports & ledger');
+    expect(step.status).not.toBe('done');
+    expect(step.description).toMatch(/No report has been generated yet/);
+
+    const sealed = lifecycleSteps(
+      base({
+        ledger: {
+          status: 'verified',
+          record_count: 2,
+          message: '',
+          records: [{ record_kind: 'observation.ingested' }, { record_kind: 'report.sealed' }],
+        },
+      }),
+    );
+    expect(byLabel(sealed, 'Reports & ledger').status).toBe('done');
+    expect(byLabel(sealed, 'Reports & ledger').description).toMatch(/1 report sealed/);
+  });
   it('claims, assessment level and ledger come from their own data; a failed ledger is blocked', () => {
     const steps = lifecycleSteps(
       base({

@@ -41,6 +41,8 @@ CONTENT_FILES: tuple[str, ...] = (
 """Sorted by name; ``manifest.json`` follows them."""
 MANIFEST = "manifest.json"
 DOCUMENTS_MANIFEST = "documents-manifest.json"
+CLAIMS_FILE = "claims.json"
+INGESTIONS_FILE = "observation-ingestions.json"
 """Added (in sorted position) only when the project has uploaded documents."""
 
 
@@ -135,7 +137,12 @@ def _climate_csv(project: ProjectRow, data_dir: Path) -> tuple[bytes, dict[str, 
 
 
 def _readme(
-    project: ProjectRow, assessment: Any, simulated: bool, has_documents: bool = False
+    project: ProjectRow,
+    assessment: Any,
+    simulated: bool,
+    has_documents: bool = False,
+    has_claims: bool = False,
+    has_ingestions: bool = False,
 ) -> bytes:
     a = assessment.attribution
     lines = [
@@ -181,6 +188,24 @@ def _readme(
             if has_documents
             else []
         ),
+        *(
+            [
+                f"| `{CLAIMS_FILE}` | Claims a person chose to check, each with the document wording it "
+                "came from, what was tested, and how it compares with the evidence on file. A "
+                "comparison, never a verification; claims about survival, carbon or biodiversity "
+                "are listed as insufficiently evidenced with the reason. |"
+            ]
+            if has_claims
+            else []
+        ),
+        *(
+            [
+                f"| `{INGESTIONS_FILE}` | Satellite-data requests for this project: parameters, "
+                "status, per-year scenes and coverage, stored-file hashes and ledger record id. |"
+            ]
+            if has_ingestions
+            else []
+        ),
         f"| `{MANIFEST}` | sha256 of every other file, in the order listed. |",
         "",
         "To check an export, hash each file and compare it with `manifest.json`.",
@@ -215,14 +240,22 @@ def _documents_manifest(documents: list[dict[str, Any]]) -> bytes:
 
 
 def build_dossier(
-    project: ProjectRow, *, data_dir: Path, documents: list[dict[str, Any]] | None = None
+    project: ProjectRow,
+    *,
+    data_dir: Path,
+    documents: list[dict[str, Any]] | None = None,
+    claims: list[dict[str, Any]] | None = None,
+    ingestions: list[dict[str, Any]] | None = None,
 ) -> bytes:
     """The dossier ZIP for ``project`` as bytes. Same inputs always give the same bytes.
 
     ``documents`` (``projects.documents.document_dict`` items) adds ``documents-manifest.json``
-    when non-empty.
+    when non-empty; ``claims`` (``claims_service.report_items``) adds ``claims.json`` and
+    ``ingestions`` (``ingestion.report_item``) adds ``observation-ingestions.json``.
     """
     docs = documents or []
+    claim_items = claims or []
+    ingestion_items = ingestions or []
     readiness = views.build_readiness(project, DOSSIER_LEVEL, data_dir)
     inventory = views.build_inventory(project, DOSSIER_LEVEL, data_dir, docs)
     assessment = build_project_assessment(project, data_dir=data_dir)
@@ -245,7 +278,9 @@ def build_dossier(
         "climate": climate_meta,
     }
     files: dict[str, bytes] = {
-        "README.md": _readme(project, assessment, simulated, bool(docs)),
+        "README.md": _readme(
+            project, assessment, simulated, bool(docs), bool(claim_items), bool(ingestion_items)
+        ),
         "assessment.json": _json(assessment_view.model_dump(mode="json")),
         "climate.csv": climate,
         "evidence-inventory.json": _json(inventory.model_dump(mode="json")),
@@ -257,6 +292,21 @@ def build_dossier(
     if docs:
         files[DOCUMENTS_MANIFEST] = _documents_manifest(docs)
         names = sorted([*names, DOCUMENTS_MANIFEST])
+    if claim_items:
+        files[CLAIMS_FILE] = _json(
+            {
+                "note": (
+                    "Claims are what someone said, not findings. Each outcome compares the claim "
+                    "with the evidence on file; UNVERIFIED means the evidence needed is missing or "
+                    "of a kind that cannot establish it, not that the claim is false."
+                ),
+                "claims": claim_items,
+            }
+        )
+        names = sorted([*names, CLAIMS_FILE])
+    if ingestion_items:
+        files[INGESTIONS_FILE] = _json({"requests": ingestion_items})
+        names = sorted([*names, INGESTIONS_FILE])
     files[MANIFEST] = _json(
         {
             "algorithm": "sha256",

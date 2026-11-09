@@ -19,11 +19,10 @@ import pytest
 import sqlalchemy as sa
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from pgdb import TestDatabase, new_database, using_postgres
-
 from groundtruth.platform.audit.ledger import STATUS_LEGACY, AuditLedger
 from groundtruth.platform.store import migrate
 from groundtruth.platform.store.database import create_db_engine, create_session_factory
+from pgdb import TestDatabase, new_database, using_postgres
 
 pytestmark = pytest.mark.skipif(
     not using_postgres(), reason="needs a disposable PostgreSQL server (GT_TEST_PG_ADMIN_URL)"
@@ -80,7 +79,7 @@ def test_migrations_apply_from_empty_and_reach_head(pg: TestDatabase) -> None:
     migrate.upgrade(pg.url)
     assert migrate.is_at_head(pg.url)
     assert migrate.current_revision(pg.url) == migrate.head_revision()
-    assert NEW_TABLES <= _tables(pg.url)
+    assert _tables(pg.url) >= NEW_TABLES
     assert {"sequence", "prev_root_hash", "record_kind", "hash_scheme"} <= _columns(
         pg.url, "audit_records"
     )
@@ -92,7 +91,7 @@ def test_migrations_roll_back_and_forward_again(pg: TestDatabase) -> None:
     assert NEW_TABLES.isdisjoint(_tables(pg.url))
     assert "sequence" not in _columns(pg.url, "audit_records")
     migrate.upgrade(pg.url)
-    assert migrate.is_at_head(pg.url) and NEW_TABLES <= _tables(pg.url)
+    assert migrate.is_at_head(pg.url) and _tables(pg.url) >= NEW_TABLES
 
 
 def test_existing_records_survive_the_new_migrations(pg: TestDatabase) -> None:

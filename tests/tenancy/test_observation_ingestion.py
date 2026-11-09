@@ -362,6 +362,17 @@ def test_a_complete_run_stores_observations_that_the_platform_then_uses(
     assert "carbon" not in json.dumps(assessment).lower()
 
 
+def test_the_series_names_the_collection_the_data_really_came_from(tenant_world: World) -> None:
+    """The stored provenance text names an Earth Engine collection; the API must not repeat that."""
+    pid = _create_project(tenant_world)["id"]
+    _post(tenant_world, pid)
+    _run(tenant_world, pid, fake_provider({2021: 6000, 2022: 6100, 2023: 6200}))
+    series = tenant_world.client("outsider").get(f"/projects/{pid}/observations").json()
+    assert "sentinel-2-l2a" in series["source"]
+    assert "planetarycomputer.microsoft.com" in series["source"]
+    assert "COPERNICUS/S2_SR_HARMONIZED" not in series["source"]
+
+
 def test_each_ingestion_is_recorded_in_the_ledger_with_the_stored_hashes(
     tenant_world: World,
 ) -> None:

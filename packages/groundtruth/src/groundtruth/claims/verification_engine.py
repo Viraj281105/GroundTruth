@@ -908,11 +908,15 @@ def verify_project_claims(
     unverified = sum(1 for c in claims if c.status == VerificationStatus.UNVERIFIED)
 
     portfolio_grade: Grade | str
-    if claims:
+    if claims and demo_kariba:
         avg_score = sum(c.grading.overall_score for c in claims) / len(claims)
         portfolio_grade = score_to_grade(avg_score)
     else:
-        portfolio_grade = "N/A"  # no claims: a grade would be invented
+        # No claims: a grade would be invented. For a real project's own claims a single letter
+        # would also mislead: claims that satellite data cannot test (survival, carbon,
+        # biodiversity) would pull it down however accurate the project is, so each claim is
+        # reported with its own outcome and no project-level grade is produced.
+        portfolio_grade = "N/A"
 
     notice = None
     if demo_kariba:

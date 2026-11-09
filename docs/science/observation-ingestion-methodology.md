@@ -123,3 +123,61 @@ contradicted, or insufficiently evidenced. It is never reported as verified.
 
 The tolerances are engineering choices, stated in code and shown with each outcome; they are not
 derived from field data.
+
+## 10. Worked example (acceptance run, 2026-11-10)
+
+A fresh NGO account created a 4 x 4 km test boundary near Pune (about 1,870 ha; treatment start 2021)
+and requested Sentinel-2 observations through the app: 2021-2026, season 15 January to 15 March, cloud
+limit 20 %, 100 m grid, 2 scenes per year, NDVI and EVI. A real worker process on PostgreSQL ran it
+against Microsoft Planetary Computer and finished as `succeeded`.
+
+| Year | Scenes (tile 43QCA) | Area covered | NDVI | EVI |
+|---|---|---|---|---|
+| 2021 | 2 | 99.8 % | 0.317 | 0.189 |
+| 2022 | 2 | 100.0 % | 0.349 | 0.185 |
+| 2023 | 2 | 99.4 % | 0.420 | 0.222 |
+| 2024 | 2 | 99.9 % | 0.338 | 0.184 |
+| 2025 | 2 | 99.7 % | 0.327 | 0.177 |
+| 2026 | 2 | 100.0 % | 0.371 | 0.199 |
+
+The assessment became **Level 1 (basic monitoring), evidence confidence Moderate**, with the observed
+change labelled "not a causal effect" and attribution **Inconclusive**: causal assessment needs five
+pre-treatment years, and Sentinel-2 L2A only reaches back to 2017.
+
+Document claims written *before* any data was fetched were then promoted by a user and matched:
+
+| Claim (as stated) | Outcome | Basis |
+|---|---|---|
+| "restores 1,900 hectares" | Supported (as the project area) | Boundary 1,870 ha, +1.6 % |
+| "NDVI increased by 0.05 since 2021" | Supported, with a limitation | Observed +0.054 (2021 to 2026). The record is not monotonic (0.317 to 0.420), so the limitation says a two-year difference can reflect year-to-year variation. |
+| "85 % of planted seedlings survived" | Insufficiently evidenced | Survival needs field plots |
+| "sequestered 40,000 tCO2e" | Insufficiently evidenced | A vegetation index is not carbon |
+| "proves biodiversity has fully recovered" | Insufficiently evidenced | Not observable from greenness; absolute wording |
+
+### Independent cross-check of the numbers
+
+For three years the NDVI was re-derived from the *same scene ids* by a separate script that does not
+use GroundTruth's pipeline (rasterio directly, native 10 m, SCL mask, per-pixel median of the two
+scenes, mean over the boundary):
+
+| Year | Processing baseline | Independent | Stored | Difference |
+|---|---|---|---|---|
+| 2021 | 2.12 | 0.3137 | 0.3170 | -0.0033 |
+| 2024 | 5.1 | 0.3333 | 0.3381 | -0.0049 |
+| 2026 | 5.11 / 5.12 | 0.3653 | 0.3712 | -0.0059 |
+
+The independent values are 1.0 to 1.6 % lower. A small, consistent offset is expected from computing at
+10 m instead of the 100 m analysis grid and from window rounding. The agreement across baselines 2.12,
+5.1 and 5.1x also shows the baseline-04.00 offset handling does not introduce a step.
+**This shows the implementation agrees with an independent reimplementation of the same formula on the
+same scenes. It does not validate NDVI against field measurements.**
+
+### Traceability checks performed
+
+* The SHA-256 of each stored bundle on disk equals the hash in the `observation.ingested` ledger record.
+* The technical dossier contains per-year scene ids and `scenes_sha256` (`observations.csv`), the claims
+  with their document wording and outcomes (`claims.json`) and the request record
+  (`observation-ingestions.json`); every file is listed in `manifest.json` with its SHA-256.
+* Downloading the dossier twice from unchanged state produced byte-identical files (same report SHA-256).
+* Altering one ledger record directly in PostgreSQL made the auditor's Reports page show "Integrity check
+  failed" naming the record; restoring it returned the ledger to verified with the same ledger root.

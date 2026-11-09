@@ -741,6 +741,26 @@ def process_pending(
     return done
 
 
+def report_item(row: ObservationIngestionRow) -> dict[str, Any]:
+    """One ingestion request as recorded, for the technical dossier (JSON-safe)."""
+
+    def iso(dt: datetime | None) -> str | None:
+        return dt.isoformat() if dt else None
+
+    return {
+        "ingestion_id": row.id,
+        "status": row.status,
+        "status_detail": row.status_detail,
+        "error_code": row.error_code,
+        "parameters": row.params,
+        "requested_at": iso(row.created_at),
+        "started_at": iso(row.started_at),
+        "finished_at": iso(row.finished_at),
+        "result": row.result,
+        "ledger_record_id": row.ledger_record_id,
+    }
+
+
 class IngestionPoller(threading.Thread):
     """Runs queued ingestions in the background of a worker process until stopped.
 

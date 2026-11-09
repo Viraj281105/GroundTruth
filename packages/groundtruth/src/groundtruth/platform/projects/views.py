@@ -12,6 +12,7 @@ import math
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from groundtruth.data_access.aoi_pipeline import AnnualObservationRecord
 from groundtruth.engine import Assessment
@@ -55,6 +56,23 @@ from groundtruth.platform.store.models import ProjectRow
 PUBLIC_REF_PREFIXES: tuple[str, ...] = ("observation:", "climate:", "dimension:", "readiness:")
 """Evidence-ref kinds that point at observations, climate or other dimensions. Any other ref
 (a causal-run evidence id, say) points into diagnostics and is audit-level."""
+
+
+def series_source(bundle: Any) -> str:
+    """Where a series came from, from what its records say they used.
+
+    The stored ``provenance.source`` text comes from a sensor spec shared with the Earth Engine
+    code path and names an Earth Engine collection, which is wrong for data fetched from the
+    Planetary Computer STAC API. So the label is built from the collection ids the records carry and
+    the catalogue they were read from, and falls back to the stored text only when they say nothing.
+    """
+    collections = sorted({c for r in bundle.records for c in (r.collection_ids or ())})
+    origin = getattr(bundle.data_origin, "value", str(bundle.data_origin))
+    if not collections:
+        return str(bundle.provenance.source)
+    host = urlparse(bundle.catalog_url or "").netloc
+    where = f" via {host}" if host else ""
+    return f"{', '.join(collections)}{where} ({origin})"
 
 
 def data_mode_of(project: ProjectRow) -> str:
@@ -146,7 +164,7 @@ def build_observations(
     return ObservationsView(
         status="available",
         unit_id=bundle.unit_id,
-        source=bundle.provenance.source,
+        source=series_source(bundle),
         points=_points(project, bundle.records, _coverage(project, bundle)),
         **common,
     )
@@ -260,7 +278,7 @@ def build_inventory(
                 years=[r.year for r in records],
                 states=states,
                 sensors=sorted({r.sensor for r in records}),
-                source=res.bundle.provenance.source,
+                source=series_source(res.bundle),
                 data_origin=str(res.bundle.data_origin.value),
             )
         )

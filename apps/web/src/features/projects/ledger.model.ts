@@ -64,3 +64,17 @@ export function formatBytes(n: number | null | undefined): string {
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/** Plain words for a ledger record kind. Unknown kinds are shown as they are, never hidden. */
+export function recordKindLabel(kind: string): string {
+  switch (kind) {
+    case 'report.sealed':
+      return 'Report sealed';
+    case 'observation.ingested':
+      return 'Satellite data stored';
+    case 'assessment':
+      return 'Assessment recorded';
+    default:
+      return kind;
+  }
+}

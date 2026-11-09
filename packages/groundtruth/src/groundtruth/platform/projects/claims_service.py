@@ -16,6 +16,7 @@ see both what the document said and what was actually tested.
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import math
 import uuid
@@ -447,3 +448,13 @@ def source_view(r: ProjectClaimRow) -> dict[str, Any]:
         "created_at": r.created_at.isoformat() if r.created_at else None,
         "updated_at": r.updated_at.isoformat() if r.updated_at else None,
     }
+
+
+def report_items(
+    project: ProjectRow, rows: list[ProjectClaimRow], data_dir: Path
+) -> list[dict[str, Any]]:
+    """Promoted claims with their source and outcome, for the technical dossier (JSON-safe)."""
+    return [
+        {"claim_id": r.id, "source": source_view(r), "outcome": dataclasses.asdict(o)}
+        for r, o in evaluate(project, rows, data_dir)
+    ]

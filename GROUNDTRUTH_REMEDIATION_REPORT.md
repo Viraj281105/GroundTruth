@@ -1,5 +1,7 @@
 # GroundTruth — Remediation Report
 
+> Superseded for current status by `GROUNDTRUTH_CORE_WORKFLOW_REPORT.md` (observation ingestion, claim promotion, PostgreSQL acceptance, end-to-end results). This report records the first remediation round.
+
 Source: independent black-box audit of the running app (2026-11-09, `GroundTruth_Audit_Report.md`).
 Base commit `bdde7e1` on branch `viraj`. **Nothing has been committed**; all changes are in the working tree.
 

@@ -192,7 +192,7 @@ export function ClaimVerificationWorkbench({ projectName, orgSlug, projectSlug, 
             <div className={styles.kpiCard}>
               <span className={styles.kpiLabel}>Claims assessed</span>
               <span className={styles.kpiValue}>{claims.length}</span>
-              <span className={styles.kpiSub}>Portfolio grade {portfolio.overallGrade || 'N/A'}</span>
+              <span className={styles.kpiSub}>{portfolio.overallGrade && portfolio.overallGrade !== 'N/A' ? `Portfolio grade ${portfolio.overallGrade}` : 'Each claim is judged on its own evidence'}</span>
             </div>
             <div className={`${styles.kpiCard} ${styles.kpiCardSupported}`}>
               <span className={styles.kpiLabel}>Supported</span>
@@ -295,7 +295,7 @@ function ClaimCard({
       >
         <div className={styles.claimTitleGroup}>
           <div className={styles.claimMetaRow}>
-            <span className={styles.claimId}>{claim.id}</span>
+            <span className={styles.claimId}>{src ? 'Your claim' : claim.id}</span>
             <span className={`${styles.statusChip} ${styles[`chip_${claim.status}`]}`}>
               {statusIcon(claim.status)}
               <span>{outcome ? outcome.label.toUpperCase() : STATUS_LABEL[claim.status].toUpperCase()}</span>

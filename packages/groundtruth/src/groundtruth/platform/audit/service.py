@@ -7,6 +7,7 @@ failure is logged and counted, never raised into the request.
 
 from __future__ import annotations
 
+import base64
 import logging
 import threading
 import time
@@ -137,7 +138,27 @@ def record_event(
 
 
 def _cursor(row: AuditEventRow) -> str:
-    return f"{row.occurred_at.isoformat()}|{row.id}"
+    """Opaque, URL-safe position of ``row``.
+
+    The raw ISO timestamp of a timezone-aware value (PostgreSQL) contains ``+00:00``, and a ``+``
+    in a query string decodes to a space, which silently broke the next-page request for any
+    client that passes the cursor through unencoded. Base64url has no such characters.
+    """
+    raw = f"{row.occurred_at.isoformat()}|{row.id}".encode()
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
+
+
+def _decode_cursor(token: str) -> tuple[datetime, str]:
+    """The (occurred_at, id) a cursor names. Raises ``ValueError`` for anything else."""
+    try:
+        padded = token + "=" * (-len(token) % 4)
+        text = base64.urlsafe_b64decode(padded.encode("ascii")).decode("utf-8")
+    except (ValueError, UnicodeError) as exc:
+        raise ValueError("malformed cursor") from exc
+    ts_text, sep, last_id = text.partition("|")
+    if not sep or not last_id:
+        raise ValueError("malformed cursor")
+    return datetime.fromisoformat(ts_text), last_id
 
 
 def list_events(
@@ -146,8 +167,7 @@ def list_events(
     """Newest first. The cursor is ``occurred_at|id`` of the last row of the previous page."""
     stmt = sa.select(AuditEventRow).where(AuditEventRow.organization_id == organization_id)
     if cursor:
-        ts_text, _, last_id = cursor.partition("|")
-        ts = datetime.fromisoformat(ts_text)
+        ts, last_id = _decode_cursor(cursor)
         stmt = stmt.where(
             sa.or_(
                 AuditEventRow.occurred_at < ts,

@@ -48,8 +48,8 @@ from groundtruth.platform.auth.authz import (
 from groundtruth.platform.auth.deps import resolve_sessions
 from groundtruth.platform.auth.service import auth_error
 from groundtruth.platform.config import get_settings
+from groundtruth.platform.projects import claims_service, ingestion, service, views
 from groundtruth.platform.projects import documents as documents_service
-from groundtruth.platform.projects import service, views
 from groundtruth.platform.projects.assessment import build_project_assessment
 from groundtruth.platform.projects.boundary import (
     MAX_BOUNDARY_BYTES,
@@ -60,7 +60,7 @@ from groundtruth.platform.projects.readiness import _boundary_file, compute_proj
 from groundtruth.platform.projects.redaction import redact
 from groundtruth.platform.reports.dossier import build_dossier
 from groundtruth.platform.store.interface import EvidenceStore, RunFilter
-from groundtruth.platform.store.models import OrganizationRow, ProjectRow
+from groundtruth.platform.store.models import ObservationIngestionRow, OrganizationRow, ProjectRow
 
 router = APIRouter(tags=["projects"])
 _log = logging.getLogger(__name__)
@@ -588,7 +588,24 @@ def export_dossier(request: Request, access: DossierExporter) -> Response:
             documents_service.document_dict(r)
             for r in documents_service.list_documents(db, project.id)
         ]
-    content = build_dossier(project, data_dir=get_settings().data_dir, documents=documents)
+    with resolve_sessions(request)() as db:
+        claim_rows = claims_service.list_claims(db, project.id)
+        claim_items = claims_service.report_items(project, claim_rows, get_settings().data_dir)
+        ingestion_items = [
+            ingestion.report_item(r)
+            for r in db.execute(
+                select(ObservationIngestionRow)
+                .where(ObservationIngestionRow.project_id == project.id)
+                .order_by(ObservationIngestionRow.created_at, ObservationIngestionRow.id)
+            ).scalars()
+        ]
+    content = build_dossier(
+        project,
+        data_dir=get_settings().data_dir,
+        documents=documents,
+        claims=claim_items,
+        ingestions=ingestion_items,
+    )
     headers = {
         "Content-Disposition": f'attachment; filename="{project.slug}-dossier.zip"',
         "X-GroundTruth-Data-Mode": views.data_mode_of(project),

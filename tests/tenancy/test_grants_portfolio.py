@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import io
 import json
@@ -424,7 +425,10 @@ def test_forged_cursor_cannot_read_another_orgs_audit(tenant_world: World) -> No
             .first()
         )
         assert other is not None
-        forged = f"{(other.occurred_at.replace(year=2100)).isoformat()}|{other.id}"
+        raw = f"{(other.occurred_at.replace(year=2100)).isoformat()}|{other.id}"
+        # cursors are opaque base64url; forge one in that format (the old raw form is rejected)
+        forged = base64.urlsafe_b64encode(raw.encode()).rstrip(b"=").decode()
+        legacy_raw = raw
         foreign = {
             e.id
             for e in db.execute(
@@ -433,6 +437,12 @@ def test_forged_cursor_cannot_read_another_orgs_audit(tenant_world: World) -> No
                 )
             ).scalars()
         }
+    assert (
+        tenant_world.client("ref")
+        .get("/orgs/reference/audit", params={"cursor": legacy_raw})
+        .status_code
+        == 422
+    )
     r = tenant_world.client("ref").get("/orgs/reference/audit", params={"cursor": forged})
     assert r.status_code == 200
     ids = {e["id"] for e in r.json()["events"]}

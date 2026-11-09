@@ -210,3 +210,19 @@ def test_outcomes_never_say_verified_or_accuse_anyone() -> None:
         text = " ".join([out.headline, *out.reasons, *out.contradicting, *out.limitations]).lower()
         assert "verified" not in text.replace("unverified", "")
         assert not any(w in text for w in ("fraud", "scam", "lied", "lying", "fake"))
+
+
+def test_a_noisy_record_discloses_that_two_years_can_mislead() -> None:
+    """Real Pune record: NDVI is not monotonic, so a 2021->2026 difference depends on endpoints."""
+    real = {2021: 0.317, 2022: 0.349, 2023: 0.420, 2024: 0.338, 2025: 0.327, 2026: 0.371}
+    out = match_claim("vegetation_index_change", 0.05, "ndvi_units", "since 2021", ctx(ndvi=real))
+    assert out.status == SUPPORTED  # 2026 - 2021 = +0.054
+    text = " ".join(out.limitations)
+    assert "ranged from 0.317 to 0.420" in text and "year-to-year variation" in text
+    assert any("All observed years" in a and "2023 0.420" in a for a in out.available_evidence)
+    # a smooth record does not carry that warning
+    smooth = {2021: 0.30, 2022: 0.32, 2023: 0.34, 2024: 0.36}
+    quiet = match_claim(
+        "vegetation_index_change", 0.30, "ndvi_units", "since 2021", ctx(ndvi=smooth)
+    )
+    assert not any("ranged from" in lim for lim in quiet.limitations)

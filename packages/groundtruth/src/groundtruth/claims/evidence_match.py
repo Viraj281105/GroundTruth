@@ -323,6 +323,17 @@ def _match_index_change(
         f"{ind.upper()} {base}: {series.values[base]:.3f}; {end}: {series.values[end]:.3f} ({series.source})",
     ]
     limits = list(GREENNESS_LIMITS)
+    all_vals = [series.values[y] for y in observed_years]
+    if len(all_vals) >= 3:
+        lo_v, hi_v = min(all_vals), max(all_vals)
+        by_year = ", ".join(f"{y} {series.values[y]:.3f}" for y in observed_years)
+        avail.append(f"All observed years: {by_year}")
+        if hi_v - lo_v >= abs(value):
+            limits.append(
+                f"Across all {len(all_vals)} observed years {ind.upper()} ranged from {lo_v:.3f} to "
+                f"{hi_v:.3f} (a spread of {hi_v - lo_v:.3f}), as large as the claimed change. A "
+                "difference between two years can reflect year-to-year variation rather than a trend."
+            )
     if low_cov:
         limits.append(
             f"The project area was covered below {COVERAGE_OK_PCT:g}% in {', '.join(map(str, low_cov))}, "

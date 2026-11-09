@@ -34,7 +34,8 @@ export interface LifecycleInput {
   inventory: Inventory | null;
   assessment: Pick<Assessment, 'level' | 'level_name'> | null;
   claims: ClaimSummary | null;
-  ledger: Pick<Ledger, 'status' | 'record_count' | 'message'> | null;
+  /** `records` lets the stepper tell a sealed report from other ledger entries (such as an observation ingestion). */
+  ledger: (Pick<Ledger, 'status' | 'record_count' | 'message'> & { records?: { record_kind: string }[] }) | null;
   /** Satellite data requests. Omitted or null when they could not be read; nothing is then asserted about them. */
   ingestions?: { active?: boolean; ingestions: { status: IngestionStatus }[] } | null;
 }
@@ -175,13 +176,25 @@ export function lifecycleSteps(i: LifecycleInput): LifecycleStep[] {
   if (!i.ledger) {
     steps.push({ label: 'Reports & ledger', shortLabel: 'Reports', segment: 'reports', status: 'unknown', description: 'The audit ledger could not be read.' });
   } else if (i.ledger.status === 'verified') {
-    steps.push({
-      label: 'Reports & ledger',
-      shortLabel: 'Reports',
-      segment: 'reports',
-      status: 'done',
-      description: `${plural(i.ledger.record_count, 'ledger record')}; the hash chain checked out on read.`,
-    });
+    // A verified ledger is not a finished report: observation ingestions are recorded in it too.
+    const sealed = (i.ledger.records ?? []).filter((r) => r.record_kind === 'report.sealed').length;
+    if (sealed > 0) {
+      steps.push({
+        label: 'Reports & ledger',
+        shortLabel: 'Reports',
+        segment: 'reports',
+        status: 'done',
+        description: `${plural(sealed, 'report')} sealed; the ledger's ${plural(i.ledger.record_count, 'record')} checked out on read.`,
+      });
+    } else {
+      steps.push({
+        label: 'Reports & ledger',
+        shortLabel: 'Reports',
+        segment: 'reports',
+        status: 'pending',
+        description: `No report has been generated yet. The ledger holds ${plural(i.ledger.record_count, 'record')} (for example data requests), and they checked out on read.`,
+      });
+    }
   } else if (i.ledger.status === 'failed') {
     steps.push({ label: 'Reports & ledger', shortLabel: 'Reports', segment: 'reports', status: 'blocked', description: 'The ledger check failed. This warrants accredited review.' });
   } else {

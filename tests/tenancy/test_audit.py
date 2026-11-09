@@ -102,3 +102,21 @@ def test_audit_failure_is_counted_not_raised(tenancy_sessions: sessionmaker[Sess
         assert db.execute(select(AuditEventRow)).first() is None
     assert row.action == "org.switch"
     assert service.audit_failure_count() == before + 1
+
+
+def test_audit_cursor_is_url_safe_for_timezone_aware_timestamps() -> None:
+    """PostgreSQL timestamps carry '+00:00'; a raw '+' in a query string decodes to a space."""
+    from datetime import UTC, datetime
+    from types import SimpleNamespace
+
+    import pytest
+
+    from groundtruth.platform.audit.service import _cursor, _decode_cursor
+
+    when = datetime(2026, 11, 9, 12, 30, 45, 123456, tzinfo=UTC)
+    token = _cursor(SimpleNamespace(occurred_at=when, id="evt-1"))  # type: ignore[arg-type]
+    assert not any(ch in token for ch in "+/= |:")
+    assert _decode_cursor(token) == (when, "evt-1")
+    for bad in ("garbage", "", "bm9wZQ", "MjAyNi0xMS0wOVQxMjozMDo0NSswMDowMA"):
+        with pytest.raises(ValueError):
+            _decode_cursor(bad)

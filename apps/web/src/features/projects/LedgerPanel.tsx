@@ -2,7 +2,7 @@ import React from 'react';
 import { Chip } from '../../components/ds/Chip';
 import { fetched } from './server';
 import { serverApi } from '../../lib/server-api';
-import { formatUtc, ledgerStatusText, shortHash } from './ledger.model';
+import { formatUtc, ledgerStatusText, recordKindLabel, shortHash } from './ledger.model';
 import { VerifyReportForm } from './VerifyReportForm';
 import styles from './projects.module.css';
 
@@ -58,7 +58,7 @@ export async function LedgerPanel({ projectId }: { projectId: string }) {
               {l.records.map((rec) => (
                 <tr key={rec.record_id}>
                   <td>{rec.sequence ?? '—'}</td>
-                  <td>{rec.record_kind === 'report.sealed' ? 'Report sealed' : rec.record_kind}</td>
+                  <td>{recordKindLabel(rec.record_kind)}</td>
                   <td>{formatUtc(rec.timestamp)}</td>
                   <td><code title={rec.record_id}>{shortHash(rec.record_id.replace('AUDIT-', ''), 8)}</code></td>
                   <td><code title={rec.report_sha256 ?? undefined}>{shortHash(rec.report_sha256, 10)}</code></td>

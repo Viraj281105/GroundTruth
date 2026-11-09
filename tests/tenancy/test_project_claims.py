@@ -270,6 +270,7 @@ def test_promoted_claims_appear_in_the_verification_workbench_payload(tenant_wor
     assert p["total_claims"] == 2 and p["has_claims"] is True
     assert p["supported_count"] == 1 and p["unverified_count"] == 1
     assert p["is_demo"] is False and p["data_mode"] == "observed"
+    assert p["overall_portfolio_grade"] == "N/A"  # no misleading project-level letter grade
     assert not any(m["id"] == "claims_submitted" for m in p["missing_information"])
     area = next(c for c in p["claims"] if c["claim_type"] == "area_restored")
     assert (
@@ -363,3 +364,61 @@ def test_promote_edit_and_withdraw_are_audited(tenant_world: World) -> None:
     with tenant_world.sessions() as db:
         actions = [e.action for e in db.execute(select(AuditEventRow)).scalars()]
     assert {"claim.promote", "claim.edit", "claim.withdraw"} <= set(actions)
+
+
+def _zip(content: bytes) -> dict[str, bytes]:
+    import io
+    import zipfile
+
+    with zipfile.ZipFile(io.BytesIO(content)) as z:
+        return {n: z.read(n) for n in z.namelist()}
+
+
+def test_the_dossier_carries_the_claims_and_the_data_requests_traceably(
+    tenant_world: World,
+) -> None:
+    import hashlib
+
+    pid = _project(tenant_world)
+    c = tenant_world.client("outsider")
+    plain = _zip(c.get(f"/projects/{pid}/export/dossier").content)
+    assert "claims.json" not in plain and "observation-ingestions.json" not in plain
+
+    doc = _upload(tenant_world, pid)
+    cands = _candidates(tenant_world, pid, doc)
+    for kind in ("area_hectares", "vegetation_index_change", "carbon_tco2e"):
+        assert _promote(tenant_world, pid, doc, cands[kind]).status_code == 201
+    _ingest(tenant_world, pid, {2021: 6000, 2022: 6300, 2023: 7000})
+
+    first = c.get(f"/projects/{pid}/export/dossier").content
+    files = _zip(first)
+    assert {"claims.json", "observation-ingestions.json", "documents-manifest.json"} <= set(files)
+
+    claims = json.loads(files["claims.json"])
+    assert "not findings" in claims["note"]
+    by_kind = {x["source"]["kind"]: x for x in claims["claims"]}
+    area = by_kind["area_hectares"]
+    assert (
+        area["source"]["original_text"]
+        == TEXT[cands["area_hectares"]["start"] : cands["area_hectares"]["end"]]
+    )
+    assert area["source"]["document_sha256"] and area["outcome"]["status"] == "SUPPORTED"
+    assert by_kind["carbon_tco2e"]["outcome"]["status"] == "UNVERIFIED"
+    veg = by_kind["vegetation_index_change"]["outcome"]
+    assert veg["status"] == "SUPPORTED" and veg["observed_value"] == pytest.approx(0.0556, abs=1e-3)
+
+    ingest = json.loads(files["observation-ingestions.json"])["requests"]
+    assert len(ingest) == 1 and ingest[0]["status"] == "succeeded"
+    assert ingest[0]["ledger_record_id"].startswith("AUDIT-")
+    assert ingest[0]["result"]["years"][0]["scene_ids"], "scene ids are in the report"
+    assert ingest[0]["result"]["stored_bundles"]["ndvi"]["sha256"]
+
+    manifest = json.loads(files["manifest.json"])
+    listed = {f["path"]: f["sha256"] for f in manifest["files"]}
+    assert {"claims.json", "observation-ingestions.json"} <= set(listed)
+    for name, digest in listed.items():
+        assert hashlib.sha256(files[name]).hexdigest() == digest, name
+    assert b"claims.json" in files["README.md"]
+
+    # same stored state -> same bytes (the report is reproducible from what is stored)
+    assert c.get(f"/projects/{pid}/export/dossier").content == first
