@@ -13,7 +13,24 @@ services:
       interval: 5s
       retries: 10
 
+  # One-shot: brings the schema to head, then exits. --max-jobs 0 means it takes no
+  # job, so it never competes with the worker. api and worker start only after it
+  # exits 0, so nothing ever serves or claims against unmigrated tables.
+  migrate:
+    image: groundtruth-backend:local
+    pull_policy: never
+    command: ["python", "-m", "apps.worker.main", "--migrate", "--max-jobs", "0"]
+    healthcheck:
+      disable: true
+    env_file: [{ path: .env, required: false }]
+    environment:
+      DATABASE_URL: postgresql+psycopg://groundtruth:groundtruth@postgres/groundtruth
+    depends_on: { postgres: { condition: service_healthy } }
+    restart: "no"
+
+  # api, worker and migrate share one image, built once, here.
   api:
+    image: groundtruth-backend:local
     build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
     env_file: [{ path: .env, required: false }]
     environment:
@@ -25,18 +42,23 @@ services:
       AUTH_COOKIE_SECURE: "false"
       AUTH_ALLOW_REGISTRATION: "true"
     ports: ["8000:8000"]
-    depends_on: { postgres: { condition: service_healthy } }
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
 
   worker:
-    build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
-    command: ["python", "-m", "apps.worker.main", "--migrate"]
+    image: groundtruth-backend:local
+    pull_policy: never
+    command: ["python", "-m", "apps.worker.main"]
     # The image's HTTP health check is for the API; the worker serves no HTTP.
     healthcheck:
       disable: true
     env_file: [{ path: .env, required: false }]
     environment:
       DATABASE_URL: postgresql+psycopg://groundtruth:groundtruth@postgres/groundtruth
-    depends_on: { postgres: { condition: service_healthy } }
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
     restart: unless-stopped
 
   web:
@@ -47,7 +69,7 @@ services:
         NEXT_PUBLIC_API_URL: http://localhost:8000
         NEXT_PUBLIC_DEMO_MODE: ${NEXT_PUBLIC_DEMO_MODE:-true}
     ports: ["3000:3000"]
-    depends_on: [api]
+    depends_on: { api: { condition: service_healthy } }
 
 volumes:
   pgdata:
