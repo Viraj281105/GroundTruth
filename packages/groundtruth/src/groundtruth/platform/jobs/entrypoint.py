@@ -21,6 +21,7 @@ and its job is retried when the lease expires.
 from __future__ import annotations
 
 import argparse
+import os
 import signal
 from collections.abc import Callable
 from types import FrameType
@@ -96,6 +97,30 @@ def restore_signal_handlers(previous: dict[int, Any]) -> None:
         signal.signal(number, handler)
 
 
+def seed_demo(extra: dict[str, str]) -> None:
+    """Import the Reference projects and the demo orgs/users (``SEED_DEMO=true``; dev only).
+
+    Idempotent: existing users keep their passwords. Credentials, when created, go to
+    ``SEED_DEMO_PASSWORDS_FILE`` (never the log). Opt-in: a real deployment must not ship
+    well-known demo accounts.
+    """
+    from groundtruth.cli import main as cli_main
+
+    argv = ["seed", "--demo"]
+    passwords_file = os.environ.get("SEED_DEMO_PASSWORDS_FILE")
+    if passwords_file:
+        argv += ["--passwords-file", passwords_file]
+    else:
+        logger.warning(
+            "SEED_DEMO=true without SEED_DEMO_PASSWORDS_FILE: credentials are printed once",
+            extra=extra,
+        )
+    code = cli_main(argv)
+    if code != 0:
+        raise ConfigurationError(f"demo seed failed (exit {code})")
+    logger.info("demo seed complete", extra=extra)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m apps.worker.main",
@@ -144,6 +169,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.migrate:
         migrate.upgrade(url)
         logger.info("database migrated to %s", migrate.head_revision(), extra=startup)
+        if os.environ.get("SEED_DEMO", "").strip().lower() in ("1", "true", "yes"):
+            seed_demo(startup)
     elif not migrate.is_at_head(url):
         logger.error(
             "cannot start: the database is at migration %s but this code needs %s. "

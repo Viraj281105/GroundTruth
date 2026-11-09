@@ -40,7 +40,7 @@ def validate_project_aoi(boundary_geojson: dict[str, Any]) -> dict[str, Any]:
             f"Unsupported GeoJSON type {geo_type!r}; must be one of {valid_top_types}."
         )
 
-    geometries: list[ Any] = []
+    geometries: list[Any] = []
     if geo_type == "FeatureCollection":
         features = boundary_geojson.get("features")
         if not isinstance(features, list) or len(features) == 0:
@@ -110,9 +110,7 @@ def validate_project_aoi(boundary_geojson: dict[str, Any]) -> dict[str, Any]:
                         f"Longitude {lon} out of bounds [-180, 180] at vertex {pt_idx}."
                     )
                 if not (-90.0 <= lat <= 90.0):
-                    raise ValueError(
-                        f"Latitude {lat} out of bounds [-90, 90] at vertex {pt_idx}."
-                    )
+                    raise ValueError(f"Latitude {lat} out of bounds [-90, 90] at vertex {pt_idx}.")
                 ring_lons.append(lon)
                 ring_lats.append(lat)
 

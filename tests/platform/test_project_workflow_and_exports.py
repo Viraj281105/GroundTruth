@@ -6,10 +6,8 @@ import csv
 import io
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
-from groundtruth.platform.api.exports import build_case_bundle, router
+from groundtruth.platform.api.exports import build_case_bundle
 from groundtruth.platform.cases.creator import validate_project_aoi
 from groundtruth.platform.reports.exporters import (
     CSV_COLUMNS,
@@ -170,17 +168,15 @@ def test_export_bundle_pdf_structure_and_content() -> None:
             assert prefix in decoded
 
 
-def test_fastapi_export_endpoints() -> None:
-    app = FastAPI()
-    app.include_router(router)
-    client = TestClient(app)
+def test_fastapi_export_endpoints(tenant_world) -> None:
+    # The export routes are project-scoped: drive them as the Reference org's owner.
+    client = tenant_world.client("ref")
 
     csv_resp = client.get("/cases/kariba-redd/export/csv")
     assert csv_resp.status_code == 200
     assert csv_resp.headers["content-type"].startswith("text/csv")
     assert (
-        csv_resp.headers["content-disposition"]
-        == 'attachment; filename="kariba-redd-evidence.csv"'
+        csv_resp.headers["content-disposition"] == 'attachment; filename="kariba-redd-evidence.csv"'
     )
     assert csv_resp.headers["x-groundtruth-data-mode"] == "simulated"
     assert "# data_origin: SYNTHETIC_SIMULATION" in csv_resp.text
@@ -189,8 +185,7 @@ def test_fastapi_export_endpoints() -> None:
     assert pdf_resp.status_code == 200
     assert pdf_resp.headers["content-type"] == "application/pdf"
     assert (
-        pdf_resp.headers["content-disposition"]
-        == 'attachment; filename="kariba-redd-report.pdf"'
+        pdf_resp.headers["content-disposition"] == 'attachment; filename="kariba-redd-report.pdf"'
     )
     assert pdf_resp.headers["x-groundtruth-data-mode"] == "simulated"
     assert pdf_resp.content.startswith(b"%PDF-1.4")

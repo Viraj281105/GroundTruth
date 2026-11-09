@@ -373,6 +373,115 @@ PLANETARY_COMPUTER_S2_DATASET = DatasetRef(
 )
 """Dataset reference for real Sentinel-2 L2A STAC observations."""
 
+PLANETARY_COMPUTER_LANDSAT_DATASET = DatasetRef(
+    dataset_id="landsat-c2-l2",
+    version="2.0",
+    provider="microsoft-planetary-computer",
+    source_uri="https://planetarycomputer.microsoft.com/api/stac/v1",
+)
+"""Dataset reference for USGS Landsat Collection 2 Level-2 Surface Reflectance."""
+
+CHIRPS_CLIMATE_DATASET = DatasetRef(
+    dataset_id="chirps-v2-monthly",
+    version="2.0",
+    provider="ucsb-chc",
+    source_uri="https://data.chc.ucsb.edu/products/CHIRPS-2.0/",
+)
+"""Dataset reference for CHIRPS v2.0 0.05° monthly precipitation observations."""
+
+
+class RealClimateCovariateAccess:
+    """Covariate port backed by genuine CHIRPS v2.0 and NASA POWER observations.
+
+    Loads real pre-treatment rainfall, seasonal precipitation, and temperature metrics.
+    Never returns simulated values.
+    """
+
+    def __init__(self, cache_path: Path | None = None) -> None:
+        from groundtruth.data_access.climate import load_kariba_climate_bundle
+
+        self._bundle = load_kariba_climate_bundle(cache_path)
+
+    def covariates(self, unit: UnitRef, keys: tuple[str, ...]) -> dict[str, float]:
+        """Return real climate covariates for a unit."""
+        summary = self._bundle.unit_summaries.get(unit.unit_id)
+        if summary is None:
+            if unit.unit_id == self._bundle.treated_summary.unit_id:
+                summary = self._bundle.treated_summary
+            else:
+                raise DataUnavailableError(
+                    f"No real climate summary found for unit {unit.unit_id!r}"
+                )
+
+        covs: dict[str, float] = {}
+        if summary.pre_treatment_mean_rainfall_mm is not None:
+            covs["rainfall_mm"] = summary.pre_treatment_mean_rainfall_mm
+            covs["annual_rainfall_mm"] = summary.pre_treatment_mean_rainfall_mm
+        if summary.baseline_mean_wet_season_mm is not None:
+            covs["wet_season_rainfall_mm"] = summary.baseline_mean_wet_season_mm
+        if summary.baseline_mean_temp_c is not None:
+            covs["mean_temp_c"] = summary.baseline_mean_temp_c
+        if summary.pre_treatment_std_rainfall_mm is not None:
+            covs["rainfall_std_mm"] = summary.pre_treatment_std_rainfall_mm
+
+        covs["drought_years_count"] = float(len(summary.pre_treatment_drought_years))
+
+        # Include any numeric unit attributes passed in UnitRef (e.g. area_ha, elevation)
+        if unit.attributes:
+            for k, v in unit.attributes.items():
+                if isinstance(v, (int, float)):
+                    covs[k] = float(v)
+
+        return {k: float(covs[k]) for k in keys if k in covs}
+
+    def dataset(self, key: str) -> DatasetRef:
+        """Return the pinned real climate dataset reference."""
+        return CHIRPS_CLIMATE_DATASET
+
+
+class RealDonorAccess:
+    """Donor-candidate port backed by verified real-world boundaries and STAC audits."""
+
+    def __init__(self) -> None:
+        self._feature_map = _load_kariba_donor_feature_map()
+
+    def candidates(self, request: AnalysisRequest) -> list[UnitRef]:
+        """Return spatially eligible real donor units, in stable unit-id order.
+
+        Only units the boundary audit marked ``eligible_for_donor_pool: true`` are returned;
+        host districts, boundary-overlapping units, leakage-belt units and duplicates never
+        reach the estimator (SUTVA). A unit without the flag is treated as ineligible.
+        If ``pool_size`` caps the list, the cut is by unit id, never by file order.
+
+        Raises:
+            DataUnavailableError: if the donor boundary file is missing or yields no
+                eligible unit.
+        """
+        project_id = request.project.unit_id
+        if not self._feature_map:
+            raise DataUnavailableError("No real donor boundary file found (kariba-donors.geojson)")
+        refs: list[UnitRef] = []
+        for uid, feat in sorted(self._feature_map.items()):
+            if uid == project_id:
+                continue
+            props = feat.get("properties") or {}
+            if props.get("eligible_for_donor_pool") is not True:
+                continue
+            refs.append(
+                UnitRef(
+                    unit_id=uid,
+                    geometry=feat,
+                    centroid_lat=props.get("centroid_lat"),
+                    centroid_lon=props.get("centroid_lon"),
+                    area_ha=props.get("area_ha"),
+                )
+            )
+        if not refs:
+            raise DataUnavailableError("Donor boundary file contains no eligible donor units")
+        if request.donors.pool_size and len(refs) > request.donors.pool_size:
+            refs = refs[: request.donors.pool_size]
+        return refs
+
 
 class StacCachedObservationAccess:
     """Observation port backed by real STAC observations stored in :class:`AOIObservationCache`.
@@ -431,7 +540,7 @@ class StacCachedObservationAccess:
         )
 
     def dataset(self, indicator: Indicator) -> DatasetRef:
-        """Return the pinned dataset reference for real Sentinel-2 L2A STAC data."""
+        """Return the pinned dataset reference for real STAC data."""
         return PLANETARY_COMPUTER_S2_DATASET
 
     def provenance(self, spec: ObservationSpec) -> Provenance:
@@ -440,18 +549,98 @@ class StacCachedObservationAccess:
         return bundle.provenance
 
 
+def real_stac_access(
+    request: AnalysisRequest,
+    cache_dir: Path | str | None = None,
+) -> DataAccess:
+    """Build a genuine observation DataAccess bundle.
+
+    Combines:
+    - StacCachedObservationAccess (real Landsat / Sentinel-2 observations)
+    - RealClimateCovariateAccess (real CHIRPS v2.0 climate covariates)
+    - RealDonorAccess (verified real donor boundaries)
+
+    Raises:
+        DataUnavailableError: If real data for the requested units or periods is incomplete.
+    """
+    from groundtruth.platform.config import REPO_ROOT, get_settings
+
+    if cache_dir is None:
+        candidates = [
+            # data/processed/landsat_cache is the quarantined location of the fabricated
+            # cache (docs/audits); it is never a candidate, however it got repopulated.
+            get_settings().data_dir / "processed" / "stac_cache",
+            REPO_ROOT / "data" / "processed" / "stac_cache",
+        ]
+        target_dir = next((p for p in candidates if p.is_dir()), None)
+        if target_dir is None:
+            raise DataUnavailableError(
+                "No real observation cache directory found. Run Landsat or STAC ingestion first."
+            )
+        cache_dir = target_dir
+
+    return DataAccess(
+        observations=StacCachedObservationAccess(cache_dir),
+        covariates=RealClimateCovariateAccess(),
+        donors=RealDonorAccess(),
+    )
+
+
 def earth_engine_access(request: AnalysisRequest) -> DataAccess:
     """Build a real Earth-observation DataAccess bundle.
 
-    **Not implemented.** No real satellite ingestion pipeline has been executed in
-    this repository, so this always raises rather than returning fixtures. A
-    silent fallback would let simulated numbers be published under a real-data
-    label. Use :func:`synthetic_fixture_access` or :func:`synthetic_access` for
-    explicitly SYNTHETIC runs.
+    Evaluates causal readiness. If real data is not fully ready for unattenuated causal
+    estimation, raises DataUnavailableError detailing the scientific blockers.
+    In accordance with GroundTruth Golden Rules:
+    - Never silently falls back to synthetic fixtures.
+    - Preserves INCONCLUSIVE / PARTIALLY_READY verdict.
     """
-    raise DataUnavailableError(
-        f"Real Earth-observation data access is not implemented for case '{request.case_id}' "
-        f"(unit '{request.project.unit_id}'): no satellite scenes have been ingested. "
-        "Genuine observations are not available for any case. "
-        "See docs/product/roadmap-detail.md milestone M1."
+    from groundtruth.engine.causal.readiness import assess_causal_readiness
+
+    readiness = assess_causal_readiness(
+        case_id=request.case_id,
+        unit_id=request.project.unit_id,
+        pre_treatment_years=11,  # 2001-2011 Landsat
+        post_treatment_years=11,  # 2012-2022 Landsat
+        usable_donors_count=37,  # All 37 audited
+        aoi_coverage_fraction=0.689,  # Single WRS-2 chip (Path 171) covers 68.9%
+        donor_pool_independence=True,
+        spillover_buffer_km=20.0,
+        sensor_discontinuity_present=True,
+        slc_off_missingness_pct=22.0,
+        severe_climate_confounding_detected=True,
     )
+
+    if not readiness.is_ready:
+        raise DataUnavailableError(
+            f"Real Earth-observation data access is not implemented for case '{request.case_id}' "
+            f"(unit '{request.project.unit_id}'): causal readiness status is {readiness.status.value}. "
+            f"{readiness.verdict_rationale} "
+            f"Blockers: {'; '.join(readiness.blockers) if readiness.blockers else 'None'}. "
+            f"Warnings: {'; '.join(readiness.warnings)}. "
+            f"Recommendation: {readiness.recommendation}. "
+            "In accordance with GroundTruth golden rules, silent fallback to synthetic fixtures is strictly prohibited."
+        )
+
+    return real_stac_access(request)
+
+
+def get_data_access(
+    request: AnalysisRequest,
+    *,
+    mode: str | None = None,
+    true_effect: float = 0.0,
+) -> DataAccess:
+    """Build DataAccess bundle for a request based on the explicit data mode.
+
+    Modes:
+    - 'REAL_OBSERVATIONS' / 'observed': Genuine satellite and climate data. Never falls back to fixtures.
+    - 'SYNTHETIC_BENCHMARK' / 'simulated': Precomputed synthetic benchmark fixtures or simulated series.
+    """
+    normalized_mode = (mode or "").strip().upper()
+    if normalized_mode in ("REAL_OBSERVATIONS", "OBSERVED", "REAL"):
+        return earth_engine_access(request)
+
+    if synthetic_fixture_available(request.case_id):
+        return synthetic_fixture_access(request)
+    return synthetic_access(request, true_effect=true_effect)

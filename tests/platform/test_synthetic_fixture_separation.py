@@ -20,7 +20,6 @@ from groundtruth.contracts.request import UnitRef
 from groundtruth.contracts.result import EngineStatus
 from groundtruth.contracts.types import Indicator, VerdictLabel
 from groundtruth.engine import run_analysis
-from groundtruth.platform.api.app import app
 from groundtruth.platform.cases.registry import get_case
 from groundtruth.platform.datasets.access import (
     SYNTHETIC_KARIBA_FIXTURE_DATASET,
@@ -35,8 +34,9 @@ from groundtruth.platform.datasets.access import (
 
 
 @pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
+def client(tenant_world) -> TestClient:
+    """The Reference org's owner: ``/verify`` is project-scoped and needs START_RUN."""
+    return tenant_world.client("ref")
 
 
 def _fixture_request():

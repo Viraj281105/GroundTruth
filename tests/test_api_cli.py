@@ -6,12 +6,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from groundtruth.cli import main
-from groundtruth.platform.api.app import app
 
 
 @pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
+def client(tenant_world) -> TestClient:
+    """The Reference org's owner: the routes under test are project-scoped now."""
+    return tenant_world.client("ref")
 
 
 class TestApi:

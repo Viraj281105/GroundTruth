@@ -3,7 +3,9 @@
 **Owner: Bhumi.**
 
 These read what the worker and the evidence store have recorded; they run nothing and
-write nothing. The existing ``/cases/{id}/verify`` still runs an analysis inline and
+write nothing. Every route needs a session and is scoped to the projects the active
+organization owns or has been granted: a run is authorized through the project it is filed
+under, and one with no project is not found by anyone. The existing ``/cases/{id}/verify`` still runs an analysis inline and
 stores nothing; submitting jobs through the API is a separate issue (#37).
 
 A refused run is a legitimate outcome, so it is returned as a normal ``200`` with
@@ -15,13 +17,15 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 
 from groundtruth.contracts.result import AnalysisResult, AnalysisStatus
 from groundtruth.platform.api.cursor import CursorError, decode_cursor, encode_cursor
 from groundtruth.platform.api.dependencies import get_store, store_errors
 from groundtruth.platform.api.errors import ApiErrorBody, ApiErrorCode, api_error
 from groundtruth.platform.api.schemas import RunComparison, RunDetail, RunItem, RunListPage
+from groundtruth.platform.api.scope import accessible_projects, authorize_filed, run_not_found
+from groundtruth.platform.auth.authz import AccessContext, Capability, Context, level_allows
 from groundtruth.platform.compare.comparison import RunSide, compare_runs
 from groundtruth.platform.store.interface import (
     EvidenceStore,
@@ -35,7 +39,9 @@ router = APIRouter(prefix="/runs", tags=["runs"])
 Store = Annotated[EvidenceStore, Depends(get_store)]
 
 _ERRORS: dict[int | str, dict[str, Any]] = {
-    404: {"model": ApiErrorBody, "description": "No such run."},
+    401: {"model": ApiErrorBody, "description": "Not signed in."},
+    403: {"model": ApiErrorBody, "description": "Your access level does not allow this."},
+    404: {"model": ApiErrorBody, "description": "No such run, or no access to its project."},
     503: {"model": ApiErrorBody, "description": "The run store is not available."},
 }
 
@@ -55,10 +61,12 @@ def _require_aware(value: datetime | None, name: str) -> datetime | None:
     "",
     response_model=RunListPage,
     summary="List stored runs, newest first",
-    responses={503: _ERRORS[503]},
+    responses={401: _ERRORS[401], 503: _ERRORS[503]},
 )
 def list_runs(
     store: Store,
+    request: Request,
+    ctx: Context,
     case_id: Annotated[str | None, Query(description="Only this case.")] = None,
     status: Annotated[
         list[AnalysisStatus] | None,
@@ -81,6 +89,9 @@ def list_runs(
     changes, so runs written while you page cannot shift or repeat a page. A run whose
     write commits late can be missing from the scroll in progress and appears in the
     next one. There is no total count; it would be stale as soon as it was read.
+
+    Only runs filed under a project the active organization owns or has been granted are
+    listed; the scope is applied here, never taken from the query.
     """
     after_instant = _require_aware(created_after, "created_after")
     before_instant = _require_aware(created_before, "created_before")
@@ -95,6 +106,7 @@ def list_runs(
         data_mode=data_mode,
         created_after=after_instant,
         created_before=before_instant,
+        project_ids=tuple(sorted(p.id for p in accessible_projects(request, ctx))),
     )
     after = None
     if cursor is not None:
@@ -118,10 +130,21 @@ def list_runs(
     )
 
 
-def _load_side(store: EvidenceStore, run_id: str, role: str) -> tuple[RunSummary, RunSide]:
+def _load_side(
+    store: EvidenceStore, request: Request, ctx: AccessContext, run_id: str, role: str
+) -> tuple[RunSummary, RunSide]:
     summary = store.summary_for(run_id)
-    if summary is None:
-        raise api_error(ApiErrorCode.RUN_NOT_FOUND, f"No {role} run {run_id!r}.")
+    # A comparison reads both runs' evidence values, so it needs the same capability as the
+    # bundle itself. Checked before the bundle is opened, and a missing, unfiled or unseen run
+    # is one and the same 404.
+    authorize_filed(
+        request,
+        ctx,
+        summary.project_id if summary is not None else None,
+        Capability.DIAGNOSTICS,
+        not_found=run_not_found(run_id, f"{role} run"),
+    )
+    assert summary is not None
     result: AnalysisResult | None = None
     unreadable: str | None = None
     if summary.engine_status is not None:
@@ -141,6 +164,8 @@ def _load_side(store: EvidenceStore, run_id: str, role: str) -> tuple[RunSummary
 )
 def compare(
     store: Store,
+    request: Request,
+    ctx: Context,
     baseline: Annotated[str, Query(description="The reference run.")],
     candidate: Annotated[str, Query(description="The run to compare against it.")],
     include_unchanged: Annotated[
@@ -155,10 +180,14 @@ def compare(
     with every reason and returns **no diff**. A difference across engine versions is
     not presented as a change. Runs from different specifications are comparable, with
     `same_specification: false`.
+
+    Both runs must be filed under projects the caller can read with diagnostics access (the
+    comparison exposes evidence values); otherwise the pair is `404`, or `403` when the
+    project is visible but the level is too low.
     """
     with store_errors():
-        baseline_summary, baseline_side = _load_side(store, baseline, "baseline")
-        candidate_summary, candidate_side = _load_side(store, candidate, "candidate")
+        baseline_summary, baseline_side = _load_side(store, request, ctx, baseline, "baseline")
+        candidate_summary, candidate_side = _load_side(store, request, ctx, candidate, "candidate")
     outcome = compare_runs(baseline_side, candidate_side, include_unchanged=include_unchanged)
     return RunComparison.build(baseline_summary, candidate_summary, outcome)
 
@@ -171,6 +200,8 @@ def compare(
 )
 def get_run(
     store: Store,
+    request: Request,
+    ctx: Context,
     run_id: str,
     include_bundle: Annotated[
         bool, Query(description="Include the evidence bundle (it is large).")
@@ -189,12 +220,28 @@ def get_run(
     With `include_report=true` a run that has a bundle also carries `report_markdown`,
     rendered on read by the deterministic renderer. No language model narrates a
     stored run.
+
+    The run is authorized through its project. The evidence bundle and the report built from
+    it carry the causal diagnostics, so they are returned only to an owner or `audit` grant;
+    other levels get the same run without those two fields (redaction removes fields and
+    never changes values). `404` when the run is missing, unfiled, or in a project the caller
+    cannot see.
     """
     with store_errors():
         summary = store.summary_for(run_id)
-        if summary is None:
-            raise api_error(ApiErrorCode.RUN_NOT_FOUND, f"No run {run_id!r}.")
+        access = authorize_filed(
+            request,
+            ctx,
+            summary.project_id if summary is not None else None,
+            Capability.OVERVIEW,
+            not_found=run_not_found(run_id),
+        )
+        assert summary is not None
+        full = level_allows(access.level, Capability.DIAGNOSTICS)
         result = store.by_run_id(run_id) if summary.engine_status is not None else None
     return RunDetail.build(
-        summary, result, include_bundle=include_bundle, include_report=include_report
+        summary,
+        result,
+        include_bundle=include_bundle and full,
+        include_report=include_report and full,
     )

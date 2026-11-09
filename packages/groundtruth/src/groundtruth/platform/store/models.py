@@ -43,6 +43,9 @@ from groundtruth.contracts.version import (
 )
 from groundtruth.platform.store.interface import IncompatibleBundleError
 
+# Registers the append-only guard for audit_events whenever the schema is imported.
+import groundtruth.platform.audit  # noqa: F401  isort:skip
+
 # Explicit constraint names make migrations reproducible and give Alembic stable
 # names to drop on downgrade. SQLite in particular cannot drop an unnamed constraint.
 NAMING_CONVENTION = {
@@ -169,6 +172,8 @@ class AnalysisRunRow(Base):
     monitoring replays it later (ADR-006). ``None`` for a result saved without it.
     """
     requested_by: Mapped[str | None] = mapped_column(sa.String(100))
+    project_id: Mapped[str | None] = mapped_column(sa.ForeignKey("projects.id"))
+    """The tenant project this run belongs to (revision 0007). ``None`` for legacy runs."""
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), server_default=sa.func.now()
     )
@@ -241,6 +246,8 @@ class JobRow(Base):
     )
 
     run_id: Mapped[str] = mapped_column(sa.ForeignKey("analysis_runs.run_id"), primary_key=True)
+    project_id: Mapped[str | None] = mapped_column(sa.ForeignKey("projects.id"))
+    """Denormalised from the run (revision 0007) so a worker can scope work by project."""
     attempts: Mapped[int] = mapped_column(sa.Integer, server_default="0")
     max_attempts: Mapped[int] = mapped_column(sa.Integer, server_default="3")
     available_at: Mapped[datetime] = mapped_column(
@@ -348,3 +355,136 @@ class SessionRow(Base):
     expires_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     user_agent: Mapped[str | None] = mapped_column(sa.String(300))
+    active_organization_id: Mapped[str | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="SET NULL")
+    )
+    """The organization this sign-in is acting for (revision 0007)."""
+
+
+ORG_TYPES: tuple[str, ...] = ("ngo", "funder", "auditor", "government", "reference")
+"""Organization kinds. ``reference`` is the system org that owns imported cases."""
+
+MEMBER_ROLES: tuple[str, ...] = ("owner", "admin", "member", "viewer")
+"""Roles inside one organization, highest to lowest."""
+
+GRANT_LEVELS: tuple[str, ...] = ("view", "audit", "contribute")
+"""What a project owner lets another organization do with a project."""
+
+AUDIT_OUTCOMES: tuple[str, ...] = ("success", "denied", "error")
+
+
+class OrganizationRow(Base):
+    """A tenant: an NGO, funder, auditor, government body or the reference org."""
+
+    __tablename__ = "organizations"
+    __table_args__ = (
+        sa.CheckConstraint(_in_list("type", ORG_TYPES), name="type_valid"),
+        sa.UniqueConstraint("slug"),
+    )
+
+    id: Mapped[str] = mapped_column(sa.String(36), primary_key=True)
+    slug: Mapped[str] = mapped_column(sa.String(100))
+    name: Mapped[str] = mapped_column(sa.String(200))
+    type: Mapped[str] = mapped_column(sa.String(16))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+
+
+class MembershipRow(Base):
+    """A user's role inside one organization."""
+
+    __tablename__ = "memberships"
+    __table_args__ = (
+        sa.CheckConstraint(_in_list("role", MEMBER_ROLES), name="role_valid"),
+        sa.UniqueConstraint("user_id", "organization_id"),
+        sa.Index("ix_memberships_organization_id", "organization_id"),
+    )
+
+    id: Mapped[str] = mapped_column(sa.String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(sa.ForeignKey("users.id", ondelete="CASCADE"))
+    organization_id: Mapped[str] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE")
+    )
+    role: Mapped[str] = mapped_column(sa.String(16))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+
+
+class ProjectRow(Base):
+    """A project owned by one organization. ``case_id`` links it to the engine's case."""
+
+    __tablename__ = "projects"
+    __table_args__ = (
+        sa.CheckConstraint(_in_list("data_mode", DATA_MODES), name="data_mode_valid"),
+        sa.UniqueConstraint("slug"),
+        sa.UniqueConstraint("case_id"),
+        sa.Index("ix_projects_organization_id", "organization_id"),
+    )
+
+    id: Mapped[str] = mapped_column(sa.String(36), primary_key=True)
+    slug: Mapped[str] = mapped_column(sa.String(100))
+    organization_id: Mapped[str] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE")
+    )
+    case_id: Mapped[str | None] = mapped_column(sa.ForeignKey("cases.case_id"))
+    name: Mapped[str] = mapped_column(sa.String(200))
+    country: Mapped[str] = mapped_column(sa.String(100))
+    ecosystem: Mapped[str] = mapped_column(sa.String(100))
+    intervention: Mapped[str] = mapped_column(sa.String(100))
+    treatment_start_year: Mapped[int] = mapped_column(sa.Integer)
+    boundary_path: Mapped[str | None] = mapped_column(sa.String(500))
+    boundary_sha256: Mapped[str | None] = mapped_column(sa.String(64))
+    data_mode: Mapped[str] = mapped_column(sa.String(16))
+    reported_funding_amount: Mapped[float | None] = mapped_column(sa.Numeric(18, 2))
+    """Reported by the owner; shown as such, never computed."""
+    reported_funding_currency: Mapped[str | None] = mapped_column(sa.String(3))
+    created_by: Mapped[str | None] = mapped_column(sa.ForeignKey("users.id", ondelete="SET NULL"))
+    """``None`` for projects imported from YAML by the seed, which have no human creator."""
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+
+
+class ProjectGrantRow(Base):
+    """Access an owner gives another organization to one project."""
+
+    __tablename__ = "project_grants"
+    __table_args__ = (
+        sa.CheckConstraint(_in_list("level", GRANT_LEVELS), name="level_valid"),
+        sa.UniqueConstraint("project_id", "grantee_organization_id"),
+        sa.Index("ix_project_grants_grantee_organization_id", "grantee_organization_id"),
+    )
+
+    id: Mapped[str] = mapped_column(sa.String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(sa.ForeignKey("projects.id", ondelete="CASCADE"))
+    grantee_organization_id: Mapped[str] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE")
+    )
+    level: Mapped[str] = mapped_column(sa.String(16))
+    granted_by: Mapped[str | None] = mapped_column(sa.ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+
+
+class AuditEventRow(Base):
+    """One security-relevant event. Append-only: no code path updates or deletes it.
+
+    Actor and organization are plain strings rather than foreign keys, so deleting a
+    user or organization never rewrites or blocks the history of what they did.
+    """
+
+    __tablename__ = "audit_events"
+    __table_args__ = (
+        sa.CheckConstraint(_in_list("outcome", AUDIT_OUTCOMES), name="outcome_valid"),
+        sa.Index("ix_audit_events_occurred_at", "occurred_at"),
+        sa.Index("ix_audit_events_organization_id_occurred_at", "organization_id", "occurred_at"),
+    )
+
+    id: Mapped[str] = mapped_column(sa.String(36), primary_key=True)
+    occurred_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    actor_user_id: Mapped[str | None] = mapped_column(sa.String(36))
+    organization_id: Mapped[str | None] = mapped_column(sa.String(36))
+    action: Mapped[str] = mapped_column(sa.String(100))
+    resource_type: Mapped[str] = mapped_column(sa.String(50))
+    resource_id: Mapped[str | None] = mapped_column(sa.String(100))
+    outcome: Mapped[str] = mapped_column(sa.String(16))
+    ip: Mapped[str | None] = mapped_column(sa.String(64))
+    user_agent: Mapped[str | None] = mapped_column(sa.String(300))
+    details: Mapped[dict[str, Any]] = mapped_column(JsonDocument)

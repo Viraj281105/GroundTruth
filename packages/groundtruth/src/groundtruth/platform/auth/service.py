@@ -29,6 +29,12 @@ _CODE_STATUS = {
     "registration_closed": 403,
     "user_not_found": 404,
     "last_admin": 409,
+    "no_active_organization": 409,
+    "not_found": 404,
+    "conflict": 409,
+    "invalid_boundary": 422,
+    "invalid_grant": 422,
+    "invalid_cursor": 422,
 }
 
 
@@ -52,7 +58,16 @@ def register(db: Session, email: str, password: str, *, now: datetime | None = N
         raise auth_error("weak_password", problem)
     if db.execute(select(UserRow.id).where(UserRow.email == email)).first() is not None:
         raise auth_error("email_taken", "An account with that email already exists.")
-    first = db.execute(select(func.count()).select_from(UserRow)).scalar_one() == 0
+    # Bootstrap: a self-registered user is admin while no active admin exists. (Counting users
+    # instead would let a seeded demo account consume the bootstrap.)
+    first = (
+        db.execute(
+            select(func.count())
+            .select_from(UserRow)
+            .where(UserRow.role == "admin", UserRow.is_active.is_(True))
+        ).scalar_one()
+        == 0
+    )
     user = UserRow(
         id=str(uuid.uuid4()),
         email=email,

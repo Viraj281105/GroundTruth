@@ -25,7 +25,21 @@ from groundtruth.contracts.version import is_compatible, parse_version
 SRC = pathlib.Path(__file__).resolve().parents[1] / "src" / "groundtruth"
 
 # The only engine names the platform is allowed to import.
-ENGINE_PUBLIC_API = {"run_analysis", "describe_engine", "engine_ref", "ENGINE_VERSION"}
+ENGINE_PUBLIC_API = {
+    "run_analysis",
+    "describe_engine",
+    "engine_ref",
+    "ENGINE_VERSION",
+    # Deliberate public-API addition (spec 6A): the platform assessment adapter feeds the pure
+    # assessment engine. Only the entry point and its input/output types are exposed.
+    "assess",
+    "Assessment",
+    "AssessmentInputs",
+    "ClimateYear",
+    "ReadinessSummary",
+    "SeriesPoint",
+    "SpreadPoint",
+}
 
 
 def imported_modules(path: pathlib.Path) -> list[tuple[str, list[str]]]:

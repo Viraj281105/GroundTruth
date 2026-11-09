@@ -25,8 +25,26 @@ from groundtruth.platform.cases.registry import get_case
 def _isolate_auth_settings(monkeypatch):
     """Ensure tests run unauthenticated by default, regardless of ambient .env."""
     from groundtruth.platform.config import get_settings
+
     s = get_settings()
     monkeypatch.setattr(s, "auth_required", False)
+
+
+@pytest.fixture
+def tenant_world(tmp_path, monkeypatch):
+    """A seeded multi-tenant world with signed-in HTTP clients (see ``tests/tenancy/world.py``).
+
+    For route tests outside ``tests/tenancy``: the read and run routes are project-scoped, so
+    they are driven by a signed-in persona, e.g. ``tenant_world.client("ref")`` (owner of every
+    seeded case project).
+    """
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent / "tenancy"))
+    from world import tenant_world_iter
+
+    yield from tenant_world_iter(tmp_path, monkeypatch)
 
 
 @pytest.fixture

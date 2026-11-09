@@ -2,7 +2,9 @@
 
 The same state ``GET /jobs/{run_id}`` serves, pushed instead of polled: the server polls the
 job store and emits an event whenever the view changes, then ends the stream once the job is
-terminal. Like the jobs router it has no authentication.
+terminal. Like the jobs router it needs a session and access to the job's project, and the
+check happens before the stream is opened: a denied caller gets a plain ``404`` (or ``403``)
+and never holds a connection.
 """
 
 from __future__ import annotations
@@ -13,12 +15,14 @@ import time
 from collections.abc import AsyncIterator
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from groundtruth.platform.api.dependencies import get_jobs, store_errors
 from groundtruth.platform.api.errors import ApiErrorBody, ApiErrorCode, api_error
 from groundtruth.platform.api.schemas import JobView
+from groundtruth.platform.api.scope import authorize_filed
+from groundtruth.platform.auth.authz import Capability, Context
 from groundtruth.platform.jobs.interface import JobControl
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -36,6 +40,13 @@ def _view(jobs: JobControl, job_id: str) -> JobView | None:
     with store_errors():
         job = jobs.status(job_id)
     return None if job is None else JobView.build(job)
+
+
+def _project_of(jobs: JobControl, job_id: str) -> str | None:
+    """The project a job is filed under (``None``: no such job, or an unfiled one)."""
+    with store_errors():
+        job = jobs.status(job_id)
+    return None if job is None else job.project_id
 
 
 def _frame(event: str, view: JobView) -> str:
@@ -81,7 +92,8 @@ _RESPONSES: dict[int | str, dict[str, Any]] = {
         "content": {"text/event-stream": {"schema": {"type": "string"}}},
         "description": "A stream of job events.",
     },
-    404: {"model": ApiErrorBody, "description": "No such job."},
+    401: {"model": ApiErrorBody, "description": "Not signed in."},
+    404: {"model": ApiErrorBody, "description": "No such job, or no access to its project."},
     503: {"model": ApiErrorBody, "description": "The job store is not available."},
 }
 
@@ -92,12 +104,22 @@ _RESPONSES: dict[int | str, dict[str, Any]] = {
     response_class=StreamingResponse,
     responses=_RESPONSES,
 )
-async def job_events(job_id: str, jobs: Jobs) -> StreamingResponse:
+async def job_events(job_id: str, jobs: Jobs, request: Request, ctx: Context) -> StreamingResponse:
     """Emit a `progress` event with the full job view on every change, then a final `done`.
 
     The stream ends once the job is terminal. Unknown jobs are `404` and an unavailable
-    store is `503` before any event is sent, exactly as for `GET /jobs/{run_id}`.
+    store is `503` before any event is sent, exactly as for `GET /jobs/{run_id}`. So is a job
+    in a project the caller cannot read: authorization comes first, then the stream.
     """
+    project_id = await asyncio.to_thread(_project_of, jobs, job_id)
+    await asyncio.to_thread(
+        authorize_filed,
+        request,
+        ctx,
+        project_id,
+        Capability.OVERVIEW,
+        not_found=lambda: api_error(ApiErrorCode.RUN_NOT_FOUND, f"No job {job_id!r}."),
+    )
     first = await asyncio.to_thread(_view, jobs, job_id)
     if first is None:
         raise api_error(ApiErrorCode.RUN_NOT_FOUND, f"No job {job_id!r}.")

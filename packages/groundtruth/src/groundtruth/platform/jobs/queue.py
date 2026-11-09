@@ -137,7 +137,13 @@ class JobQueue:
 
     # --- submitting ------------------------------------------------------------
 
-    def submit(self, request: AnalysisRequest, *, requested_by: str | None = None) -> Submission:
+    def submit(
+        self,
+        request: AnalysisRequest,
+        *,
+        requested_by: str | None = None,
+        project_id: str | None = None,
+    ) -> Submission:
         """Queue a request, unless a result or an identical job already exists.
 
         1. A stored result for the same ``spec_hash``, ``data_mode`` and engine version
@@ -149,6 +155,11 @@ class JobQueue:
         3. Otherwise a new run and job are created, ``QUEUED``. The full request is
            stored with the run, so it executes exactly as submitted.
 
+        ``requested_by`` and ``project_id`` are recorded on a new run (and the job carries
+        the project too). When an existing run answers instead, it is filed under
+        ``project_id`` if it had none, so a legacy run the same caller asks for again becomes
+        readable; a run already filed elsewhere is never moved.
+
         Raises:
             UnknownCaseError: if the case is not stored (``upsert_case`` first).
         """
@@ -156,6 +167,7 @@ class JobQueue:
             request.spec_hash, data_mode=request.data_mode, engine_version=self._engine_version
         )
         if cached is not None:
+            self._adopt(cached.run_id, project_id)
             return Submission(run_id=cached.run_id, status=SUCCEEDED, from_cache=True)
 
         now = self._clock()
@@ -173,6 +185,7 @@ class JobQueue:
                 .limit(1)
             ).first()
             if in_flight is not None:
+                self._adopt_in(session, in_flight.run_id, project_id)
                 return Submission(
                     run_id=in_flight.run_id,
                     status=AnalysisStatus(in_flight.status),
@@ -197,6 +210,7 @@ class JobQueue:
                     dataset_refs=[d.model_dump(mode="json") for d in request.datasets],
                     request=request.model_dump(mode="json"),
                     requested_by=requested_by,
+                    project_id=project_id,
                     created_at=now,
                 )
             )
@@ -204,6 +218,7 @@ class JobQueue:
             session.add(
                 JobRow(
                     run_id=run_id,
+                    project_id=project_id,
                     attempts=0,
                     max_attempts=self._max_attempts,
                     available_at=now,
@@ -212,6 +227,23 @@ class JobQueue:
                 )
             )
         return Submission(run_id=run_id, status=QUEUED)
+
+    def _adopt(self, run_id: str, project_id: str | None) -> None:
+        with self._sessions.begin() as session:
+            self._adopt_in(session, run_id, project_id)
+
+    @staticmethod
+    def _adopt_in(session: Session, run_id: str, project_id: str | None) -> None:
+        """File an unfiled run (and its job) under ``project_id``; never move a filed one."""
+        if project_id is None:
+            return
+        for model in (AnalysisRunRow, JobRow):
+            session.execute(
+                sa.update(model)
+                .where(model.run_id == run_id, model.project_id.is_(None))
+                .values(project_id=project_id)
+                .execution_options(synchronize_session=False)
+            )
 
     # --- claiming --------------------------------------------------------------
 
@@ -561,6 +593,7 @@ class JobQueue:
             return JobStatus(
                 run_id=run.run_id,
                 case_id=run.case_id,
+                project_id=run.project_id,
                 status=AnalysisStatus(run.status),
                 engine_status=run.engine_status,
                 data_mode=run.data_mode,

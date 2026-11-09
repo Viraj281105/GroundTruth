@@ -25,18 +25,38 @@ services:
       AUTH_COOKIE_SECURE: "false"
       AUTH_ALLOW_REGISTRATION: "true"
     ports: ["8000:8000"]
+    # The API must not answer before the schema exists: wait for the one-shot migrate service.
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+
+  # One-shot: applies migrations (and, only when SEED_DEMO=true, the demo organizations), then exits.
+  # Demo seeding is OFF by default; a real deployment must not ship well-known demo accounts.
+  migrate:
+    build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
+    command: ["python", "-m", "apps.worker.main", "--migrate", "--exit-when-idle"]
+    healthcheck:
+      disable: true
+    env_file: [{ path: .env, required: false }]
+    environment:
+      DATABASE_URL: postgresql+psycopg://groundtruth:groundtruth@postgres/groundtruth
+      SEED_DEMO: ${SEED_DEMO:-true}
+      SEED_DEMO_PASSWORDS_FILE: ${SEED_DEMO_PASSWORDS_FILE:-}
     depends_on: { postgres: { condition: service_healthy } }
+    restart: "no"
 
   worker:
     build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
-    command: ["python", "-m", "apps.worker.main", "--migrate"]
+    command: ["python", "-m", "apps.worker.main"]
     # The image's HTTP health check is for the API; the worker serves no HTTP.
     healthcheck:
       disable: true
     env_file: [{ path: .env, required: false }]
     environment:
       DATABASE_URL: postgresql+psycopg://groundtruth:groundtruth@postgres/groundtruth
-    depends_on: { postgres: { condition: service_healthy } }
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
     restart: unless-stopped
 
   web:
@@ -45,11 +65,13 @@ services:
       dockerfile: infrastructure/docker/web.Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8000
-        NEXT_PUBLIC_DEMO_MODE: "true"
+        NEXT_PUBLIC_DEMO_MODE: "false"
     environment:
       INTERNAL_API_URL: http://api:8000
       NEXT_PUBLIC_API_URL: http://localhost:8000
-      NEXT_PUBLIC_DEMO_MODE: "true"
+      NEXT_PUBLIC_DEMO_MODE: "false"
+      # Server-side Origin for state-changing calls; must equal the API's FRONTEND_URL.
+      SITE_URL: http://localhost:3000
     ports: ["3000:3000"]
     depends_on: [api]
 

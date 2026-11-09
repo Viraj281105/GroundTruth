@@ -278,6 +278,8 @@ def test_no_store_with_auth_off_still_works(settings, monkeypatch):
             "auth_required": False,
             "registration_open": False,
             "user": None,
+            "organizations": [],
+            "active_organization": None,
         }
 
 

@@ -157,7 +157,7 @@ async def test_csrf_middleware_blocks_untrusted_origin_on_cookie_post() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 4. Alembic Migration Chain Integrity (0001 -> 0006)
+# 4. Alembic Migration Chain Integrity (0001 -> 0007)
 # ---------------------------------------------------------------------------
 
 
@@ -199,6 +199,7 @@ def test_alembic_migration_chain_integrity() -> None:
         "0004_run_listing_indexes.py",
         "0005_job_stage.py",
         "0006_auth_users_and_sessions.py",
+        "0007_tenancy.py",
     ]
     for fname in expected_files:
         assert (versions_dir / fname).is_file(), f"Missing migration file: {fname}"
@@ -218,8 +219,8 @@ def test_alembic_migration_chain_integrity() -> None:
 
     head_file_stem = Path(expected_files[-1]).stem
     head_revision = chain[-1][0]
-    assert head_file_stem == "0006_auth_users_and_sessions"
-    assert head_revision in {"0006", "0006_auth_users_and_sessions"}
+    assert head_file_stem == "0007_tenancy"
+    assert head_revision in {"0007", "0007_tenancy"}
 
 
 # ---------------------------------------------------------------------------

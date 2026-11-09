@@ -146,9 +146,7 @@ def _build_report_lines(
     lines.append(("", 9, 8.0))
 
     if is_sim:
-        lines.append(
-            ("SIMULATED / SYNTHETIC DATA RUN — NOT SATELLITE OBSERVATIONS", 11, 16.0)
-        )
+        lines.append(("SIMULATED / SYNTHETIC DATA RUN — NOT SATELLITE OBSERVATIONS", 11, 16.0))
         lines.append(
             (
                 "Data Provenance: SYNTHETIC_SIMULATION (is_simulated=True). "
