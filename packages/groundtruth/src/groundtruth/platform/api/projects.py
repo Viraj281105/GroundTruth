@@ -7,6 +7,7 @@ anything is written, so a rejected upload leaves no row and no file.
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 from typing import Annotated, Any
 
@@ -33,6 +34,7 @@ from groundtruth.platform.api.project_schemas import (
 )
 from groundtruth.platform.api.schemas import SIMULATED_NOTICE, ProjectView
 from groundtruth.platform.api.scope import audit
+from groundtruth.platform.audit.ledger import AuditLedger
 from groundtruth.platform.audit.service import record_event
 from groundtruth.platform.auth.authz import (
     AccessContext,
@@ -46,6 +48,7 @@ from groundtruth.platform.auth.authz import (
 from groundtruth.platform.auth.deps import resolve_sessions
 from groundtruth.platform.auth.service import auth_error
 from groundtruth.platform.config import get_settings
+from groundtruth.platform.projects import documents as documents_service
 from groundtruth.platform.projects import service, views
 from groundtruth.platform.projects.assessment import build_project_assessment
 from groundtruth.platform.projects.boundary import (
@@ -60,6 +63,7 @@ from groundtruth.platform.store.interface import EvidenceStore, RunFilter
 from groundtruth.platform.store.models import OrganizationRow, ProjectRow
 
 router = APIRouter(tags=["projects"])
+_log = logging.getLogger(__name__)
 
 
 class ProjectUploadForm(BaseModel):
@@ -269,7 +273,12 @@ def get_evidence_inventory(request: Request, access: Reader) -> JSONResponse:
     """Counts, kinds, states and sources for everyone; checksums, scene ids and the item list
     only for levels that hold full evidence access (a `view` grant gets the summary)."""
     project = _fresh(request, access)
-    view = views.build_inventory(project, access.level.value, get_settings().data_dir)
+    with resolve_sessions(request)() as db:
+        documents = [
+            documents_service.document_dict(r)
+            for r in documents_service.list_documents(db, project.id)
+        ]
+    view = views.build_inventory(project, access.level.value, get_settings().data_dir, documents)
     return _respond(view, access)
 
 
@@ -574,20 +583,50 @@ def export_dossier(request: Request, access: DossierExporter) -> Response:
     """README with limitations, readiness, evidence inventory, assessment, observations, climate,
     provenance and a sha256 manifest. Owner and audit levels only; the download is audited."""
     project = _fresh(request, access)
-    content = build_dossier(project, data_dir=get_settings().data_dir)
+    with resolve_sessions(request)() as db:
+        documents = [
+            documents_service.document_dict(r)
+            for r in documents_service.list_documents(db, project.id)
+        ]
+    content = build_dossier(project, data_dir=get_settings().data_dir, documents=documents)
+    headers = {
+        "Content-Disposition": f'attachment; filename="{project.slug}-dossier.zip"',
+        "X-GroundTruth-Data-Mode": views.data_mode_of(project),
+    }
+    # Bind the exact bytes to the ledger. If sealing fails the file is still delivered, but
+    # without seal headers and with an explicit "unsealed" marker: a download is never
+    # described as sealed unless a record really exists.
+    seal_details: dict[str, Any] = {}
+    try:
+        ledger = AuditLedger(resolve_sessions(request))
+        record = ledger.record_report_seal(
+            project.id,
+            report_kind="technical_dossier",
+            content=content,
+            boundary_geometry_hash=f"sha256:{project.boundary_sha256}"
+            if project.boundary_sha256
+            else "unrecorded",
+            details={"data_mode": views.data_mode_of(project)},
+        )
+        verification = ledger.verify_project(project.id)
+        headers.update(
+            {
+                "X-GroundTruth-Ledger-Record": record.record_id,
+                "X-GroundTruth-Ledger-Sequence": str(record.sequence),
+                "X-GroundTruth-Ledger-Root": verification.ledger_root or "",
+                "X-GroundTruth-Report-SHA256": record.input_files_hashes["technical_dossier"],
+            }
+        )
+        seal_details = {"ledger_record_id": record.record_id}
+    except Exception:
+        _log.exception("could not seal dossier for project %s", project.id)
+        headers["X-GroundTruth-Ledger"] = "unsealed"
     audit(
         request,
         access.ctx,
         action="export.download",
         resource_type="project",
         resource_id=project.id,
-        details={"format": "dossier"},
+        details={"format": "dossier", **seal_details},
     )
-    return Response(
-        content=content,
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": f'attachment; filename="{project.slug}-dossier.zip"',
-            "X-GroundTruth-Data-Mode": views.data_mode_of(project),
-        },
-    )
+    return Response(content=content, media_type="application/zip", headers=headers)

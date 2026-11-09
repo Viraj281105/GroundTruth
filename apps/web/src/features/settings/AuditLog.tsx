@@ -5,8 +5,10 @@ import { Button } from '../../components/ds';
 import { createApiClient, type Schemas } from '../../lib/api-client';
 import { apiErrorMessage, detailOf } from '../projects/model';
 import styles from '../projects/projects.module.css';
+import { actorLabel, collapseRuns, formatWhen, humanizeAction, humanizeOutcome, resourceLabel } from './audit-model';
 
-type Event = Schemas['AuditEventView'];
+// `actor_email` is additive on the API; this stays valid before and after the generated types include it.
+type Event = Schemas['AuditEventView'] & { actor_email?: string | null };
 
 /** Audit log, newest first, loaded a page at a time with the API's cursor. */
 export function AuditLog({ orgSlug, initial, initialCursor }: { orgSlug: string; initial: Event[]; initialCursor: string | null }) {
@@ -49,18 +51,23 @@ export function AuditLog({ orgSlug, initial, initialCursor }: { orgSlug: string;
               </tr>
             </thead>
             <tbody>
-              {events.map((e) => (
-                <tr key={e.id}>
-                  <td>{e.occurred_at}</td>
-                  <td>{e.action}</td>
-                  <td>
-                    {e.resource_type}
-                    {e.resource_id ? ` ${e.resource_id}` : ''}
-                  </td>
-                  <td>{e.outcome}</td>
-                  <td>{e.actor_user_id ?? '—'}</td>
-                </tr>
-              ))}
+              {collapseRuns(events).map(({ event: e, count }) => {
+                const who = actorLabel(e);
+                return (
+                  <tr key={e.id}>
+                    <td>
+                      <time dateTime={e.occurred_at}>{formatWhen(e.occurred_at)}</time>
+                    </td>
+                    <td title={e.action}>
+                      {humanizeAction(e.action)}
+                      {count > 1 ? ` (×${count})` : ''}
+                    </td>
+                    <td title={e.resource_id ? `${e.resource_type} ${e.resource_id}` : e.resource_type}>{resourceLabel(e.resource_type, e.resource_id)}</td>
+                    <td>{humanizeOutcome(e.outcome)}</td>
+                    <td title={e.actor_user_id ?? undefined}>{who.text}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

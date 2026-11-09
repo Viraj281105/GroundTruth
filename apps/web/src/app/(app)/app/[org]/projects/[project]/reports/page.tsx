@@ -1,4 +1,5 @@
 import React from 'react';
+import { LedgerPanel } from '../../../../../../../features/projects/LedgerPanel';
 import { ReportsView } from '../../../../../../../features/projects/ReportsView';
 import { ProblemPanel } from '../../../../../../../features/projects/ProblemPanel';
 import { fetched, loadProject } from '../../../../../../../features/projects/server';
@@ -12,5 +13,10 @@ export default async function ReportsPage({ params }: { params: { project: strin
   const project = await loadProject(params.project);
   const v = await fetched(() => serverApi().GET('/projects/{project_id}/verification', { params: { path: { project_id: project.id } } }));
   if (!v.data && v.status !== 403) return <ProblemPanel title="Reports" status={v.status} />;
-  return <ReportsView projectId={project.id} level={project.access_level} caseId={v.data?.case_id ?? null} />;
+  return (
+    <>
+      <ReportsView projectId={project.id} level={project.access_level} caseId={v.data?.case_id ?? null} />
+      <LedgerPanel projectId={project.id} />
+    </>
+  );
 }

@@ -15,6 +15,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from groundtruth.platform.api.errors import ApiErrorBody
@@ -41,7 +42,7 @@ from groundtruth.platform.config import get_settings
 from groundtruth.platform.projects import service, views
 from groundtruth.platform.projects.assessment import build_project_assessment
 from groundtruth.platform.projects.redaction import redact
-from groundtruth.platform.store.models import ProjectRow
+from groundtruth.platform.store.models import MembershipRow, ProjectRow, UserRow
 
 logger = logging.getLogger(__name__)
 
@@ -169,12 +170,27 @@ def get_audit(
             rows, next_cursor = list_events(db, ctx.org_id, cursor=cursor, limit=limit)
         except ValueError as exc:
             raise auth_error("invalid_cursor", "The cursor is not valid.") from exc
+        # Only members of the viewing organization are named; any other actor stays an id.
+        actor_ids = {r.actor_user_id for r in rows if r.actor_user_id}
+        emails: dict[str, str] = {}
+        if actor_ids:
+            emails = dict(
+                db.execute(
+                    select(MembershipRow.user_id, UserRow.email)
+                    .join(UserRow, UserRow.id == MembershipRow.user_id)
+                    .where(
+                        MembershipRow.organization_id == ctx.org_id,
+                        MembershipRow.user_id.in_(actor_ids),
+                    )
+                ).all()
+            )
         return AuditPage(
             events=[
                 AuditEventView(
                     id=r.id,
                     occurred_at=r.occurred_at,
                     actor_user_id=r.actor_user_id,
+                    actor_email=emails.get(r.actor_user_id) if r.actor_user_id else None,
                     action=r.action,
                     resource_type=r.resource_type,
                     resource_id=r.resource_id,

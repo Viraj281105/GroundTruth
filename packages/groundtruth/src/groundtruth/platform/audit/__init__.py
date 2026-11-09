@@ -24,14 +24,15 @@ from groundtruth.platform.audit.ledger import (
 
 
 def _reject_audit_mutation(session: Session, flush_context: Any, instances: Any) -> None:
-    from groundtruth.platform.store.models import AuditEventRow
+    from groundtruth.platform.store.models import AuditEventRow, AuditRecordRow
 
+    guarded = (AuditEventRow, AuditRecordRow)
     for obj in session.deleted:
-        if isinstance(obj, AuditEventRow):
-            raise ProvenanceError("audit_events is append-only: rows cannot be deleted.")
+        if isinstance(obj, guarded):
+            raise ProvenanceError(f"{obj.__tablename__} is append-only: rows cannot be deleted.")
     for obj in session.dirty:
-        if isinstance(obj, AuditEventRow) and session.is_modified(obj):
-            raise ProvenanceError("audit_events is append-only: rows cannot be modified.")
+        if isinstance(obj, guarded) and session.is_modified(obj):
+            raise ProvenanceError(f"{obj.__tablename__} is append-only: rows cannot be modified.")
 
 
 if not event.contains(Session, "before_flush", _reject_audit_mutation):

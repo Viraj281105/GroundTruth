@@ -10,10 +10,11 @@ import { ReadinessChecklist } from '../../components/panels/ReadinessChecklist';
 import { ActivityFeed } from '../../components/panels/ActivityFeed';
 import { dataModeFor } from './derive';
 import type { DashboardData } from './loadDashboardData';
-import { LibraryNotice, NoProjects, ProjectSwitcher, Question, Region, Slot } from './parts';
+import { Hint, LibraryNotice, NoProjects, ProjectSwitcher, Question, Region, Slot } from './parts';
 import styles from './dashboards.module.css';
 
 export const NGO_QUESTION = 'Where should we intervene or inspect?';
+export const NGO_HELP = 'Pick a project to see what its satellite and weather records show, which areas may need a field visit, and whether the evidence is strong enough to report results.';
 
 /** NGO layout; also used (read-only) by `reference` orgs. */
 export function NgoDashboard({ data }: { data: DashboardData }) {
@@ -22,7 +23,7 @@ export function NgoDashboard({ data }: { data: DashboardData }) {
   return (
     <div className={styles.dashboard} data-dashboard="ngo" data-read-only={data.readOnly ? 'true' : 'false'}>
       <SetDataMode mode={sel ? dataModeFor([sel]) : 'observed'} />
-      <Question text={NGO_QUESTION} />
+      <Question text={NGO_QUESTION} help={NGO_HELP} />
       {data.readOnly && <p className={styles.muted}>Reference library: this workspace is read-only.</p>}
       <Slot panel={data.projects} title="Projects" render={(projects) => (projects.length === 0 || !data.scope ? <NoProjects orgSlug={data.orgSlug} readOnly={data.readOnly} /> : <ProjectSwitcher orgSlug={data.orgSlug} scope={data.scope} />)} />
       {sel && data.scope?.libraryCase && <LibraryNotice project={sel} />}
@@ -35,13 +36,14 @@ export function NgoDashboard({ data }: { data: DashboardData }) {
             <Region id="map" title="Project area and comparison areas">
               <ProjectMap boundaryUrl={boundaryUrlFor(sel.id)} donorsUrl={donorsUrlFor(sel.id)} />
             </Region>
-            <Region id="index-series" title="Vegetation indices" collapsible defaultOpen badge="Observations">
+            <Region id="index-series" title="How green the land is over time" collapsible defaultOpen badge="Satellite observations">
               <Slot panel={data.series} title="Vegetation indices" render={(series) => <IndexSeriesPanel series={series} />} />
             </Region>
             <Region id="climate" title="Climate context" collapsible badge="Weather & drought">
               <Slot panel={data.climate} title="Climate" render={(c) => <ClimatePanel data={c} />} />
             </Region>
-            <Region id="readiness" title="Attribution readiness" collapsible badge="Criteria checklist">
+            <Region id="readiness" title="Is the evidence strong enough?" collapsible badge="Checklist">
+              <p className={styles.muted}>This checklist shows whether we can fairly credit changes to the project (<Hint id="attribution-readiness" />) rather than to weather or other causes.</p>
               <Slot panel={data.readiness} title="Readiness" render={(r) => <ReadinessChecklist data={r} />} />
             </Region>
             <Region id="field-tasks" title="Field tasks" collapsible badge="Operations">

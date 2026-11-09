@@ -8,6 +8,7 @@ import { Question, Region, Slot } from './parts';
 import styles from './dashboards.module.css';
 
 export const FUNDER_QUESTION = 'Which projects show measurable progress or need investigation?';
+export const FUNDER_HELP = 'Compare the projects you fund or have been shared with. Projects marked for review have evidence gaps or results worth a closer look; that is a prompt to ask questions, not a finding of wrongdoing.';
 
 export function FunderDashboard({ data }: { data: DashboardData }) {
   if (data.kind !== 'funder') return null;
@@ -15,7 +16,7 @@ export function FunderDashboard({ data }: { data: DashboardData }) {
   return (
     <div className={styles.dashboard} data-dashboard="funder">
       <SetDataMode mode={mode} />
-      <Question text={FUNDER_QUESTION} />
+      <Question text={FUNDER_QUESTION} help={FUNDER_HELP} />
       <Region id="portfolio" label="Portfolio" wide>
         <Slot panel={data.portfolio} title="Portfolio" render={(p) => <PortfolioTable data={p} />} />
       </Region>

@@ -15,6 +15,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from groundtruth.data_access.aoi_pipeline import (
     AOIObservationCache,
     DataOrigin,
@@ -30,8 +32,10 @@ from groundtruth.platform.config import REPO_ROOT
 from groundtruth.platform.datasets.evidence_registry import (
     EvidenceRegistry,
     EvidenceSource,
+    IngestionMode,
     ModalityType,
     ProcessingStep,
+    ProductionAnalysisBlockedError,
     SourceLifecycle,
 )
 
@@ -178,14 +182,18 @@ def test_kasigau_evidence_registration_and_limitations():
                 timestamp="2026-11-09T18:23:03Z",
             ),
         ],
-        data_quality_score=98.0,
+        data_quality_score=None,
         completeness_percentage=96.2,
+        quality_measured=True,
         missingness_summary="3.8% cloud/shadow masked via SCL in southern quadrant.",
-        content_hash="sha256:37mds20230624t072621r049s2al2akasigaucorridorkenya",
-        lifecycle=SourceLifecycle.VALIDATED,
-        is_operational_integration=True,
-        sutva_compliant=True,
-        ingestion_mode="automated_pipeline",
+        content_hash=None,
+        lifecycle=SourceLifecycle.ACCESSIBLE,
+        is_operational_integration=False,
+        sutva_compliant=False,
+        ingestion_mode=IngestionMode.ACCESSIBLE_UNVALIDATED,
+        blocked_for_production_analysis=True,
+        blocked_reason="Single-tile pilot, unvalidated; multi-tile mosaic pending.",
+        retrieval_status="retrieved",
         notes=(
             "GENERALIZATION TEST VALIDATION: Real observations ingested from Microsoft Planetary Computer. "
             "HONEST LIMITATION: Single-tile 37MDS ingestion covers the northern ranches; full 169,741 ha corridor "
@@ -194,7 +202,13 @@ def test_kasigau_evidence_registration_and_limitations():
     )
 
     registry.register_source(kasigau_source)
-    retrieved = registry.assert_operational("sentinel2-kasigau-corridor-37mds")
-    assert retrieved.source_id == "sentinel2-kasigau-corridor-37mds"
-    assert retrieved.ingestion_mode == "automated_pipeline"
+    # A pilot ingestion is registered honestly: visible, but not operational and blocked.
+    retrieved = registry.get_source("sentinel2-kasigau-corridor-37mds")
+    assert retrieved is not None
+    assert retrieved.ingestion_mode == IngestionMode.ACCESSIBLE_UNVALIDATED
+    assert retrieved.is_operational_integration is False
+    with pytest.raises(PermissionError):
+        registry.assert_operational("sentinel2-kasigau-corridor-37mds")
+    with pytest.raises(ProductionAnalysisBlockedError):
+        registry.assert_dataset_allowed_for_production("sentinel2-kasigau-corridor-37mds")
     assert "PILOT READY WITH LIMITATIONS" in retrieved.notes

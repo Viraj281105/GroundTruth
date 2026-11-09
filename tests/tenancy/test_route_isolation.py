@@ -155,7 +155,12 @@ def test_owner_reads_the_same_routes_it_denies_others(world: World, completed) -
     run_id = store_completed_run(world.sessions, completed, world.project_ids[GRANTED_CASE])
     ref = world.client("ref")
     for method, template in scoped_routes():
-        if method != "GET" or "/export/" in template or template.endswith("/events"):
+        if (
+            method != "GET"
+            or "/export/" in template
+            or template.endswith("/events")
+            or "{doc_id}" in template  # needs a real document; see test_project_documents.py
+        ):
             continue
         path = _fill(
             template,

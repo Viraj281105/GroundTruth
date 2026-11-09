@@ -1,121 +1,152 @@
 import React from 'react';
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, ChevronRight, FileCheck, HelpCircle, Layers, ShieldCheck, XCircle } from 'lucide-react';
-import { serverApi } from '../../../../../lib/server-api';
+import { ChevronRight } from 'lucide-react';
+import { Chip, EmptyState } from '../../../../../components/ds';
+import { SetDataMode } from '../../../../../components/shell/data-mode';
+import { toRow, kpis, type AssessmentRow } from '../../../../../features/assessments/model';
+import { ProblemPanel } from '../../../../../features/projects/ProblemPanel';
 import { fetched } from '../../../../../features/projects/server';
+import { serverApi } from '../../../../../lib/server-api';
 import styles from './AssessmentsPage.module.css';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Assessments Portfolio — GroundTruth 2.0' };
+export const metadata = { title: 'Assessments — GroundTruth 2.0' };
 
+/**
+ * Every figure here is read from the API for the projects of THIS organization: the assessment level the
+ * server derived, and the claim counts from the structured-claims endpoint. Nothing is computed or assumed.
+ */
 export default async function AssessmentsPage({ params }: { params: { org: string } }) {
   const list = await fetched(() => serverApi().GET('/orgs/{slug}/projects', { params: { path: { slug: params.org } } }));
-  const projects = list.data ?? [];
+  if (!list.data) {
+    return <ProblemPanel title="Assessments" status={list.status} />;
+  }
+  const rows: AssessmentRow[] = await Promise.all(
+    list.data.map(async (p) => {
+      const path = { project_id: p.id };
+      const [assessment, claims] = await Promise.all([
+        fetched(() => serverApi().GET('/projects/{project_id}/assessment', { params: { path } })),
+        fetched(() => serverApi().GET('/claims/structured/{project_id}', { params: { path } })),
+      ]);
+      return toRow(p, assessment, claims);
+    }),
+  );
+  const k = kpis(rows);
+  const base = `/app/${params.org}/projects`;
 
   return (
     <div className={styles.container}>
+      {k.simulatedProjects > 0 && <SetDataMode mode="simulated" />}
       <div className={styles.header}>
-        <span className={styles.kicker}>Continuous Scientific Verification</span>
-        <h1 className={styles.title}>Environmental Assessments & Claim Portfolio</h1>
+        <span className={styles.kicker}>Assessments</span>
+        <h1 className={styles.title}>Assessments &amp; claims by project</h1>
         <p className={styles.desc}>
-          Cross-project restoration assessments, empirical claim verification matrices, and statistical confidence gradings across all enrolled intervention zones.
+          For each project in this organization: the assessment level the platform has reached and how many claims have been recorded. Open a
+          project to see the evidence behind each figure.
         </p>
       </div>
 
-      <div className={styles.kpiRow}>
-        <div className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>Enrolled Assessments</span>
-          <span className={styles.kpiValue}>{projects.length || 3}</span>
-          <span className={styles.kpiSub}>Independent projects</span>
-        </div>
-        <div className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>Verified Claims</span>
-          <span className={`${styles.kpiValue} ${styles.supportedText}`}>24</span>
-          <span className={styles.kpiSub}>Across 8 dimensions</span>
-        </div>
-        <div className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>Open CARs</span>
-          <span className={`${styles.kpiValue} ${styles.warningText}`}>3</span>
-          <span className={styles.kpiSub}>Corrective action requests</span>
-        </div>
-        <div className={styles.kpiCard}>
-          <span className={styles.kpiLabel}>Deterministic Ledger</span>
-          <span className={`${styles.kpiValue} ${styles.supportedText}`}>100%</span>
-          <span className={styles.kpiSub}>Merkle-sealed</span>
-        </div>
-      </div>
+      {rows.length === 0 ? (
+        <EmptyState
+          title="No projects yet"
+          body="Assessments appear here once you create a project."
+          action={<Link href={`/app/${params.org}/projects/new`}>Create project</Link>}
+        />
+      ) : (
+        <>
+          <div className={styles.kpiRow}>
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiLabel}>Projects</span>
+              <span className={styles.kpiValue}>{k.projects}</span>
+              <span className={styles.kpiSub}>In this organization</span>
+            </div>
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiLabel}>Assessments available</span>
+              <span className={styles.kpiValue}>{k.assessmentsAvailable}</span>
+              <span className={styles.kpiSub}>of {k.projects} projects</span>
+            </div>
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiLabel}>Claims recorded</span>
+              <span className={styles.kpiValue}>{k.claimsOnRealProjects}</span>
+              <span className={styles.kpiSub}>Real projects only; not verified results</span>
+            </div>
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiLabel}>Simulated projects</span>
+              <span className={styles.kpiValue}>{k.simulatedProjects}</span>
+              <span className={styles.kpiSub}>Benchmark data, not real</span>
+            </div>
+          </div>
 
-      <div className={styles.tableCard}>
-        <div className={styles.tableHeader}>
-          <h3>Active Project Assessments</h3>
-          <span className={styles.tableSub}>Click any project to enter the full Claim Verification Workbench</span>
-        </div>
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Project Name</th>
-                <th>Ecosystem / Country</th>
-                <th>Treatment Start</th>
-                <th>Claims Supported</th>
-                <th>Partially Supported</th>
-                <th>Contradicted</th>
-                <th>Verification State</th>
-                <th>Workbench</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.length > 0 ? (
-                projects.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      <strong>{p.name}</strong>
-                    </td>
-                    <td>{p.ecosystem} · {p.country}</td>
-                    <td>{p.treatment_start_year}</td>
-                    <td><span className={styles.badgeSupported}>3 / 8</span></td>
-                    <td><span className={styles.badgePartial}>3 / 8</span></td>
-                    <td><span className={styles.badgeContradicted}>1 / 8</span></td>
-                    <td>
-                      <span className={styles.statusLive}>
-                        <CheckCircle2 size={12} />
-                        Operational
-                      </span>
-                    </td>
-                    <td>
-                      <Link href={`/app/${params.org}/projects/${p.slug}/verification`} className={styles.actionLink}>
-                        <span>Inspect Claims</span>
-                        <ChevronRight size={14} />
-                      </Link>
-                    </td>
+          <div className={styles.tableCard}>
+            <div className={styles.tableHeader}>
+              <h3>Project assessments</h3>
+              <span className={styles.tableSub}>Open a project to review its claims and evidence</span>
+            </div>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Project</th>
+                    <th>Ecosystem / Country</th>
+                    <th>Treatment start</th>
+                    <th>Assessment level</th>
+                    <th>Claims</th>
+                    <th>Open</th>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td><strong>Kariba REDD+ Wildlife Corridor</strong></td>
-                  <td>Dry miombo savanna · Zimbabwe</td>
-                  <td>2011</td>
-                  <td><span className={styles.badgeSupported}>3 / 8</span></td>
-                  <td><span className={styles.badgePartial}>3 / 8</span></td>
-                  <td><span className={styles.badgeContradicted}>1 / 8</span></td>
-                  <td>
-                    <span className={styles.statusLive}>
-                      <CheckCircle2 size={12} />
-                      Operational
-                    </span>
-                  </td>
-                  <td>
-                    <Link href={`/app/${params.org}/projects/kariba/verification`} className={styles.actionLink}>
-                      <span>Inspect Claims</span>
-                      <ChevronRight size={14} />
-                    </Link>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        <strong>{r.name}</strong>
+                        {r.simulated && (
+                          <>
+                            {' '}
+                            <Chip tone="sim">Simulated</Chip>
+                          </>
+                        )}
+                        {r.libraryCase && !r.simulated && (
+                          <>
+                            {' '}
+                            <Chip>No boundary uploaded</Chip>
+                          </>
+                        )}
+                      </td>
+                      <td>{r.place}</td>
+                      <td>{r.treatmentStart}</td>
+                      <td>{r.level ?? <span className={styles.tableSub}>{r.levelUnavailable}</span>}</td>
+                      <td>
+                        {r.claims ? (
+                          r.claims.hasClaims ? (
+                            <span>
+                              {r.claims.total} total · {r.claims.supported} supported · {r.claims.partiallySupported} partly · {r.claims.contradicted}{' '}
+                              contradicted · {r.claims.unverified} unverified
+                            </span>
+                          ) : (
+                            <span className={styles.tableSub}>No claims recorded yet</span>
+                          )
+                        ) : (
+                          <span className={styles.tableSub}>{r.claimsUnavailable}</span>
+                        )}
+                      </td>
+                      <td>
+                        <Link href={`${base}/${r.slug}/verification`} className={styles.actionLink}>
+                          <span>Claims</span>
+                          <ChevronRight size={14} />
+                        </Link>{' '}
+                        <Link href={`${base}/${r.slug}/overview`} className={styles.actionLink}>
+                          <span>Overview</span>
+                          <ChevronRight size={14} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

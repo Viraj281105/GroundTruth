@@ -145,6 +145,27 @@ class IndicatorInventory(BaseModel):
     data_origin: str | None = None
 
 
+class DocumentSummary(BaseModel):
+    """One uploaded project document. ``status`` says how far processing went, never more."""
+
+    id: str
+    filename: str
+    content_type: str
+    size_bytes: int
+    sha256: str | None = Field(default=None, json_schema_extra=min_level("contribute"))
+    uploaded_at: datetime
+    status: Literal["uploaded", "text_extracted", "extraction_unsupported", "extraction_failed"]
+    status_detail: str | None = None
+    extracted_claims_count: int | None = None
+
+
+class ObservationIngestionStatus(BaseModel):
+    """Whether any path exists to ingest satellite observations for this project."""
+
+    available: bool
+    message: str
+
+
 class EvidenceInventoryView(ProjectDataResponse):
     """What evidence exists for the project. Everyone sees counts, kinds, states and sources;
     checksums, scene ids and the item list need ``EVIDENCE_FULL``."""
@@ -160,6 +181,18 @@ class EvidenceInventoryView(ProjectDataResponse):
     items: list[InventoryItem] | None = Field(
         default=None, json_schema_extra=min_level("contribute")
     )
+    documents_count: int = 0
+    documents_by_status: dict[str, int] = Field(default_factory=dict)
+    documents: list[DocumentSummary] | None = Field(
+        default=None, json_schema_extra=min_level("contribute")
+    )
+    missing_evidence: list[str] = Field(
+        default_factory=list, description="What is still missing, in plain language."
+    )
+    next_steps: list[str] = Field(
+        default_factory=list, description="What the user can do next; only real capabilities."
+    )
+    observation_ingestion: ObservationIngestionStatus | None = None
 
 
 # --- verification ----------------------------------------------------------------------------

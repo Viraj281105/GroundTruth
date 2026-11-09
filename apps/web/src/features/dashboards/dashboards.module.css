@@ -27,3 +27,5 @@
 .regionDetails[open] .regionChevron { transform: rotate(180deg); }
 .regionBadge { font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.05em; padding: 2px var(--space-2); border-radius: var(--radius-xs); background: var(--surface-sunken); color: var(--text-secondary); border: 1px solid var(--border-subtle); }
 .regionBody { padding: var(--space-4); border-top: 1px solid var(--border-subtle); display: grid; gap: var(--space-3); }
+
+.term { border-bottom: 1px dotted var(--text-muted); cursor: help; }

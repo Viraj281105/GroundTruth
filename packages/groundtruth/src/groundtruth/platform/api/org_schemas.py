@@ -81,6 +81,10 @@ class AuditEventView(BaseModel):
     id: str
     occurred_at: datetime
     actor_user_id: str | None = None
+    actor_email: str | None = Field(
+        default=None,
+        description="Email of the actor when they are a member of this organization; null otherwise.",
+    )
     action: str
     resource_type: str
     resource_id: str | None = None

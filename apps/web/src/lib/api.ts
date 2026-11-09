@@ -280,6 +280,10 @@ export async function getHealth(): Promise<HealthResponse> {
     genai_narration_implemented: false,
     cases_available: 0,
     engine_capabilities: {},
+    // Unreachable: status above says so; the registry counts are unknown, not a claim about any source.
+    evidence_sources_total: 0,
+    evidence_sources_operational: 0,
+    evidence_sources_usable_for_production: 0,
   };
 }
 

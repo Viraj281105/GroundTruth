@@ -3,6 +3,14 @@
 from groundtruth.claims.compare import Discrepancy, Severity, compare_claims
 from groundtruth.claims.extract import Claim, ClaimKind, extract_claims
 from groundtruth.claims.index import Chunk, Hit, TfidfIndex, chunk_text
+from groundtruth.claims.statements import (
+    ClaimStatement,
+    StatementKind,
+    StatementStatus,
+    TextAnalysis,
+    UnrecognisedSentence,
+    analyze_text,
+)
 from groundtruth.claims.verification_engine import (
     ClaimVerificationPortfolio,
     ConfidenceGrading,
@@ -20,6 +28,7 @@ __all__ = [
     "Chunk",
     "Claim",
     "ClaimKind",
+    "ClaimStatement",
     "ClaimVerificationPortfolio",
     "ConfidenceGrading",
     "DecomposedStatement",
@@ -27,10 +36,15 @@ __all__ = [
     "Grade",
     "Hit",
     "Severity",
+    "StatementKind",
+    "StatementStatus",
     "StructuredClaimKind",
     "StructuredClaimVerification",
+    "TextAnalysis",
     "TfidfIndex",
+    "UnrecognisedSentence",
     "VerificationStatus",
+    "analyze_text",
     "calculate_evidence_grades",
     "chunk_text",
     "compare_claims",

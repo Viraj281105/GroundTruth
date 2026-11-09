@@ -1091,6 +1091,16 @@
               }
             }
           },
+          "429": {
+            "description": "Rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
           "503": {
             "description": "No database is configured.",
             "content": {
@@ -1153,7 +1163,7 @@
             }
           },
           "429": {
-            "description": "Too many failed attempts.",
+            "description": "Too many failed attempts or rate limit exceeded.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3635,6 +3645,1371 @@
         }
       }
     },
+    "/projects/{project_id}/documents": {
+      "post": {
+        "tags": [
+          "project-documents"
+        ],
+        "summary": "Upload a project document (.pdf, .txt, .md, .csv; multipart field `file`)",
+        "description": "Stores the file and its sha256. `status` is `uploaded` until text is read: `.txt`/`.md`\nbecome `text_extracted` (claim candidates counted, never verified); other types are\n`extraction_unsupported` with the reason in `status_detail`.",
+        "operationId": "upload_document_projects__project_id__documents_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentUploadForm"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The file is larger than the size limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "File type not accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Empty or invalid file.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "project-documents"
+        ],
+        "summary": "Documents uploaded to the project, with processing status",
+        "operationId": "list_documents_projects__project_id__documents_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentListView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/documents/{doc_id}/download": {
+      "get": {
+        "tags": [
+          "project-documents"
+        ],
+        "summary": "The original uploaded bytes",
+        "operationId": "download_document_projects__project_id__documents__doc_id__download_get",
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The stored copy failed its checksum.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/documents/{doc_id}/extraction": {
+      "get": {
+        "tags": [
+          "project-documents"
+        ],
+        "summary": "Claim candidates found in the document text (not verified)",
+        "description": "Only for `text_extracted` documents. Anything else answers 409 with the reason in\n`detail.message`. Candidates are regular-expression matches with their text spans.",
+        "operationId": "document_extraction_projects__project_id__documents__doc_id__extraction_get",
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No text was extracted from this document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/documents/{doc_id}": {
+      "delete": {
+        "tags": [
+          "project-documents"
+        ],
+        "summary": "Soft-delete a document (the record and audit trail remain)",
+        "operationId": "delete_document_projects__project_id__documents__doc_id__delete",
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/ledger": {
+      "get": {
+        "tags": [
+          "audit-ledger"
+        ],
+        "summary": "The project's audit ledger, verified on read",
+        "operationId": "get_project_ledger_projects__project_id__ledger_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/ledger/verify-report": {
+      "post": {
+        "tags": [
+          "audit-ledger"
+        ],
+        "summary": "Check that a file is exactly the report a ledger record sealed",
+        "operationId": "verify_report_projects__project_id__ledger_verify_report_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyReportForm"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyReportResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/ledger/verify-reproducibility": {
+      "post": {
+        "tags": [
+          "audit-ledger"
+        ],
+        "summary": "Compare re-run findings with the findings a ledger record stored",
+        "operationId": "verify_reproducibility_projects__project_id__ledger_verify_reproducibility_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReproducibilityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReproducibilityResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{slug}/reports": {
+      "get": {
+        "tags": [
+          "audit-ledger"
+        ],
+        "summary": "Reports the organization can download, with their real ledger state",
+        "operationId": "list_reports_orgs__slug__reports_get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportsView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evidence-registry": {
+      "get": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "List evidence sources (v1)",
+        "operationId": "list_evidence_sources_api_v1_evidence_registry_get",
+        "parameters": [
+          {
+            "name": "lifecycle",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SourceLifecycle"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by lifecycle state",
+              "title": "Lifecycle"
+            },
+            "description": "Filter by lifecycle state"
+          },
+          {
+            "name": "operational_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Filter to operational integrations only",
+              "default": false,
+              "title": "Operational Only"
+            },
+            "description": "Filter to operational integrations only"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceRegistryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/evidence-registry": {
+      "get": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "List evidence sources",
+        "operationId": "list_evidence_sources_evidence_registry_get",
+        "parameters": [
+          {
+            "name": "lifecycle",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SourceLifecycle"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by lifecycle state",
+              "title": "Lifecycle"
+            },
+            "description": "Filter by lifecycle state"
+          },
+          {
+            "name": "operational_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Filter to operational integrations only",
+              "default": false,
+              "title": "Operational Only"
+            },
+            "description": "Filter to operational integrations only"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceRegistryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evidence-registry/{source_id}": {
+      "get": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "Get single evidence source (v1)",
+        "operationId": "get_evidence_source_api_v1_evidence_registry__source_id__get",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceSourceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/evidence-registry/{source_id}": {
+      "get": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "Get single evidence source",
+        "operationId": "get_evidence_source_evidence_registry__source_id__get",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceSourceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/claims/structured/{project_id}": {
+      "get": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "Get structured claim verifications (v1)",
+        "operationId": "get_structured_claims_api_v1_claims_structured__project_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Structured Claims Api V1 Claims Structured  Project Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/claims/structured/{project_id}": {
+      "get": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "Get structured claim verifications",
+        "operationId": "get_structured_claims_claims_structured__project_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Structured Claims Claims Structured  Project Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/claims/verify-structured": {
+      "post": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "Run claim-level verification (v1)",
+        "operationId": "verify_claims_structured_api_v1_claims_verify_structured_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimVerificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Verify Claims Structured Api V1 Claims Verify Structured Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/claims/verify-structured": {
+      "post": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "Run claim-level verification",
+        "operationId": "verify_claims_structured_claims_verify_structured_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimVerificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Verify Claims Structured Claims Verify Structured Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/intelligence/status": {
+      "get": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "Whether the Groq intelligence provider is configured (v1)",
+        "operationId": "intelligence_status_api_v1_intelligence_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Intelligence Status Api V1 Intelligence Status Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/intelligence/status": {
+      "get": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "Whether the Groq intelligence provider is configured (no secrets)",
+        "operationId": "intelligence_status_intelligence_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Intelligence Status Intelligence Status Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/intelligence/research": {
+      "post": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "Project-scoped intelligence inquiry (v1)",
+        "operationId": "research_intelligence_api_v1_intelligence_research_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntelligenceQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Research Intelligence Api V1 Intelligence Research Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/intelligence/research": {
+      "post": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "Project-scoped intelligence inquiry over the project's own retrieved records",
+        "operationId": "research_intelligence_intelligence_research_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntelligenceQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Research Intelligence Intelligence Research Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/benchmarks": {
+      "get": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "Run and return independent validation benchmark suite (v1)",
+        "description": "Runs a compute suite, so it needs a signed-in user (it was previously open to anyone).",
+        "operationId": "get_benchmarks_api_v1_benchmarks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Benchmarks Api V1 Benchmarks Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/benchmarks": {
+      "get": {
+        "tags": [
+          "v2-intelligence-evidence"
+        ],
+        "summary": "Run and return independent validation benchmark suite",
+        "description": "Runs a compute suite, so it needs a signed-in user (it was previously open to anyone).",
+        "operationId": "get_benchmarks_benchmarks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Benchmarks Benchmarks Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -4230,6 +5605,18 @@
             ],
             "title": "Actor User Id"
           },
+          "actor_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Email",
+            "description": "Email of the actor when they are a member of this organization; null otherwise."
+          },
           "action": {
             "type": "string",
             "title": "Action"
@@ -4286,6 +5673,7 @@
           "id",
           "occurred_at",
           "actor_user_id",
+          "actor_email",
           "action",
           "resource_type",
           "resource_id",
@@ -4558,6 +5946,79 @@
         ],
         "title": "ChangePasswordRequest"
       },
+      "ClaimCandidate": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "value",
+          "unit",
+          "start",
+          "end",
+          "quote"
+        ],
+        "title": "ClaimCandidate"
+      },
       "ClaimComparison": {
         "properties": {
           "claim_kind": {
@@ -4616,6 +6077,132 @@
         ],
         "title": "ClaimSpan"
       },
+      "ClaimStatementModel": {
+        "properties": {
+          "statement_id": {
+            "type": "string",
+            "title": "Statement Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "span": {
+            "$ref": "#/components/schemas/ClaimSpan"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "evidence_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Link"
+          },
+          "evidence_gap": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Gap"
+          }
+        },
+        "type": "object",
+        "required": [
+          "statement_id",
+          "kind",
+          "status",
+          "text",
+          "span",
+          "value",
+          "unit",
+          "period",
+          "reason",
+          "evidence_link",
+          "evidence_gap"
+        ],
+        "title": "ClaimStatementModel",
+        "description": "One statement read from the text (additive; see ``claims.statements``)."
+      },
+      "ClaimVerificationRequest": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id",
+            "description": "Project UUID or slug",
+            "default": "kariba-redd"
+          },
+          "custom_claims": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Claims",
+            "description": "Optional custom claim list"
+          }
+        },
+        "type": "object",
+        "title": "ClaimVerificationRequest"
+      },
       "ClaimsRequest": {
         "properties": {
           "text": {
@@ -4661,13 +6248,29 @@
           "disclaimer": {
             "type": "string",
             "title": "Disclaimer"
+          },
+          "statements": {
+            "items": {
+              "$ref": "#/components/schemas/ClaimStatementModel"
+            },
+            "type": "array",
+            "title": "Statements"
+          },
+          "unrecognised_sentences": {
+            "items": {
+              "$ref": "#/components/schemas/ClaimSpan"
+            },
+            "type": "array",
+            "title": "Unrecognised Sentences"
           }
         },
         "type": "object",
         "required": [
           "claims",
           "comparisons",
-          "disclaimer"
+          "disclaimer",
+          "statements",
+          "unrecognised_sentences"
         ],
         "title": "ClaimsResponse"
       },
@@ -5365,6 +6968,265 @@
         ],
         "title": "DimensionView"
       },
+      "DocumentListView": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentView"
+            },
+            "type": "array",
+            "title": "Documents"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts",
+            "description": "Documents per status; absent statuses are 0."
+          },
+          "max_bytes": {
+            "type": "integer",
+            "title": "Max Bytes"
+          },
+          "allowed_extensions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowed Extensions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "documents",
+          "counts",
+          "max_bytes",
+          "allowed_extensions"
+        ],
+        "title": "DocumentListView"
+      },
+      "DocumentSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256",
+            "min_level": "contribute"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Uploaded At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "uploaded",
+              "text_extracted",
+              "extraction_unsupported",
+              "extraction_failed"
+            ],
+            "title": "Status"
+          },
+          "status_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Detail"
+          },
+          "extracted_claims_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extracted Claims Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "filename",
+          "content_type",
+          "size_bytes",
+          "sha256",
+          "uploaded_at",
+          "status",
+          "status_detail",
+          "extracted_claims_count"
+        ],
+        "title": "DocumentSummary",
+        "description": "One uploaded project document. ``status`` says how far processing went, never more."
+      },
+      "DocumentUploadForm": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "The document: .pdf, .txt, .md or .csv."
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "DocumentUploadForm",
+        "description": "The multipart field of a document upload (a named model keeps the OpenAPI name plain)."
+      },
+      "DocumentView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256",
+            "min_level": "contribute"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Uploaded At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "uploaded",
+              "text_extracted",
+              "extraction_unsupported",
+              "extraction_failed"
+            ],
+            "title": "Status"
+          },
+          "status_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Detail"
+          },
+          "extracted_claims_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extracted Claims Count"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "uploaded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploaded By"
+          },
+          "extracted_text_chars": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extracted Text Chars"
+          },
+          "processing_note": {
+            "type": "string",
+            "title": "Processing Note",
+            "default": "Stored and checksummed. A document is not evidence of any claim until independently checked; extracted claim candidates are text matches, not verified facts."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "filename",
+          "content_type",
+          "size_bytes",
+          "sha256",
+          "uploaded_at",
+          "status",
+          "status_detail",
+          "extracted_claims_count",
+          "project_id",
+          "uploaded_by",
+          "extracted_text_chars",
+          "processing_note"
+        ],
+        "title": "DocumentView"
+      },
       "EngineFailureBody": {
         "properties": {
           "detail": {
@@ -5783,6 +7645,59 @@
             ],
             "title": "Items",
             "min_level": "contribute"
+          },
+          "documents_count": {
+            "type": "integer",
+            "title": "Documents Count",
+            "default": 0
+          },
+          "documents_by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Documents By Status"
+          },
+          "documents": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DocumentSummary"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documents",
+            "min_level": "contribute"
+          },
+          "missing_evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Evidence",
+            "description": "What is still missing, in plain language."
+          },
+          "next_steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Next Steps",
+            "description": "What the user can do next; only real capabilities."
+          },
+          "observation_ingestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObservationIngestionStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -5797,10 +7712,112 @@
           "climate_status",
           "climate_reason",
           "boundary_sha256",
-          "items"
+          "items",
+          "documents_count",
+          "documents_by_status",
+          "documents",
+          "missing_evidence",
+          "next_steps",
+          "observation_ingestion"
         ],
         "title": "EvidenceInventoryView",
         "description": "What evidence exists for the project. Everyone sees counts, kinds, states and sources;\nchecksums, scene ids and the item list need ``EVIDENCE_FULL``."
+      },
+      "EvidenceRegistryResponse": {
+        "properties": {
+          "total_registered": {
+            "type": "integer",
+            "title": "Total Registered"
+          },
+          "discovered": {
+            "type": "integer",
+            "title": "Discovered"
+          },
+          "accessible": {
+            "type": "integer",
+            "title": "Accessible"
+          },
+          "integrated": {
+            "type": "integer",
+            "title": "Integrated"
+          },
+          "validated": {
+            "type": "integer",
+            "title": "Validated"
+          },
+          "quarantined": {
+            "type": "integer",
+            "title": "Quarantined"
+          },
+          "operational_count": {
+            "type": "integer",
+            "title": "Operational Count"
+          },
+          "usable_for_production_count": {
+            "type": "integer",
+            "title": "Usable For Production Count",
+            "default": 0
+          },
+          "blocked_count": {
+            "type": "integer",
+            "title": "Blocked Count",
+            "default": 0
+          },
+          "synthetic_count": {
+            "type": "integer",
+            "title": "Synthetic Count",
+            "default": 0
+          },
+          "ingestion_mode_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Ingestion Mode Counts"
+          },
+          "average_completeness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Completeness",
+            "description": "Mean over sources with measured completeness; null if none."
+          },
+          "completeness_measured_count": {
+            "type": "integer",
+            "title": "Completeness Measured Count",
+            "default": 0
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceSourceResponse"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_registered",
+          "discovered",
+          "accessible",
+          "integrated",
+          "validated",
+          "quarantined",
+          "operational_count",
+          "usable_for_production_count",
+          "blocked_count",
+          "synthetic_count",
+          "ingestion_mode_counts",
+          "average_completeness",
+          "completeness_measured_count",
+          "sources"
+        ],
+        "title": "EvidenceRegistryResponse"
       },
       "EvidenceSnapshot": {
         "properties": {
@@ -5861,6 +7878,307 @@
         "title": "EvidenceSnapshot",
         "description": "An evidence item as one side of the diff saw it."
       },
+      "EvidenceSourceResponse": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "dataset_identifier": {
+            "type": "string",
+            "title": "Dataset Identifier"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "license": {
+            "type": "string",
+            "title": "License"
+          },
+          "permitted_usage": {
+            "type": "string",
+            "title": "Permitted Usage"
+          },
+          "modality": {
+            "type": "string",
+            "title": "Modality"
+          },
+          "spatial_coverage": {
+            "type": "string",
+            "title": "Spatial Coverage"
+          },
+          "temporal_coverage_start": {
+            "type": "string",
+            "title": "Temporal Coverage Start"
+          },
+          "temporal_coverage_end": {
+            "type": "string",
+            "title": "Temporal Coverage End"
+          },
+          "spatial_resolution": {
+            "type": "string",
+            "title": "Spatial Resolution"
+          },
+          "temporal_resolution": {
+            "type": "string",
+            "title": "Temporal Resolution"
+          },
+          "acquisition_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acquisition Date"
+          },
+          "retrieval_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieval Timestamp",
+            "description": "Null when the dataset was never retrieved."
+          },
+          "processing_history": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Processing History"
+          },
+          "data_quality_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Quality Score",
+            "description": "Null unless measured from retrieved data."
+          },
+          "completeness_percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completeness Percentage",
+            "description": "Null unless measured from retrieved data."
+          },
+          "missingness_summary": {
+            "type": "string",
+            "title": "Missingness Summary"
+          },
+          "content_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Hash",
+            "description": "sha256 of a real local artefact; null otherwise."
+          },
+          "lifecycle": {
+            "type": "string",
+            "title": "Lifecycle"
+          },
+          "is_operational_integration": {
+            "type": "boolean",
+            "title": "Is Operational Integration",
+            "description": "True only with a validated automated ingestion path."
+          },
+          "sutva_compliant": {
+            "type": "boolean",
+            "title": "Sutva Compliant"
+          },
+          "quarantine_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quarantine Reason"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "default": ""
+          },
+          "ingestion_mode": {
+            "type": "string",
+            "title": "Ingestion Mode",
+            "description": "automated_operational | manual_staging | curated_vector | accessible_unvalidated | scaffolded | quarantined | synthetic_simulated"
+          },
+          "validation_status": {
+            "type": "string",
+            "title": "Validation Status",
+            "description": "validated | unvalidated | failed | not_applicable"
+          },
+          "validation_evidence": {
+            "type": "string",
+            "title": "Validation Evidence",
+            "default": "none"
+          },
+          "blocked_for_production_analysis": {
+            "type": "boolean",
+            "title": "Blocked For Production Analysis",
+            "default": true
+          },
+          "blocked_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Reason"
+          },
+          "quality_measured": {
+            "type": "boolean",
+            "title": "Quality Measured",
+            "default": false
+          },
+          "quality_note": {
+            "type": "string",
+            "title": "Quality Note",
+            "default": ""
+          },
+          "retrieval_status": {
+            "type": "string",
+            "title": "Retrieval Status",
+            "default": "not_retrieved"
+          },
+          "retrieval_provenance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieval Provenance"
+          },
+          "content_hash_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Hash Scope"
+          },
+          "retrieved_temporal_coverage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieved Temporal Coverage"
+          },
+          "local_artifact_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Local Artifact Paths"
+          },
+          "artifacts_present": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifacts Present"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "title",
+          "provider",
+          "source_url",
+          "dataset_identifier",
+          "version",
+          "license",
+          "permitted_usage",
+          "modality",
+          "spatial_coverage",
+          "temporal_coverage_start",
+          "temporal_coverage_end",
+          "spatial_resolution",
+          "temporal_resolution",
+          "acquisition_date",
+          "retrieval_timestamp",
+          "processing_history",
+          "data_quality_score",
+          "completeness_percentage",
+          "missingness_summary",
+          "content_hash",
+          "lifecycle",
+          "is_operational_integration",
+          "sutva_compliant",
+          "quarantine_reason",
+          "notes",
+          "ingestion_mode",
+          "validation_status",
+          "validation_evidence",
+          "blocked_for_production_analysis",
+          "blocked_reason",
+          "quality_measured",
+          "quality_note",
+          "retrieval_status",
+          "retrieval_provenance",
+          "content_hash_scope",
+          "retrieved_temporal_coverage",
+          "local_artifact_paths",
+          "artifacts_present"
+        ],
+        "title": "EvidenceSourceResponse",
+        "description": "Truthful classification of one dataset. Public reference metadata only (no tenant data)."
+      },
       "EvidenceState": {
         "type": "string",
         "enum": [
@@ -5900,6 +8218,52 @@
           "span"
         ],
         "title": "ExtractedClaim"
+      },
+      "ExtractionView": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "status": {
+            "type": "string",
+            "const": "text_extracted",
+            "title": "Status"
+          },
+          "claims_count": {
+            "type": "integer",
+            "title": "Claims Count"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ClaimCandidate"
+            },
+            "type": "array",
+            "title": "Candidates"
+          },
+          "verified": {
+            "type": "boolean",
+            "const": false,
+            "title": "Verified",
+            "description": "Candidates are text matches; none is verified.",
+            "default": false
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": "Stored and checksummed. A document is not evidence of any claim until independently checked; extracted claim candidates are text matches, not verified facts."
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "status",
+          "claims_count",
+          "candidates",
+          "verified",
+          "note"
+        ],
+        "title": "ExtractionView"
       },
       "FieldChange": {
         "properties": {
@@ -6033,18 +8397,36 @@
           "earth_observation_implemented": {
             "type": "boolean",
             "title": "Earth Observation Implemented",
-            "description": "False until the Earth Engine reducer chain lands.",
+            "description": "Derived from the evidence registry: True only if a real optical source is a validated automated integration.",
             "default": false
           },
           "genai_narration_implemented": {
             "type": "boolean",
             "title": "Genai Narration Implemented",
-            "description": "False until a narration provider is implemented.",
+            "description": "Derived from settings: True only when a narration provider is selected and keyed.",
             "default": false
           },
           "cases_available": {
             "type": "integer",
             "title": "Cases Available",
+            "default": 0
+          },
+          "evidence_sources_total": {
+            "type": "integer",
+            "title": "Evidence Sources Total",
+            "description": "Datasets in the evidence registry (same source as /evidence-registry).",
+            "default": 0
+          },
+          "evidence_sources_operational": {
+            "type": "integer",
+            "title": "Evidence Sources Operational",
+            "description": "Registry sources with a validated automated ingestion path.",
+            "default": 0
+          },
+          "evidence_sources_usable_for_production": {
+            "type": "integer",
+            "title": "Evidence Sources Usable For Production",
+            "description": "Registry sources not blocked for production analysis.",
             "default": 0
           }
         },
@@ -6057,7 +8439,10 @@
           "engine_capabilities",
           "earth_observation_implemented",
           "genai_narration_implemented",
-          "cases_available"
+          "cases_available",
+          "evidence_sources_total",
+          "evidence_sources_operational",
+          "evidence_sources_usable_for_production"
         ],
         "title": "HealthResponse",
         "description": "Service liveness and capability report."
@@ -6155,6 +8540,60 @@
           "data_origin"
         ],
         "title": "IndicatorInventory"
+      },
+      "IntelligenceMode": {
+        "type": "string",
+        "enum": [
+          "environmental_research",
+          "policy_news_analysis",
+          "proposal_analysis",
+          "csr_due_diligence",
+          "contradiction_detection",
+          "stakeholder_reports"
+        ],
+        "title": "IntelligenceMode",
+        "description": "Supported intelligence research modes."
+      },
+      "IntelligenceQueryRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Query",
+            "description": "Intelligence inquiry topic"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/IntelligenceMode",
+            "description": "Research mode",
+            "default": "csr_due_diligence"
+          },
+          "project_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Project Id",
+            "description": "Project id (UUID)"
+          },
+          "stakeholder_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stakeholder Role",
+            "description": "Optional stakeholder lens: csr | auditor | ngo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "project_id"
+        ],
+        "title": "IntelligenceQueryRequest"
       },
       "InventoryItem": {
         "properties": {
@@ -6571,6 +9010,226 @@
         "title": "JobView",
         "description": "A job's status and progress, small enough to poll every second.\n\nA **refusal** is a completed job: ``status`` is ``succeeded``, ``result_state`` is\n``refused``, ``terminal`` is true and ``error.is_refusal`` is true. It is never\n``failed``. ``is_simulated`` and ``data_mode`` are always present, and a simulated job\ncarries a ``notice``."
       },
+      "LedgerFailureView": {
+        "properties": {
+          "record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Id"
+          },
+          "sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_id",
+          "sequence",
+          "reason"
+        ],
+        "title": "LedgerFailureView"
+      },
+      "LedgerRecordView": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "title": "Record Id"
+          },
+          "sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence"
+          },
+          "record_kind": {
+            "type": "string",
+            "title": "Record Kind"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "git_commit_sha": {
+            "type": "string",
+            "title": "Git Commit Sha"
+          },
+          "merkle_root_hash": {
+            "type": "string",
+            "title": "Merkle Root Hash"
+          },
+          "prev_root_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prev Root Hash"
+          },
+          "report_version": {
+            "type": "string",
+            "title": "Report Version"
+          },
+          "report_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Sha256",
+            "description": "SHA-256 of the sealed report file, for report records."
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_id",
+          "sequence",
+          "record_kind",
+          "timestamp",
+          "git_commit_sha",
+          "merkle_root_hash",
+          "prev_root_hash",
+          "report_version",
+          "report_sha256"
+        ],
+        "title": "LedgerRecordView"
+      },
+      "LedgerView": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "empty",
+              "verified",
+              "failed",
+              "legacy_unverifiable"
+            ],
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count"
+          },
+          "legacy_record_count": {
+            "type": "integer",
+            "title": "Legacy Record Count"
+          },
+          "head_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Head Sequence"
+          },
+          "head_record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Head Record Id"
+          },
+          "ledger_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Root"
+          },
+          "verified_at": {
+            "type": "string",
+            "title": "Verified At"
+          },
+          "durable": {
+            "type": "boolean",
+            "title": "Durable",
+            "description": "True when records are stored in the database."
+          },
+          "failures": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerFailureView"
+            },
+            "type": "array",
+            "title": "Failures"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerRecordView"
+            },
+            "type": "array",
+            "title": "Records"
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations",
+            "default": "Records are recomputed from stored content and chained to each other. The ledger is not externally timestamped or digitally signed, so it detects alteration, deletion and reordering but cannot by itself prove when a record was written."
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "status",
+          "message",
+          "record_count",
+          "legacy_record_count",
+          "head_sequence",
+          "head_record_id",
+          "ledger_root",
+          "verified_at",
+          "durable",
+          "failures",
+          "records",
+          "limitations"
+        ],
+        "title": "LedgerView"
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -6724,6 +9383,25 @@
         ],
         "title": "NotComparable",
         "description": "One reason two runs cannot be compared."
+      },
+      "ObservationIngestionStatus": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available",
+          "message"
+        ],
+        "title": "ObservationIngestionStatus",
+        "description": "Whether any path exists to ingest satellite observations for this project."
       },
       "ObservationPoint": {
         "properties": {
@@ -7596,6 +10274,135 @@
         ],
         "title": "RegisterRequest"
       },
+      "ReportEntry": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "project_slug": {
+            "type": "string",
+            "title": "Project Slug"
+          },
+          "project_name": {
+            "type": "string",
+            "title": "Project Name"
+          },
+          "data_mode": {
+            "type": "string",
+            "title": "Data Mode"
+          },
+          "access_level": {
+            "type": "string",
+            "title": "Access Level"
+          },
+          "dossier_available": {
+            "type": "boolean",
+            "title": "Dossier Available",
+            "description": "True when the caller's access level may download the technical dossier."
+          },
+          "dossier_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dossier Path"
+          },
+          "dossier_note": {
+            "type": "string",
+            "title": "Dossier Note"
+          },
+          "last_sealed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SealedReportView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ledger": {
+            "$ref": "#/components/schemas/ReportLedgerSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "project_slug",
+          "project_name",
+          "data_mode",
+          "access_level",
+          "dossier_available",
+          "dossier_path",
+          "dossier_note",
+          "last_sealed",
+          "ledger"
+        ],
+        "title": "ReportEntry"
+      },
+      "ReportLedgerSummary": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "empty",
+              "verified",
+              "failed",
+              "legacy_unverifiable"
+            ],
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "record_count": {
+            "type": "integer",
+            "title": "Record Count"
+          },
+          "ledger_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Root"
+          },
+          "head_record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Head Record Id"
+          },
+          "verified_at": {
+            "type": "string",
+            "title": "Verified At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message",
+          "record_count",
+          "ledger_root",
+          "head_record_id",
+          "verified_at"
+        ],
+        "title": "ReportLedgerSummary"
+      },
       "ReportedFunding": {
         "properties": {
           "amount": {
@@ -7627,6 +10434,71 @@
         ],
         "title": "ReportedFunding",
         "description": "Funding exactly as the owning organization reported it. Never computed by GroundTruth."
+      },
+      "ReportsView": {
+        "properties": {
+          "organization_slug": {
+            "type": "string",
+            "title": "Organization Slug"
+          },
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/ReportEntry"
+            },
+            "type": "array",
+            "title": "Reports"
+          }
+        },
+        "type": "object",
+        "required": [
+          "organization_slug",
+          "reports"
+        ],
+        "title": "ReportsView"
+      },
+      "ReproducibilityRequest": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Record Id"
+          },
+          "recomputed_findings": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Recomputed Findings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_id",
+          "recomputed_findings"
+        ],
+        "title": "ReproducibilityRequest"
+      },
+      "ReproducibilityResult": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "title": "Record Id"
+          },
+          "reproducibility_verified": {
+            "type": "boolean",
+            "title": "Reproducibility Verified"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_id",
+          "reproducibility_verified",
+          "message"
+        ],
+        "title": "ReproducibilityResult"
       },
       "RunComparison": {
         "properties": {
@@ -8305,6 +11177,65 @@
           "n_estimator_fits"
         ]
       },
+      "SealedReportView": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "title": "Record Id"
+          },
+          "sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "report_kind": {
+            "type": "string",
+            "title": "Report Kind"
+          },
+          "report_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Report Sha256"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size Bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_id",
+          "sequence",
+          "timestamp",
+          "report_kind",
+          "report_sha256",
+          "size_bytes"
+        ],
+        "title": "SealedReportView"
+      },
       "SetRoleRequest": {
         "properties": {
           "role": {
@@ -8323,6 +11254,18 @@
           "role"
         ],
         "title": "SetRoleRequest"
+      },
+      "SourceLifecycle": {
+        "type": "string",
+        "enum": [
+          "discovered",
+          "accessible",
+          "integrated",
+          "validated",
+          "quarantined"
+        ],
+        "title": "SourceLifecycle",
+        "description": "Explicit lifecycle phase of an environmental data source."
       },
       "StageView": {
         "properties": {
@@ -9044,6 +11987,52 @@
         ],
         "title": "VerificationView",
         "description": "The latest completed run for the project, or ``not_estimable`` when there is none."
+      },
+      "VerifyReportForm": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Record Id"
+          },
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "The report file to check (the ZIP you were given)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_id",
+          "file"
+        ],
+        "title": "VerifyReportForm",
+        "description": "Multipart fields of a report check (a named model keeps the OpenAPI name plain)."
+      },
+      "VerifyReportResult": {
+        "properties": {
+          "verified": {
+            "type": "boolean",
+            "title": "Verified"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "record_id": {
+            "type": "string",
+            "title": "Record Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verified",
+          "message",
+          "record_id"
+        ],
+        "title": "VerifyReportResult"
       },
       "WarningsDiff": {
         "properties": {

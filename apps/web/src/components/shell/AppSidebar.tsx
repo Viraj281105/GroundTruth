@@ -68,7 +68,7 @@ export function NavGroups({ groups, orgSlug, onNavigate }: { groups: NavGroup[];
             }
             const active = isNavActive(pathname, orgSlug, it, all);
             return (
-              <Link key={it.id} href={navHref(orgSlug, it)} className={styles.navi} aria-current={active ? 'page' : undefined} onClick={onNavigate}>
+              <Link key={it.id} href={navHref(orgSlug, it)} className={styles.navi} aria-label={it.label} title={it.label} aria-current={active ? 'page' : undefined} onClick={onNavigate}>
                 <Icon size={18} aria-hidden="true" />
                 <span>{it.label}</span>
               </Link>

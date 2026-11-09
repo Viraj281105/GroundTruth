@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { t } from '../../lib/i18n';
+import { TourButton } from './TourButton';
 import styles from './Footer.module.css';
 
 export function Footer() {
@@ -11,7 +12,7 @@ export function Footer() {
           <strong>GroundTruth</strong> · Independent causal screening of climate restoration and carbon-credit claims.
         </p>
         <p className={styles.note}>
-          <Link href="/method">How it works</Link> · <Link href="/app">Workspace</Link> · <Link href="/claims">Claims workbench</Link>
+          <Link href="/method">How it works</Link> · <Link href="/app">Workspace</Link> · <Link href="/claims">Claims workbench</Link> · <TourButton className={styles.linkButton} />
         </p>
         <p className={styles.note}>{t('footer.note')}</p>
         <p className={styles.note}>NDVI is not carbon. Observed change is not causal effect. {t('sim.explain')}</p>

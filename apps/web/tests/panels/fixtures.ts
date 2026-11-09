@@ -126,6 +126,12 @@ export const inventoryFull: S['EvidenceInventoryView'] = {
   climate_reason: null,
   boundary_sha256: 'deadbeef',
   items: [{ indicator: 'ndvi', year: 2021, n_scenes: 4, scene_ids: ['S2A_1'], scenes_sha256: 'cafe01' }],
+  documents_count: 0,
+  documents_by_status: {},
+  documents: [],
+  missing_evidence: [],
+  next_steps: [],
+  observation_ingestion: null,
 };
 
 /** What a `view` caller receives: the removed fields are absent, not null. */

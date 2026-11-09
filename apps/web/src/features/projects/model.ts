@@ -42,7 +42,18 @@ export function projectDataMode(p: Pick<ProjectView, 'boundary_sha256' | 'data_m
 
 export function dataModeLabel(p: Pick<ProjectView, 'boundary_sha256' | 'data_mode'>): string {
   if (isLibraryCase(p)) return 'library case — no boundary or data';
-  return p.data_mode === 'simulated' ? 'Simulated data' : 'Observed data';
+  // "Observed" means a real project rather than a simulation. It does not mean satellite data has been
+  // ingested (the stepper and Evidence tab say what data exists), so the label says "real project".
+  return p.data_mode === 'simulated' ? 'Simulated data' : 'Real project (not simulated)';
+}
+
+/** Uploading and deleting documents needs owner-level access to the project AND an org role that may edit (not a viewer). */
+export const canEditProject = (level: AccessLevel, role: MemberRole | null | undefined): boolean => level === 'owner' && (role === 'owner' || role === 'admin' || role === 'member');
+
+export function editBlockedReason(level: AccessLevel, role: MemberRole | null | undefined): string | null {
+  if (canEditProject(level, role)) return null;
+  if (level !== 'owner') return 'This project belongs to another organization and was shared with you, so you can read its documents but not change them.';
+  return 'Your role in this organization is read-only, so you cannot upload or delete documents. Ask an organization owner or admin to change your role.';
 }
 
 export const canCreateProject = (orgType: OrgType, role: MemberRole): boolean => orgType !== 'reference' && role !== 'viewer';

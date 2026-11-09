@@ -3,15 +3,26 @@ import { SetDataMode } from '../../../../../../components/shell/data-mode';
 import { ProjectBadges } from '../../../../../../features/projects/ProjectBadges';
 import { ProjectTabs } from '../../../../../../features/projects/ProjectTabs';
 import { LifecycleProgress } from '../../../../../../components/panels/LifecycleProgress';
+import { lifecycleSteps } from '../../../../../../components/panels/lifecycle.model';
+import { claimSummary } from '../../../../../../features/assessments/model';
 import { projectDataMode } from '../../../../../../features/projects/model';
-import { loadProject } from '../../../../../../features/projects/server';
+import { fetched, loadProject } from '../../../../../../features/projects/server';
+import { serverApi } from '../../../../../../lib/server-api';
 import styles from '../../../../../../features/projects/projects.module.css';
 
 export const dynamic = 'force-dynamic';
 
-/** Project header, access badge, tabs, lifecycle progress bar, and the data-mode banner trigger. Unknown or no-access projects 404. */
+/** Project header, access badge, tabs, progress bar (statuses read from the API), and the data-mode banner trigger. Unknown or no-access projects 404. */
 export default async function ProjectLayout({ children, params }: { children: React.ReactNode; params: { org: string; project: string } }) {
   const project = await loadProject(params.project);
+  const path = { params: { path: { project_id: project.id } } };
+  const [inventory, assessment, claims, ledger] = await Promise.all([
+    fetched(() => serverApi().GET('/projects/{project_id}/evidence-inventory', path)),
+    fetched(() => serverApi().GET('/projects/{project_id}/assessment', path)),
+    fetched(() => serverApi().GET('/claims/structured/{project_id}', path)),
+    fetched(() => serverApi().GET('/projects/{project_id}/ledger', path)),
+  ]);
+  const steps = lifecycleSteps({ project, inventory: inventory.data, assessment: assessment.data, claims: claimSummary(claims.data), ledger: ledger.data });
   return (
     <>
       <SetDataMode mode={projectDataMode(project)} />
@@ -22,7 +33,7 @@ export default async function ProjectLayout({ children, params }: { children: Re
         </p>
         <ProjectBadges project={project} />
       </header>
-      <LifecycleProgress orgSlug={params.org} projectSlug={params.project} />
+      <LifecycleProgress orgSlug={params.org} projectSlug={params.project} steps={steps} />
       <ProjectTabs base={`/app/${params.org}/projects/${params.project}`} level={project.access_level} />
       <div className={styles.stack}>{children}</div>
     </>

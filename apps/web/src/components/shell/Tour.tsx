@@ -1,49 +1,85 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Dialog } from '../ds/Overlay';
+import React, { useEffect, useId, useReducer, useRef } from 'react';
 import { Button } from '../ds/Button';
+import { TOUR_STEPS, TOUR_STORAGE_KEY, tourReducer } from '../../lib/tour-core';
+import overlay from '../ds/Overlay.module.css';
 import styles from './Tour.module.css';
 
-export const TOUR_STORAGE_KEY = 'gt-tour-seen';
+export { TOUR_STORAGE_KEY };
 
-const STEPS = [
-  { title: 'Welcome to GroundTruth', body: 'We estimate what a restoration or carbon project actually achieved by comparing it with a blended “twin” built from similar land that was left alone.' },
-  { title: 'Simulated data, always labelled', body: 'Everything you see today runs on a simulated test fixture. The violet “Simulated data” chip stays on screen to remind you that no real project has been analysed.' },
-  { title: 'Choose how much detail you want', body: 'Story keeps it plain. Explorer adds interactive evidence. Auditor shows every diagnostic and the full provenance. Switch any time from the top bar.' },
-  { title: 'Move fast', body: 'Press Ctrl/⌘ K to jump anywhere, or try typing “compare kariba and mikoko”. Press ? for every shortcut.' },
-] as const;
-
+/**
+ * First-run tour as a modal native <dialog> (focus trap, Escape and focus return come from the browser).
+ * The step lives in a reducer and is reset each time the tour opens. Completion is recorded by the caller via onClose.
+ */
 export function Tour({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [step, setStep] = useState(0);
-  const last = step === STEPS.length - 1;
-  const finish = () => {
-    try {
-      window.localStorage.setItem(TOUR_STORAGE_KEY, '1');
-    } catch {
-      /* will simply show again */
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const [{ step }, dispatch] = useReducer((s: { step: number }, a: 'next' | 'back' | 'reset') => tourReducer(s, a), { step: 0 });
+  const total = TOUR_STEPS.length;
+  const last = step === total - 1;
+  const current = TOUR_STEPS[step];
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (open && !el.open) {
+      dispatch('reset');
+      if (typeof el.showModal === 'function') el.showModal();
+      else el.setAttribute('open', '');
+      el.querySelector<HTMLButtonElement>('[data-tour-next]')?.focus();
     }
-    setStep(0);
-    onClose();
-  };
+    if (!open && el.open) el.close();
+  }, [open]);
+
   return (
-    <Dialog open={open} onClose={finish} title={STEPS[step].title}>
-      <p className={styles.body}>{STEPS[step].body}</p>
-      <div className={styles.footer}>
-        <span className={styles.dots} aria-label={`Step ${step + 1} of ${STEPS.length}`}>
-          {STEPS.map((_, i) => (
-            <span key={i} className={`${styles.dot} ${i === step ? styles.dotOn : ''}`} />
-          ))}
-        </span>
-        <span className={styles.buttons}>
-          <Button variant="ghost" size="sm" onClick={finish}>
-            Skip
-          </Button>
-          <Button size="sm" onClick={() => (last ? finish() : setStep(step + 1))}>
-            {last ? 'Get started' : 'Next'}
-          </Button>
-        </span>
+    <dialog
+      ref={ref}
+      className={overlay.dialog}
+      aria-labelledby={titleId}
+      data-tour
+      onClose={onClose}
+      onClick={(e) => e.target === ref.current && onClose()}
+    >
+      <div className={overlay.dialogBody}>
+        <div className={overlay.dialogHead}>
+          <h2 id={titleId}>{current.title}</h2>
+          <button type="button" className={overlay.close} onClick={onClose} aria-label="Close tour">
+            ×
+          </button>
+        </div>
+        <p className={styles.body} aria-live="polite">
+          {current.body}
+        </p>
+        <div className={styles.footer}>
+          <span className={styles.dots}>
+            <span className="sr-only">{`Step ${step + 1} of ${total}`}</span>
+            <span aria-hidden="true" style={{ display: 'inline-flex', gap: 'var(--space-2)', alignItems: 'center' }}>
+              {TOUR_STEPS.map((s, i) => (
+                <span key={s.title} className={`${styles.dot} ${i === step ? styles.dotOn : ''}`} />
+              ))}
+            </span>
+            <span aria-hidden="true" style={{ marginLeft: 'var(--space-2)', fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+              Step {step + 1} of {total}
+            </span>
+          </span>
+          <span className={styles.buttons}>
+            {!last && (
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                Skip
+              </Button>
+            )}
+            {step > 0 && (
+              <Button variant="secondary" size="sm" onClick={() => dispatch('back')}>
+                Back
+              </Button>
+            )}
+            <Button data-tour-next size="sm" onClick={() => (last ? onClose() : dispatch('next'))}>
+              {last ? 'Done' : 'Next'}
+            </Button>
+          </span>
+        </div>
       </div>
-    </Dialog>
+    </dialog>
   );
 }

@@ -6,10 +6,11 @@ import { boundaryUrlFor } from '../../components/map/geo';
 import { PortfolioTable } from '../../components/panels/PortfolioTable';
 import { climateHeadline, dataModeFor, mappableProjects } from './derive';
 import type { DashboardData } from './loadDashboardData';
-import { Question, Region, Slot } from './parts';
+import { Hint, Question, Region, Slot } from './parts';
 import styles from './dashboards.module.css';
 
 export const GOVERNMENT_QUESTION = 'Which landscapes need attention?';
+export const GOVERNMENT_HELP = 'See where projects sit on the map, how each is rated, and how dry or wet recent years have been. Only real, observed projects are drawn on the map.';
 
 export function GovernmentDashboard({ data }: { data: DashboardData }) {
   if (data.kind !== 'government') return null;
@@ -21,7 +22,7 @@ export function GovernmentDashboard({ data }: { data: DashboardData }) {
   return (
     <div className={styles.dashboard} data-dashboard="government">
       <SetDataMode mode={mode} />
-      <Question text={GOVERNMENT_QUESTION} />
+      <Question text={GOVERNMENT_QUESTION} help={GOVERNMENT_HELP} />
       <Region id="map" title="Project footprints" wide>
         {data.projects.status === 'unavailable' ? (
           <UnavailablePanel title="Project footprints" reason={data.projects.reason} evidenceNeeded="A reachable API. No substitute map is shown." />
@@ -36,7 +37,7 @@ export function GovernmentDashboard({ data }: { data: DashboardData }) {
       </Region>
       <div className={styles.grid}>
         <Region id="climate-headlines" title="Climate headline by project" collapsible badge="Observed projects">
-          <p className={styles.muted}>Observed projects only. Values are the latest served year; the drought class is the API&apos;s own.</p>
+          <p className={styles.muted}>Observed projects only. Values are for the latest year available. The drought label comes from the weather record (<Hint id="spi" />).</p>
           {data.climate.length === 0 && <p className={styles.muted}>No accessible observed project has climate data.</p>}
           <ul className={styles.headlines}>
             {data.climate.map((e) => {
@@ -57,7 +58,7 @@ export function GovernmentDashboard({ data }: { data: DashboardData }) {
             })}
           </ul>
         </Region>
-        <Region id="regional-spi" title="District climate (SPI)" collapsible badge="Regional summaries">
+        <Region id="regional-spi" title="District climate and drought" collapsible badge="Regional summaries">
           <UnavailablePanel title="District climate summary" reason="Regional district climate summaries are not served by the API yet." evidenceNeeded="A regional climate endpoint (later sub-project)." />
         </Region>
       </div>

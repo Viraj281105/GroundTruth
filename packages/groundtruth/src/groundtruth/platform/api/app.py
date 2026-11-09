@@ -29,9 +29,11 @@ from groundtruth.platform.api.claims import router as claims_router
 from groundtruth.platform.api.events import router as events_router
 from groundtruth.platform.api.exports import router as exports_router
 from groundtruth.platform.api.jobs import router as jobs_router
+from groundtruth.platform.api.ledger import router as ledger_router
 from groundtruth.platform.api.openapi_schema import install_openapi
 from groundtruth.platform.api.orgs import router as orgs_router
 from groundtruth.platform.api.portfolio import router as portfolio_router
+from groundtruth.platform.api.project_documents import router as project_documents_router
 from groundtruth.platform.api.projects import router as projects_router
 from groundtruth.platform.api.runs import router as runs_router
 from groundtruth.platform.api.schemas import (
@@ -54,6 +56,7 @@ from groundtruth.platform.cases.creator import create_and_register_case
 from groundtruth.platform.cases.registry import get_case, load_all_cases
 from groundtruth.platform.config import get_settings
 from groundtruth.platform.datasets.access import earth_engine_access, synthetic_access
+from groundtruth.platform.datasets.evidence_registry import get_global_evidence_registry
 from groundtruth.platform.reports.narrative import generate_report
 
 _log = logging.getLogger("groundtruth.auth")
@@ -93,6 +96,18 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
+    # Without this a browser hides these from page scripts, so a downloaded report's ledger
+    # seal could not be read by the web app.
+    expose_headers=[
+        "Content-Disposition",
+        "X-GroundTruth-Data-Mode",
+        "X-GroundTruth-Ledger",
+        "X-GroundTruth-Ledger-Record",
+        "X-GroundTruth-Ledger-Sequence",
+        "X-GroundTruth-Ledger-Root",
+        "X-GroundTruth-Report-SHA256",
+        "X-GroundTruth-SHA256",
+    ],
 )
 
 # Stored-run endpoints (issue #35). They read the evidence store lazily, so the endpoints
@@ -106,6 +121,8 @@ app.include_router(auth_router)
 app.include_router(orgs_router)
 app.include_router(portfolio_router)
 app.include_router(projects_router)
+app.include_router(project_documents_router)
+app.include_router(ledger_router)
 app.include_router(v2_router)
 app.include_router(exports_router, include_in_schema=False)
 
@@ -156,12 +173,17 @@ def _summary(case_id: str) -> CaseSummary:
 def health() -> HealthResponse:
     """Liveness and honest capability reporting."""
     capabilities = describe_engine()
+    registry = get_global_evidence_registry()
+    stats = registry.get_summary_statistics()
     return HealthResponse(
         version=__version__,
         engine_version=ENGINE_VERSION,
         contract_version=CONTRACT_VERSION,
-        earth_observation_implemented=False,
-        genai_narration_implemented=False,
+        earth_observation_implemented=registry.earth_observation_implemented(),
+        genai_narration_implemented=get_settings().genai_configured,
+        evidence_sources_total=stats["total_registered"],
+        evidence_sources_operational=stats["operational_count"],
+        evidence_sources_usable_for_production=stats["usable_for_production_count"],
         cases_available=len(load_all_cases()),
         engine_capabilities=capabilities["implemented"],
     )

@@ -12,6 +12,9 @@ const health = (over: Partial<HealthResponse>): HealthResponse => ({
   genai_narration_implemented: false,
   cases_available: 3,
   engine_capabilities: {},
+  evidence_sources_total: 0,
+  evidence_sources_operational: 0,
+  evidence_sources_usable_for_production: 0,
   ...over,
 });
 

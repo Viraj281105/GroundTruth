@@ -62,6 +62,8 @@ TABLES = {
     "projects",
     "project_grants",
     "audit_events",
+    "audit_records",
+    "project_documents",
 }
 STORE_DIR = (
     pathlib.Path(__file__).resolve().parents[1]

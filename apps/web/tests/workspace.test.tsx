@@ -102,7 +102,7 @@ describe('library case vs simulated banner', () => {
   });
   it('labels observed projects', () => {
     expect(projectDataMode(project({ data_mode: 'observed' }))).toBe('observed');
-    expect(dataModeLabel(project({ data_mode: 'observed' }))).toBe('Observed data');
+    expect(dataModeLabel(project({ data_mode: 'observed' }))).toBe('Real project (not simulated)');
   });
 });
 

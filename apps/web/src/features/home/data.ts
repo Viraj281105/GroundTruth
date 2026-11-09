@@ -5,19 +5,8 @@ export function buildFacts(caseCount: number | null): Fact[] {
   const facts: Fact[] = [];
   if (caseCount !== null) facts.push({ id: 'cases', value: caseCount, label: caseCount === 1 ? 'benchmark case' : 'benchmark cases', note: 'Simulated, for demonstration' });
   facts.push(
-    {
-      id: 'real',
-      value: caseCount !== null ? caseCount : 0,
-      label: 'real projects analysed',
-      note: caseCount !== null ? 'Across VCS, Gold Standard & Plan Vivo' : 'Stated honestly: nothing real yet',
-    },
-    {
-      id: 'model',
-      value: caseCount !== null ? caseCount * 31 : 0,
-      label: 'numbers computed & AI-verified',
-      note: caseCount !== null ? 'Deterministic stats engine with AI guardrails' : 'It only explains finished results',
-    },
-    { id: 'rules', value: 8, label: 'written guardrail rules', note: 'Checked by automated tests' },
+    { id: 'real', value: 0, label: 'real projects analysed', note: 'Stated honestly: nothing real yet. Every result is simulated.' },
+    { id: 'rules', value: 10, label: 'written guardrail rules', note: 'Checked by automated tests' },
   );
   return facts;
 }
@@ -46,11 +35,14 @@ export const works = [
   'Honest refusals with typed reasons',
   'An evidence bundle with provenance and a reproducibility key',
   'A grounding check on all generated text',
-  'A web app and API serving simulated cases',
+  'Sign-in and organisation workspaces with roles (NGO, funder, auditor, government)',
+  'Project boundary upload and a technical dossier ZIP export, sealed in a tamper-evident ledger',
+  'Claim-text screening that flags statements the evidence does not support',
+  'A web app and API serving simulated benchmark cases',
 ];
 export const notYet = [
-  'Live satellite telemetry ingestion (planned, stage 2)',
-  'Report export and sign-in (planned, stage 2)',
+  'Live satellite ingestion for newly created projects',
+  'Plain-language stakeholder summary reports',
   'Registry ingestion and batch screening (future)',
   'Event-study, causal-forest and spillover methods (future)',
 ];

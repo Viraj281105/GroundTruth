@@ -31,7 +31,7 @@ assert_not_index_to_carbon: Optical NDVI/EVI cannot be converted to carbon witho
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
@@ -189,8 +189,15 @@ class ClaimVerificationPortfolio:
     contradicted_count: int
     unverified_count: int
     claims: list[StructuredClaimVerification]
-    overall_portfolio_grade: Grade
+    overall_portfolio_grade: Grade | str
     scientific_guardrails: list[str]
+    # Additive fields (WP-B). Defaults keep the original 11-field construction valid.
+    data_mode: str = "observed"
+    """``synthetic`` for the seeded demo project and simulated projects (R7); else ``observed``."""
+    is_demo: bool = False
+    notice: str | None = None
+    missing_information: list[dict[str, Any]] = field(default_factory=list)
+    next_steps: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -205,6 +212,12 @@ class ClaimVerificationPortfolio:
             "claims": [c.to_dict() for c in self.claims],
             "overall_portfolio_grade": str(self.overall_portfolio_grade),
             "scientific_guardrails": self.scientific_guardrails,
+            "data_mode": self.data_mode,
+            "is_demo": self.is_demo,
+            "notice": self.notice,
+            "has_claims": self.total_claims > 0,
+            "missing_information": self.missing_information,
+            "next_steps": self.next_steps,
         }
 
 
@@ -280,8 +293,22 @@ def calculate_evidence_grades(
 def verify_project_claims(
     project_id: str,
     custom_claims: list[dict[str, Any]] | None = None,
+    *,
+    project_name: str | None = None,
+    demo_kariba: bool | None = None,
+    data_mode: str | None = None,
+    missing_information: list[dict[str, Any]] | None = None,
+    next_steps: list[str] | None = None,
 ) -> ClaimVerificationPortfolio:
-    """Decompose and verify structured claims for a restoration project."""
+    """Decompose and verify structured claims for a restoration project.
+
+    The hardcoded Kariba suite is returned only when ``demo_kariba`` is true (the platform sets
+    it for the seeded Kariba project and nothing else). When it is ``None`` the legacy
+    behaviour applies: the Kariba slug/ids select the demo suite. Any other project with no
+    claims gets an empty, honest portfolio, never Kariba data.
+    """
+    if demo_kariba is None:
+        demo_kariba = project_id in ("kariba-redd", "vcs-981", "kariba")
     timestamp = datetime.now(UTC).isoformat()
     scientific_guardrails = [
         "assert_not_index_to_carbon: Optical indices (NDVI/EVI) cannot be converted to tCO2e without destructive sampling.",
@@ -290,8 +317,9 @@ def verify_project_claims(
     ]
 
     # Standard Kariba REDD+ 8-Claim Evaluation Suite
-    if project_id in ("kariba-redd", "vcs-981", "kariba") or not custom_claims:
-        claims: list[StructuredClaimVerification] = [
+    claims: list[StructuredClaimVerification]
+    if demo_kariba:
+        claims = [
             # Claim 1: Area Restored
             StructuredClaimVerification(
                 claim_id="CLM-01-AREA",
@@ -803,32 +831,50 @@ def verify_project_claims(
             ),
         ]
     else:
-        # Fallback dynamic claim parser for user-defined custom claims
+        # User-submitted claims for a non-demo project. Nothing is graded optimistically: with
+        # no evidence linked, a claim is UNVERIFIED and its grading is computed from zero.
         claims = []
-        for idx, item in enumerate(custom_claims, start=1):
-            kind = StructuredClaimKind(item.get("claim_type", "vegetation_improvement"))
-            claimed_val = item.get("claimed_value", 0.0)
+        for idx, item in enumerate(custom_claims or [], start=1):
+            if not isinstance(item, dict):
+                raise ValueError(f"Claim {idx} must be an object.")
+            try:
+                kind = StructuredClaimKind(item.get("claim_type", "vegetation_improvement"))
+            except ValueError as exc:
+                allowed = ", ".join(k.value for k in StructuredClaimKind)
+                raise ValueError(
+                    f"Claim {idx}: unknown claim_type {item.get('claim_type')!r}. Allowed: {allowed}."
+                ) from exc
+            try:
+                status = VerificationStatus(item.get("status", "UNVERIFIED"))
+            except ValueError as exc:
+                raise ValueError(f"Claim {idx}: unknown status {item.get('status')!r}.") from exc
+            available = list(item.get("available_evidence", []))
+            missing = list(item.get("missing_evidence", []))
+            if not available and not missing:
+                missing = ["No evidence has been linked to this claim yet."]
             claims.append(
                 StructuredClaimVerification(
                     claim_id=f"CLM-{idx:02d}",
                     claim_type=kind,
                     title=item.get("title", f"Claim {idx}"),
                     definition=item.get("definition", "Restoration claim"),
-                    claimed_value=claimed_val,
+                    claimed_value=item.get("claimed_value", 0.0),
                     claimed_unit=item.get("claimed_unit", "units"),
                     observed_value=item.get("observed_value"),
                     observed_unit=item.get("observed_unit"),
-                    required_evidence=item.get("required_evidence", ["Empirical sensor data"]),
-                    available_evidence=item.get("available_evidence", ["Satellite timeseries"]),
-                    supporting_observations=item.get("supporting_observations", []),
-                    contradictory_observations=item.get("contradictory_observations", []),
-                    missing_evidence=item.get("missing_evidence", []),
+                    required_evidence=list(item.get("required_evidence", [])),
+                    available_evidence=available,
+                    supporting_observations=list(item.get("supporting_observations", [])),
+                    contradictory_observations=list(item.get("contradictory_observations", [])),
+                    missing_evidence=missing,
                     verification_methodology=item.get(
-                        "methodology", "Independent satellite causal audit"
+                        "methodology", "Not yet run: no evidence linked to this claim."
                     ),
-                    confidence_and_limitations=item.get("limitations", []),
-                    grading=calculate_evidence_grades(75.0, True, True, True, 0.08, True, True),
-                    status=VerificationStatus(item.get("status", "PARTIALLY_SUPPORTED")),
+                    confidence_and_limitations=list(item.get("limitations", [])),
+                    grading=calculate_evidence_grades(
+                        0.0, bool(available), False, False, None, False, False
+                    ),
+                    status=status,
                     discrepancy_percentage=item.get("discrepancy_percentage"),
                     corrective_action_request=item.get("corrective_action_request"),
                     decomposed_statements=[],
@@ -840,13 +886,27 @@ def verify_project_claims(
     contradicted = sum(1 for c in claims if c.status == VerificationStatus.CONTRADICTED)
     unverified = sum(1 for c in claims if c.status == VerificationStatus.UNVERIFIED)
 
-    # Average score across all claims
-    avg_score = sum(c.grading.overall_score for c in claims) / len(claims) if claims else 0.0
-    portfolio_grade = score_to_grade(avg_score)
+    portfolio_grade: Grade | str
+    if claims:
+        avg_score = sum(c.grading.overall_score for c in claims) / len(claims)
+        portfolio_grade = score_to_grade(avg_score)
+    else:
+        portfolio_grade = "N/A"  # no claims: a grade would be invented
 
+    notice = None
+    if demo_kariba:
+        notice = (
+            "SIMULATED DATA: this is the seeded Kariba demonstration suite. Its claims, "
+            "observations and grades are illustrative and are not measurements of any project."
+        )
+        name = project_name or "VCS-981: Kariba REDD+ Forest Protection & Conservation"
+        mode = "synthetic"
+    else:
+        name = project_name or project_id
+        mode = data_mode or "observed"
     return ClaimVerificationPortfolio(
         project_id=project_id,
-        project_name="VCS-981: Kariba REDD+ Forest Protection & Conservation",
+        project_name=name,
         verification_timestamp=timestamp,
         total_claims=len(claims),
         supported_count=supported,
@@ -856,4 +916,9 @@ def verify_project_claims(
         claims=claims,
         overall_portfolio_grade=portfolio_grade,
         scientific_guardrails=scientific_guardrails,
+        data_mode=mode,
+        is_demo=bool(demo_kariba),
+        notice=notice,
+        missing_information=list(missing_information or []),
+        next_steps=list(next_steps or []),
     )

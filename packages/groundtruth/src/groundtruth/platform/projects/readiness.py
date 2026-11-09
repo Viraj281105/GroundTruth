@@ -168,17 +168,28 @@ def _observed(records: tuple[AnnualObservationRecord, ...]) -> list[AnnualObserv
     return [r for r in records if r.evidence_state != _UNOBSERVED]
 
 
-def _unavailable(cid: str, name: str, required: Any, reason: str | None) -> CriterionView:
-    return CriterionView(
-        cid,
-        name,
-        "unavailable",
-        None,
-        required,
-        f"{reason}. Ingest {INDICATOR} observations for this project to evaluate this criterion."
-        if reason
-        else f"Ingest {INDICATOR} observations for this project to evaluate this criterion.",
-    )
+NO_INGESTION_PATH = (
+    "Satellite observation ingestion for a project defined by an uploaded boundary is not "
+    "available from the app yet (only an operator can ingest observations, and only for "
+    "configured reference cases). You can upload project documents now; the observation "
+    "criteria stay unavailable until observations are ingested for this project."
+)
+"""Said only when the project has no linked case: that is the real state of the platform."""
+
+
+def _unavailable(
+    cid: str, name: str, required: Any, reason: str | None, *, no_case: bool = False
+) -> CriterionView:
+    if no_case:
+        needed = f"{reason}. {NO_INGESTION_PATH}" if reason else NO_INGESTION_PATH
+    elif reason:
+        needed = (
+            f"{reason}. Ingest {INDICATOR} observations for this project "
+            "to evaluate this criterion."
+        )
+    else:
+        needed = f"Ingest {INDICATOR} observations for this project to evaluate this criterion."
+    return CriterionView(cid, name, "unavailable", None, required, needed)
 
 
 def _coverage_fraction(records: list[AnnualObservationRecord]) -> float:
@@ -313,13 +324,16 @@ def compute_project_readiness(project: ProjectRow, *, data_dir: Path) -> Project
     sensor_name = "Sensor continuity"
     if not available or obs.bundle is None:
         reason = obs.reason
+        nc = project.case_id is None
         views = [
             boundary,
-            _unavailable("observation_years", year_name, OBSERVATION_YEARS_REQUIRED, reason),
-            _unavailable("pre_treatment_observations", pre_name, None, reason),
+            _unavailable(
+                "observation_years", year_name, OBSERVATION_YEARS_REQUIRED, reason, no_case=nc
+            ),
+            _unavailable("pre_treatment_observations", pre_name, None, reason, no_case=nc),
             climate,
-            _unavailable("donor_panel", donor_name, None, reason),
-            _unavailable("sensor_continuity", sensor_name, None, reason),
+            _unavailable("donor_panel", donor_name, None, reason, no_case=nc),
+            _unavailable("sensor_continuity", sensor_name, None, reason, no_case=nc),
         ]
         return ProjectReadiness(views, all(v.status == "met" for v in views))
 

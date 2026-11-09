@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import base64
 import io
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from groundtruth.claims import Claim, ClaimKind, compare_claims, extract_claims
+from groundtruth.claims import Claim, ClaimKind, analyze_text, compare_claims, extract_claims
 from groundtruth.contracts.errors import CaseDefinitionError
 from groundtruth.platform.api.schemas import MessageErrorBody
 from groundtruth.platform.auth.deps import require_role
@@ -57,10 +58,29 @@ class ClaimComparison(BaseModel):
     note: str
 
 
+class ClaimStatementModel(BaseModel):
+    """One statement read from the text (additive; see ``claims.statements``)."""
+
+    statement_id: str
+    kind: str
+    status: str
+    """``extracted`` | ``unsupported_by_available_evidence`` | ``overclaim``."""
+    text: str
+    span: ClaimSpan
+    value: float | None = None
+    unit: str | None = None
+    period: str | None = None
+    reason: str
+    evidence_link: str | None = None
+    evidence_gap: str | None = None
+
+
 class ClaimsResponse(BaseModel):
     claims: list[ExtractedClaim]
     comparisons: list[ClaimComparison]
     disclaimer: str
+    statements: list[ClaimStatementModel] = Field(default_factory=list)
+    unrecognised_sentences: list[ClaimSpan] = Field(default_factory=list)
 
 
 class PdfExtractRequest(BaseModel):
@@ -128,9 +148,31 @@ def analyze_claims(body: ClaimsRequest) -> ClaimsResponse:
         raise HTTPException(status_code=422, detail="text must not be blank")
     claims = extract_claims(body.text)
     models = [_to_model(c) for c in claims]
+    analysis = analyze_text(body.text)
+    extra: dict[str, Any] = {
+        "statements": [
+            ClaimStatementModel(
+                statement_id=st.statement_id,
+                kind=st.kind.value,
+                status=st.status.value,
+                text=st.text,
+                span=ClaimSpan(start=st.start, end=st.end, text=st.text),
+                value=st.value,
+                unit=st.unit,
+                period=st.period,
+                reason=st.reason,
+                evidence_link=st.evidence_link,
+                evidence_gap=st.evidence_gap,
+            )
+            for st in analysis.statements
+        ],
+        "unrecognised_sentences": [
+            ClaimSpan(start=u.start, end=u.end, text=u.text) for u in analysis.unrecognised
+        ],
+    }
     if body.case_id is None:
         return ClaimsResponse(
-            claims=models, comparisons=[], disclaimer=DISCLAIMER_BASE + NO_CASE_NOTE
+            claims=models, comparisons=[], disclaimer=DISCLAIMER_BASE + NO_CASE_NOTE, **extra
         )
 
     try:
@@ -198,4 +240,5 @@ def analyze_claims(body: ClaimsRequest) -> ClaimsResponse:
         claims=models,
         comparisons=comparisons,
         disclaimer=DISCLAIMER_BASE + " Only figures the case actually holds are compared.",
+        **extra,
     )

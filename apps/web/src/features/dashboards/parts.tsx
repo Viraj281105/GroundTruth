@@ -2,6 +2,8 @@ import React from 'react';
 import { Chip } from '../../components/ds/Chip';
 import { EmptyState, LinkButton } from '../../components/ds';
 import { UnavailablePanel } from '../../components/ds/UnavailablePanel';
+import { Tooltip } from '../../components/ds/Tooltip';
+import { glossary } from '../../lib/glossary';
 import type { Panel, Project, ProjectScope } from './loadDashboardData';
 import styles from './dashboards.module.css';
 
@@ -64,11 +66,31 @@ export function Slot<T>({ panel, title, render }: { panel: Panel<T> | null; titl
 }
 
 /** The persona's decision question, shown as the dashboard's lead heading. */
-export function Question({ text }: { text: string }) {
+export function Question({ text, help }: { text: string; help?: string }) {
   return (
-    <h1 className={styles.question} data-persona-question>
-      {text}
-    </h1>
+    <div>
+      <h1 className={styles.question} data-persona-question>
+        {text}
+      </h1>
+      {help && (
+        <p className={styles.muted} data-persona-help>
+          {help}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** A technical term with its plain-language meaning from the shared glossary, readable on hover or keyboard focus. */
+export function Hint({ id, children }: { id: string; children?: React.ReactNode }) {
+  const entry = glossary(id);
+  if (!entry) return <>{children}</>;
+  return (
+    <Tooltip content={entry.plain}>
+      <span tabIndex={0} className={styles.term} aria-label={`${children ?? entry.label}: ${entry.plain}`}>
+        {children ?? entry.label}
+      </span>
+    </Tooltip>
   );
 }
 

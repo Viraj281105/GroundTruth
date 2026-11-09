@@ -99,3 +99,15 @@ class TestMiddleware:
         # The server still answers; the browser withholds the body from the page.
         assert response.status_code == 200
         assert "access-control-allow-origin" not in response.headers
+
+
+def test_ledger_headers_are_exposed_to_browser_scripts() -> None:
+    """A web client must be able to read the seal of a report it just downloaded."""
+    middleware = next(m for m in app.user_middleware if m.cls is CORSMiddleware)
+    exposed = {h.lower() for h in middleware.kwargs["expose_headers"]}
+    assert {
+        "x-groundtruth-ledger-record",
+        "x-groundtruth-ledger-root",
+        "x-groundtruth-report-sha256",
+        "x-groundtruth-ledger",
+    } <= exposed

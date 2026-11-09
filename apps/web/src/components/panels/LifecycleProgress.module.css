@@ -171,3 +171,9 @@
   background: var(--accent);
 }
 
+
+/* Not available / blocked / unknown: visibly different from "not done yet" */
+.muted .bubble { border-style: dashed; }
+.muted .stepLabel { color: var(--text-muted); }
+.blocked .bubble { border-color: var(--danger-text); color: var(--danger-text); }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

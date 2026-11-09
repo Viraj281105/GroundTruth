@@ -42,12 +42,25 @@ class HealthResponse(BaseModel):
         description="What the engine can actually do, reported by the engine itself.",
     )
     earth_observation_implemented: bool = Field(
-        default=False, description="False until the Earth Engine reducer chain lands."
+        default=False,
+        description="Derived from the evidence registry: True only if a real optical source is a validated automated integration.",
     )
     genai_narration_implemented: bool = Field(
-        default=False, description="False until a narration provider is implemented."
+        default=False,
+        description="Derived from settings: True only when a narration provider is selected and keyed.",
     )
     cases_available: int = 0
+    evidence_sources_total: int = Field(
+        default=0,
+        description="Datasets in the evidence registry (same source as /evidence-registry).",
+    )
+    evidence_sources_operational: int = Field(
+        default=0,
+        description="Registry sources with a validated automated ingestion path.",
+    )
+    evidence_sources_usable_for_production: int = Field(
+        default=0, description="Registry sources not blocked for production analysis."
+    )
 
 
 class CaseSummary(BaseModel):

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Card, EmptyState, Skeleton } from '../../components/ds';
+import { Button, Card, Chip, EmptyState, Skeleton } from '../../components/ds';
 import { BarList } from '../../components/charts';
 import { claimPairs } from './pairs';
 import { getApiBaseUrl, getCases } from '../../lib/api';
@@ -9,6 +9,7 @@ import type { CaseSummary } from '../../lib/types';
 import { CLAIMS_COPY as C } from './copy';
 import { analyzeClaims, MAX_TEXT_CHARS, type AnalyzeResult, type ClaimsResponse } from './client';
 import { segmentText } from './highlight';
+import { formatStatementValue, highlightSpans, statementIndexForClaim, statementLabel, statementsOf, statementTone, unrecognisedOf } from './statements';
 import styles from './ClaimsWorkbench.module.css';
 
 const REAL_DOCUMENTS = [
@@ -101,6 +102,7 @@ export function ClaimsWorkbench() {
           const res = await fetch(`${getApiBaseUrl()}/claims/extract-pdf`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ file_base64: base64, filename: file.name }),
           });
           if (res.ok) {
@@ -129,7 +131,7 @@ export function ClaimsWorkbench() {
   }
 
   const segments = useMemo(
-    () => (state.phase === 'done' ? segmentText(state.text, state.data.claims.map((c) => c.span)) : []),
+    () => (state.phase === 'done' ? segmentText(state.text, highlightSpans(state.data)) : []),
     [state],
   );
 
@@ -189,7 +191,7 @@ export function ClaimsWorkbench() {
               <p className={styles.preview} aria-label="Text with claims highlighted">
                 {segments.map((s, i) =>
                   s.claim === null ? <span key={i}>{s.text}</span> : (
-                    <mark key={i} id={`claim-${s.claim}`} className={`${styles.mark} ${active === s.claim ? styles.markActive : ''}`}>{s.text}</mark>
+                    <mark key={i} id={`stmt-${s.claim}`} className={`${styles.mark} ${active === s.claim ? styles.markActive : ''}`}>{s.text}</mark>
                   ),
                 )}
               </p>
@@ -223,10 +225,13 @@ function Panel({ state, active, setActive }: { state: State; active: number | nu
     );
   }
   const { data } = state;
-  if (data.claims.length === 0) return <EmptyState title={C.noneFoundTitle} body={C.noneFoundBody} />;
+  const statements = statementsOf(data);
+  const unrecognised = unrecognisedOf(data);
+  if (data.claims.length === 0 && statements.length === 0 && unrecognised.length === 0) return <EmptyState title={C.noneFoundTitle} body={C.noneFoundBody} />;
   return (
     <div className={styles.field}>
       <h2 style={{ fontSize: 'var(--text-xl)', margin: 0 }}>{C.panelTitle} ({data.claims.length})</h2>
+      {data.claims.length === 0 && <p className={styles.note}>{C.noneFoundBody}</p>}
       <ul className={styles.list}>
         {data.claims.map((c, i) => {
           const cmp = data.comparisons[i];
@@ -234,8 +239,8 @@ function Panel({ state, active, setActive }: { state: State; active: number | nu
             <li key={`${c.span.start}-${i}`}>
               <button
                 type="button"
-                className={`${styles.item} ${active === i ? styles.itemActive : ''}`}
-                onClick={() => { setActive(i); document.getElementById(`claim-${i}`)?.scrollIntoView({ block: 'center' }); }}
+                className={`${styles.item} ${active !== null && active === statementIndexForClaim(data, i) ? styles.itemActive : ''}`}
+                onClick={() => { const k = statementIndexForClaim(data, i); setActive(k); document.getElementById(`stmt-${k}`)?.scrollIntoView?.({ block: 'center' }); }}
               >
                 <span className={styles.kind}>{C.kinds[c.kind] ?? c.kind}</span>
                 <span className={styles.pair}>
@@ -248,8 +253,10 @@ function Panel({ state, active, setActive }: { state: State; active: number | nu
           );
         })}
       </ul>
+      <StatementList data={data} active={active} setActive={setActive} />
       <PairChart data={data} />
-      <p className={styles.hint}>{data.disclaimer}</p>
+      <UnclassifiedList data={data} />
+      <p className={styles.hint}>{data.disclaimer || C.fallbackDisclaimer}</p>
     </div>
   );
 }
@@ -276,5 +283,60 @@ function PairChart({ data }: { data: ClaimsResponse }) {
       </div>
       <p className={styles.hint}>{C.pairsScale}</p>
     </Card>
+  );
+}
+
+/** Every statement read from the text, with its status and why. Extraction is never presented as verification. */
+export function StatementList({ data, active, setActive }: { data: ClaimsResponse; active?: number | null; setActive?: (i: number | null) => void }) {
+  const statements = statementsOf(data);
+  if (statements.length === 0) return null;
+  return (
+    <section className={styles.field} aria-label={C.statementsTitle}>
+      <h3 style={{ fontSize: 'var(--text-base)', margin: 0 }}>{C.statementsTitle} ({statements.length})</h3>
+      <p className={styles.hint}>{C.statementsHint}</p>
+      <ul className={styles.list}>
+        {statements.map((st, i) => {
+          const value = formatStatementValue(st);
+          return (
+            <li key={st.statement_id || i} data-statement-status={st.status}>
+              <button
+                type="button"
+                className={`${styles.item} ${active === i ? styles.itemActive : ''}`}
+                onClick={() => { setActive?.(i); document.getElementById(`stmt-${i}`)?.scrollIntoView?.({ block: 'center' }); }}
+              >
+                <span className={styles.stmtHead}>
+                  <Chip tone={statementTone(st.status)}>{statementLabel(st.status)}</Chip>
+                  <span className={styles.pairLabel}>{C.kinds[st.kind] ?? st.kind}</span>
+                </span>
+                <q className={styles.quote}>{st.text}</q>
+                {value && <span className="num">{value}</span>}
+                {st.reason && <span className={styles.note}>{st.reason}</span>}
+                {st.evidence_gap && <span className={styles.note}><b>{C.evidenceGap}</b> {st.evidence_gap}</span>}
+                {st.evidence_link && <span className={styles.note}><b>{C.evidenceLink}</b> {st.evidence_link}</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/** Sentences the extractor could not classify, listed so nothing is silently ignored. */
+export function UnclassifiedList({ data }: { data: ClaimsResponse }) {
+  const items = unrecognisedOf(data);
+  if (items.length === 0) return null;
+  return (
+    <section className={styles.field} aria-label={C.unclassifiedTitle}>
+      <h3 style={{ fontSize: 'var(--text-base)', margin: 0 }}>{C.unclassifiedTitle} ({items.length})</h3>
+      <p className={styles.hint}>{C.unclassifiedHint}</p>
+      <ul className={styles.list}>
+        {items.map((u, i) => (
+          <li key={`${u.start}-${i}`} className={styles.item}>
+            <q className={styles.quote}>{u.text}</q>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

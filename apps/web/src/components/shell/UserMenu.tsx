@@ -9,6 +9,7 @@ import { initials, menuLinksFor, ROLE_LABELS } from '../../lib/auth-core';
 import { Chip } from '../ds/Chip';
 import { LinkButton } from '../ds/Button';
 import { useToast } from '../ds/Overlay';
+import { TourButton } from './TourButton';
 import styles from './UserMenu.module.css';
 
 const ICONS: Record<string, React.ReactNode> = {
@@ -31,7 +32,11 @@ export function UserMenu() {
     const onDown = (e: MouseEvent) => {
       if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      wrap.current?.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]')?.focus();
+    };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
     return () => {
@@ -76,6 +81,10 @@ export function UserMenu() {
               {l.label}
             </Link>
           ))}
+          <TourButton role="menuitem" className={styles.item} onDone={() => setOpen(false)}>
+            <Info size={16} />
+            Show the tour again
+          </TourButton>
           {user ? (
             <button
               type="button"

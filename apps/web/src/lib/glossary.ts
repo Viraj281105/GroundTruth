@@ -92,6 +92,21 @@ const ENTRIES: Record<string, GlossaryEntry> = {
     plain: 'Made-up test data used to demonstrate the system. It says nothing about any real project.',
     technical: 'Output of the deterministic synthetic fixture, labelled is_simulated=true throughout.',
   },
+  'attribution-readiness': {
+    label: 'Attribution readiness',
+    plain: 'A checklist of whether there is enough good evidence to say a change on the ground was caused by the project, rather than by weather or other factors.',
+    technical: 'Criteria that must be met (pre-period length, donor-pool size, data coverage, climate adjustment) before a causal estimate is attempted.',
+  },
+  spi: {
+    label: 'SPI-12 (drought index)',
+    plain: 'A score for how dry or wet the last 12 months were compared with normal for the area. Below -1 means unusually dry.',
+    technical: 'Standardised Precipitation Index over a 12-month window; values at or below -1 flag drought, at or above +1 flag wet conditions.',
+  },
+  att: {
+    label: 'ATT (estimated effect)',
+    plain: 'The estimated difference the project made on its own land, compared with what the twin shows would have happened anyway.',
+    technical: 'Average treatment effect on the treated: the mean gap between the project area and its synthetic counterfactual after the intervention.',
+  },
   review: {
     label: 'Warrants accredited review',
     plain: 'The independent estimate and the project’s claim differ enough that a qualified auditor should look closer. It is not a finding of wrongdoing.',

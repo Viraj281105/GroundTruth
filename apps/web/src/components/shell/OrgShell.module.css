@@ -75,3 +75,6 @@ a.navi:hover { background: rgb(255 255 255 / 0.07); color: var(--sidebar-ink); t
 }
 
 @media (prefers-reduced-motion: reduce) { .app { transition: none; } }
+
+.side :focus-visible, .tabbar :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.side a:focus-visible, .side button:focus-visible { outline-color: var(--sidebar-ink); }

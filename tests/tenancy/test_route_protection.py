@@ -15,7 +15,23 @@ from fastapi.dependencies.models import Dependant
 
 from groundtruth.platform.api.app import app
 
-PUBLIC_EXACT = frozenset({"/health", "/openapi.json", "/docs", "/docs/oauth2-redirect", "/redoc"})
+# The evidence registry is static public reference metadata (source names, licences, coverage,
+# integration status). It contains no tenant, user or organization data (asserted in
+# tests/test_dataset_truthfulness.py), and being public lets anyone check what GroundTruth
+# claims to ingest.
+PUBLIC_EXACT = frozenset(
+    {
+        "/health",
+        "/openapi.json",
+        "/docs",
+        "/docs/oauth2-redirect",
+        "/redoc",
+        "/evidence-registry",
+        "/evidence-registry/{source_id}",
+        "/api/v1/evidence-registry",
+        "/api/v1/evidence-registry/{source_id}",
+    }
+)
 PUBLIC_PREFIXES = ("/auth/", "/docs/", "/redoc/", "/static/")
 
 SCOPED_PARAMS = ("{project_id}", "{case_id}", "{run_id}", "{job_id}", "{slug}")

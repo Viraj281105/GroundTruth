@@ -622,6 +622,19 @@ def earth_engine_access(request: AnalysisRequest) -> DataAccess:
             "In accordance with GroundTruth golden rules, silent fallback to synthetic fixtures is strictly prohibited."
         )
 
+    # Registry gate: even a causally-ready request may only use datasets the evidence
+    # registry permits for production analysis (fails closed, no synthetic fallback).
+    from groundtruth.platform.datasets.evidence_registry import (
+        assert_dataset_allowed_for_production,
+    )
+
+    for source_id in (
+        "sentinel-2-msi-l2a",
+        "chirps-monthly-v2",
+        "geoboundaries-adm2-zimbabwe",
+    ):
+        assert_dataset_allowed_for_production(source_id)
+
     return real_stac_access(request)
 
 

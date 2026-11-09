@@ -813,6 +813,396 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{project_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Documents uploaded to the project, with processing status */
+        get: operations["list_documents_projects__project_id__documents_get"];
+        put?: never;
+        /**
+         * Upload a project document (.pdf, .txt, .md, .csv; multipart field `file`)
+         * @description Stores the file and its sha256. `status` is `uploaded` until text is read: `.txt`/`.md`
+         *     become `text_extracted` (claim candidates counted, never verified); other types are
+         *     `extraction_unsupported` with the reason in `status_detail`.
+         */
+        post: operations["upload_document_projects__project_id__documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/documents/{doc_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The original uploaded bytes */
+        get: operations["download_document_projects__project_id__documents__doc_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/documents/{doc_id}/extraction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Claim candidates found in the document text (not verified)
+         * @description Only for `text_extracted` documents. Anything else answers 409 with the reason in
+         *     `detail.message`. Candidates are regular-expression matches with their text spans.
+         */
+        get: operations["document_extraction_projects__project_id__documents__doc_id__extraction_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/documents/{doc_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Soft-delete a document (the record and audit trail remain) */
+        delete: operations["delete_document_projects__project_id__documents__doc_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/ledger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The project's audit ledger, verified on read */
+        get: operations["get_project_ledger_projects__project_id__ledger_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/ledger/verify-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check that a file is exactly the report a ledger record sealed */
+        post: operations["verify_report_projects__project_id__ledger_verify_report_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/ledger/verify-reproducibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Compare re-run findings with the findings a ledger record stored */
+        post: operations["verify_reproducibility_projects__project_id__ledger_verify_reproducibility_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{slug}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reports the organization can download, with their real ledger state */
+        get: operations["list_reports_orgs__slug__reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/evidence-registry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List evidence sources (v1) */
+        get: operations["list_evidence_sources_api_v1_evidence_registry_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/evidence-registry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List evidence sources */
+        get: operations["list_evidence_sources_evidence_registry_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/evidence-registry/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get single evidence source (v1) */
+        get: operations["get_evidence_source_api_v1_evidence_registry__source_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/evidence-registry/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get single evidence source */
+        get: operations["get_evidence_source_evidence_registry__source_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/claims/structured/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get structured claim verifications (v1) */
+        get: operations["get_structured_claims_api_v1_claims_structured__project_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/claims/structured/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get structured claim verifications */
+        get: operations["get_structured_claims_claims_structured__project_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/claims/verify-structured": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run claim-level verification (v1) */
+        post: operations["verify_claims_structured_api_v1_claims_verify_structured_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/claims/verify-structured": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run claim-level verification */
+        post: operations["verify_claims_structured_claims_verify_structured_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/intelligence/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether the Groq intelligence provider is configured (v1) */
+        get: operations["intelligence_status_api_v1_intelligence_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/intelligence/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether the Groq intelligence provider is configured (no secrets) */
+        get: operations["intelligence_status_intelligence_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/intelligence/research": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Project-scoped intelligence inquiry (v1) */
+        post: operations["research_intelligence_api_v1_intelligence_research_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/intelligence/research": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Project-scoped intelligence inquiry over the project's own retrieved records */
+        post: operations["research_intelligence_intelligence_research_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/benchmarks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Run and return independent validation benchmark suite (v1)
+         * @description Runs a compute suite, so it needs a signed-in user (it was previously open to anyone).
+         */
+        get: operations["get_benchmarks_api_v1_benchmarks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/benchmarks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Run and return independent validation benchmark suite
+         * @description Runs a compute suite, so it needs a signed-in user (it was previously open to anyone).
+         */
+        get: operations["get_benchmarks_benchmarks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -1031,6 +1421,11 @@ export interface components {
             occurred_at: string;
             /** Actor User Id */
             actor_user_id: string | null;
+            /**
+             * Actor Email
+             * @description Email of the actor when they are a member of this organization; null otherwise.
+             */
+            actor_email: string | null;
             /** Action */
             action: string;
             /** Resource Type */
@@ -1149,6 +1544,21 @@ export interface components {
             /** New Password */
             new_password: string;
         };
+        /** ClaimCandidate */
+        ClaimCandidate: {
+            /** Kind */
+            kind: string;
+            /** Value */
+            value: number | null;
+            /** Unit */
+            unit: string | null;
+            /** Start */
+            start: number | null;
+            /** End */
+            end: number | null;
+            /** Quote */
+            quote: string | null;
+        };
         /** ClaimComparison */
         ClaimComparison: {
             /** Claim Kind */
@@ -1169,6 +1579,49 @@ export interface components {
             /** Text */
             text: string;
         };
+        /**
+         * ClaimStatementModel
+         * @description One statement read from the text (additive; see ``claims.statements``).
+         */
+        ClaimStatementModel: {
+            /** Statement Id */
+            statement_id: string;
+            /** Kind */
+            kind: string;
+            /** Status */
+            status: string;
+            /** Text */
+            text: string;
+            span: components["schemas"]["ClaimSpan"];
+            /** Value */
+            value: number | null;
+            /** Unit */
+            unit: string | null;
+            /** Period */
+            period: string | null;
+            /** Reason */
+            reason: string;
+            /** Evidence Link */
+            evidence_link: string | null;
+            /** Evidence Gap */
+            evidence_gap: string | null;
+        };
+        /** ClaimVerificationRequest */
+        ClaimVerificationRequest: {
+            /**
+             * Project Id
+             * @description Project UUID or slug
+             * @default kariba-redd
+             */
+            project_id?: string;
+            /**
+             * Custom Claims
+             * @description Optional custom claim list
+             */
+            custom_claims?: {
+                [key: string]: unknown;
+            }[] | null;
+        };
         /** ClaimsRequest */
         ClaimsRequest: {
             /** Text */
@@ -1184,6 +1637,10 @@ export interface components {
             comparisons: components["schemas"]["ClaimComparison"][];
             /** Disclaimer */
             disclaimer: string;
+            /** Statements */
+            statements: components["schemas"]["ClaimStatementModel"][];
+            /** Unrecognised Sentences */
+            unrecognised_sentences: components["schemas"]["ClaimSpan"][];
         };
         /** ClimateSourceView */
         ClimateSourceView: {
@@ -1492,6 +1949,103 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** DocumentListView */
+        DocumentListView: {
+            /** Project Id */
+            project_id: string;
+            /** Documents */
+            documents: components["schemas"]["DocumentView"][];
+            /**
+             * Counts
+             * @description Documents per status; absent statuses are 0.
+             */
+            counts: {
+                [key: string]: number;
+            };
+            /** Max Bytes */
+            max_bytes: number;
+            /** Allowed Extensions */
+            allowed_extensions: string[];
+        };
+        /**
+         * DocumentSummary
+         * @description One uploaded project document. ``status`` says how far processing went, never more.
+         */
+        DocumentSummary: {
+            /** Id */
+            id: string;
+            /** Filename */
+            filename: string;
+            /** Content Type */
+            content_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Sha256 */
+            sha256: string | null;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "uploaded" | "text_extracted" | "extraction_unsupported" | "extraction_failed";
+            /** Status Detail */
+            status_detail: string | null;
+            /** Extracted Claims Count */
+            extracted_claims_count: number | null;
+        };
+        /**
+         * DocumentUploadForm
+         * @description The multipart field of a document upload (a named model keeps the OpenAPI name plain).
+         */
+        DocumentUploadForm: {
+            /**
+             * File
+             * @description The document: .pdf, .txt, .md or .csv.
+             */
+            file: string;
+        };
+        /** DocumentView */
+        DocumentView: {
+            /** Id */
+            id: string;
+            /** Filename */
+            filename: string;
+            /** Content Type */
+            content_type: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Sha256 */
+            sha256: string | null;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "uploaded" | "text_extracted" | "extraction_unsupported" | "extraction_failed";
+            /** Status Detail */
+            status_detail: string | null;
+            /** Extracted Claims Count */
+            extracted_claims_count: number | null;
+            /** Project Id */
+            project_id: string;
+            /** Uploaded By */
+            uploaded_by: string | null;
+            /** Extracted Text Chars */
+            extracted_text_chars: number | null;
+            /**
+             * Processing Note
+             * @default Stored and checksummed. A document is not evidence of any claim until independently checked; extracted claim candidates are text matches, not verified facts.
+             */
+            processing_note: string;
+        };
         /**
          * EngineFailureBody
          * @description The body ``/verify`` returns when the engine refused or could not run.
@@ -1680,6 +2234,76 @@ export interface components {
             boundary_sha256: string | null;
             /** Items */
             items: components["schemas"]["InventoryItem"][] | null;
+            /**
+             * Documents Count
+             * @default 0
+             */
+            documents_count: number;
+            /** Documents By Status */
+            documents_by_status: {
+                [key: string]: number;
+            };
+            /** Documents */
+            documents: components["schemas"]["DocumentSummary"][] | null;
+            /**
+             * Missing Evidence
+             * @description What is still missing, in plain language.
+             */
+            missing_evidence: string[];
+            /**
+             * Next Steps
+             * @description What the user can do next; only real capabilities.
+             */
+            next_steps: string[];
+            observation_ingestion: components["schemas"]["ObservationIngestionStatus"] | null;
+        };
+        /** EvidenceRegistryResponse */
+        EvidenceRegistryResponse: {
+            /** Total Registered */
+            total_registered: number;
+            /** Discovered */
+            discovered: number;
+            /** Accessible */
+            accessible: number;
+            /** Integrated */
+            integrated: number;
+            /** Validated */
+            validated: number;
+            /** Quarantined */
+            quarantined: number;
+            /** Operational Count */
+            operational_count: number;
+            /**
+             * Usable For Production Count
+             * @default 0
+             */
+            usable_for_production_count: number;
+            /**
+             * Blocked Count
+             * @default 0
+             */
+            blocked_count: number;
+            /**
+             * Synthetic Count
+             * @default 0
+             */
+            synthetic_count: number;
+            /** Ingestion Mode Counts */
+            ingestion_mode_counts: {
+                [key: string]: number;
+            };
+            /**
+             * Average Completeness
+             * @description Mean over sources with measured completeness; null if none.
+             */
+            average_completeness: number | null;
+            /**
+             * Completeness Measured Count
+             * @default 0
+             */
+            completeness_measured_count: number;
+            /** Sources */
+            sources: components["schemas"]["EvidenceSourceResponse"][];
         };
         /**
          * EvidenceSnapshot
@@ -1701,6 +2325,131 @@ export interface components {
             provenance_fingerprint: string;
         };
         /**
+         * EvidenceSourceResponse
+         * @description Truthful classification of one dataset. Public reference metadata only (no tenant data).
+         */
+        EvidenceSourceResponse: {
+            /** Source Id */
+            source_id: string;
+            /** Title */
+            title: string;
+            /** Provider */
+            provider: string;
+            /** Source Url */
+            source_url: string;
+            /** Dataset Identifier */
+            dataset_identifier: string;
+            /** Version */
+            version: string;
+            /** License */
+            license: string;
+            /** Permitted Usage */
+            permitted_usage: string;
+            /** Modality */
+            modality: string;
+            /** Spatial Coverage */
+            spatial_coverage: string;
+            /** Temporal Coverage Start */
+            temporal_coverage_start: string;
+            /** Temporal Coverage End */
+            temporal_coverage_end: string;
+            /** Spatial Resolution */
+            spatial_resolution: string;
+            /** Temporal Resolution */
+            temporal_resolution: string;
+            /** Acquisition Date */
+            acquisition_date: string | null;
+            /**
+             * Retrieval Timestamp
+             * @description Null when the dataset was never retrieved.
+             */
+            retrieval_timestamp: string | null;
+            /** Processing History */
+            processing_history: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Data Quality Score
+             * @description Null unless measured from retrieved data.
+             */
+            data_quality_score: number | null;
+            /**
+             * Completeness Percentage
+             * @description Null unless measured from retrieved data.
+             */
+            completeness_percentage: number | null;
+            /** Missingness Summary */
+            missingness_summary: string;
+            /**
+             * Content Hash
+             * @description sha256 of a real local artefact; null otherwise.
+             */
+            content_hash: string | null;
+            /** Lifecycle */
+            lifecycle: string;
+            /**
+             * Is Operational Integration
+             * @description True only with a validated automated ingestion path.
+             */
+            is_operational_integration: boolean;
+            /** Sutva Compliant */
+            sutva_compliant: boolean;
+            /** Quarantine Reason */
+            quarantine_reason: string | null;
+            /**
+             * Notes
+             * @default
+             */
+            notes: string;
+            /**
+             * Ingestion Mode
+             * @description automated_operational | manual_staging | curated_vector | accessible_unvalidated | scaffolded | quarantined | synthetic_simulated
+             */
+            ingestion_mode: string;
+            /**
+             * Validation Status
+             * @description validated | unvalidated | failed | not_applicable
+             */
+            validation_status: string;
+            /**
+             * Validation Evidence
+             * @default none
+             */
+            validation_evidence: string;
+            /**
+             * Blocked For Production Analysis
+             * @default true
+             */
+            blocked_for_production_analysis: boolean;
+            /** Blocked Reason */
+            blocked_reason: string | null;
+            /**
+             * Quality Measured
+             * @default false
+             */
+            quality_measured: boolean;
+            /**
+             * Quality Note
+             * @default
+             */
+            quality_note: string;
+            /**
+             * Retrieval Status
+             * @default not_retrieved
+             */
+            retrieval_status: string;
+            /** Retrieval Provenance */
+            retrieval_provenance: string | null;
+            /** Content Hash Scope */
+            content_hash_scope: string | null;
+            /** Retrieved Temporal Coverage */
+            retrieved_temporal_coverage: string | null;
+            /** Local Artifact Paths */
+            local_artifact_paths: string[];
+            /** Artifacts Present */
+            artifacts_present: boolean | null;
+        };
+        /**
          * EvidenceState
          * @description Explicit epistemological status of an evidence item.
          * @enum {string}
@@ -1715,6 +2464,32 @@ export interface components {
             /** Unit */
             unit: string;
             span: components["schemas"]["ClaimSpan"];
+        };
+        /** ExtractionView */
+        ExtractionView: {
+            /** Document Id */
+            document_id: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "text_extracted";
+            /** Claims Count */
+            claims_count: number;
+            /** Candidates */
+            candidates: components["schemas"]["ClaimCandidate"][];
+            /**
+             * Verified
+             * @description Candidates are text matches; none is verified.
+             * @default false
+             * @constant
+             */
+            verified: false;
+            /**
+             * Note
+             * @default Stored and checksummed. A document is not evidence of any claim until independently checked; extracted claim candidates are text matches, not verified facts.
+             */
+            note: string;
         };
         /**
          * FieldChange
@@ -1796,13 +2571,13 @@ export interface components {
             };
             /**
              * Earth Observation Implemented
-             * @description False until the Earth Engine reducer chain lands.
+             * @description Derived from the evidence registry: True only if a real optical source is a validated automated integration.
              * @default false
              */
             earth_observation_implemented: boolean;
             /**
              * Genai Narration Implemented
-             * @description False until a narration provider is implemented.
+             * @description Derived from settings: True only when a narration provider is selected and keyed.
              * @default false
              */
             genai_narration_implemented: boolean;
@@ -1811,6 +2586,24 @@ export interface components {
              * @default 0
              */
             cases_available: number;
+            /**
+             * Evidence Sources Total
+             * @description Datasets in the evidence registry (same source as /evidence-registry).
+             * @default 0
+             */
+            evidence_sources_total: number;
+            /**
+             * Evidence Sources Operational
+             * @description Registry sources with a validated automated ingestion path.
+             * @default 0
+             */
+            evidence_sources_operational: number;
+            /**
+             * Evidence Sources Usable For Production
+             * @description Registry sources not blocked for production analysis.
+             * @default 0
+             */
+            evidence_sources_usable_for_production: number;
         };
         /** IndicatorInventory */
         IndicatorInventory: {
@@ -1843,6 +2636,35 @@ export interface components {
             source: string | null;
             /** Data Origin */
             data_origin: string | null;
+        };
+        /**
+         * IntelligenceMode
+         * @description Supported intelligence research modes.
+         * @enum {string}
+         */
+        IntelligenceMode: "environmental_research" | "policy_news_analysis" | "proposal_analysis" | "csr_due_diligence" | "contradiction_detection" | "stakeholder_reports";
+        /** IntelligenceQueryRequest */
+        IntelligenceQueryRequest: {
+            /**
+             * Query
+             * @description Intelligence inquiry topic
+             */
+            query: string;
+            /**
+             * @description Research mode
+             * @default csr_due_diligence
+             */
+            mode?: components["schemas"]["IntelligenceMode"];
+            /**
+             * Project Id
+             * @description Project id (UUID)
+             */
+            project_id: string;
+            /**
+             * Stakeholder Role
+             * @description Optional stakeholder lens: csr | auditor | ngo
+             */
+            stakeholder_role?: string | null;
         };
         /**
          * InventoryItem
@@ -2005,6 +2827,77 @@ export interface components {
              */
             note: string;
         };
+        /** LedgerFailureView */
+        LedgerFailureView: {
+            /** Record Id */
+            record_id: string | null;
+            /** Sequence */
+            sequence: number | null;
+            /** Reason */
+            reason: string;
+        };
+        /** LedgerRecordView */
+        LedgerRecordView: {
+            /** Record Id */
+            record_id: string;
+            /** Sequence */
+            sequence: number | null;
+            /** Record Kind */
+            record_kind: string;
+            /** Timestamp */
+            timestamp: string;
+            /** Git Commit Sha */
+            git_commit_sha: string;
+            /** Merkle Root Hash */
+            merkle_root_hash: string;
+            /** Prev Root Hash */
+            prev_root_hash: string | null;
+            /** Report Version */
+            report_version: string;
+            /**
+             * Report Sha256
+             * @description SHA-256 of the sealed report file, for report records.
+             */
+            report_sha256: string | null;
+        };
+        /** LedgerView */
+        LedgerView: {
+            /** Project Id */
+            project_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "empty" | "verified" | "failed" | "legacy_unverifiable";
+            /** Message */
+            message: string;
+            /** Record Count */
+            record_count: number;
+            /** Legacy Record Count */
+            legacy_record_count: number;
+            /** Head Sequence */
+            head_sequence: number | null;
+            /** Head Record Id */
+            head_record_id: string | null;
+            /** Ledger Root */
+            ledger_root: string | null;
+            /** Verified At */
+            verified_at: string;
+            /**
+             * Durable
+             * @description True when records are stored in the database.
+             */
+            durable: boolean;
+            /** Failures */
+            failures: components["schemas"]["LedgerFailureView"][];
+            /** Records */
+            records: components["schemas"]["LedgerRecordView"][];
+            /**
+             * Limitations
+             * @default Records are recomputed from stored content and chained to each other. The ledger is not externally timestamped or digitally signed, so it detects alteration, deletion and reordering but cannot by itself prove when a record was written.
+             */
+            limitations: string;
+        };
         /** LoginRequest */
         LoginRequest: {
             /** Email */
@@ -2063,6 +2956,16 @@ export interface components {
              * @enum {string}
              */
             side: "baseline" | "candidate" | "both";
+            /** Message */
+            message: string;
+        };
+        /**
+         * ObservationIngestionStatus
+         * @description Whether any path exists to ingest satellite observations for this project.
+         */
+        ObservationIngestionStatus: {
+            /** Available */
+            available: boolean;
             /** Message */
             message: string;
         };
@@ -2431,6 +3334,48 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** ReportEntry */
+        ReportEntry: {
+            /** Project Id */
+            project_id: string;
+            /** Project Slug */
+            project_slug: string;
+            /** Project Name */
+            project_name: string;
+            /** Data Mode */
+            data_mode: string;
+            /** Access Level */
+            access_level: string;
+            /**
+             * Dossier Available
+             * @description True when the caller's access level may download the technical dossier.
+             */
+            dossier_available: boolean;
+            /** Dossier Path */
+            dossier_path: string | null;
+            /** Dossier Note */
+            dossier_note: string;
+            last_sealed: components["schemas"]["SealedReportView"] | null;
+            ledger: components["schemas"]["ReportLedgerSummary"];
+        };
+        /** ReportLedgerSummary */
+        ReportLedgerSummary: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "empty" | "verified" | "failed" | "legacy_unverifiable";
+            /** Message */
+            message: string;
+            /** Record Count */
+            record_count: number;
+            /** Ledger Root */
+            ledger_root: string | null;
+            /** Head Record Id */
+            head_record_id: string | null;
+            /** Verified At */
+            verified_at: string;
+        };
         /**
          * ReportedFunding
          * @description Funding exactly as the owning organization reported it. Never computed by GroundTruth.
@@ -2445,6 +3390,31 @@ export interface components {
              * @description Name of the owning organization.
              */
             reported_by: string;
+        };
+        /** ReportsView */
+        ReportsView: {
+            /** Organization Slug */
+            organization_slug: string;
+            /** Reports */
+            reports: components["schemas"]["ReportEntry"][];
+        };
+        /** ReproducibilityRequest */
+        ReproducibilityRequest: {
+            /** Record Id */
+            record_id: string;
+            /** Recomputed Findings */
+            recomputed_findings: {
+                [key: string]: unknown;
+            };
+        };
+        /** ReproducibilityResult */
+        ReproducibilityResult: {
+            /** Record Id */
+            record_id: string;
+            /** Reproducibility Verified */
+            reproducibility_verified: boolean;
+            /** Message */
+            message: string;
         };
         /**
          * RunComparison
@@ -2723,6 +3693,21 @@ export interface components {
              */
             n_estimator_fits: number;
         };
+        /** SealedReportView */
+        SealedReportView: {
+            /** Record Id */
+            record_id: string;
+            /** Sequence */
+            sequence: number | null;
+            /** Timestamp */
+            timestamp: string;
+            /** Report Kind */
+            report_kind: string;
+            /** Report Sha256 */
+            report_sha256: string | null;
+            /** Size Bytes */
+            size_bytes: number | null;
+        };
         /** SetRoleRequest */
         SetRoleRequest: {
             /**
@@ -2731,6 +3716,12 @@ export interface components {
              */
             role: "owner" | "admin" | "member" | "viewer";
         };
+        /**
+         * SourceLifecycle
+         * @description Explicit lifecycle phase of an environmental data source.
+         * @enum {string}
+         */
+        SourceLifecycle: "discovered" | "accessible" | "integrated" | "validated" | "quarantined";
         /**
          * StageView
          * @description One live stage of a job, as it was observed.
@@ -3016,6 +4007,28 @@ export interface components {
             /** Spec Hash */
             spec_hash: string | null;
             bundle: components["schemas"]["EvidenceBundle"] | null;
+        };
+        /**
+         * VerifyReportForm
+         * @description Multipart fields of a report check (a named model keeps the OpenAPI name plain).
+         */
+        VerifyReportForm: {
+            /** Record Id */
+            record_id: string;
+            /**
+             * File
+             * @description The report file to check (the ZIP you were given).
+             */
+            file: string;
+        };
+        /** VerifyReportResult */
+        VerifyReportResult: {
+            /** Verified */
+            verified: boolean;
+            /** Message */
+            message: string;
+            /** Record Id */
+            record_id: string;
         };
         /**
          * WarningsDiff
@@ -3775,6 +4788,15 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description Rate limit exceeded. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
             /** @description No database is configured. */
             503: {
                 headers: {
@@ -3826,7 +4848,7 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
-            /** @description Too many failed attempts. */
+            /** @description Too many failed attempts or rate limit exceeded. */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -5778,6 +6800,1056 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    list_documents_projects__project_id__documents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentListView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or document. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    upload_document_projects__project_id__documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["DocumentUploadForm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or document. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description The file is larger than the size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description File type not accepted. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Empty or invalid file. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    download_document_projects__project_id__documents__doc_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                doc_id: string;
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or document. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description The stored copy failed its checksum. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    document_extraction_projects__project_id__documents__doc_id__extraction_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                doc_id: string;
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtractionView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or document. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No text was extracted from this document. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    delete_document_projects__project_id__documents__doc_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                doc_id: string;
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or document. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_project_ledger_projects__project_id__ledger_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_report_projects__project_id__ledger_verify_report_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["VerifyReportForm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyReportResult"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_reproducibility_projects__project_id__ledger_verify_reproducibility_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReproducibilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReproducibilityResult"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reports_orgs__slug__reports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportsView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    list_evidence_sources_api_v1_evidence_registry_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by lifecycle state */
+                lifecycle?: components["schemas"]["SourceLifecycle"] | null;
+                /** @description Filter to operational integrations only */
+                operational_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceRegistryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_evidence_sources_evidence_registry_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by lifecycle state */
+                lifecycle?: components["schemas"]["SourceLifecycle"] | null;
+                /** @description Filter to operational integrations only */
+                operational_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceRegistryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evidence_source_api_v1_evidence_registry__source_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceSourceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_evidence_source_evidence_registry__source_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceSourceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_structured_claims_api_v1_claims_structured__project_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_structured_claims_claims_structured__project_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_claims_structured_api_v1_claims_verify_structured_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimVerificationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_claims_structured_claims_verify_structured_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimVerificationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    intelligence_status_api_v1_intelligence_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    intelligence_status_intelligence_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    research_intelligence_api_v1_intelligence_research_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntelligenceQueryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    research_intelligence_intelligence_research_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntelligenceQueryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_benchmarks_api_v1_benchmarks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_benchmarks_benchmarks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };

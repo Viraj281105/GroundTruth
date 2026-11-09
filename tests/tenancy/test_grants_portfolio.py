@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "auth"))
 from authhelpers import ORIGIN, PASSWORD, login, new_client, register
 from world import GRANTED_CASE, PRIVATE_CASE, World
 
+from groundtruth.platform.audit.service import record_event
 from groundtruth.platform.store.models import AuditEventRow, ProjectGrantRow, ProjectRow
 
 pytestmark = pytest.mark.usefixtures("_fast_scrypt")
@@ -209,6 +210,30 @@ def test_audit_log_admin_only(tenant_world: World) -> None:
         assert c.get("/orgs/reference/audit").status_code == 403
 
 
+def test_audit_log_names_member_actors_and_hides_outsiders(tenant_world: World) -> None:
+    ref = tenant_world.client("ref")
+    _grant(tenant_world, MIKOKO, FUNDER)
+    events = ref.get("/orgs/reference/audit?limit=200").json()["events"]
+    grants = [e for e in events if e["action"] == "project.grant"]
+    assert grants and all(e["actor_email"] for e in grants)
+    assert all(e["actor_user_id"] for e in grants)
+    # An actor who is not a member of the viewing organization stays anonymous (id only).
+    with tenant_world.sessions() as db:
+        outsider_id = tenant_world.user_ids["outsider"]
+        record_event(
+            db,
+            action="org.switch",
+            outcome="success",
+            actor_user_id=outsider_id,
+            organization_id=tenant_world.org_ids["reference"],
+            resource_type="organization",
+        )
+        db.commit()
+    events = ref.get("/orgs/reference/audit?limit=200").json()["events"]
+    foreign = [e for e in events if e["actor_user_id"] == outsider_id]
+    assert foreign and all(e["actor_email"] is None for e in foreign)
+
+
 def test_activity_excludes_auth_and_membership_events(tenant_world: World) -> None:
     _grant(tenant_world, MIKOKO, FUNDER)
     viewer = _add_member(tenant_world, "viewer3@example.org", "viewer")
@@ -297,7 +322,11 @@ def test_dossier_is_audited_and_deterministic(tenant_world: World) -> None:
                 select(AuditEventRow).where(AuditEventRow.action == "export.download")
             ).scalars()
         )
-    assert len(rows) == 2 and rows[0].details == {"format": "dossier"}
+    assert len(rows) == 2
+    for row in rows:  # each download is audited and names the ledger record that sealed it
+        assert row.details["format"] == "dossier"
+        assert row.details["ledger_record_id"].startswith("AUDIT-")
+    assert rows[0].details["ledger_record_id"] != rows[1].details["ledger_record_id"]
 
 
 def _keys(node: Any) -> set[str]:

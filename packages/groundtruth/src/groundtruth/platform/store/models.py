@@ -502,6 +502,7 @@ class AuditRecordRow(Base):
         sa.Index("ix_audit_records_project_id", "project_id"),
         sa.Index("ix_audit_records_timestamp", "timestamp"),
         sa.Index("ix_audit_records_merkle_root_hash", "merkle_root_hash"),
+        sa.Index("uq_audit_records_project_sequence", "project_id", "sequence", unique=True),
     )
 
     record_id: Mapped[str] = mapped_column(sa.String(64), primary_key=True)
@@ -520,5 +521,52 @@ class AuditRecordRow(Base):
     report_version: Mapped[str] = mapped_column(sa.String(32), nullable=False)
     merkle_root_hash: Mapped[str] = mapped_column(sa.String(128), nullable=False)
     deterministic_reproducible: Mapped[bool] = mapped_column(
-        sa.Boolean, default=True, nullable=False
+        sa.Boolean, default=False, nullable=False
     )
+    # Hash-chain columns (revision 0009). NULL ``hash_scheme`` marks a legacy row written
+    # before the chain existed; such rows are reported as unverifiable, never as verified.
+    sequence: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
+    prev_root_hash: Mapped[str | None] = mapped_column(sa.String(128), nullable=True)
+    record_kind: Mapped[str] = mapped_column(
+        sa.String(32), default="assessment", server_default="assessment", nullable=False
+    )
+    hash_scheme: Mapped[str | None] = mapped_column(sa.String(32), nullable=True)
+
+
+DOCUMENT_STATUSES: tuple[str, ...] = (
+    "uploaded",
+    "text_extracted",
+    "extraction_unsupported",
+    "extraction_failed",
+)
+
+
+class ProjectDocumentRow(Base):
+    """A document an organization uploaded to one of its projects (revision 0010).
+
+    ``status`` is honest about processing: ``uploaded`` means stored and hashed, nothing more.
+    Nothing here is ever "verified"; the claim count is a count of text candidates only.
+    """
+
+    __tablename__ = "project_documents"
+    __table_args__ = (
+        sa.CheckConstraint(_in_list("status", DOCUMENT_STATUSES), name="status_valid"),
+        sa.Index("ix_project_documents_project_id", "project_id"),
+    )
+
+    id: Mapped[str] = mapped_column(sa.String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(sa.ForeignKey("projects.id", ondelete="CASCADE"))
+    original_filename: Mapped[str] = mapped_column(sa.String(255))
+    """Sanitised display name; never used as a filesystem path."""
+    content_type: Mapped[str] = mapped_column(sa.String(100))
+    size_bytes: Mapped[int] = mapped_column(sa.Integer)
+    sha256: Mapped[str] = mapped_column(sa.String(64))
+    storage_key: Mapped[str] = mapped_column(sa.String(300))
+    uploaded_by: Mapped[str | None] = mapped_column(sa.ForeignKey("users.id", ondelete="SET NULL"))
+    uploaded_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(sa.String(32))
+    status_detail: Mapped[str | None] = mapped_column(sa.String(500))
+    extracted_text_chars: Mapped[int | None] = mapped_column(sa.Integer)
+    extracted_claims_count: Mapped[int | None] = mapped_column(sa.Integer)
+    deleted_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    """Soft delete: the row and its audit trail stay; the stored bytes are removed."""

@@ -14,7 +14,7 @@ describe('/app/no-organization', () => {
   it('tells a member-less user plainly that they are not in an organization yet', () => {
     const html = renderToStaticMarkup(<Page />);
     expect(html).toContain('You are not in an organization yet');
-    expect(html).toContain('Ask the owner or an admin');
+    expect(html).toContain('ask the owner or an admin');
     expect(html).toContain('href="/app"');
     expect(html).toContain('Sign out');
   });

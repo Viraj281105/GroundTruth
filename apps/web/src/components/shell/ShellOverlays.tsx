@@ -4,7 +4,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Dialog, useToast } from '../ds/Overlay';
 import { CommandPalette } from './CommandPalette';
-import { Tour, TOUR_STORAGE_KEY } from './Tour';
+import { Tour } from './Tour';
+import { OPEN_TOUR_EVENT, hasSeenTour, markTourSeen, safeLocalStorage, tourSuppressedOn } from '../../lib/tour-core';
 import { useTheme } from '../../lib/theme';
 import { useLens } from '../../lib/lens';
 import { LENSES, type Lens } from '../../lib/lens-core';
@@ -37,10 +38,16 @@ export function ShellOverlays() {
   useEffect(() => {
     try {
       setRecent(parseRecent(window.localStorage.getItem(RECENT_STORAGE_KEY)));
-      if (!window.localStorage.getItem(TOUR_STORAGE_KEY)) setTour(true);
     } catch {
-      /* storage blocked: no recents, no tour */
+      /* storage blocked: no recents */
     }
+    // First-run tour: once per browser (localStorage) or at least once per visit (memory). Never over the sign-in forms.
+    if (!hasSeenTour(safeLocalStorage()) && !tourSuppressedOn(window.location.pathname)) setTour(true);
+  }, []);
+
+  const closeTour = useCallback(() => {
+    markTourSeen(safeLocalStorage());
+    setTour(false);
   }, []);
 
   useEffect(() => {
@@ -112,18 +119,21 @@ export function ShellOverlays() {
       else if (result.type === 'navigate') router.push(result.href);
     };
     const onOpen = () => setPalette(true);
+    const onTour = () => setTour(true);
     window.addEventListener('keydown', onKey);
     window.addEventListener(OPEN_PALETTE_EVENT, onOpen);
+    window.addEventListener(OPEN_TOUR_EVENT, onTour);
     return () => {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener(OPEN_PALETTE_EVENT, onOpen);
+      window.removeEventListener(OPEN_TOUR_EVENT, onTour);
     };
   }, [router, cycleTheme, cycleLens]);
 
   return (
     <>
       <CommandPalette open={palette} onClose={() => setPalette(false)} cases={cases} recent={recent} onAction={onAction} />
-      <Tour open={tour} onClose={() => setTour(false)} />
+      <Tour open={tour} onClose={closeTour} />
       <Dialog open={help} onClose={() => setHelp(false)} title="Keyboard shortcuts">
         <ul className={styles.list} style={{ maxHeight: 'none' }}>
           {SHORTCUT_HELP.map((row) => (

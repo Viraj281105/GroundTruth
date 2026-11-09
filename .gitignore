@@ -50,3 +50,6 @@ test-results/
 playwright-report/
 cases/e2e-*.yaml
 cases/boundaries/e2e-*.geojson
+
+# User-uploaded project boundaries are runtime data, never source.
+cases/boundaries/projects/

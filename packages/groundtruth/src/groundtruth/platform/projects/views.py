@@ -23,9 +23,11 @@ from groundtruth.platform.api.project_schemas import (
     ClimateYearView,
     ConclusionView,
     DimensionView,
+    DocumentSummary,
     EvidenceInventoryView,
     IndicatorInventory,
     InventoryItem,
+    ObservationIngestionStatus,
     ObservationPoint,
     ObservationsView,
     ReadinessCriterion,
@@ -42,6 +44,7 @@ from groundtruth.platform.projects.assessment import (
 )
 from groundtruth.platform.projects.data import ClimateResult, load_climate, load_observations
 from groundtruth.platform.projects.readiness import (
+    NO_INGESTION_PATH,
     ProjectReadiness,
     compute_project_readiness,
     normalise_month,
@@ -196,9 +199,27 @@ def build_climate(project: ProjectRow, access_level: str, data_dir: Path) -> Cli
 # --- evidence inventory ----------------------------------------------------------------------
 
 
+def _ingestion_status(project: ProjectRow) -> ObservationIngestionStatus:
+    """The real state of observation ingestion for this project, nothing more hopeful."""
+    if project.case_id:
+        return ObservationIngestionStatus(
+            available=False,
+            message=(
+                "Observations for this project's configured case are ingested by an operator "
+                "with the `groundtruth ingest-stac` command; the app does not start ingestion."
+            ),
+        )
+    return ObservationIngestionStatus(available=False, message=NO_INGESTION_PATH)
+
+
 def build_inventory(
-    project: ProjectRow, access_level: str, data_dir: Path
+    project: ProjectRow,
+    access_level: str,
+    data_dir: Path,
+    documents: list[dict[str, Any]] | None = None,
 ) -> EvidenceInventoryView:
+    """``documents`` are the project's live uploaded documents (``documents.document_dict``)."""
+    docs = documents or []
     indicators: list[IndicatorInventory] = []
     items: list[InventoryItem] = []
     totals: dict[str, int] = {}
@@ -244,6 +265,29 @@ def build_inventory(
         kinds.append("climate")
     if project.boundary_sha256:
         kinds.append("boundary")
+    if docs:
+        kinds.append("documents")
+    by_status: dict[str, int] = {}
+    for d in docs:
+        by_status[d["status"]] = by_status.get(d["status"], 0) + 1
+    missing: list[str] = []
+    steps: list[str] = []
+    if not available:
+        missing.append(
+            "No satellite observations are ingested for this project"
+            + (f" ({first_reason})." if first_reason else ".")
+        )
+    if climate.status != "available":
+        missing.append("No climate series is ingested for this project.")
+    if not project.boundary_sha256:
+        missing.append("No project boundary is recorded.")
+        steps.append("Upload the project boundary.")
+    if not docs:
+        missing.append("No project documents (design documents, baseline records) are uploaded.")
+        steps.append("Upload project design documents or baseline records (.pdf, .txt, .md, .csv).")
+    ingestion = _ingestion_status(project)
+    if not available:
+        steps.append(ingestion.message)
     return EvidenceInventoryView(
         data_mode=data_mode_of(project),  # type: ignore[arg-type]
         access_level=access_level,  # type: ignore[arg-type]
@@ -256,6 +300,17 @@ def build_inventory(
         climate_reason=climate.reason,
         boundary_sha256=project.boundary_sha256,
         items=items,
+        documents_count=len(docs),
+        documents_by_status=by_status,
+        documents=[
+            DocumentSummary(
+                **{k: d[k] for k in DocumentSummary.model_fields if k in d},
+            )
+            for d in docs
+        ],
+        missing_evidence=missing,
+        next_steps=steps,
+        observation_ingestion=ingestion,
     )
 
 

@@ -53,6 +53,16 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default=REPO_ROOT / "data")
     cases_dir: Path = Field(default=REPO_ROOT / "cases")
     artifacts_dir: Path = Field(default=REPO_ROOT / "artifacts")
+    project_documents_dir: Path = Field(
+        default=REPO_ROOT / "data" / "project_documents",
+        description="Local blob-store root for uploaded project documents (env "
+        "PROJECT_DOCUMENTS_DIR). S3 is used instead when STORAGE_BACKEND=s3.",
+    )
+    project_document_max_bytes: int = Field(
+        default=10 * 1024 * 1024,
+        ge=1,
+        description="Largest accepted project document upload (env PROJECT_DOCUMENT_MAX_BYTES).",
+    )
 
     # --- earth observation providers --------------------------------------
     google_cloud_project: str | None = None
@@ -68,6 +78,10 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-2.5-flash"
     nugen_api_key: SecretStr | None = None
+    groq_api_key: SecretStr | None = Field(
+        default=None, description="Groq inference key (env GROQ_API_KEY); unset means unavailable."
+    )
+    groq_model: str = "llama-3.3-70b-versatile"
     openai_api_key: SecretStr | None = None
     anthropic_api_key: SecretStr | None = None
     genai_max_output_tokens: int = 1200
@@ -188,8 +202,10 @@ class Settings(BaseSettings):
 
     @property
     def real_eo_ingestion_implemented(self) -> bool:
-        """Honest capability flag: live satellite ingestion is disabled in the default runtime."""
-        return False
+        """Derived from the evidence registry: True only with a validated automated source."""
+        from groundtruth.platform.datasets.evidence_registry import get_global_evidence_registry
+
+        return get_global_evidence_registry().earth_observation_implemented()
 
     @property
     def deployment_tenancy_mode(self) -> str:

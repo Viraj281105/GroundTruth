@@ -27,5 +27,5 @@ export const homeCopy = {
   allCases: 'All cases',
   featuredError: 'Cases could not be loaded, so none are featured.',
   status:
-    'Honest status: no real project has been analysed. Every result in this product comes from a simulated fixture and is labelled as such.',
+    'Honest status: no real project has been analysed. Every result in this product comes from a simulated fixture and is labelled as such. Sign-in, organisation workspaces, boundary upload, dossier export and claim-text screening exist today; live satellite ingestion for new projects does not yet.',
 } as const;

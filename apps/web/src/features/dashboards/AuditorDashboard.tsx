@@ -9,10 +9,11 @@ import { ActivityFeed } from '../../components/panels/ActivityFeed';
 import { getPublicApiUrl } from '../../lib/api';
 import { dataModeFor, dataQuality } from './derive';
 import type { DashboardData } from './loadDashboardData';
-import { LibraryNotice, NoProjects, ProjectSwitcher, Question, Region, Slot } from './parts';
+import { Hint, LibraryNotice, NoProjects, ProjectSwitcher, Question, Region, Slot } from './parts';
 import styles from './dashboards.module.css';
 
 export const AUDITOR_QUESTION = 'Which claims are substantiated and what evidence is missing?';
+export const AUDITOR_HELP = 'Review one project at a time: what the evidence supports, what is still missing, and the full record you can export for an accredited review.';
 
 export function AuditorDashboard({ data }: { data: DashboardData }) {
   if (data.kind !== 'auditor') return null;
@@ -23,7 +24,7 @@ export function AuditorDashboard({ data }: { data: DashboardData }) {
   return (
     <div className={styles.dashboard} data-dashboard="auditor">
       <SetDataMode mode={sel ? dataModeFor([sel]) : 'observed'} />
-      <Question text={AUDITOR_QUESTION} />
+      <Question text={AUDITOR_QUESTION} help={AUDITOR_HELP} />
       <Slot panel={data.projects} title="Projects" render={(projects) => (projects.length === 0 || !data.scope ? <NoProjects orgSlug={data.orgSlug} readOnly /> : <ProjectSwitcher orgSlug={data.orgSlug} scope={data.scope} />)} />
       {sel && data.scope?.libraryCase && <LibraryNotice project={sel} />}
       {live && (
@@ -38,14 +39,15 @@ export function AuditorDashboard({ data }: { data: DashboardData }) {
             <Region id="verdict" title="Attribution, methodology and limitations" collapsible badge="Screening outcome">
               <Slot panel={data.verification} title="Verification" render={(v) => <VerdictPanel data={v} />} />
             </Region>
-            <Region id="readiness" title="Attribution readiness" collapsible badge="Criteria checklist">
+            <Region id="readiness" title="Is the evidence strong enough?" collapsible badge="Checklist">
+              <p className={styles.muted}>Whether the evidence can fairly support crediting changes to the project (<Hint id="attribution-readiness" />).</p>
               <Slot panel={data.readiness} title="Readiness" render={(r) => <ReadinessChecklist data={r} />} />
             </Region>
             <Region id="data-quality" title="Data quality" collapsible badge="Coverage & sensors">
               {dq && (
                 <ul className={styles.facts}>
                   <li>
-                    AOI coverage (NDVI):{' '}
+                    Satellite coverage of the project area (<Hint id="ndvi">greenness index</Hint>):{' '}
                     {dq.coverage ? (dq.coverage.min === dq.coverage.max ? `${dq.coverage.min.toFixed(1)}% across served years` : `${dq.coverage.min.toFixed(1)}% to ${dq.coverage.max.toFixed(1)}% across served years`) : 'not available'}
                   </li>
                   <li>Missing climate months: {dq.missingClimateMonths === null ? 'not available' : dq.missingClimateMonths}</li>

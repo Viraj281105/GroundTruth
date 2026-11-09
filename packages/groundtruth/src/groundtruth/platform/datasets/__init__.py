@@ -23,9 +23,13 @@ from groundtruth.platform.datasets.access import (
 from groundtruth.platform.datasets.evidence_registry import (
     EvidenceRegistry,
     EvidenceSource,
+    IngestionMode,
     ModalityType,
     ProcessingStep,
+    ProductionAnalysisBlockedError,
     SourceLifecycle,
+    ValidationStatus,
+    assert_dataset_allowed_for_production,
     get_global_evidence_registry,
 )
 from groundtruth.platform.datasets.synthetic import SYNTHETIC_MARKER, is_synthetic
@@ -36,8 +40,10 @@ __all__ = [
     "SYNTHETIC_MARKER",
     "EvidenceRegistry",
     "EvidenceSource",
+    "IngestionMode",
     "ModalityType",
     "ProcessingStep",
+    "ProductionAnalysisBlockedError",
     "SourceLifecycle",
     "StacCachedObservationAccess",
     "SyntheticCovariateAccess",
@@ -46,6 +52,8 @@ __all__ = [
     "SyntheticFixtureDonorAccess",
     "SyntheticFixtureObservationAccess",
     "SyntheticObservationAccess",
+    "ValidationStatus",
+    "assert_dataset_allowed_for_production",
     "earth_engine_access",
     "get_global_evidence_registry",
     "is_synthetic",
