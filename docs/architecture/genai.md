@@ -108,3 +108,52 @@ The mandatory caveat explicitly requires the sentence *"Model divergence is not 
 
 ### 3.3 Check 3: Mandatory Caveat Enforcement
 The engine compiles a set of mandatory caveat strings required for the specific verdict (e.g., *parallel trends assumption cannot be directly tested post-treatment*). The verifier validates that distinct semantic fragments of each required caveat are preserved in the published prose.
+
+---
+
+## 4. Exporting a Report (#38)
+
+An export is a deliverable, so it goes through `platform/reports/export_pipeline.py`
+(`build_export_report`), which makes four guarantees about whatever it ships. Viraj decides what a
+report says (C6); the pipeline decides nothing about content.
+
+1. **The final report passes `verify_grounding` against its own bundle**, including the
+   deterministic one. It is re-checked at the door rather than assumed.
+2. **A narration that fails verification is refused, not substituted.** The export stops with a
+   structured error: `narration_not_grounded` (502) if the text failed, `narration_failed` (502) if
+   the provider raised, `report_not_grounded` (500) if the report that would ship fails, which is
+   a defect. **This differs from the inline `report_markdown`** in `/verify` and `/runs`, which
+   keeps ADR-007's behaviour (`generate_report`): a failed narration falls back to the
+   deterministic report, labelled `fell_back`. An inline report is a preview; an export is what a
+   buyer saves and sends, so it never silently becomes a different document.
+3. **Provenance and the simulated-data warning survive.** The grounding check only requires the
+   verdict caveats, so a narration may drop the Provenance section or stop saying the run is
+   simulated and still pass. When that happens the pipeline appends the deterministic Provenance
+   section verbatim, or puts the bundle's own simulated-data warning at the top. Nothing else is
+   ever added.
+4. **The generator is labelled**: `deterministic` or `genai:<provider>`, in the PDF
+   (`Report generator: ...`), the CSV (`# report_generator: ...`) and the
+   `X-GroundTruth-Report-Generator` header.
+
+`GET /cases/{id}/export/pdf?narrate=true` asks for a GenAI narration. Without a configured provider
+it answers `422 narration_not_configured`; without `narrate` the export is the deterministic report.
+
+### 4.1 What the export check trusts beyond the evidence values
+
+`contracts/grounding` accepts a number only if it is an evidence value, an interval bound, a year
+or a small integer. It does not recognise the thresholds the engine writes into its own verdict text
+("significance level 0.050", "limit 0.30"), so **the deterministic report fails that check for 7 of
+the 27 cases** (e.g. `alto-mayo-redd`, `kasigau-corridor-redd`). The proper fix belongs in
+`contracts/grounding` (C1/C6) and has not been made.
+
+Until then the export policy trusts numbers from exactly these engine-written fields, listed in
+`ENGINE_WRITTEN_NUMBER_SOURCES`:
+
+| Field | Why |
+| --- | --- |
+| `verdict.rationale` | The sentence the engine's verdict gate writes, thresholds included. |
+
+It does **not** trust any other string in the bundle (warnings, caveats, notes, provenance
+parameters), and never anything a narrator wrote: the policy is built from the bundle before the
+narrator speaks. `tests/test_report_export.py` proves a narrator cannot get an invented number
+through by quoting it.

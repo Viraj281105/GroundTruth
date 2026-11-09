@@ -105,7 +105,10 @@ def test_unknown_email_and_wrong_password_are_indistinguishable(client, monkeypa
     wrong = login(new_client(client), "a@example.org", "not the password")
     unknown = login(new_client(client), "nobody@example.org", "not the password")
     assert wrong.status_code == unknown.status_code == 401
-    assert wrong.json() == unknown.json()
+    # Everything must match except the per-request id, which is unique by design and
+    # says nothing about the account.
+    assert {**wrong.json(), "request_id": None} == {**unknown.json(), "request_id": None}
+    assert wrong.json()["request_id"] != unknown.json()["request_id"]
     assert code(wrong) == "invalid_credentials"
     assert "set-cookie" not in wrong.headers and "set-cookie" not in unknown.headers
     assert len(calls) == 2  # the unknown email still paid for a verification

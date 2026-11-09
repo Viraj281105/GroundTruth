@@ -87,6 +87,36 @@ def require_response_fields(spec: dict[str, Any]) -> dict[str, Any]:
     return spec
 
 
+VALIDATION_ENVELOPE_PROPERTIES: dict[str, dict[str, Any]] = {
+    "code": {"type": "string", "title": "Code", "description": "Always `validation_error`."},
+    "message": {"type": "string", "title": "Message", "description": "A one-line summary."},
+    "fields": {
+        "type": "array",
+        "items": {"type": "string"},
+        "title": "Fields",
+        "description": "The dotted name of every offending field, e.g. `body.area_ha`.",
+    },
+    "is_refusal": {"type": "boolean", "title": "Is Refusal", "description": "Always false."},
+    "request_id": {"type": "string", "title": "Request Id"},
+}
+"""The only members the error envelope adds to FastAPI's ``HTTPValidationError``. All optional."""
+
+
+def document_error_envelope(spec: dict[str, Any]) -> dict[str, Any]:
+    """Describe what the error envelope adds to FastAPI's validation error. Returns a new dict.
+
+    FastAPI writes ``HTTPValidationError`` itself, so the members the envelope adds at run time
+    are declared here, from :data:`VALIDATION_ENVELOPE_PROPERTIES`. They stay optional: the
+    schema belongs to the framework, and a client must not rely on them being present on an
+    error that never reached the API. Nothing FastAPI wrote is changed.
+    """
+    spec = copy.deepcopy(spec)
+    schema = spec.get("components", {}).get("schemas", {}).get("HTTPValidationError")
+    if schema is not None:
+        schema.setdefault("properties", {}).update(copy.deepcopy(VALIDATION_ENVELOPE_PROPERTIES))
+    return spec
+
+
 def install_openapi(app: FastAPI) -> None:
     """Serve the adjusted schema at ``/openapi.json``, built once and kept."""
     generate: Callable[[], dict[str, Any]] = app.openapi
@@ -95,7 +125,7 @@ def install_openapi(app: FastAPI) -> None:
     def openapi() -> dict[str, Any]:
         nonlocal built
         if built is None:
-            built = require_response_fields(generate())
+            built = document_error_envelope(require_response_fields(generate()))
         return built
 
     app.openapi = openapi  # type: ignore[method-assign]

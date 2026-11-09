@@ -5,17 +5,40 @@ from __future__ import annotations
 import json
 import logging
 import re
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import ValidationError
 
+from groundtruth.contracts.errors import CaseDefinitionError
+from groundtruth.contracts.request import AnalysisWindow
+from groundtruth.contracts.types import Indicator, MethodologyStandard
 from groundtruth.engine.run import run_analysis
-from groundtruth.platform.cases.registry import CaseDefinition, cases_directory, get_case
+from groundtruth.platform.cases.registry import (
+    CaseDefinition,
+    CaseValidationError,
+    case_from_payload,
+    cases_directory,
+    check_creatable_status,
+    get_case,
+)
 from groundtruth.platform.datasets.access import synthetic_access
 from groundtruth.platform.reports.narrative import generate_report
 
 logger = logging.getLogger("groundtruth.cases.creator")
+
+
+_CASE_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+"""Lowercase kebab, as case ids are everywhere. It also keeps an id from being a path."""
+
+
+def _first_error(exc: Exception) -> str:
+    """The first human-readable reason from a pydantic error, without its boilerplate."""
+    if isinstance(exc, ValidationError) and exc.errors():
+        return str(exc.errors()[0]["msg"]).removeprefix("Value error, ")
+    return str(exc)
 
 
 def slugify(text: str) -> str:
@@ -136,6 +159,65 @@ def validate_project_aoi(boundary_geojson: dict[str, Any]) -> dict[str, Any]:
     return boundary_geojson
 
 
+def _validate_before_writing(yaml_data: dict[str, Any], case_id: str) -> None:
+    """Check a case as the loader and the engine will see it, with nothing on disk yet.
+
+    Raises:
+        CaseValidationError: naming the field where the cause is known.
+    """
+    project, window = yaml_data["project"], yaml_data["analysis_window"]
+    try:
+        AnalysisWindow(**window)
+    except ValueError as exc:
+        raise CaseValidationError(
+            _first_error(exc),
+            field="analysis window (pre_start, pre_end, post_start, post_end)",
+            hint="Periods must run pre_start <= pre_end < post_start <= post_end.",
+        ) from exc
+    try:
+        Indicator(yaml_data["analysis"]["indicator"])
+    except ValueError as exc:
+        raise CaseValidationError(
+            f"unknown indicator {yaml_data['analysis']['indicator']!r}",
+            field="indicator",
+            hint=f"Use one of {[i.value for i in Indicator]}.",
+        ) from exc
+    try:
+        MethodologyStandard(project["standard"])
+    except ValueError as exc:
+        raise CaseValidationError(
+            f"unknown standard {project['standard']!r}",
+            field="standard",
+            hint=f"Use one of {[s.value for s in MethodologyStandard]}.",
+        ) from exc
+    try:
+        start = date.fromisoformat(project["crediting_period_start"])
+        end = date.fromisoformat(project["crediting_period_end"])
+    except ValueError as exc:
+        raise CaseValidationError(
+            "crediting_period_start and crediting_period_end must be dates",
+            field="crediting_period_start / crediting_period_end",
+            hint="Use YYYY-MM-DD, for example 2015-01-01.",
+        ) from exc
+    if end <= start:
+        raise CaseValidationError(
+            "the crediting period must end after it starts",
+            field="crediting_period_end",
+            hint="Send an end date later than crediting_period_start.",
+        )
+    try:
+        case = case_from_payload(yaml_data, Path(f"{case_id}.yaml"))
+        case.to_request()  # a case that cannot make a valid AnalysisRequest is not created
+    except CaseValidationError:
+        raise
+    except (CaseDefinitionError, ValueError) as exc:
+        raise CaseValidationError(
+            _first_error(exc),
+            field="case",
+            hint="Check the analysis window: it needs at least 5 pre-treatment periods.",
+        ) from exc
+
+
 def create_and_register_case(
     *,
     name: str,
@@ -155,10 +237,34 @@ def create_and_register_case(
     post_end: int = 2022,
     boundary_geojson: dict[str, Any] | None = None,
     custom_case_id: str | None = None,
+    status: str | None = None,
 ) -> CaseDefinition:
-    """Create a new case definition on disk, calibrate its fixture, and register it."""
+    """Create a new case definition on disk, calibrate its fixture, and register it.
+
+    Everything is validated before anything is written, so a rejected case leaves no file
+    behind. A case that cannot produce a valid ``AnalysisRequest`` is rejected too.
+
+    Raises:
+        CaseValidationError: if any input is invalid, with the offending field named.
+    """
+    check_creatable_status(status)
+    if custom_case_id is not None and not (
+        _CASE_ID.fullmatch(custom_case_id) and len(custom_case_id) <= 80
+    ):
+        raise CaseValidationError(
+            f"case_id {custom_case_id!r} is not lowercase kebab-case",
+            field="case_id",
+            hint="Use lowercase letters, digits and single hyphens, e.g. 'my-project'.",
+        )
     if boundary_geojson is not None:
-        validate_project_aoi(boundary_geojson)
+        try:
+            validate_project_aoi(boundary_geojson)
+        except ValueError as exc:
+            raise CaseValidationError(
+                str(exc),
+                field="boundary_geojson",
+                hint="Send a closed Polygon or MultiPolygon, in WGS84 longitude and latitude.",
+            ) from exc
 
     root = cases_directory()
     base_slug = custom_case_id or slugify(name)
@@ -202,10 +308,6 @@ def create_and_register_case(
             ],
         }
 
-    boundary_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(boundary_path, "w", encoding="utf-8") as f:
-        json.dump(boundary_geojson, f, indent=2)
-
     yaml_data = {
         "case_id": case_id,
         "status": "scaffolded",
@@ -241,11 +343,21 @@ def create_and_register_case(
         },
     }
 
-    yaml_path = root / f"{case_id}.yaml"
-    with open(yaml_path, "w", encoding="utf-8") as f:
-        yaml.safe_dump(yaml_data, f, sort_keys=False)
+    _validate_before_writing(yaml_data, case_id)
 
-    case = get_case(case_id)
+    yaml_path = root / f"{case_id}.yaml"
+    boundary_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(boundary_path, "w", encoding="utf-8") as f:
+            json.dump(boundary_geojson, f, indent=2)
+        with open(yaml_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(yaml_data, f, sort_keys=False)
+        case = get_case(case_id)
+    except BaseException:
+        # Never leave half a case behind: an unloadable YAML breaks the whole case list.
+        yaml_path.unlink(missing_ok=True)
+        boundary_path.unlink(missing_ok=True)
+        raise
 
     # Automatically generate calibrated completed fixture
     _generate_and_store_fixture(case)

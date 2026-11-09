@@ -41,6 +41,35 @@ flowchart LR
   - Organization boundaries, project grants, Scrypt password hashing ($N=32768, r=8, p=1$), timing attack mitigation, and session cookies with HttpOnly, SameSite, and Secure flags.
   - Row-level tenant isolation returning `HTTP 403 Forbidden` on unauthorized cross-tenant queries.
 
+### Added on `bhumi-dev`: report export and structured errors (#38, #39)
+- **Report export pipeline (#38).** PDF and CSV exports are verified against their own bundle
+  (`verify_grounding`), labelled with their generator (`deterministic` or `genai:<provider>`) in the PDF,
+  CSV and an `X-GroundTruth-Report-Generator` header, and guaranteed to carry the provenance section and
+  the simulated-data warning. A narrated report that fails verification **refuses the export** with a
+  structured error (`narration_not_grounded`, `narration_failed`, `report_not_grounded`); the inline
+  `report_markdown` keeps its deterministic fallback. `GET /cases/{id}/export/pdf?narrate=true` is the
+  opt-in (`422 narration_not_configured` without a provider). The export policy trusts numbers from
+  `verdict.rationale` only, beyond the evidence values: the deterministic report fails the contract's
+  check for 7 of 27 cases because the engine's own thresholds are not recognised there (a fix for
+  `contracts/grounding`, C1/C6).
+- **One error envelope for every router (#39).** Every error response carries `request_id` and a
+  top-level `is_refusal`; the existing `detail` shapes are unchanged. Validation errors name their
+  fields (`code: validation_error`, `fields`) and no longer echo the submitted input. Absolute paths,
+  tracebacks, SQL and secrets are scrubbed from error bodies and from stored error text; an unexpected
+  exception returns a JSON 500 with a request id (traceback in the server log only) and carries CORS
+  headers. New optional fields on the error models; API types regenerated.
+
+### Fixed on `bhumi-dev`
+- **`POST /jobs`, `/verify` and the CLI ignored the case's `min_donors`/`max_donors` (#36).** They
+  defaulted to `min_donors=10`, so Kariba ran with a best placebo p-value of 0.091 instead of 0.032.
+  They now use the case's own values. A request may raise the floor but not lower it
+  (`min_donors_below_case_floor`).
+- **Case management (#36).** `status: analysed` is refused on every path (`CaseDefinition` itself;
+  it needs a run reviewed by both owners, C7 and #4), unknown statuses are refused, and `POST /cases`
+  validates before writing and answers structured 422s instead of a bare 500. A rejected case no longer
+  leaves an unloadable YAML behind that broke the whole case list. Case ids must be kebab-case.
+  API types regenerated (`min_donors` is optional; `CreateCaseRequest.status`).
+
 ### Added on `bhumi-dev` before the 2.0 merge
 - **Earth Engine observation service (#22):** `platform/datasets/observation.py`, with
   sign-in, retries, rate limiting and caching shared through `platform/datasets/session.py`.
