@@ -1,7 +1,7 @@
 # ADR-011: The unit of analysis is a masked administrative district
 
-**Status:** Proposed
-**Date:** 2026-09-20
+**Status:** Accepted
+**Date:** 2026-09-20 (Accepted for GroundTruth 2.0)
 **Deciders:** Viraj, Bhumi
 
 ## Context

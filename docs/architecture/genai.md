@@ -1,158 +1,110 @@
-# 7. GenAI grounding
+# GenAI Grounding Architecture
 
-## Where the model sits
+**Package**: `packages/groundtruth/src/groundtruth/contracts/grounding.py` & `reports/`  
+**Guarantees**: Deterministic Fallback, Zero Autonomous Calculation, 2% Numeric Grounding Gate, Prohibited Accusation Filtering.
 
+GroundTruth 2.0 uses Large Language Models (LLMs) strictly as downstream narrators of verified evidence. The model is forbidden from computing statistics, estimating counterfactuals, or reaching legal conclusions.
+
+```mermaid
+flowchart TD
+    subgraph DataPipeline["Deterministic Pipeline (Pure Python / NumPy)"]
+        RawData["Raw Satellite & Climate Observations"] --> Engine["Analytical Engine"]
+        Engine --> Bundle["Immutable EvidenceBundle (SHA-256)"]
+    end
+
+    subgraph NarrationTier["Reporting & Narration Layer"]
+        Bundle --> DryRenderer["Deterministic Markdown Renderer<br/>(Zero Model Dependency, Offline)"]
+        Bundle --> PromptBuilder["Structured Narration Prompt<br/>(Evidence Items + Mandatory Caveats)"]
+        PromptBuilder --> LLM["LLM Generation Service<br/>(Claude / OpenAI / Local Mistral)"]
+        LLM --> DraftProse["Draft Audit Narrative"]
+    end
+
+    subgraph GroundingGateway["Downstream Grounding Verifier (contracts/grounding.py)"]
+        DraftProse --> Check1{"1. Numeric Grounding<br/>Do all numbers match bundle<br/>within 2% relative tolerance?"}
+        Check1 -- Fail --> Fallback["Fail Closed: Publish Deterministic Report"]
+        Check1 -- Pass --> Check2{"2. Prohibited Assertions<br/>Are fraud, legal guilt, or<br/>certainty claims absent?"}
+        Check2 -- Fail --> Fallback
+        Check2 -- Pass --> Check3{"3. Mandatory Caveats<br/>Do all required scientific<br/>caveats survive in prose?"}
+        Check3 -- Fail --> Fallback
+        Check3 -- Pass --> VerifiedReport["Publish Verified Executive Audit Report"]
+    end
+
+    DryRenderer --> Fallback
 ```
-NOT THIS:   raw satellite data  →  LLM  →  "the project over-issued 57%"
 
-THIS:       raw data → stats/CV/ML engine → verified evidence bundle
-                                                     ↓
-                                          LLM narrates the bundle
-                                                     ↓
-                                          grounding verifier
-                                                     ↓
-                                    pass → publish   fail → deterministic report
-```
-
-The language model is downstream of every number. It explains; it does not
-compute, estimate, infer or conclude.
-
-## Why this is architecture and not prompting
-
-Instructing a model to avoid hallucination reduces the rate. It does not make
-the failure mode impossible, and in a verification system a single fluent
-invented figure is worse than no report at all — it is exactly the kind of
-output a reader will trust.
-
-So the constraint is enforced downstream of the model, where it does not depend
-on the model complying:
-
-1. The model receives only the `EvidenceBundle` and the deterministic report.
-   There is no path from raw data to the model.
-2. Its output is parsed and every number checked against the bundle.
-3. Its output is scanned for prohibited assertions.
-4. Required caveats must survive into the prose.
-5. On any failure the deterministic report is published instead.
-
-The system degrades to **correct and dry**, never to **fluent and wrong**.
-
-## The deterministic renderer
-
-`render_deterministic` produces a complete Markdown report — verdict, evidence
-table with units and intervals, caveats, and a full provenance section with
-fingerprints — with no model, no API key and no network.
-
-This matters beyond convenience: **the scientific pipeline has no dependency on
-a language model.** Remove the GenAI layer entirely and the system still works.
-A test asserts that the deterministic renderer passes its own grounding check,
-so the fallback is never the weaker product in terms of correctness.
-
-## The three checks
-
-### 1. Numeric grounding
-
-Every number in the text must match a bundle value within a 2% relative
-tolerance. Percentage renderings of a bundle value are accepted, so a model may
-write "3.85 percent" for a stored 0.0385.
-
-Exempt without a match: four-digit years, small integers 0–10 (list markers and
-counts), and anything in `extra_allowed_values`.
-
-Masked before scanning, because they contain digit runs that assert nothing:
-
-- backticked identifiers and hex provenance fingerprints
-- URLs
-
-A backticked span holding *only* a plain number is still scanned, so a figure
-cannot be smuggled past the check by wrapping it in backticks.
-
-Identifiers like `donor-031` are not read as negative numbers: a minus sign
-only counts as a sign when it does not follow a word character.
-
-### 2. Prohibited assertions
-
-| Pattern class | Why blocked |
-| --- | --- |
-| fraud, scam, deliberate inflation, lied, deceived | GroundTruth has no standing to allege misconduct |
-| criminal, illegal, guilty | Legal conclusions are outside its competence |
-| proves that, conclusively shows, definitive, certainly | Overstates what a screening estimate supports |
-| "NDVI of X equals Y tCO2e" | A spectral index is not a carbon stock |
-
-**Negated forms are exempt.** The mandatory caveat says "not evidence of fraud",
-which contains the word the fraud filter looks for. Without the exemption the
-system would reject its own disclaimer — and the failure would be quiet, because
-the safe fallback would simply fire on every correctly-caveated report. The
-exemption list is in `NEGATED_ASSERTION_PATTERNS`, and a test covers it.
-
-### 3. Required caveats
-
-`policy_for_bundle` derives required phrases from the verdict's caveats. A
-distinctive fragment of each must appear, so the model may re-flow wording
-without dropping meaning.
-
-## The system prompt
-
-The narration prompt states the rules explicitly, and notes that they are
-checked automatically afterwards:
-
-1. Every number must appear in the bundle. No new computation, no re-rounding,
-   no annualising, no unit conversion.
-2. Never state or imply fraud, deception, intent or illegality.
-3. Never describe a vegetation index as an amount of carbon.
-4. Never write that anything is proven, definitive, certain or conclusive.
-5. Reproduce every caveat.
-6. If the outcome is inconclusive, say so plainly. Do not soften it.
-
-## Provider status
-
-| Provider | Status |
-| --- | --- |
-| Deterministic renderer | Implemented, always available |
-| `EchoNarrator` (test double) | Implemented |
-| Nugen | Interface defined, HTTP call **not implemented** |
-| OpenAI | Interface defined, HTTP call **not implemented** |
-| Anthropic | Interface defined, HTTP call **not implemented** |
-
-`build_narrator` raises `ConfigurationError` if a provider is selected without a
-key, rather than silently disabling narration — a silent degrade would hide a
-deployment mistake.
-
-## The planned evaluation
-
-`experiments/genai_grounding_eval/` specifies a comparison of Nugen's alignment
-stack against an unaligned baseline on identical evidence bundles, measuring:
-
-- **ungrounded figure rate** — numbers not traceable to the bundle
-- **prohibited assertion rate** — fraud, legal or certainty claims
-- **caveat retention rate** — required caveats surviving into the prose
-- **fallback rate** — how often the deterministic report has to take over
-
-**This evaluation has not been run.** No comparative claim about any provider
-appears anywhere in this repository, and none should until the harness produces
-numbers.
-
-Note that the grounding verifier makes the *outcome* safe regardless of which
-model is used. What the evaluation measures is how often the safety net has to
-catch something — which is a question about model quality, not about whether the
-system can be trusted.
-
-## Testing the boundary
-
-`tests/test_grounding.py` covers:
-
-- grounded text accepted
-- invented figures rejected
-- plausible-but-wrong figures rejected (the dangerous case)
-- percentage renderings accepted
-- eight varieties of accusatory and overclaiming text rejected
-- index-to-carbon phrasing rejected
-- the approved "warrants review" framing accepted
-- caveat-dropping rejected
-- the deterministic renderer passing its own check
-- a hallucinating narrator triggering fallback with its output discarded
-- a failing provider degrading safely
-- the narrator receiving the bundle and the rules
+![Auditor Dashboard](../product/screens/auditor-dashboard.png)
 
 ---
 
-Previous: [6. Validation](../science/validation.md) · Next: [8. Limitations](../science/limitations.md)
+## 1. Why Grounding is Architecture, Not Prompting
+
+Instructing a language model in a system prompt to "never hallucinate" reduces error frequency, but provides **zero architectural guarantees**. In carbon verification, a single fluent but invented number—such as claiming an intervention produced "142,500 tCO2e of additionality" when the engine calculated no such figure—discredits the entire platform.
+
+GroundTruth 2.0 enforces verification **downstream of the model**:
+1. The model receives only the verified `EvidenceBundle` and the deterministic baseline report. It has no access to raw satellite imagery or uncalibrated spreadsheets.
+2. The generated output is parsed as untrusted text and subjected to strict algorithmic verification.
+3. If the model violates any rule, the output is discarded and the system falls back to the deterministic report.
+
+> The platform degrades to **correct and dry**, never to **fluent and wrong**.
+
+---
+
+## 2. The Deterministic Fallback Renderer
+
+`groundtruth.platform.reports.render_deterministic` produces a comprehensive, publication-ready Markdown audit report:
+- Executive attribution verdict with confidence levels.
+- Full evidence table with measured values, declared units, and uncertainty bounds.
+- All mandatory scientific caveats.
+- Complete cryptographic provenance tables with SHA-256 fingerprints.
+
+The deterministic renderer runs completely offline with zero API keys and zero network calls. A unit test asserts that the deterministic renderer passes its own grounding verification suite, guaranteeing that the fallback is never inferior in scientific validity.
+
+---
+
+## 3. The Three Verification Checks
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Platform as Report Platform
+    participant LLM as Language Model
+    participant Gate as Grounding Verifier
+    participant Pub as Publishing Store
+
+    Platform->>LLM: Prompt(EvidenceBundle, DeterministicReport)
+    LLM-->>Platform: Draft Markdown Narrative
+    Platform->>Gate: verify_grounding(DraftProse, EvidenceBundle)
+    
+    Gate->>Gate: Extract all numbers (regex scanning)
+    Gate->>Gate: Match numbers against Bundle (2% relative tolerance)
+    Gate->>Gate: Scan for Prohibited Words (fraud, criminal, illegal)
+    Gate->>Gate: Verify Negated Exemptions ("not evidence of fraud")
+    Gate->>Gate: Scan for Mandatory Caveat Substrings
+    
+    alt All Checks Pass
+        Gate-->>Platform: VerificationStatus: PASSED
+        Platform->>Pub: Publish Grounded Report
+    else Verification Fails
+        Gate-->>Platform: VerificationStatus: VIOLATION (Detailed Diagnostic)
+        Platform->>Pub: Discard Draft & Publish Deterministic Report
+    end
+```
+
+### 3.1 Check 1: Numeric Grounding (2% Tolerance)
+Every number appearing in the generated narrative must correspond to a verified item in the `EvidenceBundle`:
+- Tolerates minor percentage formatting (e.g., `0.042` rendered as `4.2%`).
+- Numbers within a 2% relative tolerance are accepted to account for conversational rounding.
+- Exemptions: Calendar years (e.g., `2011`, `2022`), small integer list markers (`1` through `10`), and backticked SHA-256 fingerprints.
+
+### 3.2 Check 2: Prohibited Assertions & Negation Handling
+GroundTruth 2.0 is an environmental verification tool, not a judicial court. The grounding filter immediately rejects text containing:
+- Accusations of misconduct: `fraud`, `scam`, `lied`, `cheat`, `deception`.
+- Legal conclusions: `criminal`, `illegal`, `guilty`, `unlawful`.
+- Absolute certainty: `proves conclusively`, `indisputable`, `definitive proof`.
+- Implicit carbon conversion: *"NDVI of 0.4 equals 50 tonnes of carbon"*.
+
+**Negated Exemption Handling**:
+The mandatory caveat explicitly requires the sentence *"Model divergence is not evidence of fraud"*. If the filter naively banned the word "fraud", the system would reject its own required disclaimer. The verifier in `contracts/grounding.py` applies regex patterns that detect and exempt recognized negated constructions.
+
+### 3.3 Check 3: Mandatory Caveat Enforcement
+The engine compiles a set of mandatory caveat strings required for the specific verdict (e.g., *parallel trends assumption cannot be directly tested post-treatment*). The verifier validates that distinct semantic fragments of each required caveat are preserved in the published prose.

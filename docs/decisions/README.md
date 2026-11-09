@@ -1,71 +1,51 @@
-# Architecture decision records
+# Architecture Decision Records (ADRs)
 
-An ADR records a decision that was expensive to make and would be expensive to
-reverse. It captures the context and the alternatives, so that a year from now
-nobody has to reconstruct the reasoning from the code.
+An Architecture Decision Record (ADR) captures a critical architectural choice that constrains the design and would be expensive to reverse. It documents context, tradeoffs, alternatives considered, and binding consequences.
 
-## What gets an ADR
+```mermaid
+graph TD
+    subgraph CoreFoundations["System & Boundary Architecture"]
+        ADR1["ADR-001: Monorepo Topology"]
+        ADR2["ADR-002: Engine/Platform Seam"]
+        ADR3["ADR-003: Analysis Contract"]
+    end
 
-Write one when a decision:
+    subgraph ScientificModel["Evidence & Provenance Model"]
+        ADR4["ADR-004: Evidence Object Model"]
+        ADR5["ADR-005: Provenance Graph"]
+        ADR6["ADR-006: Reproducibility & Spec Hash"]
+        ADR7["ADR-007: GenAI Grounding Boundary"]
+        ADR11["ADR-011: Unit of Analysis"]
+    end
 
-- constrains how future work must be structured,
-- would be costly to reverse,
-- was genuinely contested, or
-- will otherwise be re-litigated every few months.
+    subgraph ExecutionInfrastructure["Execution & Deployment"]
+        ADR8["ADR-008: Asynchronous Job Lifecycle"]
+        ADR9["ADR-009: Data Management & Pinned References"]
+        ADR10["ADR-010: Containerized Deployment & Tiered Storage"]
+    end
 
-Do **not** write one for a library choice with no downstream consequence, a
-naming convention, or anything already settled by an existing ADR.
-
-## Status values
-
-| Status | Meaning |
-| --- | --- |
-| Proposed | Under discussion, not yet binding |
-| Accepted | In force. Code should comply. |
-| Superseded | Replaced by a later ADR, which must be named |
-| Deprecated | No longer applies; nothing replaced it |
-
-An accepted ADR is never edited to change the decision. Write a new one that
-supersedes it, so the history of reasoning stays intact.
-
-## Index
-
-| ADR | Decision | Status |
-| --- | --- | --- |
-| [001](ADR-001-monorepo-structure.md) | Monorepo with one Python distribution | Accepted |
-| [002](ADR-002-engine-platform-boundary.md) | Split engine and platform by an enforced contract | Accepted |
-| [003](ADR-003-analysis-contract.md) | `AnalysisRequest` / `AnalysisResult` as the interface | Accepted |
-| [004](ADR-004-evidence-object.md) | Evidence bundle as the unit of scientific output | Accepted |
-| [005](ADR-005-provenance-model.md) | Mandatory provenance on every value | Accepted |
-| [006](ADR-006-reproducibility.md) | Reproducibility via `spec_hash` and declared seeds | Accepted |
-| [007](ADR-007-genai-boundary.md) | GenAI strictly downstream, grounding enforced in code | Accepted |
-| [008](ADR-008-analysis-jobs.md) | Analyses as asynchronous jobs, typed results not exceptions | Accepted |
-| [009](ADR-009-data-management.md) | Pinned dataset references, data out of git | Accepted |
-| [010](ADR-010-deployment.md) | Containerised API and worker, deferred until MVP | Proposed |
-| [011](ADR-011-unit-of-analysis.md) | The unit of analysis is a masked administrative district | Proposed |
-
-## Template
-
-```markdown
-# ADR-NNN: Title
-
-**Status:** Proposed | Accepted | Superseded by ADR-XXX
-**Date:** YYYY-MM-DD
-**Deciders:** Viraj, Bhumi
-
-## Context
-What situation forced a decision. Include constraints that were real at the time.
-
-## Decision
-What we chose, stated so someone can comply with it.
-
-## Alternatives considered
-What else was on the table and why it lost. This is the most useful section a
-year later.
-
-## Consequences
-What becomes easy, what becomes hard, what we accept.
-
-## Revisit when
-The concrete trigger that should reopen this.
+    ADR1 --> ADR2 --> ADR3
+    ADR3 --> ADR4 --> ADR5 --> ADR6 --> ADR7
+    ADR3 --> ADR8 --> ADR9 --> ADR10
+    ADR3 --> ADR11
 ```
+
+![Auditor Dashboard](../product/screens/auditor-dashboard.png)
+
+---
+
+## Complete ADR Registry
+
+| ADR | Title | Status | Deciders | Summary |
+| :--- | :--- | :--- | :--- | :--- |
+| [001](ADR-001-monorepo-structure.md) | Monorepo with One Python Distribution | **Accepted** | Viraj, Bhumi | Unified repository with `apps/` and `packages/groundtruth` for atomic commits and shared CI. |
+| [002](ADR-002-engine-platform-boundary.md) | Split Engine and Platform by Enforced Contract | **Accepted** | Viraj, Bhumi | Absolute unidirectional dependency seam guarded by AST import parsing (`test_contract_boundary.py`). |
+| [003](ADR-003-analysis-contract.md) | `AnalysisRequest` / `AnalysisResult` as Interface | **Accepted** | Viraj, Bhumi | Self-contained Pydantic v2 schemas; engine reads zero configuration or environment. |
+| [004](ADR-004-evidence-object.md) | Evidence Bundle as the Unit of Scientific Output | **Accepted** | Viraj, Bhumi | Immutable, serializable `EvidenceBundle` as the sole currency of the reporting tier. |
+| [005](ADR-005-provenance-model.md) | Mandatory Provenance on Every Value | **Accepted** | Viraj, Bhumi | SHA-256 derivation DAG on every metric, enabling "two-click provenance drill-down". |
+| [006](ADR-006-reproducibility.md) | Reproducibility via `spec_hash` and Declared Seeds | **Accepted** | Viraj, Bhumi | Deterministic PRNG seeds and canonical request hashing ensure bit-level reproducibility. |
+| [007](ADR-007-genai-boundary.md) | GenAI Strictly Downstream, Grounding in Code | **Accepted** | Viraj, Bhumi | LLMs only narrate verified bundles; 2% numeric check and prohibited accusation filtering. |
+| [008](ADR-008-analysis-jobs.md) | Analyses as Asynchronous Jobs, Typed Refusals | **Accepted** | Viraj, Bhumi | Compute executed off HTTP loops; scientific refusals treated as succeeded jobs with error payloads. |
+| [009](ADR-009-data-management.md) | Pinned Dataset References, Data Out of Git | **Accepted** | Viraj, Bhumi | Large rasters managed outside git via tiered blob storage; pinned `DatasetRef` in every run. |
+| [010](ADR-010-deployment.md) | Containerized API, Worker, and Tiered Storage | **Accepted** | Viraj, Bhumi | Dual-container deployment from unified image; 8-process worker tuning, 4-tier storage hierarchy. |
+| [011](ADR-011-unit-of-analysis.md) | Unit of Analysis is a Masked Administrative District | **Accepted** | Viraj, Bhumi | Standardized ADM2 districts with 10 km leakage buffers and pre-treatment baseline forest masks. |

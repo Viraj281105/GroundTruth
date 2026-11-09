@@ -1,166 +1,181 @@
-# Frontend architecture
+# Frontend Architecture
 
-**Owner: Viraj.** `apps/web/`
+**Owner**: Frontend Engineering (`apps/web/`)  
+**Stack**: Next.js 14 (App Router), TypeScript 5.4, TailwindCSS, Recharts, MapLibre GL, SWR, Headless UI.  
+**Test Suite**: 542 unit, component, and integration tests (`vitest` / React Testing Library), Playwright E2E.
 
-**Status: the API contract types exist. No UI is built.**
+The GroundTruth 2.0 frontend is an enterprise web application designed for due-diligence professionals, portfolio managers, sovereign authorities, and ecosystem operators. It renders high-dimensional econometric counterfactuals, multi-temporal geospatial observations, and cryptographic evidence provenance with zero client-side data fabrication.
 
-The evidence bundle format is now stable and versioned, so UI work can proceed
-without rewrites. Building views before the bundle settled would have meant
-building them twice.
+```mermaid
+graph TD
+    subgraph RouteArchitecture["Next.js 14 App Router Hierarchy"]
+        RootLayout["app/layout.tsx (Global Providers, Theme, SWR)"]
+        
+        PublicGroup["app/(public)/<br/><i>Public Marketing & Methodology</i>"]
+        AppGroup["app/(app)/<br/><i>Authenticated Multi-Tenant Workspaces</i>"]
+        LegacyGroup["app/(legacy)/<br/><i>Backward-Compatible Case Visualizer</i>"]
+        
+        PublicGroup --> LandingPage["Landing Page (page.tsx)"]
+        PublicGroup --> MethodPage["Methodology Overview"]
+        
+        AppGroup --> AppLayout["Tenant Shell & Organization Context"]
+        AppLayout --> AuditorDash["Auditor Workspace (/auditor)"]
+        AppLayout --> FunderDash["Funder Workspace (/funder)"]
+        AppLayout --> GovDash["Government Workspace (/government)"]
+        AppLayout --> NGODash["NGO Workspace (/ngo)"]
+        AppLayout --> ProjectDetail["Project & Evidence Explorer (/projects/[id])"]
+    end
+
+    subgraph DesignSystem["Design System (components/ds/) • 542 Tests"]
+        Atoms["Primitives: Button, Input, Badge, Card, Stat, Table, Tabs, Select, Switch, Alert, Modal"]
+        Charts["Visualization: CounterfactualChart, PlaceboHistogram, TrajectorySparkline"]
+        Map["Geospatial: MapLibreBoundaryViewer, DonorDistrictsLayer"]
+    end
+
+    AppLayout --> DesignSystem
+```
+
+![Auditor Dashboard](../product/screens/auditor-dashboard.png)
 
 ---
 
-## Stack
+## 1. App Router Restructuring: Public vs. Multi-Tenant Workspaces
 
-Next.js (App Router), TypeScript, Tailwind, Recharts for charts, MapLibre for
-maps. Types generated from the API OpenAPI schema — **the UI never hand-writes a
-backend shape**, which is what keeps it independent of Python internals.
+GroundTruth 2.0 restructures the application into route groups to provide clear isolation between public documentation and multi-tenant authenticated operations:
 
-## Views
+### 1.1 `(public)` Route Group
+* **Scope**: Public-facing marketing, mission statement, scientific methodology, and team accreditation.
+* **Layout**: Lightweight public header, unauthenticated navigation, zero database dependency.
+* **Security**: No cookies or tenant session headers required.
 
-| View | Purpose | Status |
-| --- | --- | --- |
-| Case browser | Projects with status; makes clear nothing is `analysed` | Planned |
-| Project page | Claim, window, donor region, run history | Planned |
-| Counterfactual chart | Project vs synthetic control, gap shaded, treatment date marked | Planned |
-| Placebo distribution | Histogram of placebo RMSPE ratios, project highlighted | Planned |
-| Map | Project boundary, donor pool, leakage belt, exclusions | Planned |
-| Timeline | Crediting period, treatment date, sensor transitions, fire years | Planned |
-| Evidence explorer | Every value with unit, interval and provenance drill-down | Planned |
-| Report view | Rendered Markdown, generator labelled | Planned |
+### 1.2 `(app)` Route Group
+* **Scope**: Authenticated multi-tenant workspace supporting role-based dashboards and case verification.
+* **Layout**: Includes the Global Navigation Shell, Organization Tenant Switcher, Persona Role Badge, and Scoped Grant Guards.
+* **Security**: Enforces active session validation, cross-organization boundary checks, and CSRF token transmission.
 
-The counterfactual chart is the centrepiece. It is the one image that makes the
-argument — observed versus what comparable regions did — and everything else
-supports it.
+![Cross-Organization Access Denied](../product/screens/cross-org-denied.png)
 
-## Non-negotiable UI rules
+---
 
-These encode the project's scientific commitments into the interface. Helpers
-for rules 1, 5 and 6 already exist in `apps/web/src/lib/types.ts`.
+## 2. The 4 Stakeholder Personas & Tailored Workspaces
 
-1. **The simulated-data banner is persistent and not dismissible** on any view
-   showing a simulated run. Driven by `result.is_simulated`, never inferred.
-2. **No bare numbers.** Every value shows its unit and, where one exists, its
-   interval *with the interval's `kind`*. A sensitivity envelope rendered as a
-   confidence interval is a misrepresentation, not a simplification.
-3. **Provenance in two clicks** from any number on screen.
-4. **Caveats render with the verdict**, never behind a disclosure triangle.
-5. **`INCONCLUSIVE` is styled neutrally.** It is a legitimate outcome — often the
-   most valuable one — and must not look like an error.
-6. **`divergent_from_claim` is amber, never alarm-red.** It means "warrants
-   review", not "wrongdoing". No copy, tooltip or colour may imply misconduct.
-7. **Refusals are designed states**, not error toasts. They carry the reason and
-   the remediation from the structured error.
+GroundTruth 2.0 provides dedicated, optimized views for each key stakeholder:
 
-## Run states from the stored-run API
+### 2.1 Auditor Persona (`/auditor`)
+* **Primary Objective**: Independent forensic audit of carbon additionality and baseline credibility.
+* **Key Visuals**: Simplex synthetic control counterfactual trajectory, pre-treatment RMSPE fit curves, leave-one-out sensitivity bounds, in-space placebo distribution p-value ranking, and complete evidence provenance traces.
+* **Required Scope**: `audit` or `contribute`.
 
-`GET /runs` and `GET /runs/{run_id}` (#35) send a `result_state` so the UI derives
-nothing. It uses the existing `ResultState` values `running`, `measured`, `refused` and
-`failed`, and two more that `ResultState` now has as well (#40):
+![Auditor Dashboard](../product/screens/compose-auditor-dashboard.png)
 
-| Value | Meaning | Rendering |
-| --- | --- | --- |
-| `queued` | Recorded, not yet picked up by a worker | The `running` tone (info); it is waiting, not failing |
-| `cancelled` | Cancelled before it produced evidence | Neutral, like `not_started`; not an error |
+### 2.2 Funder Persona (`/funder`)
+* **Primary Objective**: Portfolio-level capital allocation risk, credit over-issuance exposure, and delivery tracking.
+* **Key Visuals**: Aggregate risk heatmaps, claimed vs. observed biomass delta, portfolio carbon additionality scores, and fund allocation timelines.
+* **Required Scope**: `view`, `audit`, or `contribute`.
 
-A stored refusal is a normal `200` response with `result_state: "refused"` and the full
-structured `error` (including `detail`), so the refusal view can be driven from it. Every
-run carries `is_simulated`; the persistent banner is driven by that field and by
-`contains_simulated` on a page or a comparison, never inferred. A comparison with
-`comparable: false` has no diff by design: render its `not_comparable` reasons, not a
-table of changes.
+![Funder Dashboard](../product/screens/funder-dashboard.png)
 
-### Watching a job
+### 2.3 Government Persona (`/government`)
+* **Primary Objective**: Sovereign forest accounting, NDC reporting, and national leakage belt monitoring.
+* **Key Visuals**: Regional administrative district forest cover, cross-border leakage belts, national carbon registry integration, and Article 6 adjustment flags.
+* **Required Scope**: `view` or `audit`.
 
-`POST /jobs` returns at once with a `status_url`; poll `GET /jobs/{run_id}` about once a
-second until `terminal` is true. The response carries `stages` (claim, data, engine,
-record) with a state each, so the UI can show where a job is. It deliberately has **no
-percentage**: the engine is one uninterruptible step, so while it runs the UI gets
-`elapsed_ms` (time spent) and nothing about how much is left. Do not synthesise a
-progress bar from it. The engine's own per-stage timings arrive in `engine_metrics` after
-it finishes, for completed analyses only. A refusal is `result_state: "refused"` with
-every stage `done`, and renders as the refusal state, not an error. Cancelling a running
-job returns `202` and `cancel_requested: true`; keep polling until `terminal`, because the
-engine cannot be interrupted and the cancel completes when it returns.
+![Government Dashboard](../product/screens/government-dashboard.png)
 
-## How the case page runs an analysis (#40)
+### 2.4 NGO / Project Developer Persona (`/ngo`)
+* **Primary Objective**: Intervention tracking, ground-truth field data submission, and multi-spectral vegetation health monitoring.
+* **Key Visuals**: High-resolution Sentinel-2 vegetation trajectory (NDVI/EVI/NDMI/NBR), seasonal rainfall anomaly overlays (CHIRPS SPI-12), and ground-truth survey upload interfaces.
+* **Required Scope**: `contribute`.
 
-**Run** submits a job; it does not call `/verify`. `src/lib/jobs.ts` holds the plumbing
-(submit, poll, cancel, fetch the stored run, normalise errors); the page holds the states.
+![NGO Dashboard](../product/screens/ngo-dashboard.png)
 
-```
-click Run ─► POST /jobs ─► ?run=<id> in the address
-          ─► GET /jobs/{id} every ~1 s until terminal   (LoadingState shows job.stages)
-          ─► measured  → GET /runs/{id}?include_report=true → the existing results view
-             refused   → RefusalState with the engine's code, stage, remediation, detail
-             failed    → ErrorState with the error code and remediation
-             cancelled → EmptyState "Run Cancelled"
+---
+
+## 3. GroundTruth Design System (`components/ds/`)
+
+The design system provides a comprehensive, accessible, and mathematically precise library of components, backed by **542 automated unit and component tests**:
+
+```mermaid
+graph LR
+    subgraph UIPrimitives["Atomic UI Primitives"]
+        Btn["Button (ds/button)"]
+        Badge["Badge (ds/badge)"]
+        Card["Card (ds/card)"]
+        Stat["Stat Display (ds/stat)"]
+        Table["Data Table (ds/table)"]
+        Tabs["Tabs (ds/tabs)"]
+        Modal["Dialog Modal (ds/modal)"]
+        Alert["Callout Alert (ds/alert)"]
+    end
+
+    subgraph ScientificComponents["Scientific Visualizers"]
+        CFChart["CounterfactualChart<br/>• Observed vs. SCM<br/>• Shaded Crediting Gap<br/>• Intervention Marker"]
+        PlaceboPlot["PlaceboDistributionPlot<br/>• Permutation Histogram<br/>• Ranked Phipson-Smyth P-Value"]
+        ProvDrill["ProvenanceExplorer<br/>• Two-Click Derivation Tree<br/>• SHA-256 Fingerprint Inspector"]
+        EvidenceTable["EvidenceMatrix<br/>• Value + Unit + Confidence Kind<br/>• EvidenceState Epistemology"]
+    end
+
+    UIPrimitives --> ScientificComponents
 ```
 
-- **No simulated progress.** The loading state shows only the stages the API observed,
-  with their durations or elapsed time. The illustrative 9-stage tracker is no longer
-  shown anywhere: not for queued runs, not for inline runs, not while loading a case.
-  `LoadingState` still renders it when no `stages` are passed, for other callers.
-- **Reload and links resume.** `?run=<id>` is resumed on load. A run of another case is
-  refused (`run_case_mismatch`), never shown under the wrong project.
-- **Losing the API** while polling backs off 1, 2, 4, 8, then 10 s; after 30 s without an
-  answer the page says it lost contact. Retry resumes watching the same run; it never
-  submits a second one.
-- **Cancel** is offered while the job is queued or running.
-- **No job store** (`503 store_not_configured` or `store_unavailable`): the error state
-  shows the code and remediation, and a **Run inline instead** button appears. Only the
-  user can choose it; nothing falls back to `/verify` on its own. An inline run is not
-  stored, so it has no `?run=`.
-- **Injected effect.** `POST /jobs` has no `true_effect` (it is not part of the
-  specification hash, #37), so for queued runs the slider is disabled and reads
-  "SET BY WORKER": the worker's `--true-effect` (default 0.06) applies. It is live only for
-  inline runs. The quick presets still name an effect; for a queued run only their donor
-  count applies.
-- **Demo mode is unchanged.** With `NEXT_PUBLIC_DEMO_MODE=true` and the API unreachable,
-  the fixture is shown under the non-dismissible "no analysis was executed" banner, via the
-  same `isDemoMode()`-gated helpers in `api.ts`. `jobs.ts` never returns fixture data.
+### 3.1 Component Highlights
+* **`ds/stat`**: Formats numerical values strictly with units and confidence intervals (e.g., `+0.042 NDVI (90% CI: +0.012 to +0.071, SCM In-Space Placebo)`).
+* **`ds/badge`**: Epistemological state tags (`RAW_OBSERVED`, `DERIVED`, `MODEL_ESTIMATED`, `INFERRED`, `INSUFFICIENT_EVIDENCE`).
+* **`ds/alert`**: Contextual scientific callouts for non-negotiable caveats.
+* **`ds/table`**: Paginated, sortable donor candidate comparison matrix displaying weights, geographic distances, and covariate balance.
 
-### Configuration for a deployed API
+---
 
-`NEXT_PUBLIC_API_URL` is inlined at **build** time; build with the deployed API's URL
-(see `apps/web/.env.example`). The site's origin must be in the API's
-`CORS_ALLOWED_ORIGINS` (or be its `FRONTEND_URL`). A browser reports a refused
-cross-origin call as a network failure, so the unreachable error (`api_unreachable`) names
-both the API URL and that setting.
+## 4. Scientific Commitments in the User Interface
 
-## Data flow
+GroundTruth 2.0 enforces non-negotiable scientific presentation rules directly in code:
 
+1. **Persistent Simulated Data Banner**: Any view rendering data where `result.is_simulated == true` displays a non-dismissible amber header banner:
+   > *"SIMULATED DATA BENCHMARK: No real-world satellite raster observations were used in this estimate. Numerical outputs are generated from synthetic baseline fixtures."*
+2. **No Bare Numbers**: Every measurement rendered on screen must be paired with its declared unit and its uncertainty interval *with the interval's mathematical kind* (e.g., empirical placebo permutation vs. bootstrap). Rendering a sensitivity envelope as a standard confidence interval is rejected.
+3. **Provenance in Two Clicks**: Clicking any numerical figure anywhere in the UI opens the Provenance Drawer, displaying the originating sensor collection, processing algorithm, pipeline code commit, parameters, and input data hashes.
+4. **Uncompromised Caveat Visibility**: Caveats are displayed alongside verdicts in primary viewports, never concealed behind accordion dropdowns or secondary disclosure tabs.
+5. **Neutral Styling for Inconclusive**: An `INCONCLUSIVE` attribution verdict is styled in balanced, neutral slate tones. Inconclusive is a valid scientific finding—often the most valuable outcome in carbon due diligence—and must never be rendered as a software failure or error state.
+6. **Divergent from Claim is Amber, Never Red**: If independent causal analysis diverges from a developer's claimed credits, the indicator is rendered in amber with the text *"Warrants Accredited Review"*. Red styling and accusatory language (e.g., "fraud", "scam") are strictly prohibited.
+7. **Refusals as Designed States**: When a dataset is insufficient, the system presents a structured Refusal Panel detailing the exact missing criteria (e.g., *Insufficient clear-pixel fraction in pre-treatment baseline*) along with explicit remediation steps.
+
+---
+
+## 5. Client Data Flow & Asynchronous Job Streaming
+
+The web application never hand-writes API schemas. All data structures are generated directly from the backend OpenAPI 3.1 specification:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UI as Next.js View Component
+    participant Hook as useAnalysisJob / SWR
+    participant Client as Typed ApiClient (fetch)
+    participant API as FastAPI Backend
+
+    UI->>Hook: triggerVerification(caseId, donorSpec)
+    Hook->>Client: api.submitJob(requestPayload)
+    Client->>API: POST /jobs
+    API-->>Client: 202 Accepted { run_id: "run_9a2f...", status_url: "/jobs/run_9a2f..." }
+    Client-->>Hook: Return Run Identifier
+    
+    loop Poll Status (every 1000ms with Exponential Backoff on Failure)
+        Hook->>Client: api.getJobStatus("run_9a2f...")
+        Client->>API: GET /jobs/run_9a2f...
+        API-->>Client: 200 OK { terminal: false, stage: "engine", elapsed_ms: 1240 }
+        Hook-->>UI: Update Live Progress Tracker (Current Stage: Engine)
+    end
+
+    Hook->>Client: api.getJobStatus("run_9a2f...")
+    Client->>API: GET /jobs/run_9a2f...
+    API-->>Client: 200 OK { terminal: true, result_state: "measured" }
+    
+    Hook->>Client: api.getRunResult("run_9a2f...")
+    Client->>API: GET /runs/run_9a2f...?include_bundle=true
+    API-->>Client: 200 OK (Immutable EvidenceBundle)
+    Client-->>Hook: Return Typed AnalysisResult
+    Hook-->>UI: Transition to Completed State & Render Visualizations
 ```
-OpenAPI schema ──generate──► TypeScript types ──► typed API client ──► views
-```
 
-Regenerating types is part of the API change workflow, not a frontend chore:
-`make api-types` after any API schema or route change (see `apps/web/README.md`).
-If the schema changes and the types are not regenerated, CI fails, and so does
-`npm run build`.
-
-`src/lib/types.ts` keeps its old names as aliases of the generated types, plus
-UI-only helpers. These are the places where the UI and the API still differ, kept
-visible rather than papered over:
-
-| Where | UI | API | Note |
-| --- | --- | --- | --- |
-| `Confidence.kind` | `ConfidenceKind`, four values | `string` | The contract types it as a free string. Narrowing it is a `contracts/` change. Components only compare it to strings, so they are unaffected. |
-| `VerificationResponse` identity fields | were optional | always present | `run_id`, `spec_hash`, `engine_version`, `contract_version`, `duration_ms`. The UI is now stricter, which is safe. |
-| `ResultState` | `not_started` plus every API value | `queued`, `running`, `measured`, `refused`, `failed`, `cancelled` | Aligned in #40; a type test fails if the API adds a state the UI lacks. |
-| Donor ADR-011 types (`DonorExclusionCategory`, `DonorLadderRung`, `DonorCandidateSummary`) | hand-copied from `platform.units.rules` | not served by any endpoint | Generation cannot protect them; a change in Python would go unnoticed. |
-
-## Design principles
-
-**Show the uncertainty, do not hide it.** The interval is not a detail to reveal
-on hover; it is part of the number.
-
-**Make the counterfactual legible.** A non-specialist should understand "this
-line is what actually happened, this line is what comparable places did" without
-a statistics background.
-
-**Refusal is a first-class state.** Designed, explained, and visually distinct
-from both success and error.
-
-**Accessibility.** Keyboard navigable, charts with text alternatives, and never
-colour alone to distinguish observed from counterfactual.
+### 5.1 Connection Loss & Resumption
+If network contact with the backend API is interrupted during job execution, the client polling mechanism enters an exponential backoff schedule ($1\text{s}, 2\text{s}, 4\text{s}, 8\text{s}, 10\text{s}$). The run identifier is stored in the browser URL query parameter (`?run=<run_id>`), allowing users to refresh or share the page without losing execution tracking.

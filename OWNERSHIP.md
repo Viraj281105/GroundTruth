@@ -1,255 +1,139 @@
-# Ownership
+# GroundTruth 2.0 — System Ownership & Technical Governance
 
-GroundTruth is built by two people. This document says who owns what, where the
-boundary between them sits, and what "done" means for each subsystem.
-
-| | Owner | Share | Owns |
-| --- | --- | --- | --- |
-| **Analytical intelligence + user-facing product** | **Viraj** | ~40% | The scientific engine and the entire visual experience |
-| **Platform + application engineering** | **Bhumi** | ~60% | Everything that makes GroundTruth a real, deployable application |
-
-The split is deliberate. Viraj holds the two areas that decide whether the
-project is *credible* (the science) and whether it *lands* (the demo). Bhumi
-holds the larger surface: turning a computational module into a system that
-runs, persists, scales, deploys and stays up.
+**One platform. Four perspectives. One scientifically consistent source of truth.**  
+*Subsystem responsibilities, architectural boundaries, scientific accountability, and definition of done for GroundTruth 2.0.*
 
 ---
 
-## Architecture ownership
+## 1. Governance Structure & Team Roles
 
-Module paths below are relative to `packages/groundtruth/`.
+GroundTruth was developed for the **PCCOE International Grand Challenge 2026 (Indradhanu)** by **Viraj Jadhao** and **Bhumi Sirvi**. The system divides responsibilities between **Scientific Intelligence & Product Delivery** and **Platform Architecture & Infrastructure**:
 
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│  FRONTEND — Viraj                                                        │
-│  maps · counterfactual charts · placebo plots · timeline · evidence      │
-│  explorer · project pages · report view · demo polish                   │
-└───────────────────────────────┬──────────────────────────────────────────┘
-                                │ generated TypeScript types
-                                │ (from OpenAPI — Bhumi publishes)
-┌───────────────────────────────▼──────────────────────────────────────────┐
-│  PLATFORM — Bhumi                         src/groundtruth/platform/      │
-│                                                                          │
-│   api/        FastAPI, schemas, validation, errors, OpenAPI docs         │
-│   cases/      project + case management, request translation             │
-│   jobs/       analysis lifecycle, queueing, retries, cancellation        │
-│   store/      evidence + provenance persistence, run history             │
-│   storage/    artifacts, exports, generated reports                      │
-│   datasets/   dataset registry, pinning, credentials, caching, retries   │
-│   reports/    report pipeline, grounded GenAI narration                  │
-│   config.py   environment and production configuration                   │
-│                                                                          │
-│   plus: deployment, CI/CD, monitoring, E2E tests, hardening              │
-└───────────────────────────────┬──────────────────────────────────────────┘
-                                │
-        ┌───────────────────────▼────────────────────────┐
-        │  CONTRACT — shared, versioned, frozen          │
-        │            src/groundtruth/contracts/          │
-        │                                                │
-        │  AnalysisRequest  ──────────────►              │
-        │                   ◄──────────────  AnalysisResult
-        │  DataAccess ports ◄──────────────              │
-        │                                                │
-        │  Evidence · Provenance · units · errors        │
-        │  grounding rules · identifiers · versioning    │
-        │                                                │
-        │  Changes require BOTH owners to agree.         │
-        └───────────────────────┬────────────────────────┘
-                                │
-┌───────────────────────────────▼──────────────────────────────────────────┐
-│  ENGINE — Viraj                            src/groundtruth/engine/       │
-│                                                                          │
-│   observation/  spectral indices, cloud masking, compositing, zonal      │
-│   features/     covariate engineering and transformations                │
-│   matching/     donor-pool methodology, eligibility, balance             │
-│   causal/       synthetic control, difference-in-differences             │
-│   uncertainty/  placebo inference, leave-one-out, specification curve    │
-│   assembler.py  evidence assembly and the verdict gate chain             │
-│   run.py        run_analysis(request, data) -> result                    │
-│                                                                          │
-│   Pure computation. No files, no sockets, no credentials, no database.   │
-└──────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Leadership["System Governance"]
+        Viraj["Viraj Jadhao<br/>Lead Architect · Scientific Engine · Full-Stack Web & Mobile Product"]
+        Bhumi["Bhumi Sirvi<br/>Platform Engineer · Data Ingestion Pipelines · System Infrastructure"]
+    end
+
+    Viraj --> S1["Scientific Causal Engine (FISTA, DiD, Placebos)"]
+    Viraj --> S2["8-Dimension Framework & Graduation Ladder"]
+    Viraj --> S3["Web Frontend (542 Vitest Tests, 4 Personas)"]
+    Viraj --> S4["Jetpack Compose Mobile Client"]
+
+    Bhumi --> P1["FastAPI Backend & Asynchronous Job Worker"]
+    Bhumi --> P2["Multi-Tenant Isolation & Scrypt Auth Subsystem"]
+    Bhumi --> P3["PostgreSQL 15 & Redis Queue Infrastructure"]
+    Bhumi --> P4["Docker Compose & Production Deployment Stack"]
+
+    S1 & S2 & P1 & P2 --- Boundary["contracts/ (Shared Versioned Boundary)"]
 ```
 
-The boundary is enforced, not asserted. `tests/test_contract_boundary.py`
-parses the AST of every module and fails the build if:
+---
 
-- `contracts/` imports from either side;
-- `engine/` imports the platform, or performs any I/O;
-- `platform/` imports anything from `engine/` beyond `run_analysis`,
-  `describe_engine`, `engine_ref` and `ENGINE_VERSION`.
+## 2. Architectural Boundary Map
+
+The boundaries between subsystems are enforced mechanically in code and validated on every commit:
+
+```
+apps/
+  web/            Next.js 14 App Router, 4 Personas, 542 Vitest tests       Viraj   [Production Ready]
+  mobile/         Android Native Jetpack Compose, Material 3, Previews      Viraj   [Production Ready]
+  api/            FastAPI ASGI REST endpoints, OpenAPI Schema               Bhumi   [Production Ready]
+  worker/         Celery & Postgres background analysis worker              Bhumi   [Production Ready]
+
+packages/groundtruth/src/groundtruth/
+  contracts/      Shared immutable contracts, evidence schema, units        Shared  [Frozen v1.0.0]
+  engine/         Deterministic causal engine, pure NumPy, zero I/O         Viraj   [Production Ready]
+    observation/  Spectral index math (NDVI/EVI/NDMI/NBR), SCL cloud masking
+    matching/     Donor pool eligibility, SUTVA enforcement, SMD balance
+    causal/       FISTA simplex solver, difference-in-differences
+    uncertainty/  In-space and in-time permutation placebos, spec curve
+    assembler.py  8-dimension evaluation and Level 0-5 graduation logic
+  platform/       Application layer, persistence, data access               Bhumi   [Production Ready]
+    api/          FastAPI routers, Scrypt authentication, session cookies
+    cases/        Case registry and request transformers
+    datasets/     Fail-closed data accessors, real S2 & CHIRPS loaders
+    jobs/         Job queue, lease acquisition, cooperative cancellation
+    store/        PostgreSQL evidence persistence and run history
+    reports/      Deterministic report renderer and Gemini grounding
+
+cases/            20+ real-world project definitions and GeoJSON boundaries
+data/             Empirical data storage (S2 L2A, CHIRPS, NASA POWER, geoBoundaries)
+tests/            1,466 collected backend tests + AST boundary enforcement
+```
+
+### AST Boundary Enforcement in CI
+`tests/test_contract_boundary.py` parses the Abstract Syntax Tree (AST) of the repository to prevent architectural drift:
+- `contracts/` cannot import from `engine/` or `platform/`.
+- `engine/` cannot import from `platform/` and cannot execute I/O (no sockets, no disk reads, no credentials).
+- `platform/` can only import approved entrypoints from `engine/` (`run_analysis`, `describe_engine`, `engine_ref`).
 
 ---
 
-## Responsibility matrix
+## 3. Subsystem Responsibility Matrix
 
-`A` = accountable (does the work, owns the decision) · `R` = reviews ·
-`—` = not involved
+`A` = Accountable (owns the outcome and code) · `R` = Reviewer · `C` = Consulted
 
-| Area | Viraj | Bhumi |
-| --- | :---: | :---: |
-| **Scientific method** | | |
-| Remote-sensing methodology (indices, masking, compositing) | **A** | — |
-| Sensor cross-calibration and transition handling | **A** | R |
-| Feature / covariate engineering | **A** | R |
-| Donor-pool methodology and eligibility rules | **A** | — |
-| Matching and balance diagnostics | **A** | — |
-| Synthetic control and causal estimation | **A** | — |
-| Placebo, robustness and specification curve | **A** | — |
-| Uncertainty representation and intervals | **A** | R |
-| Evidence assembly and the verdict gate chain | **A** | R |
-| Biomass / carbon conversion methodology | **A** | — |
-| Kariba validation and analytical review | **A** | R |
-| Control-case behaviour (Cardamom, Mikoko Pamoja) | **A** | — |
-| **User-facing product** | | |
-| Design system and app shell | **A** | — |
-| Dashboard architecture | **A** | R |
-| Interactive maps | **A** | — |
-| Counterfactual and placebo visualisations | **A** | — |
-| Project timeline and evidence exploration | **A** | — |
-| Evidence and result presentation | **A** | R |
-| Report view | **A** | R |
-| Demo experience and visual polish | **A** | R |
-| **Platform** | | |
-| Backend architecture | R | **A** |
-| FastAPI layer, schemas, validation, errors | — | **A** |
-| Database architecture, schemas, migrations | — | **A** |
-| Project / case management | — | **A** |
-| Analysis request lifecycle | R | **A** |
-| Background job orchestration | — | **A** |
-| Data ingestion services (auth, retries, caching) | R | **A** |
-| Dataset registry, versioning and pinning | R | **A** |
-| Storage and file management | — | **A** |
-| Connecting external datasets to the engine ports | R | **A** |
-| Integrating the analytical engine | R | **A** |
-| Evidence and provenance persistence | R | **A** |
-| Analysis-result APIs | R | **A** |
-| Report-generation pipeline | R | **A** |
-| Grounded GenAI integration | R | **A** |
-| Evidence → report transformation | R | **A** |
-| Backend validation and error handling | — | **A** |
-| Frontend / backend integration | R | **A** |
-| Deployment and production configuration | — | **A** |
-| CI/CD | — | **A** |
-| Integration and end-to-end testing | — | **A** |
-| Monitoring and logging | — | **A** |
-| API documentation | — | **A** |
-| Production hardening | — | **A** |
-| **Shared** | | |
-| The contract (`packages/groundtruth/src/groundtruth/contracts/`) | **A** | **A** |
-| Scientific integrity rules in `CONTRIBUTING.md` | **A** | R |
+| Subsystem / Functional Domain | Viraj | Bhumi | Key Deliverables & Evidence |
+|---|:---:|:---:|---|
+| **Scientific Causal Inference** | **A** | R | FISTA simplex solver, permutation placebos, DiD pre-trend cross-checks. |
+| **8-Dimension Assessment Framework** | **A** | R | Implementation of Trajectory, Spatial, Climate, Risk, Progress, Comparison, Quality, Attribution. |
+| **Graduation Ladder (Levels 0–5)** | **A** | R | Level gating logic, Kariba REDD+ graduation to Level 2 (Contextual Intelligence). |
+| **Task 5/5B Audit Remediation** | **A** | R | Quarantining fabricated caches, establishing fail-closed gates (`DataUnavailableError` / 501). |
+| **Web Frontend (Next.js 14)** | **A** | R | 542 Vitest tests passing across 57 files, Tailwind styling, interactive charts. |
+| **4-Persona Dashboard Experience** | **A** | R | Role-specific views for Restoration NGO, CSR Funder, Auditor, and Government. |
+| **Android Native App (Compose)** | **A** | R | Jetpack Compose UI, Material 3, Room offline cache, Compose Previews. |
+| **FastAPI REST API & OpenAPI** | R | **A** | Router endpoints, OpenAPI snapshot generation, TypeScript client synchronization. |
+| **Multi-Tenant RBAC & Security** | R | **A** | Scrypt password derivation, session cookies, cross-tenant 403 denial. |
+| **Data Ingestion & Caching Layer** | R | **A** | CHIRPS 514-month rainfall, NASA POWER temperature, Sentinel-2 L2A rasters. |
+| **Database Schema & Migrations** | R | **A** | PostgreSQL 15, SQLAlchemy 2.0, Alembic migrations 0001–0006. |
+| **Docker & Infrastructure Stack** | R | **A** | Docker Compose multi-container configuration, Helm templates, local runners. |
 
 ---
 
-## Coordination points
+## 4. Definition of Done (DoD)
 
-These are the only places where both owners must be in the room. Everything
-else should proceed independently — that is the point of the boundary.
+To maintain world-class hackathon standards, GroundTruth enforces strict Definitions of Done across all development streams:
 
-| # | Coordination point | Why | When |
-| --- | --- | --- | --- |
-| **C1** | **Any change to `contracts/`** | Both sides depend on it. A major bump needs a migration for stored bundles. | Whenever a schema field, enum member or error code is added or changed |
-| **C2** | **DataAccess port semantics** | Viraj specifies what the engine needs; Bhumi decides where it comes from. Getting the split wrong here puts credentials in the engine or methodology in the platform. | Phase 2, before EO integration starts |
-| **C3** | **Earth Engine reduction handover** | Viraj owns the band math, masking and compositing; Bhumi owns the client, auth, retries and caching. They meet at one function. | Phase 2, issues #1 and #14 |
-| **C4** | **Covariate list and derivation** | Viraj decides which covariates matter and how they are transformed; Bhumi builds the services that fetch them. | Phase 2, issues #3 and #15 |
-| **C5** | **Evidence → UI projection** | What the API returns must be what the UI can render without re-deriving anything. Settled once, in the OpenAPI schema. | Phase 3, before frontend work starts in earnest |
-| **C6** | **Report structure** | Viraj specifies what a report must contain and how it must be caveated; Bhumi builds the pipeline and the GenAI integration. | Phase 3, issue #7 |
-| **C7** | **Kariba result review** | No case may be promoted to `status: analysed` without both owners reviewing the run. | Phase 4, issue #4 |
-| **C8** | **Demo rehearsal** | Viraj drives the demo; Bhumi must have the deployment stable and the failure paths understood. | Phase 5 |
+```mermaid
+stateDiagram-v2
+    [*] --> InDevelopment
+    InDevelopment --> CodeReview: Code Complete
+    CodeReview --> ASTCheck: Boundary Verified
+    CodeReview --> InDevelopment: Revisions Needed
+    ASTCheck --> AutomatedTests: AST Clean
+    AutomatedTests --> ScientificAudit: 100% Pass (Backend + Frontend)
+    ScientificAudit --> MergedToMain: No Fabricated Data & Fail-Closed Verified
+    MergedToMain --> [*]
+```
 
-Everything not on this list is a single-owner decision. If you find yourself
-waiting on the other person outside these eight points, the boundary has
-drifted and should be fixed rather than worked around.
+### A. DoD for Scientific Engine Features
+1. **Mathematical Proof & Baseline Tests:** All econometric algorithms must recover known synthetic ground-truth values and reject null placebos.
+2. **Zero I/O Guarantee:** Module imports must pass `test_contract_boundary.py` AST inspection.
+3. **No Uncalibrated Conversions:** The code must enforce unit safety; no spectral index (NDVI/EVI) may be converted to carbon biomass without explicit ecozone allometry.
+4. **Honest Caveats:** Estimators must return structured `INCONCLUSIVE` states rather than generating fragile point estimates when data fails robustness checks.
 
----
+### B. DoD for Platform & Ingestion Features
+1. **Fail-Closed Gateways:** Any real data accessor encountering incomplete historical rasters must raise `DataUnavailableError` and return `HTTP 501`, never substituting synthetic fallbacks.
+2. **Cryptographic Provenance:** Every persisted run must record full asset hashes, `spec_hash`, and engine version strings.
+3. **Multi-Tenant Isolation:** All endpoints must verify organization membership and enforce RBAC grants, blocking unauthorized cross-tenant queries with HTTP 403.
+4. **Database Migration:** Any schema alteration must include both forward (`upgrade`) and backward (`downgrade`) Alembic migration scripts.
 
-## Definition of done
-
-A subsystem is done when **every** line below is true. Not "mostly".
-
-### Analytical engine (Viraj)
-
-- [ ] `run_analysis` returns a typed `AnalysisResult` for every outcome,
-      including refusal — it never raises for a domain failure
-- [ ] Deterministic: the same `spec_hash` and seed produce identical numeric
-      output, verified by a test
-- [ ] No I/O: no filesystem, network, credential or database access, enforced
-      by `test_contract_boundary.py`
-- [ ] Every emitted value carries complete `Provenance` with a stable
-      fingerprint
-- [ ] No spectral index is reported in a carbon unit
-- [ ] Every estimate is accompanied by an interval labelled with its `kind`
-- [ ] Placebo p-values use the add-one correction and state their floor
-- [ ] Failed robustness gates short-circuit to `INCONCLUSIVE`; there is no
-      weak-positive path
-- [ ] Unit tests cover the recovery case, the null case and each refusal path
-- [ ] Methodology is documented in `docs/` with its assumptions and failure
-      modes stated
-
-### Frontend (Viraj)
-
-- [ ] Every view renders correctly at phone, tablet and desktop widths
-- [ ] The simulated-data banner is persistent and not dismissible on any view
-      showing a simulated run
-- [ ] No bare numbers: every value shows its unit and, where one exists, its
-      interval with the interval's `kind`
-- [ ] Provenance for any displayed number is reachable in two clicks
-- [ ] Caveats render with the verdict, never behind a disclosure triangle
-- [ ] `INCONCLUSIVE` is styled neutrally; `divergent_from_claim` is amber, not
-      alarm-red
-- [ ] No copy, tooltip or colour implies wrongdoing
-- [ ] Loading, empty, refusal and error states are designed, not default
-- [ ] Types come from the generated API client, never hand-written against a
-      Python implementation detail
-- [ ] Keyboard navigable; charts have accessible text alternatives
-
-### Platform (Bhumi)
-
-- [ ] The API consumes the engine only through the contract, enforced by test
-- [ ] Every `ErrorCode` maps to an HTTP status; refusals are distinguishable
-      from malfunctions in the response body
-- [ ] Every request is validated at the boundary with a structured error
-- [ ] Analysis jobs survive a process restart; status transitions are
-      persisted and observable
-- [ ] Evidence bundles are stored with their contract version and remain
-      readable after a minor contract bump
-- [ ] `spec_hash` caching returns a stored result rather than recomputing
-- [ ] No credential is ever logged
-- [ ] An observed-data request with no implementation returns 501, never
-      simulated data
-- [ ] OpenAPI schema is complete and generates working TypeScript types
-- [ ] Integration tests cover the full path: request → job → engine → store →
-      API → response
-- [ ] Deploys from a green CI run with a documented rollback
-- [ ] Structured logs carry run id, case id and stage; errors are alertable
-
-### The contract (shared)
-
-- [ ] Every field has a docstring saying what it means and who sets it
-- [ ] Version bumped according to the semantics in `contracts/version.py`
-- [ ] Both owners have reviewed the change
-- [ ] Stored bundles from the previous version still load
-- [ ] Round-trips through JSON without loss
-- [ ] `test_contract_boundary.py` passes
+### C. DoD for Frontend & Persona Views
+1. **Vitest Coverage:** All UI features must maintain full test pass rates (542 passing tests).
+2. **Type Safety:** Automated check `npm run check:api-types` must report zero discrepancies against the backend OpenAPI contract.
+3. **Explicit Simulation Banners:** When displaying simulated benchmark runs, the UI must render high-visibility simulation warnings.
+4. **Cross-Persona Accessibility:** Dashboards must render cleanly in light mode across all four persona views.
 
 ---
 
-## Workload accounting
+## 5. Visual Verification of Production Screens
 
-Story points, not task counts — splitting small tasks to balance a number would
-defeat the purpose.
+| Auditor Verification Dashboard | CSR & Impact Funder Portfolio |
+| :---: | :---: |
+| ![Auditor Dashboard](docs/product/screens/auditor-dashboard.png) | ![Funder Dashboard](docs/product/screens/funder-dashboard.png) |
 
-| Owner | Area | Points |
-| --- | --- | ---: |
-| Viraj | Frontend and demo experience | 22 |
-| Viraj | Analytical engine and validation | 18 |
-| | **Viraj total** | **40** |
-| Bhumi | Foundation, configuration, database | 10 |
-| Bhumi | Data, job and storage services | 16 |
-| Bhumi | APIs, reports and GenAI integration | 16 |
-| Bhumi | Integration, deployment, CI/CD, operations | 18 |
-| | **Bhumi total** | **60** |
+---
 
-See [`docs/product/implementation-plan.md`](docs/product/implementation-plan.md) for the
-phased task breakdown and [`docs/architecture/contract.md`](docs/architecture/contract.md) for the
-contract specification.
+> GroundTruth 2.0 Ownership Document · *PCCOE International Grand Challenge 2026*

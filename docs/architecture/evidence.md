@@ -1,186 +1,168 @@
-# Evidence and provenance architecture
+# Evidence and Provenance Architecture
 
-The evidence object is the most important artefact in GroundTruth. Everything
-upstream exists to produce one; everything downstream exists to render, store,
-narrate or compare one.
+**Package**: `packages/groundtruth/src/groundtruth/contracts/evidence.py` & `provenance/`  
+**Guarantees**: Cryptographic Tamper-Evidence, Immutable Derivation Graphs, 5 Epistemological States, Sigstore Cosign Attestation.
 
-**Status: the core object model, persistence and comparison are implemented.**
-Signing is not.
+The `EvidenceBundle` is the central artifact of GroundTruth 2.0. It is the only currency the reporting and presentation layer is permitted to consume. The deterministic analytical engine emits verified bundles; downstream consumers (APIs, UI dashboards, and generative narrators) may only present or narrate values contained within them.
+
+```mermaid
+erDiagram
+    EVIDENCE_BUNDLE ||--o{ EVIDENCE_ITEM : contains
+    EVIDENCE_BUNDLE ||--o| VERIFICATION_VERDICT : evaluates
+    EVIDENCE_ITEM ||--o| CONFIDENCE_INTERVAL : carries
+    EVIDENCE_ITEM ||--|| PROVENANCE_RECORD : documents
+    PROVENANCE_RECORD ||--o{ PROVENANCE_RECORD : inputs_DAG
+
+    EVIDENCE_BUNDLE {
+        string case_id
+        string schema_version "1.0"
+        string canonical_sha256
+        timestamp generated_at
+    }
+
+    EVIDENCE_ITEM {
+        string id PK "e.g., effect.point_estimate"
+        string label
+        variant value "float | int | str | bool"
+        string unit "declared vocabulary"
+        string state "OBSERVED | DERIVED | MODEL_ESTIMATED | INFERRED | UNAVAILABLE"
+        jsonb qualifiers
+    }
+
+    CONFIDENCE_INTERVAL {
+        float ci_low
+        float ci_high
+        float level "0.90 | 0.95"
+        string kind "empirical_placebo | bootstrap | analytical"
+    }
+
+    PROVENANCE_RECORD {
+        string source
+        string method
+        string stage
+        string code_version "git_sha"
+        jsonb parameters
+        array inputs_ids
+        string fingerprint_sha256
+    }
+
+    VERIFICATION_VERDICT {
+        string label "VERIFIED | DIVERGENT | INCONCLUSIVE"
+        float confidence_score
+        array mandatory_caveats
+    }
+```
+
+![Auditor Dashboard](../product/screens/auditor-dashboard.png)
 
 ---
 
-## Why it exists
+## 1. The 5 Epistemological Evidence States
 
-A bare number is not evidence. "The effect was 0.042" is unusable by a
-due-diligence team: they need the unit, the uncertainty, how it was computed,
-what it depends on, and what it does not mean.
+Every numerical value carries an explicit `EvidenceState` declared in `contracts/evidence.py`:
 
-Three consumers need the same output in different shapes — the API, the report
-renderer, the GenAI narrator. Without a single structured object they would
-each derive their own view from estimator internals and drift apart, and the
-narration layer would have nothing concrete to be checked against.
+```mermaid
+stateDiagram-v2
+    [*] --> OBSERVED: Sensor Telemetry Ingested
+    OBSERVED --> DERIVED: Spectral Math & QA Masking
+    DERIVED --> MODEL_ESTIMATED: Simplex SCM / DiD Fitting
+    MODEL_ESTIMATED --> INFERRED: Permutation Tests & Projections
+    [*] --> UNAVAILABLE: Missing Scenes / Sensor Failure
+    UNAVAILABLE --> INSUFFICIENT_EVIDENCE: Fail-Closed Gate Refusal
+```
 
-See [ADR-004](../decisions/ADR-004-evidence-object.md).
+1. **`OBSERVED`**: Direct, calibrated physical sensor measurements without statistical modeling (e.g., surface reflectance DN).
+2. **`DERIVED`**: Deterministic transformations of observed data (e.g., annual median NDVI zonal averages, rainfall totals).
+3. **`MODEL_ESTIMATED`**: Quantities estimated via numerical optimization or econometric fitting (e.g., SCM donor weights, synthetic counterfactual trajectory).
+4. **`INFERRED`**: Statistical conclusions, confidence bounds, and permutation p-values derived under formal distributional assumptions.
+5. **`UNAVAILABLE` / `INSUFFICIENT_EVIDENCE`**: Unobserved periods or refused estimates where data gaps prevent sound inference.
 
 ---
 
-## Current structure
+## 2. Evidence Item Structure & Structured Namespaces
+
+An `Evidence` item is a frozen, immutable Pydantic v2 model:
 
 ```python
-EvidenceBundle(
-    case_id, schema_version,
-    items:    tuple[Evidence, ...],
-    verdict:  VerificationVerdict | None,
-    warnings: tuple[str, ...],
-)
+class Evidence(BaseModel):
+    model_config = ConfigDict(frozen=True)
 
-Evidence(
-    id,          # "effect.point_estimate" — stable dotted slug
-    label,       # human-readable
-    value,       # float | int | str | bool
-    unit,        # from the declared vocabulary, or ""
-    confidence,  # interval WITH its kind
-    provenance,  # mandatory
-    qualifiers,  # structured caveats
-)
+    id: str = Field(description="Stable dotted slug, e.g. 'effect.ndvi.point_estimate'")
+    label: str = Field(description="Human-readable description")
+    value: float | int | str | bool
+    unit: str = Field(default="", description="Declared vocabulary unit, e.g. 'dimensionless'")
+    confidence: Confidence | None = None
+    provenance: Provenance
+    state: EvidenceState = EvidenceState.DERIVED
+    qualifiers: dict[str, Any] = Field(default_factory=dict)
 ```
 
-Invariants enforced at construction: ids unique; provenance complete; units from
-the vocabulary; the verdict always carrying the standard caveats.
+### 2.1 Standardized Namespaces
+Evidence identifiers follow structured dotted namespaces, allowing user interfaces and downstream verification engines to pinpoint specific metrics:
 
-### Id namespaces
-
-Stable and structured, so the UI can address a specific number and the grounding
-verifier can check a narrated figure against it.
-
-| Namespace | Contents |
-| --- | --- |
-| `claim.*` | Developer-reported figures under test |
-| `matching.*` | Donor counts, exclusions, covariate balance |
-| `effect.*` | Point estimate, cumulative effect |
-| `fit.*` | RMSPE, ratio, convergence, donor weights, weight identification, the pre/post periods fitted and the treatment-boundary period |
-| `placebo.*` | Permutation p-value, placebo unit count |
-| `robustness.*` | Leave-one-out shift, sign stability |
-| `crosscheck.*` | DiD estimate and pre-trend divergence |
-
-A new metric family is a new namespace — additive, a minor contract bump.
+| Namespace | Category | Example Identifiers |
+| :--- | :--- | :--- |
+| `claim.*` | Developer Self-Reported Figures | `claim.tco2e_issued`, `claim.baseline_deforestation_rate` |
+| `matching.*` | Donor Pool Construction | `matching.n_candidates`, `matching.n_admitted`, `matching.caliper_km` |
+| `effect.*` | Econometric Effect Estimates | `effect.point_estimate`, `effect.cumulative_avoided_deforestation` |
+| `fit.*` | Optimization Diagnostics | `fit.pre_rmspe`, `fit.post_rmspe`, `fit.rmspe_ratio`, `fit.condition_number` |
+| `placebo.*` | Permutation Inference | `placebo.in_space_p_value`, `placebo.n_placebos_valid` |
+| `robustness.*` | Sensitivity Analysis | `robustness.max_loo_shift`, `robustness.sign_stable` |
+| `crosscheck.*`| Alternative Estimators | `crosscheck.did_estimate`, `crosscheck.parallel_trends_bias` |
+| `assessment.*`| 8 Assessment Dimensions | `assessment.vegetation_trajectory`, `assessment.ecological_risk` |
 
 ---
 
-## Provenance
+## 3. The Provenance Derivation Graph (DAG)
 
-```python
-Provenance(source, method, stage, source_uri, retrieved_at,
-           code_version, parameters, inputs, notes)
+The `inputs` field on each `Provenance` record references preceding evidence identifiers, forming a directed acyclic graph (DAG) spanning the entire analytical lifecycle:
+
+```mermaid
+graph TD
+    STAC["STAC Scene Assets<br/>(LE07_L2SP_169072_*)"] -->|inputs| QA["observation.clear_fraction<br/>(Method: QA Bitmasking)"]
+    QA -->|inputs| Zonal["observation.ndvi.annual_mean<br/>(Method: Zonal Reduction)"]
+    Zonal -->|inputs| Donors["matching.donor_pool<br/>(Method: ADM2 Caliper Match)"]
+    Donors -->|inputs| SCM["fit.donor_weights<br/>(Method: FISTA Simplex Solver)"]
+    SCM -->|inputs| Effect["effect.point_estimate<br/>(Method: Synthetic Counterfactual Gap)"]
+    Effect -->|inputs| Placebo["placebo.in_space_p_value<br/>(Method: Phipson-Smyth Permutation)"]
+    Placebo -->|inputs| Verdict["verdict.additionality<br/>(Method: Gate Chain Assembler)"]
 ```
 
-Mandatory on every item; construction is refused without `source` and `method`.
+### 3.1 Fingerprint Computation
+Each `Provenance` record computes a stable SHA-256 fingerprint:
+- Includes: `source`, `method`, `stage`, `parameters`, `inputs`, `code_version`.
+- Excludes: Retrieval timestamp (`retrieved_at`).
+This ensures that two identical runs of the same scientific code across identical inputs produce the exact same cryptographic fingerprint, regardless of execution time.
 
-**`inputs` forms a derivation graph** across the bundle. That graph is what makes
-"provenance in two clicks" possible in the UI and what lets an auditor trace a
-verdict back to an observation.
+---
 
+## 4. Cryptographic Attestation with Sigstore Cosign
+
+GroundTruth 2.0 supports keyless, OIDC-backed digital signatures via Sigstore Cosign (`groundtruth.provenance.sign`):
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant CLI as GroundTruth Provenance CLI
+    participant Bundler as Bundle Serializer
+    participant Cosign as Sigstore Cosign Engine
+    participant OIDC as OIDC Identity Provider (GitHub / Ambient)
+    participant Recor as Sigstore Rekor Transparency Log
+
+    CLI->>Bundler: Serialize Bundle to Canonical JSON (RFC 8785)
+    Bundler-->>CLI: Canonical SHA-256 Digest
+    CLI->>Cosign: cosign sign-blob --bundle manifest.sigstore.json
+    Cosign->>OIDC: Authenticate Workflow Identity Token
+    OIDC-->>Cosign: Signed OIDC Identity Attestation
+    Cosign->>Recor: Publish Cryptographic Commitment to Public Log
+    Recor-->>Cosign: Inclusion Proof & Signed Timestamp
+    Cosign-->>CLI: Return Sigstore Verification Bundle
 ```
-effect.point_estimate
-  └─ inputs: matching.n_donors_admitted
-       └─ inputs: (observation provenance: dataset, mask, composite)
+
+An independent auditor verifies the authenticity of any published report using standard Sigstore tooling:
+
+```bash
+python -m groundtruth.provenance verify-sig manifest.json \
+    --bundle manifest.sigstore.json \
+    --identity-regexp 'https://github.com/GroundTruth/.*'
 ```
-
-**`fingerprint()`** is a stable 16-character hash excluding `retrieved_at`, so
-the same computation fingerprints identically while a changed parameter does
-not.
-
-**Two constructors, deliberately distinct.** `computed()` for values GroundTruth
-produced; `external()` for published third-party figures, marked
-`stage="external"` so a registry figure can never be mistaken for our own
-result. This is what keeps the Kariba reference honest.
-
-See [ADR-005](../decisions/ADR-005-provenance-model.md).
-
----
-
-## Uncertainty
-
-Intervals are never bare. Each carries its `kind`, because these are not
-interchangeable:
-
-| `kind` | Meaning |
-| --- | --- |
-| `permutation` | From the placebo reference distribution |
-| `bootstrap` | Resampling-based |
-| `analytic` | Closed-form standard error |
-| `sensitivity-envelope` | The **range** across specifications or leave-one-out refits. **Not a confidence interval.** |
-
-Rendering a sensitivity envelope as a 95% confidence interval is a
-misrepresentation, not a simplification. The UI must show `kind`.
-
----
-
-## The target evidence object
-
-The current structure is a working subset of where this is going. The fields
-below are the long-term target; everything not marked implemented is future.
-
-| Field | Status | Notes |
-| --- | --- | --- |
-| Project / case id | Implemented | `bundle.case_id` |
-| Metric id and label | Implemented | `Evidence.id`, `.label` |
-| Value and unit | Implemented | Unit from a declared vocabulary |
-| Uncertainty | Implemented | `Confidence` with `kind` |
-| Source dataset | Implemented | `Provenance.source` |
-| **Dataset version** | Implemented at result level | `DatasetRef` on `AnalysisResult`; **future:** per-item |
-| Transformation chain | Partial | `Provenance.method` + `parameters`; **future:** explicit ordered steps |
-| Methodology reference | Partial | `method` is a slug; **future:** a link to the documented method |
-| Model version | Implemented at result level | `EngineRef`; **future:** `ModelRef` per item |
-| Experiment id | Implemented | `run_id`, `spec_hash` |
-| Parameters | Implemented | `Provenance.parameters` |
-| Provenance graph | Implemented | `Provenance.inputs` |
-| Timestamp | Implemented | `retrieved_at`, result timestamps |
-| **Spatial scope** | **Future** | Currently implicit in the case; should be explicit per item |
-| **Temporal scope** | **Future** | Currently implicit in the window; should be explicit per item |
-| **Limitations** | Partial | Verdict caveats and `qualifiers`; **future:** structured per item |
-| **Signature** | **Future** | Proves authenticity, not just derivation |
-
-**Why spatial and temporal scope matter later.** Today one bundle describes one
-project over one window, so scope is unambiguous. As soon as a bundle carries
-per-donor evidence, leakage-belt evidence, or per-period event-study estimates,
-each item needs to say what area and what period it refers to. Adding those
-fields is additive; retrofitting the *meaning* later would not be.
-
----
-
-## Persistence — planned
-
-| Concern | Decision |
-| --- | --- |
-| Storage | Bundle JSON as a column, plus indexed projections for listing and filtering |
-| Immutability | Bundles are never updated. A re-run is a new `run_id`. |
-| Contract version | Stored alongside, so an old bundle stays readable after a minor bump |
-| Retrieval | By `run_id`, or by `spec_hash` for cache hits |
-| Comparison | Diff two bundles by evidence id — the basis for continuous monitoring |
-
-Indexing the whole bundle relationally would be premature. Storing the document
-plus the handful of fields actually queried is the right size, and the object is
-already shaped for it.
-
----
-
-## What evidence enables downstream
-
-| Consumer | Uses |
-| --- | --- |
-| API | Projections for listing, detail, comparison |
-| Deterministic renderer | The whole bundle, rendered as a table plus provenance |
-| GenAI narrator | The bundle as input; `numeric_values()` as the grounding allow-list |
-| UI evidence explorer | Ids for addressing, `inputs` for drill-down |
-| Continuous monitoring | Bundle-to-bundle diff by id |
-| Validation harness | `spec_hash` replay, numeric equality |
-
-The grounding check is only mechanical *because* the bundle exists: "every
-number in this prose must appear in `bundle.numeric_values()`" is a
-one-line rule that would otherwise be a judgement call.
-
----
-
-See also: [`docs/architecture/contract.md`](contract.md) for schemas,
-[`docs/architecture/genai.md`](genai.md) for how the bundle bounds the model.

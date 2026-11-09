@@ -7,6 +7,32 @@
 **Date of Audit:** November 7, 2026  
 **Status:** COMPLETE — RIGOROUS TECHNICAL & SCIENTIFIC AUDIT  
 
+```
+   ┌─────────────────────────────────────────────────────────────────────────────┐
+   │                          AUDIT VERDICT SUMMARY                              │
+   ├─────────────────────────────────────────────────────────────────────────────┤
+   │  Engineering Integrity            │ EXCEPTIONAL (954 Backend, 320 Frontend) │
+   │  EO Data Provenance               │ SYNTHETIC FIXTURE MASQUERADING AS REAL  │
+   │  57.04% Kariba Recovery Claim     │ REVERSE-ENGINEERED (WITHDRAWN)          │
+   │  SUTVA Compliance                 │ SEVERE DONOR CONTAMINATION (FIXED)      │
+   │  SCM Weight Identification        │ DEGENERATE UNIFORM WEIGHTING (J > T₀)   │
+   │  Gemini Grounding Security        │ SHALLOW TOKEN MATCHING (EXPANDED GUARDS)│
+   └─────────────────────────────────────────────────────────────────────────────┘
+```
+
+```mermaid
+flowchart TD
+    subgraph AUDIT_STREAMS ["Five Specialist Investigation Streams"]
+        A1["Agent 1: Earth Observation Provenance\n- Traced runtime STAC execution (0 network calls)\n- Proved kariba_observed.json is synthetic"]
+        A2["Agent 2: Biomass & Carbon Allometry\n- Traced reverse-engineered ΔNDVI = 0.06090088\n- Refuted linear NDVI-to-carbon scaling"]
+        A3["Agent 3: Causal Inference Mechanics\n- Identified SUTVA violations in donor pool\n- Proved FISTA uniform weighting collapse (w = 0.02)"]
+        A4["Agent 4: Gemini & Evidence Integrity\n- Exploited regex grounding vulnerabilities\n- Verified fail-safe deterministic fallback"]
+        A5["Agent 5: Infrastructure & Test Verification\n- Executed 954 backend & 320 frontend tests\n- Verified typecheck, migrations, and Docker"]
+    end
+```
+
+![Auditor Dashboard](../product/screens/auditor-dashboard.png)
+
 ---
 
 ## 1. Executive Assessment
@@ -28,6 +54,8 @@ However, the audit revealed **deep scientific vulnerabilities and critical misre
 4. **Degenerate Equal Weighting in Synthetic Control:**  
    Because $J = 50$ donors exceeds $T_0 = 10$ pre-treatment years and candidate series are near-collinear, the FISTA optimizer terminates on iteration 1, producing uniform weights ($w_j \approx 0.0200 \pm 2.4 \times 10^{-7}$). The "synthetic control" on this observed dataset is computationally equivalent to an unweighted simple average.
 5. **The Permutation P-Value ($p = 0.0196$) is a Sample-Size Floor Artifact:**  
+
+![Kariba Project Overview](../product/screens/kariba-overview.png)
    The reported $p = 0.0196$ is the exact theoretical minimum floor $(0 + 1)/(50 + 1) = 1/51 \approx 0.0196078$ for a one-sided permutation test with 50 placebos. It cannot take any lower value regardless of effect size.
 6. **Gemini Grounding is Shallow Regex/Token Matching:**  
    `enforce_grounding()` and `verify_grounding()` check numbers against a flat list of floats. Context inversion, entity swapping, and fabricated causal narratives pass 100% undetected as long as the numbers exist anywhere in the evidence bundle.

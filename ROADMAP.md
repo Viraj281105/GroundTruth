@@ -1,197 +1,140 @@
-# Roadmap
+# GroundTruth 2.0 — Product & Scientific Roadmap
 
-GroundTruth started as a hackathon project. The repository is structured for
-what it could become over one to two years: an independent evidence and
-intelligence platform for ecosystem restoration and climate claims.
-
-This document describes the stages. It is explicit about what exists and what
-does not, because a roadmap that reads like a feature list is a liability in a
-project whose entire value proposition is honesty about uncertainty.
-
-**Status vocabulary, used throughout the repository:**
-
-| | |
-| --- | --- |
-| **Implemented** | Works, tested, running in CI |
-| **Planned** | Designed, has an issue, not built |
-| **Future** | An extension point exists; no commitment, no timeline |
+**One platform. Four perspectives. One scientifically consistent source of truth.**  
+*The strategic evolution of GroundTruth: from hackathon prototype to enterprise multi-tenant ecological intelligence and planetary-scale verification.*
 
 ---
 
-## NOW — foundation and prototype
+## 1. Roadmap Architecture & Evolutionary Stages
 
-*Where the repository is today.*
+GroundTruth is engineered with an extensible modular boundary designed to scale across multiple years. This roadmap provides an honest accounting of what is **Implemented and Tested**, what is **Planned**, and what represents **Future Research Horizons**.
 
-**Implemented**
+```mermaid
+flowchart TD
+    M1["Milestone 1: Scientific Engine & In-Memory Benchmark<br/>(COMPLETED)"]
+    M2["Milestone 2: GroundTruth 2.0 Multi-Tenant Enterprise Platform<br/>(COMPLETED & DEMO READY)"]
+    M3["Milestone 3: Automated Multi-Tile Landsat L2 & Global Donors<br/>(ACTIVE DEVELOPMENT)"]
+    M4["Milestone 4: Planetary-Scale GEDI LiDAR & Real-Time Deforestation<br/>(FUTURE HORIZON)"]
 
-- Three-package architecture with an enforced contract boundary
-- `AnalysisRequest → run_analysis → AnalysisResult`, reproducible by `spec_hash`
-- Simplex-constrained synthetic control (FISTA, numpy only), DiD cross-check
-- Donor matching with recorded eligibility exclusions and balance diagnostics
-- In-space and in-time placebo inference, leave-one-out, permutation intervals
-- Evidence assembly with an explicit verdict gate chain
-- Deterministic report renderer and an enforced GenAI grounding verifier
-- FastAPI surface, CLI, three case definitions
-- 194 tests; CI on Python 3.11–3.13 plus a scientific-integrity job
-
-**Not built**
-
-- Any real Earth-observation data. Everything runs on a labelled simulated
-  fixture.
-- Database, job queue, worker, storage, frontend, deployment
-- Any analysis of a real project
-
-**The honest headline:** the machinery is correct — it recovers a known
-injected effect and distinguishes it from a null — and it has never seen a real
-forest.
+    M1 --> M2
+    M2 --> M3
+    M3 --> M4
+```
 
 ---
 
-## MVP — one real answer, end to end
+## 2. Milestone Breakdown & Capability Progression
 
-*Goal: `Project → Data → Causal Analysis → Evidence → Visualization` working on
-real satellite data for Kariba.*
-
-| Workstream | Owner | Deliverable |
-| --- | --- | --- |
-| Earth-observation reduction methodology | Viraj | Sentinel-2/Landsat masking, compositing, index math, cross-sensor calibration |
-| EO client service | Bhumi | Auth, retries, caching, dataset version pinning behind `ObservationAccess` |
-| Covariate methodology | Viraj | Which covariates, how derived and transformed |
-| Covariate services | Bhumi | CHIRPS, SRTM, OSM, WorldPop, WDPA behind `CovariateAccess` |
-| Boundary acquisition | Bhumi | Registry geometry for all three cases, validated against registered area |
-| Donor-pool methodology | Viraj | Ecoregion constraint, leakage belt, protected-area exclusion |
-| Persistence and jobs | Bhumi | Database, evidence store, async analysis lifecycle |
-| Core visualisations | Viraj | Counterfactual chart, placebo plot, map, evidence explorer |
-| Frontend/backend integration | Bhumi | Generated types, API client, wiring |
-| Kariba run | Viraj | First real result, reviewed, published whatever it says |
-
-**Exit criterion:** a reviewed evidence bundle for Kariba from real imagery,
-visible in the UI, with full provenance — and reported regardless of what it
-says.
-
-**Deliberately excluded from MVP:** carbon conversion, GenAI narration,
-multiple estimators, continuous monitoring. Each is scoped later for a reason.
-
----
-
-## Stage 2 — a working analysis platform
-
-*Goal: someone who is not us can analyse a project.*
-
-**Planned**
-
-- Project and case management through the UI, not a YAML pull request
-- Asynchronous analysis with progress, cancellation and history
-- Analysis comparison: two runs, two specifications, or two projects side by side
-- Biomass layer (ESA CCI / GEDI L4B) so index effects become comparable to
-  tCO2e claims, with propagated error and honestly wide intervals
-- GenAI narration with a measured grounding evaluation published either way
-- Specification curve surfaced in the product, not just in experiments
-- Report export with provenance intact
-- Authentication, rate limiting, audit logging
-
-**Exit criterion:** an analyst with no knowledge of the codebase can define a
-project, run an analysis, read the evidence and export a report.
+```mermaid
+gantt
+    title GroundTruth Evolutionary Timeline
+    dateFormat  YYYY-MM
+    section Milestone 1
+    Causal Solver & FISTA Simplex         :done, m1_1, 2026-08, 2026-09
+    In-Space & In-Time Placebos          :done, m1_2, 2026-09, 2026-09
+    Contract Boundary AST Guard           :done, m1_3, 2026-09, 2026-09
+    section Milestone 2 (2.0)
+    4 Personas: NGO, Funder, Auditor, Gov :done, m2_1, 2026-10, 2026-11
+    8-Dimension Assessment Framework      :done, m2_2, 2026-10, 2026-11
+    Real Sentinel-2 (2021-2023)           :done, m2_3, 2026-10, 2026-11
+    43-Yr CHIRPS & NASA POWER SPI-12      :done, m2_4, 2026-10, 2026-11
+    Task 5/5B Audit & Fail-Closed Guard   :done, m2_5, 2026-11, 2026-11
+    542-Test Web & Jetpack Compose Native :done, m2_6, 2026-11, 2026-11
+    section Milestone 3
+    Automated Multi-Tile Landsat Ingestion:active, m3_1, 2026-12, 2027-02
+    Local Overpass Sensor Harmonization  :m3_2, 2027-01, 2027-03
+    Dynamic GeoBoundaries Donor Matching  :m3_3, 2027-02, 2027-04
+    section Milestone 4
+    Spaceborne GEDI L4A/L4B LiDAR Canopy  :m4_1, 2027-05, 2027-08
+    Global Automated Registry Sync        :m4_2, 2027-07, 2027-10
+```
 
 ---
 
-## Stage 3 — generalised analysis and automated ingestion
+## 3. Milestone 1: The Core Causal Engine (Completed)
 
-*Goal: GroundTruth analyses projects it was not hand-configured for.*
+*Objective: Establish a mathematically unassailable causal inference engine in pure Python with strict contract isolation.*
 
-**Planned**
-
-- Automated registry ingestion (Verra, Gold Standard, Plan Vivo, Berkeley CTP)
-- Automatic donor-pool proposal from ecoregion, biome and pressure covariates
-- Multi-estimator agreement: synthetic control, matched controls, DiD, event
-  study — with disagreement reported as a finding rather than reconciled
-- Ecosystem-specific methodology profiles (dry forest, evergreen, mangrove,
-  peatland, grassland) so an indicator and window are chosen defensibly
-- Batch screening across a registry slice with prioritisation
-- Analyst workflow: queue, triage, annotate, escalate
-
-**Exit criterion:** 50+ projects screened in one batch, each with per-project
-provenance and a defensible indicator choice.
+### Delivered Capabilities:
+- **Simplex-Constrained Synthetic Control:** Custom FISTA solver operating on pure NumPy without heavy external solvers.
+- **Robust Permutation Inference:** In-space and in-time placebos with Phipson-Smyth add-one correction floor ($p = 1 / (J+1)$).
+- **Difference-in-Differences Cross-Check:** With formal pre-trend parallel assumption diagnostics and standardized mean difference (SMD).
+- **Specification Multiverse Curve:** Evaluates treatment sensitivity across combinations of donor pools, covariates, and baseline years.
+- **AST Contract Boundary Enforcement:** `tests/test_contract_boundary.py` mechanically prevents architecture violations.
+- **Deterministic Reporting & Grounding Guard:** Regex and numeric grounding verification rejecting LLM hallucinations and legal allegations.
 
 ---
 
-## Long term — continuous evidence intelligence
+## 4. Milestone 2: GroundTruth 2.0 — Multi-Tenant Platform (Current Production Baseline)
 
-*Goal: verify once, then keep watching.*
+*Objective: Transform the computational module into an enterprise-grade ecological intelligence platform delivering tailored persona perspectives.*
 
-**Future**
+```mermaid
+flowchart LR
+    subgraph P2["GroundTruth 2.0 Pillars"]
+        direction TB
+        P_P["4 Role-Based Personas<br/>(NGO · Funder · Auditor · Gov)"]
+        P_D["8-Dimension Assessment Engine<br/>(Levels 0 through 5)"]
+        P_R["Empirical Climate & S2 Layer<br/>(514-Mo CHIRPS · NASA POWER · S2 L2A)"]
+        P_S["Fail-Closed Scientific Gateways<br/>(DataUnavailableError / 501)"]
+        P_T["542-Test Web & Compose Native<br/>(Next.js 14 · Vitest · Android)"]
+    end
+```
 
-- Scheduled re-analysis: re-run a stored `spec_hash` on new imagery and diff
-  the bundles
-- Event detection: deforestation alerts, fire, ecological deterioration,
-  restoration progress
-- Automated review triggers when a project diverges from its own trajectory
-- Portfolio-level risk intelligence across a buyer's holdings
-- Expansion beyond forest carbon: biodiversity, land restoration, ecosystem
-  services, water and hydrological restoration
-- Public API and methodology publication
+### Delivered Capabilities:
+1. **Four Tailored Personas:**
+   - **Auditor / MRV Dashboard:** Complete STAC scene discovery, sensor continuity audits, cryptographic SHA-256 evidence chain verification.
+   - **Restoration NGO Dashboard:** Boundary registration, seasonal NDVI/EVI/NDMI/NBR tracking, climate drought defense.
+   - **CSR / Impact Funder Portfolio:** Portfolio additionality screening, ESG audit defense, accredited review triggers.
+   - **Government / Regulator Dashboard:** Territorial conservation tracking, administrative district leakage, SPI-12 emergency tracking.
+2. **The 8-Dimension Assessment Framework:** Evaluates Trajectory, Spatial, Climate, Risk, Progress, Comparison, Evidence Quality, and Attribution.
+3. **Graduation Levels 0 to 5:** Kariba REDD+ successfully graduated to **Level 2 (Contextual Intelligence)**.
+4. **Empirical Climate Intelligence:** 43 years (1981–2023) of monthly CHIRPS precipitation (514/516 months) with honest missingness flags, NASA POWER temperature, and SPI-12 drought index across 50 districts.
+5. **Real Sentinel-2 L2A Earth Observation:** 10m surface reflectance indices (NDVI/EVI/NDMI/NBR) across 2021–2023 for Kariba's 784,987 ha parcel.
+6. **Task 5/5B Audit Remediation:** Quarantined fabricated Landsat caches; enforced fail-closed gateways that return `HTTP 501` rather than manufacturing unverified numbers in real mode.
+7. **Production Web & Mobile Clients:** Next.js 14 web app verified by **542 passing Vitest tests**, accompanied by an Android native client in Jetpack Compose.
 
-The architectural groundwork for this already exists — `spec_hash` makes a
-re-run comparable, `DatasetRef` pins what was used, and the evidence bundle is
-diffable. None of it is built.
-
----
-
-## What we explicitly will not build
-
-Scope discipline matters more than ambition here.
-
-| Not building | Why |
-| --- | --- |
-| Credit issuance, retirement or pricing | Different regulatory category entirely |
-| Automated de-listing or enforcement | No system should cost a project its status on a screening signal |
-| A replacement for field verification | Ground plots measure pools no satellite sees |
-| A fraud-detection product | Satellite data cannot establish intent, and framing it that way would be irresponsible |
-| Our own imagery pipeline | Earth Engine and the open archives are better than anything we would build |
-| A general-purpose GIS | We are a verification system that uses geospatial data, not a geospatial platform |
+| Auditor Dashboard | Restoration NGO Dashboard |
+| :---: | :---: |
+| ![Auditor Dashboard](docs/product/screens/auditor-dashboard.png) | ![NGO Dashboard](docs/product/screens/ngo-dashboard.png) |
 
 ---
 
-## What must be decided now, and what can wait
+## 5. Milestone 3: Automated Multi-Tile Landsat Ingestion & Sensor Cross-Calibration (Active Development)
 
-The distinction that keeps a small team from either over-building or painting
-itself into a corner.
+*Objective: Eliminate all static caches by automating multi-tile Landsat Collection 2 Level 2 raster acquisition and concurrent-overpass cross-calibration.*
 
-**Decide now — expensive to change later**
-
-| Decision | Status |
-| --- | --- |
-| The engine/platform contract shape | **Decided.** ADR-002, ADR-003 |
-| Evidence object and provenance model | **Decided.** ADR-004, ADR-005 |
-| GenAI strictly downstream of evidence | **Decided.** ADR-007 |
-| Reproducibility via `spec_hash` | **Decided.** ADR-006 |
-| Ownership boundary and enforcement | **Decided.** ADR-002 |
-| Status vocabulary and honesty discipline | **Decided.** This document, `AGENTS.md` |
-
-**Abstract now — cheap to add behind an existing interface**
-
-Earth-observation providers, covariate sources, estimators, robustness checks,
-narration providers, dataset versions. Each has a port or a registry key today
-and needs no structural change to extend.
-
-**Keep simple — do not build yet**
-
-Database, job queue, worker process, auth, caching, multi-environment config,
-containerisation. Each is a small, well-understood change *because* the contract
-already carries what it will need.
-
-**Wait for a reason**
-
-| Deferred | Trigger to build it |
-| --- | --- |
-| Splitting into multiple Python distributions | The engine needs an independent release cadence or an external consumer |
-| Carbon conversion | After the indicator-level estimate is validated on Kariba. Stacking a conversion on an unvalidated estimate compounds two uncertainties. |
-| Continuous monitoring | After a single analysis is trustworthy and cheap to re-run |
-| Registry-scale batch | After one project runs end to end on real data |
+### In Development:
+- **Distributed Multi-Tile Ingestion Pipeline:** Automated acquisition and cloud masking for the 7 WRS-2 tiles covering Kariba (Paths 169–172, Rows 71–73) directly from USGS / Microsoft Planetary Computer STAC APIs.
+- **Empirical Sensor Overpass Cross-Calibration:** Replacing theoretical literature coefficients with locally verified, empirical overpass regression between Landsat 7 ETM+ and Landsat 8 OLI during their 2013–2016 concurrent orbit period.
+- **Automated SUTVA Leakage Filtering:** Algorithmic calculation of geodesic boundary buffers to programmatically exclude project host districts from donor pools.
+- **Weather-Residualized SCM Execution on Real Rasters:** Advancing Kariba from Level 2 to **Level 4 (Weather-Residualized Causal Model)** once empirical pre-treatment vegetation panels are fully processed.
 
 ---
 
-See [`docs/product/capability-matrix.md`](docs/product/capability-matrix.md) for
-the feature-level status table and
-[`docs/product/implementation-plan.md`](docs/product/implementation-plan.md) for
-the phased task breakdown with owners.
+## 6. Milestone 4: Planetary Scale & Structural Biomass Verification (Future Horizon)
+
+*Objective: Scale GroundTruth across all global voluntary carbon market projects with spaceborne LiDAR and continuous near-real-time monitoring.*
+
+### Research Horizons:
+- **Spaceborne LiDAR Integration (NASA GEDI L4A/L4B):** Direct calibration of canopy height and aboveground biomass density (AGBD) to bridge the NDVI-to-carbon gap with empirical structural physics.
+- **Automated Registry Ingestion:** Real-time synchronization with Verra, Gold Standard, and Plan Vivo registry APIs to monitor newly registered project parcels automatically.
+- **Near-Real-Time Reversal Alerts:** Weekly Sentinel-1 SAR and Sentinel-2 optical change detection to alert funders and governments to illegal deforestation within 48 hours of occurrence.
+- **Decentralized Cryptographic Attestation:** Zero-knowledge verification proofs enabling project developers to prove additionality without disclosing proprietary commercial plot geometries.
+
+---
+
+## 7. Strategic Capability Matrix
+
+| Capability Area | Milestone 1 (Prototype) | Milestone 2 (GroundTruth 2.0) | Milestone 3 (Planned) | Milestone 4 (Planetary Scale) |
+|---|---|---|---|---|
+| **User Personas** | Single Generic View | 4 Tailored Personas (Web + Mobile) | Organization Workspaces | Self-Service Registry Integration |
+| **Assessment Dimensions** | 1 (Causal Effect) | 8 Orthogonal Dimensions | 8 Dimensions with Live Data | Automated Continuous Scoring |
+| **Graduation Ladder** | Binary Pass/Fail | Levels 0 through 5 | Automated Level Transitions | Regulatory Compliance Audit |
+| **Earth Observation** | Synthetic Benchmark | Real S2 (2021-2023) + Fail-Closed | Automated Landsat 5/7/8/9 | Global Sentinel-1/2 + GEDI LiDAR |
+| **Climate Integration** | Simulated Covariates | 43-Yr CHIRPS + NASA POWER (SPI-12) | Automated Weather Residualization | Dynamic Microclimate Downscaling |
+| **Testing & QA** | 194 Backend Tests | 1,466 Backend + 542 Frontend Tests | Automated STAC E2E Rasters | Continuous Satellite Ingestion CI |
+
+---
+
+> GroundTruth 2.0 Roadmap · *PCCOE International Grand Challenge 2026*
