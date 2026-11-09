@@ -6,7 +6,8 @@ import { VerdictPanel } from '../../../../../../../components/panels/VerdictPane
 import { DiagnosticsSummary } from '../../../../../../../features/projects/DiagnosticsSummary';
 import { diagnosticsVisible } from '../../../../../../../features/projects/model';
 import { ProblemPanel } from '../../../../../../../features/projects/ProblemPanel';
-import { fetched, loadProject } from '../../../../../../../features/projects/server';
+import { canEditProject } from '../../../../../../../features/projects/model';
+import { fetched, loadOrg, loadProject } from '../../../../../../../features/projects/server';
 import { ClaimVerificationWorkbench } from '../../../../../../../components/panels/ClaimVerificationWorkbench';
 import { claimsProblem, toPortfolio } from '../../../../../../../components/panels/claimWorkbenchModel';
 import styles from '../../../../../../../features/projects/projects.module.css';
@@ -19,8 +20,10 @@ export default async function VerificationPage({ params }: { params: { org: stri
   const project = await loadProject(params.project);
   const path = { project_id: project.id };
 
-  const [claimsRes, verification, assessment] = await Promise.all([
+  const org = await loadOrg(params.org);
+  const [claimsRes, claimTypes, verification, assessment] = await Promise.all([
     fetched(() => serverApi().GET('/claims/structured/{project_id}', { params: { path } })),
+    fetched(() => serverApi().GET('/projects/{project_id}/claims', { params: { path } })),
     fetched(() => serverApi().GET('/projects/{project_id}/verification', { params: { path } })),
     fetched(() => serverApi().GET('/projects/{project_id}/assessment', { params: { path } })),
   ]);
@@ -36,6 +39,9 @@ export default async function VerificationPage({ params }: { params: { org: stri
           orgSlug={params.org}
           projectSlug={project.slug}
           portfolio={toPortfolio(claimsRes.data)}
+          projectId={project.id}
+          canEdit={claimTypes.data !== null && canEditProject(project.access_level, org?.role ?? null)}
+          kinds={claimTypes.data?.kinds ?? []}
         />
       ) : (
         <UnavailablePanel

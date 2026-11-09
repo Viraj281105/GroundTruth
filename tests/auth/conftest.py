@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import pathlib
+import sys
 
 import pytest
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from authhelpers import ORIGIN
 from fastapi.testclient import TestClient
 
@@ -14,6 +17,7 @@ from groundtruth.platform.config import get_settings
 from groundtruth.platform.store import migrate
 from groundtruth.platform.store.database import create_db_engine, create_session_factory
 from groundtruth.platform.store.sql import SqlEvidenceStore
+from pgdb import new_database
 
 
 @pytest.fixture
@@ -34,9 +38,10 @@ def settings(monkeypatch):
 
 @pytest.fixture
 def sessions(tmp_path: pathlib.Path):
-    url = f"sqlite:///{tmp_path / 'auth.db'}"
-    migrate.upgrade(url)
-    return create_session_factory(create_db_engine(url))
+    db = new_database(tmp_path, "auth.db")
+    migrate.upgrade(db.url)
+    yield create_session_factory(create_db_engine(db.url))
+    db.drop()
 
 
 @pytest.fixture

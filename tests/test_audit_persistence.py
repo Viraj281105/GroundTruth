@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import hashlib
+import sys
 from collections.abc import Iterator
 from itertools import pairwise
 from pathlib import Path
@@ -17,6 +18,7 @@ import pytest
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from groundtruth.platform.audit.ledger import (
     GENESIS,
     STATUS_EMPTY,
@@ -30,6 +32,7 @@ from groundtruth.platform.audit.ledger import (
 )
 from groundtruth.platform.store.database import create_db_engine
 from groundtruth.platform.store.models import Base
+from pgdb import new_database
 
 EMPTY_SHA256 = hashlib.sha256(b"").hexdigest()
 GEO = {
@@ -39,10 +42,11 @@ GEO = {
 
 
 @pytest.fixture
-def db_url(tmp_path: Path) -> str:
-    url = f"sqlite:///{(tmp_path / 'ledger.db').as_posix()}"
-    Base.metadata.create_all(create_db_engine(url))
-    return url
+def db_url(tmp_path: Path) -> Iterator[str]:
+    db = new_database(tmp_path, "ledger.db")
+    Base.metadata.create_all(create_db_engine(db.url))
+    yield db.url
+    db.drop()
 
 
 def _ledger(url: str) -> AuditLedger:
@@ -156,7 +160,7 @@ def test_modification_is_detected(db_url: str, ledger: AuditLedger) -> None:
     ids = _add(ledger, "p3", 3)
     _sql(
         db_url,
-        "UPDATE audit_records SET final_findings = :f WHERE record_id = :r",
+        "UPDATE audit_records SET final_findings = CAST(:f AS JSON) WHERE record_id = :r",
         f='{"att": 0.9}',
         r=ids[1],
     )
@@ -240,7 +244,7 @@ def test_legacy_rows_are_unverifiable_never_verified(db_url: str, ledger: AuditL
         "intermediate_hashes, final_findings, report_version, merkle_root_hash, "
         "deterministic_reproducible, record_kind) VALUES ('AUDIT-OLD', 'legacy', "
         "'2026-11-09 08:00:00', 'x', '1', '1', 'm', 'h', '{}', '{}', '{}', '{}', '{}', "
-        "'2.0-verified', 'sha256:" + "00" * 32 + "', 1, 'assessment')",
+        "'2.0-verified', 'sha256:" + "00" * 32 + "', TRUE, 'assessment')",
     )
     result = ledger.verify_project("legacy")
     assert result.status == STATUS_LEGACY

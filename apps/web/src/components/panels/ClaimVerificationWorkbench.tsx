@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -13,7 +14,18 @@ import {
   ShieldCheck,
   XCircle,
 } from 'lucide-react';
-import { Chip } from '../ds';
+import { Button, Chip } from '../ds';
+import { ClaimForm } from '../../features/projects/ClaimForm';
+import { createClaim, patchClaim, withdrawClaim } from '../../features/projects/claims.client';
+import {
+  EDIT_BLOCKED,
+  correctionNotice,
+  emptyForm,
+  formFromSource,
+  outcomeCopy,
+  type ClaimKindView,
+  type ClaimSource,
+} from '../../features/projects/claims.model';
 import { humanize, isSimulated, type ClaimStatus, type ClaimView, type PortfolioView } from './claimWorkbenchModel';
 import styles from './ClaimVerificationWorkbench.module.css';
 
@@ -23,6 +35,12 @@ interface WorkbenchProps {
   orgSlug: string;
   projectSlug: string;
   portfolio: PortfolioView;
+  /** Needed to add, correct or withdraw claims. Without it the workbench is read-only. */
+  projectId?: string;
+  /** Owner-level access AND an org role that may edit. */
+  canEdit?: boolean;
+  /** The claim types the API accepts. */
+  kinds?: ClaimKindView[];
 }
 
 const STATUS_LABEL: Record<ClaimStatus, string> = {
@@ -89,7 +107,9 @@ export function ClaimsEmptyState({ portfolio, orgSlug, projectSlug }: { portfoli
     <section className={styles.emptyState} aria-label="No claims to verify yet" data-testid="claims-empty">
       <h3 className={styles.emptyTitle}>No claims to verify yet</h3>
       <p className={styles.emptyLead}>
-        No claims have been extracted for this project, so nothing is graded and no verification figures are shown.
+        No claims have been added to this project, so nothing is graded and no verification figures are shown. Add claims by promoting
+        statements from an uploaded document (use <Link href={`${base}/evidence`} className={styles.emptyLink}>View extracted statements in the Evidence tab</Link>),
+        or by typing one in below.
         Overall portfolio grade: <strong>{portfolio.overallGrade || 'N/A'}</strong>.
       </p>
       {portfolio.missingInformation.length > 0 && (
@@ -130,7 +150,7 @@ export function ClaimsEmptyState({ portfolio, orgSlug, projectSlug }: { portfoli
   );
 }
 
-export function ClaimVerificationWorkbench({ projectName, orgSlug, projectSlug, portfolio }: WorkbenchProps) {
+export function ClaimVerificationWorkbench({ projectName, orgSlug, projectSlug, portfolio, projectId, canEdit = false, kinds = [] }: WorkbenchProps) {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [expandedClaim, setExpandedClaim] = useState<string | null>(portfolio.claims[0]?.id ?? null);
 
@@ -162,7 +182,10 @@ export function ClaimVerificationWorkbench({ projectName, orgSlug, projectSlug, 
       </div>
 
       {!portfolio.hasClaims ? (
-        <ClaimsEmptyState portfolio={portfolio} orgSlug={orgSlug} projectSlug={projectSlug} />
+        <>
+          <ClaimsEmptyState portfolio={portfolio} orgSlug={orgSlug} projectSlug={projectSlug} />
+          <AddClaimByTyping projectId={projectId} canEdit={canEdit} kinds={kinds} />
+        </>
       ) : (
         <>
           <div className={styles.kpiRow}>
@@ -204,11 +227,16 @@ export function ClaimVerificationWorkbench({ projectName, orgSlug, projectSlug, 
             ))}
           </div>
 
+          <AddClaimByTyping projectId={projectId} canEdit={canEdit} kinds={kinds} />
+
           <div className={styles.claimsList}>
             {filtered.map((claim) => (
               <ClaimCard
                 key={claim.id}
                 claim={claim}
+                projectId={projectId}
+                canEdit={canEdit}
+                kinds={kinds}
                 simulated={isSimulated(portfolio)}
                 expanded={expandedClaim === claim.id}
                 onToggle={() => setExpandedClaim((cur) => (cur === claim.id ? null : claim.id))}
@@ -230,8 +258,26 @@ function Grade({ label, grade, score }: { label: string; grade: string; score: n
   );
 }
 
-function ClaimCard({ claim, simulated, expanded, onToggle }: { claim: ClaimView; simulated: boolean; expanded: boolean; onToggle: () => void }) {
+function ClaimCard({
+  claim,
+  simulated,
+  expanded,
+  onToggle,
+  projectId,
+  canEdit,
+  kinds,
+}: {
+  claim: ClaimView;
+  simulated: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  projectId?: string;
+  canEdit: boolean;
+  kinds: ClaimKindView[];
+}) {
   const g = claim.grading;
+  const src = claim.source;
+  const outcome = src ? outcomeCopy(claim.status.toUpperCase()) : null;
   return (
     <div className={`${styles.claimCard} ${styles[`card_${claim.status}`]}`}>
       <div
@@ -252,7 +298,7 @@ function ClaimCard({ claim, simulated, expanded, onToggle }: { claim: ClaimView;
             <span className={styles.claimId}>{claim.id}</span>
             <span className={`${styles.statusChip} ${styles[`chip_${claim.status}`]}`}>
               {statusIcon(claim.status)}
-              <span>{STATUS_LABEL[claim.status].toUpperCase()}</span>
+              <span>{outcome ? outcome.label.toUpperCase() : STATUS_LABEL[claim.status].toUpperCase()}</span>
             </span>
             {claim.kind && <span className={styles.claimKindTag}>{humanize(claim.kind)}</span>}
             {simulated && <Chip tone="sim">Simulated</Chip>}
@@ -276,15 +322,18 @@ function ClaimCard({ claim, simulated, expanded, onToggle }: { claim: ClaimView;
         </div>
 
         <div className={styles.gradeMiniWrap}>
-          <Grade label="EV. QUAL" grade={g.evidenceQuality} score={g.evidenceQualityScore} />
-          <Grade label="METHOD" grade={g.methodological} score={g.methodologicalScore} />
-          <Grade label="CAUSAL" grade={g.causal} score={g.causalScore} />
+          {!src && <Grade label="EV. QUAL" grade={g.evidenceQuality} score={g.evidenceQualityScore} />}
+          {!src && <Grade label="METHOD" grade={g.methodological} score={g.methodologicalScore} />}
+          {!src && <Grade label="CAUSAL" grade={g.causal} score={g.causalScore} />}
           <div className={styles.chevronWrap}>{expanded ? <ChevronUp size={20} aria-hidden="true" /> : <ChevronDown size={20} aria-hidden="true" />}</div>
         </div>
       </div>
 
       {expanded && (
         <div className={styles.claimBody}>
+          {src && <SourceBlock source={src} />}
+          {src && outcome && <OutcomeBlock claim={claim} plain={outcome.plain} />}
+          {src && <ClaimControls claimId={claim.id} source={src} projectId={projectId} canEdit={canEdit} kinds={kinds} />}
           {claim.definition && (
             <div className={styles.definitionBox}>
               <span className={styles.sectionLabel}>Definition and scope:</span>
@@ -292,6 +341,7 @@ function ClaimCard({ claim, simulated, expanded, onToggle }: { claim: ClaimView;
             </div>
           )}
 
+          {(!src || claim.statements.length > 0) && (
           <div className={styles.statementsBox}>
             <span className={styles.sectionLabel}>Testable statements:</span>
             {claim.statements.length === 0 ? (
@@ -314,6 +364,7 @@ function ClaimCard({ claim, simulated, expanded, onToggle }: { claim: ClaimView;
               </ul>
             )}
           </div>
+          )}
 
           <div className={styles.evidenceGrid}>
             <div className={styles.evidenceCol}>
@@ -364,7 +415,7 @@ function ClaimCard({ claim, simulated, expanded, onToggle }: { claim: ClaimView;
             </div>
           </div>
 
-          {g.rationale.length > 0 && (
+          {!src && g.rationale.length > 0 && (
             <div className={styles.definitionBox}>
               <span className={styles.sectionLabel}>Grading rationale (overall grade {g.overall || 'N/A'}):</span>
               <ul className={styles.methodList}>
@@ -384,5 +435,202 @@ function ClaimCard({ claim, simulated, expanded, onToggle }: { claim: ClaimView;
         </div>
       )}
     </div>
+  );
+}
+
+/** Where a promoted or typed claim came from, and what was corrected. The original wording is never edited. */
+export function SourceBlock({ source }: { source: ClaimSource }) {
+  const notice = correctionNotice(source);
+  return (
+    <section className={styles.sourceBox} aria-label="Where this claim came from" data-claim-source>
+      <span className={styles.sectionLabel}>Where this claim came from</span>
+      {source.document_id ? (
+        <p className={styles.methodText}>
+          Document: <strong>{source.document_name ?? 'a project document'}</strong>
+        </p>
+      ) : (
+        <p className={styles.methodText}>Typed in by a team member (not taken from a document).</p>
+      )}
+      <p className={styles.sourceQuote}>
+        {source.document_id ? 'The document said: ' : 'As typed: '}&ldquo;{source.original_text}&rdquo;
+      </p>
+      {notice && (
+        <div className={styles.correction} data-claim-edited>
+          <p className={styles.methodText}>
+            <strong>{notice}</strong>
+          </p>
+          <p className={styles.sourceQuote}>Now tested as: &ldquo;{source.statement_text}&rdquo;</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function OutcomeBlock({ claim, plain }: { claim: ClaimView; plain: string }) {
+  return (
+    <section className={styles.outcomeBox} aria-label="How this claim matches the evidence" data-claim-outcome={claim.status}>
+      <span className={styles.sectionLabel}>How it matches the evidence</span>
+      {claim.headline && <p className={styles.outcomeHeadline}>{claim.headline}</p>}
+      <p className={styles.methodText}>{plain}</p>
+      {claim.reasons.length > 0 && (
+        <>
+          <span className={styles.subColLabel}>Why:</span>
+          <ul className={styles.methodList}>
+            {claim.reasons.map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** Edit and Withdraw for one claim. Editors only; everyone else gets a plain explanation. */
+function ClaimControls({ claimId, source, projectId, canEdit, kinds }: { claimId: string; source: ClaimSource; projectId?: string; canEdit: boolean; kinds: ClaimKindView[] }) {
+  const router = useRouter();
+  const [mode, setMode] = useState<'idle' | 'edit' | 'confirm'>('idle');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!canEdit || !projectId) {
+    return (
+      <p className={styles.methodText} data-claim-readonly>
+        {EDIT_BLOCKED}
+      </p>
+    );
+  }
+
+  async function onWithdraw() {
+    setBusy(true);
+    setError(null);
+    const r = await withdrawClaim(projectId as string, claimId);
+    setBusy(false);
+    if (!r.ok) return setError(r.message);
+    setMode('idle');
+    router.refresh();
+  }
+
+  if (mode === 'edit') {
+    return (
+      <ClaimForm
+        idPrefix={`edit-${claimId}`}
+        initial={formFromSource(source)}
+        kinds={kinds}
+        submitLabel="Save correction"
+        busy={busy}
+        error={error}
+        onCancel={() => {
+          setMode('idle');
+          setError(null);
+        }}
+        intro={<p className={styles.methodText}>The original wording above stays as it is. Your correction changes only what is tested.</p>}
+        onSubmit={async (fields) => {
+          setBusy(true);
+          setError(null);
+          const r = await patchClaim(projectId, claimId, fields);
+          setBusy(false);
+          if (!r.ok) return setError(r.message);
+          setMode('idle');
+          router.refresh();
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className={styles.controls}>
+      {mode === 'confirm' ? (
+        <>
+          <p className={styles.methodText}>Withdraw this claim? It stops being tested and leaves this list. The record that it was added is kept.</p>
+          <Button variant="danger" size="sm" loading={busy} onClick={onWithdraw}>
+            Withdraw claim
+          </Button>
+          <Button variant="secondary" size="sm" disabled={busy} onClick={() => setMode('idle')}>
+            Keep it
+          </Button>
+        </>
+      ) : (
+        <>
+          <Button variant="secondary" size="sm" onClick={() => setMode('edit')}>
+            Edit
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setMode('confirm')}>
+            Withdraw
+          </Button>
+        </>
+      )}
+      {error && (
+        <p role="alert" className={styles.methodText}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Add a claim by typing it. Typed claims are tested the same way as claims taken from documents. */
+export function AddClaimByTyping({ projectId, canEdit, kinds }: { projectId?: string; canEdit: boolean; kinds: ClaimKindView[] }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  if (!canEdit || !projectId) {
+    return (
+      <p className={styles.methodText} data-claim-readonly>
+        {EDIT_BLOCKED}
+      </p>
+    );
+  }
+  if (!open) {
+    return (
+      <div className={styles.controls}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setOpen(true);
+            setDone(false);
+          }}
+        >
+          Add a claim by typing it
+        </Button>
+        {done && (
+          <span role="status" className={styles.methodText}>
+            Claim added. It is now compared with the evidence on file.
+          </span>
+        )}
+      </div>
+    );
+  }
+  return (
+    <section className={styles.sourceBox} aria-label="Add a claim by typing it">
+      <span className={styles.sectionLabel}>Add a claim by typing it</span>
+      <ClaimForm
+        idPrefix="typed"
+        initial={emptyForm()}
+        kinds={kinds}
+        submitLabel="Add claim"
+        busy={busy}
+        error={error}
+        intro={<p className={styles.methodText}>Type a claim someone has made about this project. Adding it does not verify it; it is compared with the evidence on file.</p>}
+        onCancel={() => {
+          setOpen(false);
+          setError(null);
+        }}
+        onSubmit={async (fields) => {
+          setBusy(true);
+          setError(null);
+          const r = await createClaim(projectId, fields);
+          setBusy(false);
+          if (!r.ok) return setError(r.message);
+          setOpen(false);
+          setDone(true);
+          router.refresh();
+        }}
+      />
+    </section>
   );
 }

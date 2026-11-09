@@ -1,17 +1,22 @@
 from __future__ import annotations
 
 import pathlib
+import sys
 
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from groundtruth.platform.store import migrate
 from groundtruth.platform.store.database import create_db_engine, create_session_factory
+from pgdb import new_database
 
 
 @pytest.fixture
-def tenancy_db_url(tmp_path: pathlib.Path) -> str:
-    return f"sqlite:///{tmp_path / 'tenancy.db'}"
+def tenancy_db_url(tmp_path: pathlib.Path):
+    db = new_database(tmp_path, "tenancy.db")
+    yield db.url
+    db.drop()
 
 
 @pytest.fixture

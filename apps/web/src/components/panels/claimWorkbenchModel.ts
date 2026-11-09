@@ -30,8 +30,14 @@ export interface GradingView {
   rationale: string[];
 }
 
+import type { ClaimSource } from '../../features/projects/claims.model';
+
 export interface ClaimView {
   id: string;
+  /** Present for claims promoted from a document or typed in; absent for demo and other claims. */
+  source: ClaimSource | null;
+  headline: string;
+  reasons: string[];
   kind: string;
   title: string;
   definition: string;
@@ -128,9 +134,41 @@ function toGrading(raw: unknown): GradingView {
   };
 }
 
+const nstr = (v: unknown): string | null => (typeof v === 'string' ? v : null);
+
+/** The source block is only trusted when it names the claim's text; anything else is treated as no source. */
+export function toSource(raw: unknown): ClaimSource | null {
+  const o = obj(raw);
+  if (typeof o.statement_text !== 'string' || typeof o.original_text !== 'string') return null;
+  return {
+    project_claim_id: str(o.project_claim_id),
+    document_id: nstr(o.document_id),
+    document_name: nstr(o.document_name),
+    document_sha256: nstr(o.document_sha256),
+    start: num(o.start),
+    end: num(o.end),
+    original_text: o.original_text,
+    original_kind: nstr(o.original_kind),
+    original_value: num(o.original_value),
+    original_unit: nstr(o.original_unit),
+    original_period: nstr(o.original_period),
+    statement_text: o.statement_text,
+    kind: str(o.kind),
+    value: num(o.value),
+    unit: nstr(o.unit),
+    period: nstr(o.period),
+    edited: o.edited === true,
+    created_at: nstr(o.created_at),
+    updated_at: nstr(o.updated_at),
+  };
+}
+
 function toClaim(raw: Obj, i: number): ClaimView {
   return {
     id: str(raw.claim_id) || `claim-${i + 1}`,
+    source: toSource(raw.source),
+    headline: str(raw.headline),
+    reasons: strs(raw.reasons),
     kind: str(raw.claim_type),
     title: str(raw.title) || humanize(raw.claim_type) || `Claim ${i + 1}`,
     definition: str(raw.definition),

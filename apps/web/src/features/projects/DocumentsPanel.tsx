@@ -7,7 +7,12 @@ import { saveBlob } from '../case/report/downloads';
 import { deleteDocument, fetchDocumentBlob, fetchExtraction, uploadDocument } from './documents.client';
 import { allowedHint, formatBytes, validateUpload, type DocumentView, type ExtractionView } from './documents.model';
 import { DocumentsTable } from './DocumentsTable';
+import { CandidateList, candidateKey } from './CandidateList';
+import { ClaimForm } from './ClaimForm';
+import { createClaim } from './claims.client';
+import { formFromCandidate, type ClaimCandidate, type ClaimListView, type ProjectClaimView } from './claims.model';
 import styles from './documents.module.css';
+import claimStyles from './claims.module.css';
 
 type Msg = { kind: 'ok' | 'error'; text: string } | null;
 
@@ -20,9 +25,13 @@ export interface DocumentsPanelProps {
   canEdit: boolean;
   /** Plain-language reason shown instead of the controls when canEdit is false. */
   blockedReason: string | null;
+  /** The project's claims and claim types. Null when they could not be loaded. */
+  claimsData?: ClaimListView | null;
+  /** Link to the Verification page, where claims are matched against the evidence. */
+  verificationHref?: string;
 }
 
-export function DocumentsPanel({ projectId, documents, maxBytes, allowedExtensions, canEdit, blockedReason }: DocumentsPanelProps) {
+export function DocumentsPanel({ projectId, documents, maxBytes, allowedExtensions, canEdit, blockedReason, claimsData = null, verificationHref = '../verification' }: DocumentsPanelProps) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -30,6 +39,31 @@ export function DocumentsPanel({ projectId, documents, maxBytes, allowedExtensio
   const [msg, setMsg] = useState<Msg>(null);
   const [confirm, setConfirm] = useState<DocumentView | null>(null);
   const [view, setView] = useState<{ doc: DocumentView; result: { ok: true; data: ExtractionView } | { ok: false; message: string } | null } | null>(null);
+
+  const [reviewing, setReviewing] = useState<ClaimCandidate | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [created, setCreated] = useState<ProjectClaimView[]>([]);
+  const [justAdded, setJustAdded] = useState<string[]>([]);
+  const claimsNow = claimsData ? [...claimsData.claims, ...created] : null;
+
+  function closeView() {
+    setView(null);
+    setReviewing(null);
+    setAddError(null);
+  }
+
+  async function onAddClaim(docId: string, c: ClaimCandidate, fields: { statement_text: string; kind: string; value: number | null; unit: string | null; period: string | null }) {
+    setAdding(true);
+    setAddError(null);
+    const r = await createClaim(projectId, { document_id: docId, start: c.start, end: c.end, ...fields });
+    setAdding(false);
+    if (!r.ok) return setAddError(r.message);
+    setCreated((x) => [...x, r.data]);
+    setJustAdded((x) => [...x, `${docId}:${candidateKey(c)}`]);
+    setReviewing(null);
+    router.refresh();
+  }
 
   async function onUpload(e: React.FormEvent) {
     e.preventDefault();
@@ -126,25 +160,53 @@ export function DocumentsPanel({ projectId, documents, maxBytes, allowedExtensio
         </div>
       </Dialog>
 
-      <Dialog open={view !== null} onClose={() => setView(null)} title={view ? `Extracted statements: ${view.doc.filename}` : 'Extracted statements'}>
+      <Dialog open={view !== null} onClose={closeView} title={view ? `Extracted statements: ${view.doc.filename}` : 'Extracted statements'}>
         <Chip tone="caution">Candidates, not verified</Chip>
         {view?.result === null && <p className={styles.muted}>Loading…</p>}
         {view?.result && !view.result.ok && <p role="alert" className={styles.error}>{view.result.message}</p>}
         {view?.result?.ok && (
           <>
             <p className={styles.muted}>{view.result.data.note}</p>
-            {view.result.data.candidates.length === 0 ? (
+            {reviewing && claimsData ? (
+              <ClaimForm
+                key={candidateKey(reviewing)}
+                idPrefix="promote"
+                initial={formFromCandidate(reviewing)}
+                kinds={claimsData.kinds}
+                submitLabel="Add as claim"
+                busy={adding}
+                error={addError}
+                onCancel={() => {
+                  setReviewing(null);
+                  setAddError(null);
+                }}
+                onSubmit={(fields) => onAddClaim(view.doc.id, reviewing, fields)}
+                intro={
+                  <div className={claimStyles.original}>
+                    <p>
+                      The document said: <em>&ldquo;{reviewing.quote ?? ''}&rdquo;</em>
+                    </p>
+                    <p>Check the number and wording. If you change them, the claim is tested as you corrected it, and the original wording is kept beside it. Adding a claim does not verify it.</p>
+                  </div>
+                }
+              />
+            ) : view.result.data.candidates.length === 0 ? (
               <p>No possible claims were found in the text.</p>
             ) : (
-              <ul className={styles.candidates}>
-                {view.result.data.candidates.map((c, i) => (
-                  <li key={`${c.start ?? i}-${i}`}>
-                    <strong>{c.kind}</strong>
-                    {c.value !== null && c.value !== undefined ? `: ${c.value}${c.unit ? ` ${c.unit}` : ''}` : ''}
-                    {c.quote && <p className={styles.quote}>&ldquo;{c.quote}&rdquo;</p>}
-                  </li>
-                ))}
-              </ul>
+              <CandidateList
+                documentId={view.doc.id}
+                candidates={view.result.data.candidates}
+                claims={claimsNow}
+                kinds={claimsData?.kinds ?? []}
+                canEdit={canEdit}
+                blockedReason={blockedReason}
+                justAdded={justAdded.filter((k) => k.startsWith(`${view.doc.id}:`)).map((k) => k.slice(view.doc.id.length + 1))}
+                verificationHref={verificationHref}
+                onReview={(c) => {
+                  setAddError(null);
+                  setReviewing(c);
+                }}
+              />
             )}
           </>
         )}

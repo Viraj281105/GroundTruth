@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session, sessionmaker
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "auth"))
 from authhelpers import ORIGIN, login, new_client, register
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from groundtruth.platform.api.app import app
 from groundtruth.platform.api.dependencies import get_jobs, get_store, reset_store
 from groundtruth.platform.auth import passwords
@@ -43,6 +44,7 @@ from groundtruth.platform.store.models import (
     UserRow,
 )
 from groundtruth.platform.store.sql import SqlEvidenceStore
+from pgdb import new_database
 
 CASES = Path(__file__).resolve().parents[2] / "cases"
 GRANTED_CASE = "kariba-redd"
@@ -226,9 +228,10 @@ def configure_auth(monkeypatch: pytest.MonkeyPatch) -> None:
 def tenant_world_iter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[World]:
     """A fully seeded world on a fresh SQLite database (the ``tenant_world`` fixture's body)."""
     configure_auth(monkeypatch)
-    url = f"sqlite:///{tmp_path / 'tenant.db'}"
+    db = new_database(tmp_path, "tenant.db")
+    url = db.url
     migrate.upgrade(url)
-    sessions = create_session_factory(create_db_engine(url, connect_args={"timeout": 30}))
+    sessions = create_session_factory(create_db_engine(url, connect_args=db.connect_args))
     store = SqlEvidenceStore(sessions)
     reset_store()
     login_limiter.clear()
@@ -240,3 +243,4 @@ def tenant_world_iter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterat
         app.dependency_overrides.clear()
         reset_store()
         login_limiter.clear()
+        db.drop()

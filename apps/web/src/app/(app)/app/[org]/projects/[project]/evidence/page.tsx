@@ -14,9 +14,10 @@ export default async function EvidencePage({ params }: { params: { org: string; 
   const project = await loadProject(params.project);
   const org = await loadOrg(params.org);
   const path = { params: { path: { project_id: project.id } } };
-  const [inventory, docs] = await Promise.all([
+  const [inventory, docs, claims] = await Promise.all([
     fetched(() => serverApi().GET('/projects/{project_id}/evidence-inventory', path)),
     fetched(() => serverApi().GET('/projects/{project_id}/documents', path)),
+    fetched(() => serverApi().GET('/projects/{project_id}/claims', path)),
   ]);
   const role = org?.role ?? null;
   return (
@@ -30,6 +31,8 @@ export default async function EvidencePage({ params }: { params: { org: string; 
           allowedExtensions={docs.data.allowed_extensions}
           canEdit={canEditProject(project.access_level, role)}
           blockedReason={editBlockedReason(project.access_level, role)}
+          claimsData={claims.data}
+          verificationHref={`/app/${params.org}/projects/${params.project}/verification`}
         />
       ) : (
         <ProblemPanel title="Project documents" status={docs.status} />

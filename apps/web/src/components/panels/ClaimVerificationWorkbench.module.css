@@ -584,3 +584,9 @@
 .emptyLinks { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .emptyLink { color: var(--accent); font-weight: 600; font-size: var(--text-sm); }
 .emptyLink:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.sourceBox, .outcomeBox { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-sunken); }
+.sourceQuote { margin: 0; font-style: italic; color: var(--text-secondary); font-size: var(--text-sm); }
+.correction { border-left: 3px solid var(--accent); padding-left: var(--space-3); display: flex; flex-direction: column; gap: var(--space-1); }
+.outcomeHeadline { margin: 0; font-weight: 600; color: var(--text-primary); font-size: var(--text-base); }
+.controls { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
