@@ -69,7 +69,8 @@ class FakeClock:
             return self.now
 
 
-def _request(*, seed: int = 20260101, min_donors: int | None = None) -> AnalysisRequest:
+def _request(*, seed: int = 20260101, min_donors: int = 10) -> AnalysisRequest:
+    # 10 is what POST /jobs sends by default, so a job submitted through the API has this hash.
     return get_case("kariba-redd").to_request(seed=seed, min_donors=min_donors)
 
 

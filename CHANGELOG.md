@@ -41,6 +41,19 @@ flowchart LR
   - Organization boundaries, project grants, Scrypt password hashing ($N=32768, r=8, p=1$), timing attack mitigation, and session cookies with HttpOnly, SameSite, and Secure flags.
   - Row-level tenant isolation returning `HTTP 403 Forbidden` on unauthorized cross-tenant queries.
 
+### Added on `bhumi-dev` before the 2.0 merge
+- **Earth Engine observation service (#22):** `platform/datasets/observation.py`, with
+  sign-in, retries, rate limiting and caching shared through `platform/datasets/session.py`.
+  Landsat 7 2001-2022 (agreed with Viraj, C3), pinned to a 2026-11-01 snapshot. Tested
+  offline; network tests are opt-in (`--run-network`). Never run on real data.
+- **Covariate services and ADR-011 unit construction (#23):** `platform/datasets/covariates.py`
+  and `platform/units/provider.py`, behind the required settings in
+  `cases/run_parameters/kariba-redd.yaml` (decisions V1-V9 agreed with Viraj, C4). No real unit
+  set has been generated; the generation script refuses until every setting is decided.
+- **Docker fixes (#44):** one shared backend image, a one-shot `migrate` service that api and
+  worker wait for, backend image without the web source, and `.dockerignore` rules that keep
+  environment files and keys out of every image.
+
 ### Visual Preview of 2.0 Dashboards
 | Auditor Verification Dashboard | Project Overview & Dimensions |
 | :---: | :---: |

@@ -183,7 +183,9 @@ def queue_run(
     requested_by: str | None = None,
 ) -> str:
     """A QUEUED simulated run for ``case_id``, filed under ``project_id`` (may be ``None``)."""
-    request = get_case(case_id).to_request(data_mode="simulated", seed=seed_value)
+    # min_donors=10 is what POST /jobs sends by default, so a later submission through the
+    # API hashes the same; the Kariba case itself sets 30.
+    request = get_case(case_id).to_request(data_mode="simulated", seed=seed_value, min_donors=10)
     run_id = JobQueue(sessions).submit(request, requested_by=requested_by).run_id
     with sessions() as db:
         db.execute(

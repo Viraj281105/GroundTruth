@@ -253,6 +253,7 @@ class TestMissingClimateObservations:
 class TestTemporalAlignment:
     """Verify alignment between satellite observation periods and climate series."""
 
+    @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
     def test_alignment_with_kariba_panel_window_2001_2022(self) -> None:
         bundle = load_kariba_climate_bundle(DEFAULT_CLIMATE_CACHE_PATH)
         kariba_climate = bundle.treated_summary
@@ -276,6 +277,7 @@ class TestTemporalAlignment:
         assert report.alignment_status == "PARTIAL"
         assert len(report.notes) >= 3
 
+    @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
     def test_alignment_with_sentinel2_window_2021_2023(self) -> None:
         bundle = load_kariba_climate_bundle(DEFAULT_CLIMATE_CACHE_PATH)
         kariba_climate = bundle.treated_summary
@@ -300,6 +302,7 @@ class TestTemporalAlignment:
         assert obs_by_year[2023].wet_season_rainfall_mm is not None
         assert obs_by_year[2023].mean_temp_c is not None
 
+    @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
     def test_strict_complete_calendar_years_raises_on_partial_year(self) -> None:
         bundle = load_kariba_climate_bundle(DEFAULT_CLIMATE_CACHE_PATH)
         kariba_climate = bundle.treated_summary
@@ -321,6 +324,7 @@ class TestTemporalAlignment:
 class TestKaribaClimateBundleAndSPI:
     """Verify real CHIRPS v2.0 + NASA POWER MERRA-2 bundle integrity and SPI drought indices."""
 
+    @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
     def test_kariba_climate_bundle_provenance_and_spatial_coverage(self) -> None:
         bundle = load_kariba_climate_bundle(DEFAULT_CLIMATE_CACHE_PATH)
 
@@ -355,6 +359,7 @@ class TestKaribaClimateBundleAndSPI:
             assert 400.0 <= u.baseline_mean_rainfall_mm <= 1500.0
             assert 15.0 <= (u.baseline_mean_temp_c or 0.0) <= 30.0
 
+    @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
     def test_kariba_historical_droughts_detected_by_spi(self) -> None:
         bundle = load_kariba_climate_bundle(DEFAULT_CLIMATE_CACHE_PATH)
         kariba_by_year = bundle.treated_summary.record_by_year()
@@ -386,6 +391,7 @@ class TestKaribaClimateBundleAndSPI:
 class TestDonorClimateComparabilityAndConfounding:
     """Verify donor climate comparability evaluation and weather-confounding adjustment."""
 
+    @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
     def test_donor_climate_comparability_flags_extreme_wet_and_cool_donors(self) -> None:
         bundle = load_kariba_climate_bundle(DEFAULT_CLIMATE_CACHE_PATH)
         donor_list = list(bundle.eligible_donor_summaries().values())
@@ -413,6 +419,7 @@ class TestDonorClimateComparabilityAndConfounding:
         assert diag.climate_covariate_balance_unweighted.is_balanced is False
         assert diag.climate_covariate_balance_unweighted.max_abs_smd > 0.25
 
+    @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
     def test_post_treatment_covariate_divergence_warning(self) -> None:
         bundle = load_kariba_climate_bundle(DEFAULT_CLIMATE_CACHE_PATH)
         donor_list = list(bundle.eligible_donor_summaries().values())
@@ -555,6 +562,7 @@ class TestCausalGatePreservation:
             "n_bootstrap",
         ]
 
+    @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
     def test_all_10_kariba_specifications_preserve_inconclusive_verdict(self) -> None:
         bundle = load_kariba_climate_bundle(DEFAULT_CLIMATE_CACHE_PATH)
         donor_ids = list(bundle.eligible_donor_ids)
@@ -642,6 +650,7 @@ class TestCausalGatePreservation:
         assert verdict == VerdictLabel.INCONCLUSIVE
         assert any("under_identified_simplex" in r for r in reasons)
 
+    @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
     def test_sentinel2_comovement_explicitly_refuses_causal_identification(self) -> None:
         bundle = load_kariba_climate_bundle(DEFAULT_CLIMATE_CACHE_PATH)
         s2_comovement = analyze_sentinel2_climate_comovement(
@@ -672,6 +681,7 @@ class TestCausalGatePreservation:
 class TestSentinel2NDMIIntegrity:
     """Verify Sentinel-2 NDMI calculation, sign convention, and pipeline integration."""
 
+    @pytest.mark.requires_local_data("data/processed/stac_cache/kariba-redd__ndmi.json")
     def test_stac_cache_ndmi_values_and_provenance(self) -> None:
         import json
         from pathlib import Path
@@ -717,6 +727,7 @@ class TestSentinel2NDMIIntegrity:
         assert res_dry[0] == pytest.approx((0.22 - 0.26) / (0.22 + 0.26), abs=1e-6)
         assert res_dry[0] < 0.0
 
+    @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
     def test_missing_observations_remain_none_without_default_fabrication(self) -> None:
         bundle = load_kariba_climate_bundle(DEFAULT_CLIMATE_CACHE_PATH)
         # Call without providing spectral values
@@ -733,6 +744,7 @@ class TestSentinel2NDMIIntegrity:
         assert any("unavailable or incomplete" in n for n in res.interpretation_notes)
         assert res.identifies_causal_effect is False
 
+    @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
     def test_scm_and_did_unaffected_by_ndmi_correction(self) -> None:
         # Verify that causal estimation operates strictly on NDVI and does not change
         bundle = load_kariba_climate_bundle(DEFAULT_CLIMATE_CACHE_PATH)

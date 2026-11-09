@@ -540,6 +540,7 @@ def test_deduplicate_scene_overpasses_keeps_latest_baseline() -> None:
 def test_explicit_error_handling_for_network_credentials_and_missing_assets(
     tmp_path: Path,
 ) -> None:
+    pytest.importorskip("rasterio", reason="needs the `geo` extra")
     from groundtruth.contracts.errors import ConfigurationError, DataUnavailableError
     from groundtruth.contracts.ports import ObservationSpec
     from groundtruth.contracts.request import UnitRef

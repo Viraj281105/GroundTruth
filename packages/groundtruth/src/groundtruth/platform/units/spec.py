@@ -141,7 +141,58 @@ BASELINE_FOREST_ASSET: Final[str] = "UMD/hansen/global_forest_change_2023_v1_11"
 BASELINE_FOREST_BAND: Final[str] = "treecover2000"
 PERMANENT_WATER_ASSET: Final[str] = "JRC/GSW1_4/GlobalSurfaceWater"
 PERMANENT_WATER_BAND: Final[str] = "occurrence"
-PROTECTED_AREA_ASSET: Final[str] = "WCMC/WDPA/current/polygons"
+PROTECTED_AREA_ASSET_FOLDER: Final[str] = "WCMC/WDPA"
+
+
+def protected_area_asset(release: str) -> str:
+    """The dated WDPA snapshot for a release such as ``202610``.
+
+    Dated snapshots rather than ``WCMC/WDPA/current/polygons``, which moves every month
+    whatever release string is recorded beside it (#23, B6).
+    """
+    return f"{PROTECTED_AREA_ASSET_FOLDER}/{release}/polygons"
+
+
+GAUL_ADM0_NAMES: Final[dict[str, str]] = {
+    "ZWE": "Zimbabwe",
+    "ZMB": "Zambia",
+    "MOZ": "Mozambique",
+    "MWI": "Malawi",
+    "TZA": "United Republic of Tanzania",
+}
+"""GAUL 2015 has no ISO3 field, so a rung's countries are matched on ``ADM0_NAME``.
+
+The listing network test checks these literal names against the asset, and a country
+that returns no district raises rather than quietly shrinking the search region.
+"""
+
+STUDY_BOUNDS: Final[tuple[float, float, float, float]] = (21.0, -27.5, 41.5, -0.5)
+"""West, south, east, north: a rectangle around every country on the ladder. Used only
+for the names-only listings, which report no counts."""
+
+C4_AGREEMENT: Final[str] = "agreed with Viraj (C4), 2026-11-05"
+
+PINNED_DECISIONS: Final[tuple[str, ...]] = (
+    "V1 Roads: gROADS v1 (CIESIN, 1980-2010), uploaded as our own Earth Engine asset and "
+    f"pinned by asset id, source sha256 and upload date. {C4_AGREEMENT}.",
+    "V2 Population: WorldPop/GP/100m/pop, year 2000, matching Hansen treecover2000. The asset "
+    f"is deprecated in the Earth Engine catalog. {C4_AGREEMENT}.",
+    "V3 Rainfall: CHIRPS daily, mean annual total over calendar years 2001-2010, reduced at "
+    f"CHIRPS native scale (~5.5 km), not 30 m. {C4_AGREEMENT}.",
+    "V4 Statistics: every covariate is measured over the masked unit at the dataset's native "
+    "scale. Mean of per-pixel values for rainfall, elevation, slope and road distance; slope "
+    "is computed per pixel before averaging; population_density is summed population divided "
+    f"by the unit's eligible area. {C4_AGREEMENT}.",
+    "V6 Raster mask: pixels outside the district are set to 0 before eroding; erosion is a "
+    "300 m circular kernel, 10 pixels at 30 m; eligible area is pixel count x pixel area in "
+    "the pinned equal-area CRS; fragment count is the connected-components count; "
+    f"geometry_hash is the raster equivalent. {C4_AGREEMENT}.",
+    f"V7 WDPA Adopted: not subtracted, the literal reading of ADR-011. {C4_AGREEMENT}.",
+    f"V8 Donors: pool_size 80, min_donors 30, max_donors 50. {C4_AGREEMENT}.",
+    "V9(b) Leakage-belt exclusions are eligibility rules recorded in this manifest, not by "
+    f"match_donors. {C4_AGREEMENT}.",
+)
+"""Decisions that shape the unit set, recorded in every manifest."""
 
 UNIT_ID_PREFIX: Final[str] = "gaul2015"
 """``unit_id`` is ``gaul2015:{ADM2_CODE}`` until #60 gives units real descriptors."""

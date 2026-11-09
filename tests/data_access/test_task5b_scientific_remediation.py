@@ -304,6 +304,7 @@ def test_harmonization_leaves_oli_scenes_untouched_in_mixed_year() -> None:
 # --- 3. Real Donor Matrix & Synthetic Control Readiness ------------------------------
 
 
+@pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
 def test_kariba_donor_eligibility_counts_come_from_boundary_data(repo_root: Path) -> None:
     """Counts are derived from the committed donor GeoJSON, with no padded placeholder units."""
     matrix = build_kariba_donor_eligibility_matrix()
@@ -327,6 +328,7 @@ def test_kariba_donor_eligibility_counts_come_from_boundary_data(repo_root: Path
         assert rec.area_km2 == p["area_km2"]
 
 
+@pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
 def test_border_caveats_follow_preregistered_rules() -> None:
     matrix = build_kariba_donor_eligibility_matrix()
     border = {u.unit_id for u in matrix.units if u.category == DonorCategory.BORDER_LEAKAGE_CAVEAT}
@@ -373,6 +375,7 @@ def test_real_donor_access_returns_only_eligible_units(repo_root: Path) -> None:
         assert host not in ids
 
 
+@pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
 def test_donor_diagnostics_unavailable_without_real_panel() -> None:
     """No simulated diagnostics: without an observed panel nothing is reported."""
     matrix = build_kariba_donor_eligibility_matrix()
@@ -381,6 +384,7 @@ def test_donor_diagnostics_unavailable_without_real_panel() -> None:
     assert matrix.to_dict()["diagnostics"] is None
 
 
+@pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
 def test_donor_panel_missing_core_donor_is_refused() -> None:
     with pytest.raises(DataUnavailableError, match="lacks"):
         build_kariba_donor_eligibility_matrix(

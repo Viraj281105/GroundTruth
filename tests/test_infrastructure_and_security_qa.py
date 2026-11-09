@@ -232,8 +232,14 @@ def test_docker_compose_and_helm_chart_structure() -> None:
     compose_path = REPO_ROOT / "docker-compose.yml"
     compose_data = yaml.safe_load(compose_path.read_text(encoding="utf-8"))
     services = compose_data.get("services", {})
-    assert {"postgres", "api", "worker", "web"}.issubset(services.keys())
-    assert "--migrate" in services["worker"]["command"]
+    assert {"postgres", "migrate", "api", "worker", "web"}.issubset(services.keys())
+    # Migrations run once, in a one-shot service, before anything serves or claims jobs.
+    assert "--migrate" in services["migrate"]["command"]
+    assert "--migrate" not in services["worker"].get("command", [])
+    for waiting in ("api", "worker"):
+        assert services[waiting]["depends_on"]["migrate"] == {
+            "condition": "service_completed_successfully"
+        }
 
     helm_root = REPO_ROOT / "infrastructure" / "helm" / "groundtruth"
     chart_data = yaml.safe_load((helm_root / "Chart.yaml").read_text(encoding="utf-8"))

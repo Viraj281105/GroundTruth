@@ -183,3 +183,23 @@ The pre-treatment mask must never condition on post-intervention data:
 | **Landsat Scene Metadata Audit** | `data/processed/kariba_landsat_coverage_audit.json` | USGS Landsat Collection 2 L2 | 2001–2022 | **`AUDITED`** (STAC Metadata Only) |
 | **Donor Landsat Metadata Audit** | `data/processed/donor_landsat_coverage_audit.json` | USGS Landsat Collection 2 L2 | 2001–2022 | **`AUDITED`** (STAC Metadata Only) |
 | **Quarantined Fabricated Cache** | `data/processed/_quarantine_task5b_fabricated/` | Fabricated Python Script (`build_multitile_cache.py`) | 2001–2022 | **`QUARANTINED`** (Do Not Use) |
+
+---
+
+## 7. Earth Engine Path (#22, #23)
+
+A second real-data path, separate from the STAC caches above and not used by
+`get_data_access()`. It is tested offline and has never been run on real data.
+
+- **Observations (#22):** `platform/datasets/observation.py`, Landsat 7 for 2001-2022 (agreed
+  with Viraj, C3), pinned to a 2026-11-01 snapshot. See `docs/architecture/earth-observation.md`.
+- **Covariates (#23):** `platform/datasets/covariates.py`. Rainfall is the CHIRPS mean annual
+  total over 2001-2010 at native scale; elevation and per-pixel slope come from SRTM; road
+  distance comes from gROADS v1 as our own uploaded asset ([upload steps](groads-upload.md));
+  population is WorldPop 2000 summed over the eligible area (V1-V4, agreed with Viraj, C4,
+  2026-11-05). Each `DatasetRef.version` carries the release and the reference year as
+  `<release>;ref=<epoch>`.
+- **Unit construction (#23):** `platform/units/provider.py`, the ADR-011 mask as a raster
+  ([amendment 1](../decisions/ADR-011-amendment-1-raster-units.md)). The open settings live in
+  `cases/run_parameters/kariba-redd.yaml`, and generation refuses while any is undecided. The
+  registered-projects snapshot it needs is described in `cases/carbon_projects/README.md`.

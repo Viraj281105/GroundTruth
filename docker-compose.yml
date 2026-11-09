@@ -13,7 +13,9 @@ services:
       interval: 5s
       retries: 10
 
+  # api, worker and migrate share one image, built once, here.
   api:
+    image: groundtruth-backend:local
     build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
     env_file: [{ path: .env, required: false }]
     environment:
@@ -33,8 +35,10 @@ services:
   # One-shot: applies migrations (and, only when SEED_DEMO=true, the demo organizations), then exits.
   # Demo seeding is OFF by default; a real deployment must not ship well-known demo accounts.
   migrate:
-    build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
-    command: ["python", "-m", "apps.worker.main", "--migrate", "--exit-when-idle"]
+    image: groundtruth-backend:local
+    pull_policy: never
+    # --max-jobs 0: migrate (and seed, if enabled), then exit without taking a job.
+    command: ["python", "-m", "apps.worker.main", "--migrate", "--max-jobs", "0"]
     healthcheck:
       disable: true
     env_file: [{ path: .env, required: false }]
@@ -46,7 +50,8 @@ services:
     restart: "no"
 
   worker:
-    build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
+    image: groundtruth-backend:local
+    pull_policy: never
     command: ["python", "-m", "apps.worker.main"]
     # The image's HTTP health check is for the API; the worker serves no HTTP.
     healthcheck:
@@ -73,7 +78,7 @@ services:
       # Server-side Origin for state-changing calls; must equal the API's FRONTEND_URL.
       SITE_URL: http://localhost:3000
     ports: ["3000:3000"]
-    depends_on: [api]
+    depends_on: { api: { condition: service_healthy } }
 
 volumes:
   pgdata:

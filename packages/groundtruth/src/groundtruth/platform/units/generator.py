@@ -22,12 +22,17 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from groundtruth.contracts.errors import DonorPoolError
 from groundtruth.contracts.request import AnalysisRequest, UnitRef
 from groundtruth.logging import get_logger
 from groundtruth.platform.units.boundary import RegistryBoundary, load_registry_boundary
-from groundtruth.platform.units.manifest import UnitSetManifest, build_manifest
+from groundtruth.platform.units.manifest import (
+    ManifestContext,
+    UnitSetManifest,
+    build_manifest,
+)
 from groundtruth.platform.units.provider import UnitConstructionService
 from groundtruth.platform.units.rules import (
     DistrictFacts,
@@ -77,18 +82,21 @@ class UnitSet:
         ecoregion, district name — cannot travel here until #60 widens
         ``UnitRef.attributes`` beyond floats; the manifest carries them meanwhile.
         """
-        return tuple(
-            UnitRef(
-                unit_id=facts.unit_id,
-                area_ha=facts.eligible_area_km2 * HECTARES_PER_KM2,
-                attributes={
-                    "eligible_area_km2": facts.eligible_area_km2,
-                    "forest_share_in_target_ecoregions": (facts.forest_share_in_target_ecoregions),
-                    "fragments": float(facts.fragments),
-                },
-            )
-            for facts in self.candidates
-        )
+        return tuple(district_unit_ref(facts) for facts in self.candidates)
+
+
+def district_unit_ref(facts: DistrictFacts) -> UnitRef:
+    """One eligible district as a contract unit, with its outline and mask recipe."""
+    return UnitRef(
+        unit_id=facts.unit_id,
+        geometry=facts.geometry,
+        area_ha=facts.eligible_area_km2 * HECTARES_PER_KM2,
+        attributes={
+            "eligible_area_km2": facts.eligible_area_km2,
+            "forest_share_in_target_ecoregions": facts.forest_share_in_target_ecoregions,
+            "fragments": float(facts.fragments),
+        },
+    )
 
 
 def generate_unit_set(
@@ -101,6 +109,8 @@ def generate_unit_set(
     case_id: str | None = None,
     engine_version: str = "unknown",
     git_sha: str | None = None,
+    treated_geometry: dict[str, Any] | None = None,
+    manifest_context: ManifestContext | None = None,
 ) -> UnitSet:
     """Build the ADR-011 donor-candidate set for one case.
 
@@ -115,6 +125,11 @@ def generate_unit_set(
         case_id: Overrides the case id in the boundary artifact.
         engine_version: Recorded in the manifest.
         git_sha: Recorded in the manifest.
+        treated_geometry: The treated unit's outline and mask recipe. Defaults to the
+            bare registry boundary, which is not the masked unit ADR-011 defines, so a
+            real run supplies it.
+        manifest_context: What a real run adds to the manifest: belt hash, covariate
+            refs, and the hashes of the committed settings it ran under.
 
     Returns:
         The :class:`UnitSet`, including the manifest.
@@ -177,6 +192,7 @@ def generate_unit_set(
         exclusions=outcome.screening.exclusions,
         engine_version=engine_version,
         git_sha=git_sha,
+        context=manifest_context,
     )
 
     logger.info(
@@ -191,7 +207,7 @@ def generate_unit_set(
 
     return UnitSet(
         case_id=boundary.case_id,
-        treated_unit=_treated_unit_ref(boundary, treated_area),
+        treated_unit=_treated_unit_ref(boundary, treated_area, treated_geometry),
         treated_eligible_area_km2=treated_area,
         candidates=outcome.screening.eligible,
         exclusions=outcome.screening.exclusions,
@@ -200,11 +216,15 @@ def generate_unit_set(
     )
 
 
-def _treated_unit_ref(boundary: RegistryBoundary, eligible_area_km2: float) -> UnitRef:
+def _treated_unit_ref(
+    boundary: RegistryBoundary,
+    eligible_area_km2: float,
+    geometry: dict[str, Any] | None = None,
+) -> UnitRef:
     """The treated unit, carrying its **eligible** area as ADR-011 requires."""
     return UnitRef(
         unit_id=boundary.case_id,
-        geometry=boundary.geometry,
+        geometry=geometry if geometry is not None else boundary.geometry,
         area_ha=eligible_area_km2 * HECTARES_PER_KM2,
         attributes={
             "eligible_area_km2": eligible_area_km2,

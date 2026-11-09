@@ -9,7 +9,9 @@ COPY packages/groundtruth/pyproject.toml packages/groundtruth/README.md packages
 COPY packages/groundtruth/src packages/groundtruth/src
 RUN pip install "./packages/groundtruth[api,db,genai]" psycopg[binary]
 
-COPY apps ./apps
+# Only the two backend entrypoints. apps/web is a separate image and does not belong here.
+COPY apps/api ./apps/api
+COPY apps/worker ./apps/worker
 COPY cases ./cases
 COPY configs ./configs
 COPY data ./data

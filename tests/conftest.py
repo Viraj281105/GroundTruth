@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -19,6 +21,44 @@ from groundtruth.engine.matching.donors import DonorPool
 from groundtruth.engine.uncertainty.placebo import in_space_placebo
 from groundtruth.engine.uncertainty.robustness import leave_one_out
 from groundtruth.platform.cases.registry import get_case
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--run-network",
+        action="store_true",
+        default=False,
+        help="run tests marked `network`, which call real external services (needs credentials)",
+    )
+
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    # Tests over data that is not in git (it lives under data/processed/ on the machine that
+    # produced it) skip with the missing file named, and run wherever the file exists. They
+    # are never given stand-in data.
+    for item in items:
+        marker = item.get_closest_marker("requires_local_data")
+        if marker is None:
+            continue
+        missing = [path for path in marker.args if not (_REPO_ROOT / path).exists()]
+        if missing:
+            item.add_marker(
+                pytest.mark.skip(
+                    reason=f"requires local data not in the repository: {', '.join(missing)}"
+                )
+            )
+
+    # Network tests are opt-in: skipped by default and in CI, so the suite never
+    # depends on credentials, quotas or someone else's uptime.
+    if config.getoption("--run-network"):
+        return
+    skip = pytest.mark.skip(reason="network test: pass --run-network to run it")
+    for item in items:
+        if "network" in item.keywords:
+            item.add_marker(skip)
 
 
 @pytest.fixture(autouse=True)

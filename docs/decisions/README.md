@@ -49,3 +49,4 @@ graph TD
 | [009](ADR-009-data-management.md) | Pinned Dataset References, Data Out of Git | **Accepted** | Viraj, Bhumi | Large rasters managed outside git via tiered blob storage; pinned `DatasetRef` in every run. |
 | [010](ADR-010-deployment.md) | Containerized API, Worker, and Tiered Storage | **Accepted** | Viraj, Bhumi | Dual-container deployment from unified image; 8-process worker tuning, 4-tier storage hierarchy. |
 | [011](ADR-011-unit-of-analysis.md) | Unit of Analysis is a Masked Administrative District | **Accepted** | Viraj, Bhumi | Standardized ADM2 districts with 10 km leakage buffers and pre-treatment baseline forest masks. |
+| [011, amendment 1](ADR-011-amendment-1-raster-units.md) | A Masked Unit is a Raster Rebuilt from a Recipe | **Agreed** | Viraj, Bhumi | Replaces the stored multipolygon with an outline plus a mask recipe; 300 m erosion as a 10-pixel kernel at 30 m. |
