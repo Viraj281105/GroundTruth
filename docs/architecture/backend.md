@@ -86,6 +86,39 @@ Cases are YAML under `cases/`; `POST /cases` writes one. Three rules hold on eve
   `min_donors_below_case_floor`, because lowering the floor is how a refusal gets forced into a number.
   This applies to `POST /jobs`, `POST /cases/{id}/verify` and the CLI.
 
+### 1.2 Report export (#38)
+
+PDF and CSV exports go through `platform/reports/export_pipeline.py`: the report is verified against
+its own bundle, a failed narration refuses the export instead of being substituted, provenance and the
+simulated-data warning are guaranteed, and the generator is labelled. See
+[`genai.md`](genai.md), section 4. The inline `report_markdown` keeps its deterministic fallback.
+
+### 1.3 One error envelope for every router (#39)
+
+Routes raise errors in several ways (`api_error`, a bare `HTTPException`, FastAPI's validation error,
+the auth module's `auth_error`, the CSRF guard, an unexpected exception). Rather than touch each,
+`ErrorEnvelopeMiddleware` (`platform/api/error_envelope.py`) normalises the response of any status
+400 or above whose body is JSON. It sits inside CORS, so even a 500 carries CORS headers.
+
+| Every error response has | |
+| --- | --- |
+| `request_id` | Also the `X-Request-ID` header, which every response carries. A valid id from the caller is kept. |
+| `is_refusal` | At the top level always, and inside `detail` when `detail` is a dict. `true` only for a scientific refusal. |
+| `detail` | **Unchanged in shape**: a dict `{code, message, hint, ...}`, a string, or FastAPI's validation list. |
+
+Added to the validation list and string forms: `code` (`validation_error`, or `http_<status>`), `message`,
+and for validation errors `fields`, the dotted name of each offending field (`body.area_ha`). The list
+keeps `loc`, `msg` and `type` per entry; **the submitted `input` is dropped**, because a rejected
+password field would otherwise be echoed back.
+
+The scrub rewrites only absolute file paths (the file name stays), tracebacks, SQL and its
+parameters, credentials in connection strings, and configured secrets. It never removes a key, and
+`code`, `stage`, `remediation` and `hint` pass through untouched. Stored engine error text served in
+200 responses (`error.message`, `failure_reason`) is scrubbed the same way.
+
+An exception no route handled returns a JSON 500 (`internal_error`) with a generic message and the
+request id. The traceback is logged on the server, with configured secrets removed first.
+
 ---
 
 ## 2. Multi-Tenant RBAC Enforcement & Data Isolation

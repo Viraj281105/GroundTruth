@@ -4036,14 +4036,32 @@
         "properties": {
           "detail": {
             "$ref": "#/components/schemas/ApiErrorDetail"
+          },
+          "is_refusal": {
+            "type": "boolean",
+            "title": "Is Refusal",
+            "default": false
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
           }
         },
         "type": "object",
         "required": [
-          "detail"
+          "detail",
+          "is_refusal",
+          "request_id"
         ],
         "title": "ApiErrorBody",
-        "description": "The JSON body of an error response, for the OpenAPI schema."
+        "description": "The JSON body of an error response, for the OpenAPI schema.\n\n``is_refusal`` and ``request_id`` are added to every error response by\n:class:`~groundtruth.platform.api.error_envelope.ErrorEnvelopeMiddleware`."
       },
       "ApiErrorDetail": {
         "properties": {
@@ -4065,13 +4083,19 @@
               }
             ],
             "title": "Hint"
+          },
+          "is_refusal": {
+            "type": "boolean",
+            "title": "Is Refusal",
+            "default": false
           }
         },
         "type": "object",
         "required": [
           "code",
           "message",
-          "hint"
+          "hint",
+          "is_refusal"
         ],
         "title": "ApiErrorDetail"
       },
@@ -5398,11 +5422,30 @@
         "properties": {
           "detail": {
             "$ref": "#/components/schemas/EngineFailureDetail"
+          },
+          "is_refusal": {
+            "type": "boolean",
+            "title": "Is Refusal",
+            "description": "The same value as `detail.is_refusal`, at the top level.",
+            "default": false
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
           }
         },
         "type": "object",
         "required": [
-          "detail"
+          "detail",
+          "is_refusal",
+          "request_id"
         ],
         "title": "EngineFailureBody",
         "description": "The body ``/verify`` returns when the engine refused or could not run."
@@ -6025,6 +6068,33 @@
             },
             "type": "array",
             "title": "Detail"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Always `validation_error`."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "A one-line summary."
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Fields",
+            "description": "The dotted name of every offending field, e.g. `body.area_ha`."
+          },
+          "is_refusal": {
+            "type": "boolean",
+            "title": "Is Refusal",
+            "description": "Always false."
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
           }
         },
         "type": "object",
@@ -6708,14 +6778,42 @@
           "detail": {
             "type": "string",
             "title": "Detail"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "is_refusal": {
+            "type": "boolean",
+            "title": "Is Refusal",
+            "default": false
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
           }
         },
         "type": "object",
         "required": [
-          "detail"
+          "detail",
+          "code",
+          "message",
+          "is_refusal",
+          "request_id"
         ],
         "title": "MessageErrorBody",
-        "description": "An error whose ``detail`` is a plain message, e.g. an unknown case (404)."
+        "description": "An error whose ``detail`` is a plain message, e.g. an unknown case (404).\n\n``code`` (``http_<status>``), ``is_refusal`` and ``request_id`` are added to it by the\nerror envelope, so a client can read the same fields from every error."
       },
       "NotComparable": {
         "properties": {

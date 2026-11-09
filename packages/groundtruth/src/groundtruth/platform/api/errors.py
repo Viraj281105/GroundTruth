@@ -38,6 +38,14 @@ class ApiErrorCode(StrEnum):
     CASE_NOT_FOUND = "case_not_found"
     JOB_ALREADY_FINISHED = "job_already_finished"
     """The job succeeded or failed, so there is nothing left to cancel."""
+    NARRATION_NOT_CONFIGURED = "narration_not_configured"
+    """``narrate=true`` was asked for but no GenAI provider is configured."""
+    NARRATION_FAILED = "narration_failed"
+    """The narration provider failed, so no narrated report was produced."""
+    NARRATION_NOT_GROUNDED = "narration_not_grounded"
+    """The narrated report failed verification against its bundle and was not exported."""
+    REPORT_NOT_GROUNDED = "report_not_grounded"
+    """The report that would be exported fails verification: a defect, never shipped."""
     INVALID_CASE = "invalid_case"
     """A case, or part of one, is invalid in a way the caller can fix; the field is named."""
     CASE_STATUS_REQUIRES_REVIEW = "case_status_requires_review"
@@ -57,6 +65,10 @@ API_ERROR_STATUS: dict[ApiErrorCode, int] = {
     ApiErrorCode.NOT_IMPLEMENTED: 501,
     ApiErrorCode.CASE_NOT_FOUND: 404,
     ApiErrorCode.JOB_ALREADY_FINISHED: 409,
+    ApiErrorCode.NARRATION_NOT_CONFIGURED: 422,
+    ApiErrorCode.NARRATION_FAILED: 502,
+    ApiErrorCode.NARRATION_NOT_GROUNDED: 502,
+    ApiErrorCode.REPORT_NOT_GROUNDED: 500,
     ApiErrorCode.INVALID_CASE: 422,
     ApiErrorCode.CASE_STATUS_REQUIRES_REVIEW: 422,
     ApiErrorCode.MIN_DONORS_BELOW_CASE_FLOOR: 422,
@@ -68,12 +80,20 @@ class ApiErrorDetail(BaseModel):
     code: str
     message: str
     hint: str | None = None
+    is_refusal: bool = False
+    """True only for a scientific refusal; every other error says false."""
 
 
 class ApiErrorBody(BaseModel):
-    """The JSON body of an error response, for the OpenAPI schema."""
+    """The JSON body of an error response, for the OpenAPI schema.
+
+    ``is_refusal`` and ``request_id`` are added to every error response by
+    :class:`~groundtruth.platform.api.error_envelope.ErrorEnvelopeMiddleware`.
+    """
 
     detail: ApiErrorDetail
+    is_refusal: bool = False
+    request_id: str | None = None
 
 
 def case_validation_error(exc: CaseValidationError) -> HTTPException:

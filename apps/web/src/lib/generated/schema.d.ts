@@ -962,9 +962,19 @@ export interface components {
         /**
          * ApiErrorBody
          * @description The JSON body of an error response, for the OpenAPI schema.
+         *
+         *     ``is_refusal`` and ``request_id`` are added to every error response by
+         *     :class:`~groundtruth.platform.api.error_envelope.ErrorEnvelopeMiddleware`.
          */
         ApiErrorBody: {
             detail: components["schemas"]["ApiErrorDetail"];
+            /**
+             * Is Refusal
+             * @default false
+             */
+            is_refusal: boolean;
+            /** Request Id */
+            request_id: string | null;
         };
         /** ApiErrorDetail */
         ApiErrorDetail: {
@@ -974,6 +984,11 @@ export interface components {
             message: string;
             /** Hint */
             hint: string | null;
+            /**
+             * Is Refusal
+             * @default false
+             */
+            is_refusal: boolean;
         };
         /** AssessmentView */
         AssessmentView: {
@@ -1507,6 +1522,14 @@ export interface components {
          */
         EngineFailureBody: {
             detail: components["schemas"]["EngineFailureDetail"];
+            /**
+             * Is Refusal
+             * @description The same value as `detail.is_refusal`, at the top level.
+             * @default false
+             */
+            is_refusal: boolean;
+            /** Request Id */
+            request_id: string | null;
         };
         /**
          * EngineFailureDetail
@@ -1773,6 +1796,28 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+            /**
+             * Code
+             * @description Always `validation_error`.
+             */
+            code?: string;
+            /**
+             * Message
+             * @description A one-line summary.
+             */
+            message?: string;
+            /**
+             * Fields
+             * @description The dotted name of every offending field, e.g. `body.area_ha`.
+             */
+            fields?: string[];
+            /**
+             * Is Refusal
+             * @description Always false.
+             */
+            is_refusal?: boolean;
+            /** Request Id */
+            request_id?: string;
         };
         /**
          * HealthResponse
@@ -2052,10 +2097,24 @@ export interface components {
         /**
          * MessageErrorBody
          * @description An error whose ``detail`` is a plain message, e.g. an unknown case (404).
+         *
+         *     ``code`` (``http_<status>``), ``is_refusal`` and ``request_id`` are added to it by the
+         *     error envelope, so a client can read the same fields from every error.
          */
         MessageErrorBody: {
             /** Detail */
             detail: string;
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /**
+             * Is Refusal
+             * @default false
+             */
+            is_refusal: boolean;
+            /** Request Id */
+            request_id: string | null;
         };
         /**
          * NotComparable

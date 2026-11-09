@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from groundtruth.contracts.result import AnalysisResult, AnalysisStatus
 from groundtruth.platform.api.cursor import CursorError, decode_cursor, encode_cursor
 from groundtruth.platform.api.dependencies import get_store, store_errors
+from groundtruth.platform.api.error_envelope import scrub_text
 from groundtruth.platform.api.errors import ApiErrorBody, ApiErrorCode, api_error
 from groundtruth.platform.api.schemas import RunComparison, RunDetail, RunItem, RunListPage
 from groundtruth.platform.api.scope import accessible_projects, authorize_filed, run_not_found
@@ -151,7 +152,7 @@ def _load_side(
         try:
             result = store.by_run_id(run_id)
         except IncompatibleBundleError as exc:
-            unreadable = str(exc)
+            unreadable = scrub_text(str(exc))
     return summary, RunSide(summary=summary, result=result, unreadable=unreadable)
 
 

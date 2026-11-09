@@ -23,6 +23,7 @@ from groundtruth.contracts.result import (
     RunMetrics,
 )
 from groundtruth.contracts.types import VerdictLabel
+from groundtruth.platform.api.error_envelope import scrub_optional, scrub_text
 from groundtruth.platform.compare.comparison import Comparison, NotComparable
 from groundtruth.platform.compare.diff import BundleDiff
 from groundtruth.platform.jobs.interface import LIVE_STAGES, JobStatus
@@ -174,9 +175,17 @@ class VerificationResponse(BaseModel):
 
 
 class MessageErrorBody(BaseModel):
-    """An error whose ``detail`` is a plain message, e.g. an unknown case (404)."""
+    """An error whose ``detail`` is a plain message, e.g. an unknown case (404).
+
+    ``code`` (``http_<status>``), ``is_refusal`` and ``request_id`` are added to it by the
+    error envelope, so a client can read the same fields from every error.
+    """
 
     detail: str
+    code: str
+    message: str
+    is_refusal: bool = False
+    request_id: str | None = None
 
 
 class EngineFailureDetail(BaseModel):
@@ -198,6 +207,10 @@ class EngineFailureBody(BaseModel):
     """The body ``/verify`` returns when the engine refused or could not run."""
 
     detail: EngineFailureDetail
+    is_refusal: bool = Field(
+        default=False, description="The same value as `detail.is_refusal`, at the top level."
+    )
+    request_id: str | None = None
 
 
 class ErrorResponse(BaseModel):
@@ -278,7 +291,7 @@ class RunItem(BaseModel):
             created_at=summary.created_at,
             error_code=summary.error_code,
             is_refusal=_is_refusal(summary.error_code),
-            failure_reason=summary.failure_reason,
+            failure_reason=scrub_optional(summary.failure_reason),
         )
 
 
@@ -307,10 +320,10 @@ class RunError(BaseModel):
     def from_error(cls, error: AnalysisError) -> RunError:
         return cls(
             code=error.code.value,
-            message=error.message,
+            message=scrub_text(error.message),
             stage=error.stage,
             detail=error.detail,
-            remediation=error.remediation,
+            remediation=scrub_optional(error.remediation),
             is_refusal=error.is_refusal,
         )
 
@@ -656,7 +669,7 @@ class JobView(BaseModel):
                 else None
             ),
             error=RunError.from_error(job.error) if job.error else None,
-            failure_reason=job.failure_reason,
+            failure_reason=scrub_optional(job.failure_reason),
             status_url=f"/jobs/{job.run_id}",
             result_url=f"/runs/{job.run_id}" if job.engine_status is not None else None,
         )

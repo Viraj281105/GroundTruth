@@ -27,7 +27,11 @@ CSV_COLUMNS: tuple[str, ...] = (
 )
 
 
-def _bundle_is_simulated(bundle: EvidenceBundle) -> bool:
+SIMULATED_BANNER = "SIMULATED / SYNTHETIC DATA RUN — NOT SATELLITE OBSERVATIONS"
+"""The headline every export of a simulated run carries."""
+
+
+def bundle_is_simulated(bundle: EvidenceBundle) -> bool:
     """Return True if the bundle originates from simulated / synthetic data."""
     flag = getattr(bundle, "is_simulated", None)
     if isinstance(flag, bool):
@@ -37,6 +41,9 @@ def _bundle_is_simulated(bundle: EvidenceBundle) -> bool:
         or "simulated" in item.provenance.source.lower()
         for item in bundle.items
     )
+
+
+_bundle_is_simulated = bundle_is_simulated  # the name existing callers and tests use
 
 
 def _bundle_is_calibrated(bundle: EvidenceBundle) -> bool:
@@ -50,8 +57,12 @@ def _enum_or_str(val: Any) -> str:
     return str(val.value if hasattr(val, "value") else val)
 
 
-def export_bundle_csv(bundle: EvidenceBundle) -> str:
-    """Export an :class:`EvidenceBundle` to a UTF-8 CSV string with provenance headers."""
+def export_bundle_csv(bundle: EvidenceBundle, *, generator: str = "deterministic") -> str:
+    """Export an :class:`EvidenceBundle` to a UTF-8 CSV string with provenance headers.
+
+    ``generator`` says who produced the export: a CSV holds the evidence table and no prose, so
+    it is ``deterministic`` unless a caller says otherwise.
+    """
     is_sim = _bundle_is_simulated(bundle)
     data_origin = "SYNTHETIC_SIMULATION" if is_sim else "OBSERVED"
     calibrated = _bundle_is_calibrated(bundle)
@@ -68,6 +79,7 @@ def export_bundle_csv(bundle: EvidenceBundle) -> str:
 
     buf = io.StringIO()
     buf.write(f"# case_id: {bundle.case_id}\n")
+    buf.write(f"# report_generator: {generator}\n")
     buf.write(f"# schema_version: {bundle.schema_version}\n")
     buf.write(f"# is_simulated: {is_sim}\n")
     buf.write(f"# data_origin: {data_origin}\n")
@@ -135,6 +147,7 @@ def _build_report_lines(
     bundle: EvidenceBundle,
     *,
     report_markdown: str | None = None,
+    generator: str = "deterministic",
 ) -> list[tuple[str, int, float]]:
     """Build structured (text, font_size, leading) tuples for PDF layout."""
     is_sim = _bundle_is_simulated(bundle)
@@ -143,10 +156,11 @@ def _build_report_lines(
 
     lines.append((f"GroundTruth Verification Screening Report — {bundle.case_id}", 14, 20.0))
     lines.append((f"Case ID: {bundle.case_id} | Schema Version: {bundle.schema_version}", 9, 14.0))
+    lines.append((f"Report generator: {generator}", 9, 14.0))
     lines.append(("", 9, 8.0))
 
     if is_sim:
-        lines.append(("SIMULATED / SYNTHETIC DATA RUN — NOT SATELLITE OBSERVATIONS", 11, 16.0))
+        lines.append((SIMULATED_BANNER, 11, 16.0))
         lines.append(
             (
                 "Data Provenance: SYNTHETIC_SIMULATION (is_simulated=True). "
@@ -243,9 +257,10 @@ def export_bundle_pdf(
     bundle: EvidenceBundle,
     *,
     report_markdown: str | None = None,
+    generator: str = "deterministic",
 ) -> bytes:
     """Generate a self-contained ``%PDF-1.4`` binary document for an :class:`EvidenceBundle`."""
-    all_lines = _build_report_lines(bundle, report_markdown=report_markdown)
+    all_lines = _build_report_lines(bundle, report_markdown=report_markdown, generator=generator)
 
     # Paginate lines so each page fits cleanly within US Letter (612 x 792 pt)
     pages_lines: list[list[tuple[str, int, float]]] = []

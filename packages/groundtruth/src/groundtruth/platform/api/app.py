@@ -26,6 +26,7 @@ from groundtruth.engine import ENGINE_VERSION, describe_engine, run_analysis
 from groundtruth.observability import setup_telemetry
 from groundtruth.platform.api.auth import router as auth_router
 from groundtruth.platform.api.claims import router as claims_router
+from groundtruth.platform.api.error_envelope import ErrorEnvelopeMiddleware
 from groundtruth.platform.api.errors import case_validation_error
 from groundtruth.platform.api.events import router as events_router
 from groundtruth.platform.api.exports import router as exports_router
@@ -91,6 +92,9 @@ setup_telemetry(app)  # no-op unless OpenTelemetry is installed and an endpoint 
 
 # Added before CORS so CORS is outermost and a rejected request still carries CORS headers.
 app.add_middleware(CsrfOriginMiddleware, allowed_origins=lambda: get_settings().cors_origins)
+# Wraps everything above, so the CSRF rejection gets the same error envelope as any route, and
+# sits inside CORS so even an unexpected 500 carries CORS headers (#39).
+app.add_middleware(ErrorEnvelopeMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origins,
