@@ -39,6 +39,8 @@ export const runCopy = {
     evidence: "Open the evidence",
     overview: "Back to overview",
     again: "Run again",
+    notLive:
+      "This run executed the analysis engine on synthetic benchmark data. It is not live satellite ingestion. The overview and report tabs show the precomputed benchmark; open the evidence from here to see this run.",
   },
   outcomes: {
     refused: {

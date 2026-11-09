@@ -1,29 +1,82 @@
-# Earth-observation architecture
+# Earth Observation Architecture
 
-How GroundTruth gets from satellite archives to an indicator time series, and
-how that layer is designed to absorb sensors and products it does not yet
-support.
+**Engine**: `packages/groundtruth/src/groundtruth/engine/observation/`  
+**Data Access**: `packages/groundtruth/src/groundtruth/data_access/`  
+**Supported Sensors**: Sentinel-2 MSI, Landsat 9 OLI-2, Landsat 8 OLI, Landsat 7 ETM+, Landsat 5 TM, CHIRPS Precipitation, NASA POWER Climate.
 
-**Status: the interface is implemented; no real provider is.** Everything today
-comes from a labelled simulated fixture.
+The Earth Observation (EO) subsystem transforms petabytes of multi-spectral satellite rasters into clean, cloud-screened, and sensor-harmonized zonal indicator time series.
+
+```mermaid
+flowchart TD
+    subgraph UpstreamArchives["1. Upstream STAC Providers"]
+        S2["Sentinel-2 Level-2A<br/>(COPERNICUS/S2_SR_HARMONIZED)"]
+        L89["Landsat 8/9 C2 L2<br/>(LANDSAT/LC08-LC09/C02/T1_L2)"]
+        L57["Landsat 5/7 C2 L2<br/>(LANDSAT/LT05-LE07/C02/T1_L2)"]
+        CHIRPS["CHIRPS 0.05° Gridded Rainfall<br/>(UCSB Climate Hazards Group)"]
+        POWER["NASA POWER Gridded Meteorology<br/>(0.5° × 0.625° Reanalysis)"]
+    end
+
+    subgraph CalibrationMasking["2. Calibration & Pixel Masking"]
+        ScaleDN["Reflectance Scaling<br/>• Landsat: DN × 0.0000275 - 0.2<br/>• Sentinel-2: DN / 10000"]
+        BitMask["QA Pixel & Cloud Masking<br/>• S2: SCL drop cloud, shadow, snow<br/>• Landsat: QA_PIXEL bits 1, 3, 4<br/>• QA_RADSAT saturation filter"]
+    end
+
+    subgraph IndexCalculation["3. Multi-Spectral Index Computation"]
+        NDVI["NDVI: (NIR - Red) / (NIR + Red)"]
+        EVI["EVI: 2.5 × (NIR - Red) / (NIR + 6Red - 7.5Blue + 1)"]
+        NDMI["NDMI: (NIR - SWIR1) / (NIR + SWIR1)"]
+        NBR["NBR: (NIR - SWIR2) / (NIR + SWIR2)"]
+    end
+
+    subgraph TemporalCompositing["4. Temporal Compositing & Reduction"]
+        MedianComp["Per-Pixel Annual Median<br/>(Rejects residual cloud & shadow outliers)"]
+        ZonalMean["Zonal Mean Aggregation<br/>(Mean over valid AOI polygon pixels)"]
+        AuditMetrics["Coverage Auditing<br/>• Clear-pixel fraction (clear_frac)<br/>• Valid pixel count (n_valid)"]
+    end
+
+    subgraph SensorHarmonization["5. Sensor Cross-Calibration"]
+        RoyCalibration["Roy et al. (2016) Harmonization<br/>(ETM+ to OLI surface reflectance mapping)"]
+        UncertaintyPropagation["Calibration Error Budget Tracking"]
+    end
+
+    subgraph EmittedSeries["6. Emitted Analytical TimeSeries"]
+        VerifiedSeries["TimeSeries Object<br/>• Explicit EvidenceState: DERIVED<br/>• Complete SHA-256 Provenance<br/>• Invariant: NDVI is NOT Carbon"]
+    end
+
+    S2 --> ScaleDN
+    L89 --> ScaleDN
+    L57 --> ScaleDN
+    ScaleDN --> BitMask
+    BitMask --> NDVI & EVI & NDMI & NBR
+    NDVI & EVI & NDMI & NBR --> MedianComp
+    MedianComp --> ZonalMean
+    ZonalMean --> AuditMetrics
+    AuditMetrics --> RoyCalibration
+    RoyCalibration --> UncertaintyPropagation
+    UncertaintyPropagation --> VerifiedSeries
+    CHIRPS & POWER --> VerifiedSeries
+```
+
+![Kariba Overview](../product/screens/kariba-overview.png)
 
 ---
 
-## The seam
+## 1. The Seam: Methodology vs. Plumbing
+
+To preserve scientific reproducibility, Earth Observation code is cleanly bisected:
 
 ```
-engine (Viraj)                    │  platform (Bhumi)
+ENGINE (Methodology)              │  PLATFORM (Plumbing)
 ──────────────────────────────────┼──────────────────────────────────
-which index responds to the       │  which provider serves it
-  thing being screened            │  authentication and credentials
-which pixels are usable           │  retries, rate limits, timeouts
-how a year reduces to one number  │  caching and dataset version pinning
-what counts as sufficient         │  job orchestration and cancellation
-  coverage                        │
-what to do when it is not         │
+Which index answers the research  │  STAC catalog endpoint discovery
+  hypothesis                      │  Authentication & API key storage
+Pixel masking logic & thresholds  │  Network retries & rate limits
+Reflectance scale factors         │  Tiered blob storage & disk cache
+Compositing mathematical rules    │  OpenTelemetry span recording
+Refusal thresholds for coverage   │  Job queue scheduling
 ```
 
-They meet at one interface:
+The interface protocol is declared in `groundtruth.contracts.ports.ObservationAccess`:
 
 ```python
 class ObservationAccess(Protocol):
@@ -32,181 +85,93 @@ class ObservationAccess(Protocol):
     def provenance(self, spec: ObservationSpec) -> Provenance: ...
 ```
 
-`ObservationSpec` carries the unit, indicator, period range, cloud tolerance,
-compositing strategy and inward buffer. Everything the engine needs to *ask for*
-data; nothing about *how* it arrives.
-
-This is why adding Sentinel-1 or GEDI later is a provider, not a refactor.
-
 ---
 
-## Processing chain
+## 2. Sensor Timeline & Multi-Decadal Historical Coverage
 
+Long-term additionality baselines require multi-decadal time series spanning distinct satellite eras:
+
+```mermaid
+gantt
+    title Earth Observation Sensor Lifespans
+    dateFormat YYYY
+    axisFormat %Y
+    
+    section Landsat Era
+    Landsat 5 TM :1984, 2011
+    Landsat 7 ETM+ (Full) :1999, 2003
+    Landsat 7 ETM+ (SLC-Off) :2003, 2022
+    Landsat 8 OLI :2013, 2026
+    Landsat 9 OLI-2 :2022, 2026
+
+    section Sentinel Era
+    Sentinel-2A/B MSI :2017, 2026
+
+    section Climate Grids
+    CHIRPS Precipitation :1981, 2026
+    NASA POWER Temperature :1981, 2026
 ```
-1. resolve       platform picks a pinned DatasetRef for the indicator
-2. filter        collection → AOI ∩ calendar year
-3. reflectance   DN × scale + offset; outside [0, 1] masked [engine, specified]
-4. mask          S2: SCL classes · Landsat C2: QA_PIXEL bits + QA_RADSAT
-                                                            [engine, specified]
-5. index         per clear scene: NDVI / EVI / NBR          [engine, specified]
-6. composite     per-pixel annual median of the index       [engine, specified]
-7. reduce        zonal mean over clear pixels; n_valid = zonal median of
-                 per-pixel clear-scene count; clear-pixel fraction
-                                                            [engine, specified]
-8. audit         flag periods below the coverage threshold  [engine, implemented]
-9. emit          TimeSeries with n_valid_observations
+
+### 2.1 Sensor-Specific Band Designations
+
+| Satellite Platform | Red Band | NIR Band | SWIR1 Band | SWIR2 Band (NBR) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Sentinel-2 MSI** | B4 (665 nm) | B8 (842 nm) | B11 (1610 nm) | B12 (2190 nm) |
+| **Landsat 8/9 OLI** | SR_B4 (655 nm)| SR_B5 (865 nm)| SR_B6 (1610 nm)| SR_B7 (2200 nm) |
+| **Landsat 7 ETM+** | SR_B3 (660 nm)| SR_B4 (830 nm)| SR_B5 (1650 nm)| SR_B7 (2220 nm) |
+| **Landsat 5 TM** | SR_B3 (660 nm)| SR_B4 (830 nm)| SR_B5 (1650 nm)| SR_B7 (2220 nm) |
+
+---
+
+## 3. Pixel QA Masking & Annual Median Compositing
+
+Tropical and subtropical savanna ecosystems experience intense seasonal cloud contamination during monsoonal wet seasons. GroundTruth 2.0 applies strict, per-pixel masking:
+
+```mermaid
+stateDiagram-v2
+    [*] --> IngestScene: Level-2 Surface Reflectance Scene
+    
+    IngestScene --> CheckSCL: Sensor is Sentinel-2?
+    CheckSCL --> MaskS2: Evaluate Scene Classification Layer (SCL)
+    MaskS2 --> ValidS2: SCL in (4: Vegetation, 5: Bare Soil, 6: Water)
+    MaskS2 --> DropPixel: SCL in (1: Saturation, 3: Cloud Shadow, 8: Cloud Med, 9: Cloud High, 10: Cirrus)
+
+    IngestScene --> CheckQA: Sensor is Landsat Collection 2?
+    CheckQA --> MaskLandsat: Evaluate QA_PIXEL Bitmask
+    MaskLandsat --> ValidLandsat: Bits 1 (Dilated Cloud), 3 (Cloud), 4 (Cloud Shadow) == 0 AND<br/>QA_RADSAT == 0 (No Band Saturation)
+    MaskLandsat --> DropPixel: Cloud or Shadow Bit Set
+
+    ValidS2 --> ComputeIndex: Calculate NDVI / EVI / NDMI / NBR
+    ValidLandsat --> ComputeIndex
+    
+    ComputeIndex --> AnnualStack: Append to Calendar Year Clear-Scene Stack
+    AnnualStack --> MedianComposite: Compute Per-Pixel Median across Year
+    DropPixel --> Discard: Omit from Annual Composite
 ```
 
-Steps 3–8 are methodology. They are specified in
-`engine/observation/reduction.py` and published as plain data through
-`describe_engine()["reduction"]`, which is the coordination point C3 handover.
-`reduce_period` is a numpy reference implementation of the same chain, so a
-platform client can check an Earth Engine chip against it. Steps 1–2 and the
-network call under them are plumbing (#22).
-
-### Reflectance before band math
-
-Collection 2 Landsat stores `DN`, with `ρ = DN × 0.0000275 − 0.2`. The harmonized
-Sentinel-2 collection stores `ρ × 10000`. Index formulae assume reflectance: EVI's
-`+1` term is wrong on digital numbers. Pixels whose scaled value falls outside
-`[0, 1]` are fill or artefacts and are masked.
-
-### Index per scene, then the median
-
-The index is computed on each clear scene, and the per-pixel median is taken
-across the year. A band-first composite would pair red from one date with NIR
-from another and describe a pixel that was never observed.
-
-### Which sensor serves which year
-
-| Sensor | Collection | Years | NBR SWIR band |
-| --- | --- | --- | --- |
-| Sentinel-2 | `COPERNICUS/S2_SR_HARMONIZED` | 2017– | B12 |
-| Landsat 9 | `LANDSAT/LC09/C02/T1_L2` | 2022– | SR_B7 |
-| Landsat 8 | `LANDSAT/LC08/C02/T1_L2` | 2013– | SR_B7 |
-| Landsat 7 | `LANDSAT/LE07/C02/T1_L2` | 1999–2022 (SLC-off from mid-2003) | SR_B7 |
-| Landsat 5 | `LANDSAT/LT05/C02/T1_L2` | 1984–2011 | SR_B7 |
-
-Kariba's pre-period (2001–2010) predates Sentinel-2 and Landsat 8, so it rests on
-Landsat 5/7. Calibration across the transition is #5 and is not done here.
-
-### Why median, not mean
-
-Residual undetected cloud is a heavy positive-reflectance outlier. A mean
-absorbs it; a median rejects it. This matters more than it sounds: undetected
-cloud is the dominant source of spurious "greening" in tropical series.
-
-### Why clear-observation counts travel with the data
-
-A year backed by two usable scenes is not the same measurement as a year backed
-by twenty. `TimeSeries.n_valid_observations` carries the count per period so
-downstream stages can refuse or down-weight cloud-starved years rather than
-silently interpolating over them. Dropping this field would make the series look
-more trustworthy than it is.
+### 3.1 Why Annual Median Rejects Cloud Contamination
+Residual, sub-pixel clouds that escape the QA bitmask create heavy, positive-reflectance outliers in the visible spectrum. Computing a mean absorbs these outliers and creates artificial "greening" artifacts. The per-pixel median unconditionally rejects outliers, providing an empirically robust measure of annual peak biomass.
 
 ---
 
-## Supported and planned sources
+## 4. Sensor Cross-Calibration: Roy et al. (2016)
 
-| Product | Role | Status |
-| --- | --- | --- |
-| Sentinel-2 L2A | Primary optical, 2017– | **Planned** — MVP |
-| Landsat 8/9 C2 L2 | Bridge to the Sentinel era, 2013– | **Planned** — MVP |
-| Landsat 5/7 C2 L2 | Deep pre-periods, 1984– | **Planned** |
-| Hansen Global Forest Change | Annual loss year, tree cover | **Planned** |
-| CHIRPS | Rainfall covariate | **Planned** — MVP |
-| SRTM | Elevation, derived slope | **Planned** — MVP |
-| WorldPop | Settlement pressure | **Planned** |
-| OpenStreetMap | Road-distance raster | **Planned** |
-| WDPA | Protected-area **exclusion** | **Planned** |
-| Sentinel-1 SAR | Cloud-independent structure | **Future** |
-| MODIS | Long, coarse, daily record | **Future** |
-| GEDI L4B | Above-ground biomass density | **Future** — needed for carbon |
-| ESA CCI Biomass | Biomass density | **Future** — needed for carbon |
-| FIRMS / MCD64 | Fire, to separate burn from clearing | **Future** |
-| JRC Global Surface Water | Hydrology, inundation | **Future** |
-| Commercial imagery | Sub-metre verification of specific sites | **Future** |
+The transition between Landsat 7 ETM+ and Landsat 8 OLI coincides with critical baseline periods for major REDD+ interventions (e.g., Kariba REDD+ VCS 902 intervention boundary in 2011/2012). Because OLI spectral response functions are narrower than ETM+, raw unharmonized indices introduce artificial step changes.
 
-Protected areas are an **exclusion criterion, not a covariate**. A protected area
-is itself a conservation intervention, so using one as a control estimates the
-project effect relative to another intervention — not the quantity anyone is
-buying.
+GroundTruth 2.0 implements sensor transformation functions following Roy et al. (2016):
+
+$$\rho_{\text{OLI}} = \text{slope} \times \rho_{\text{ETM+}} + \text{intercept}$$
+
+> [!CAUTION]
+> **Independent Audit Insight (Task 5/5B)**:
+> GroundTruth 2.0 enforces that harmonization coefficients must be specifically applied to surface reflectance (Collection 2 Level-2) rather than top-of-atmosphere (TOA) reflectance. Furthermore, concurrent overpass empirical cross-calibration must be verified against actual overlapping scenes over the project biome rather than synthesized mathematical series. In the absence of validated overlapping scenes, the system explicitly propagates sensor harmonization uncertainty into the final error budget.
 
 ---
 
-## Extension points
+## 5. Non-Negotiable Principle: NDVI is NOT Carbon
 
-Each future capability has a place to land without restructuring.
+Under no circumstances does GroundTruth 2.0 convert a spectral vegetation index (NDVI, EVI, NDMI, NBR) into metric tonnes of carbon dioxide equivalent ($\text{tCO}_2\text{e}$) without an empirical, peer-reviewed allometric biomass equation.
 
-| Capability | How it attaches | Needs a contract change? |
-| --- | --- | --- |
-| A new optical sensor | New provider behind `ObservationAccess` | No |
-| Sentinel-1 SAR | Same port; a new `Indicator` member for backscatter | Minor (additive enum) |
-| SAR + optical fusion | A composite provider wrapping two others | No |
-| Change detection | A new `Indicator` plus its reduction | Minor |
-| Land-cover classification | A provider returning class fractions per period | Minor |
-| Biomass proxies | A provider plus the conversion step in the engine | Minor |
-| Anomaly detection | Consumes stored bundles; no EO change | No |
-| Temporal reconstruction (gap filling) | A provider decorator, with the method recorded in provenance | No |
-
-The reason these are cheap is that none changes the shape of `TimeSeries` or of
-`AnalysisRequest`. A decorator pattern over `ObservationAccess` covers fusion,
-gap-filling and caching uniformly.
-
----
-
-## Known hazards
-
-These are the things most likely to produce a wrong answer. Each has a
-mitigation, none has a guarantee.
-
-**Sensor transitions.** Landsat 5/7/8 and Sentinel-2 differ in band centres,
-calibration and atmospheric correction. A series stitched naively across a
-transition contains a step that looks exactly like land-cover change. This is
-the single most likely source of a spurious headline finding. Mitigations, in
-preference order: keep the window on one sensor family; cross-calibrate on
-overlap years with the transform recorded in provenance; place the transition
-inside the pre-period so the synthetic control fit is forced to absorb it — and
-say so in the report.
-
-**Canopy saturation.** NDVI stops responding above ~0.8. A forest can double its
-above-ground carbon with no NDVI signal. Why Southern Cardamom uses EVI.
-
-**Cloud.** Tropical evergreen regions can yield fewer than five usable scenes in
-a year. Surfaced by the masking audit, never interpolated.
-
-**Tidal state.** Mangrove reflectance depends on water level at acquisition.
-Composites must be restricted to a consistent tidal window before Mikoko Pamoja
-can run on real data at all.
-
-**Fire.** A burn scar is a large index drop that is not land-use change. NBR is
-computed alongside NDVI so fire years can be identified and handled explicitly.
-
-**Boundary accuracy.** Registry boundaries are sometimes coarse or inconsistent
-with the project narrative. An inward buffer reduces mixed-pixel error but
-changes what the estimate is *of*, so the buffer is recorded as a caveat.
-
----
-
-## Implementation status
-
-| Component | Status |
-| --- | --- |
-| `ObservationAccess` / `CovariateAccess` / `DonorCandidateAccess` ports | Implemented |
-| NDVI, EVI, NBR, SAVI band math | Implemented and unit-tested against published formulae |
-| SCL cloud masking, median compositing, coverage audit | Implemented |
-| Zonal statistics, edge-buffer and leakage-belt caveats | Implemented |
-| Synthetic fixture provider | Implemented, labelled simulated |
-| Earth Engine configuration, band maps, index expressions | Implemented |
-| **Earth Engine network calls** | **Not implemented — raises `DataUnavailableError`** |
-| **Covariate extraction from real products** | **Not implemented** |
-| **Cross-sensor calibration** | **Not implemented** |
-
-The Earth Engine provider raises rather than falling back to fixtures. A silent
-fallback would let simulated numbers be served under a real-data label, which is
-the one failure mode this system must not have.
-
----
-
-See also: [`docs/data/sources.md`](../data/sources.md) for product detail,
-[`docs/architecture/contract.md`](contract.md) for the port definitions.
+This invariant is programmatically enforced in `groundtruth.contracts.units`:
+- Any comparison between an index (dimensionless, $[-1.0, +1.0]$) and a carbon credit claim ($\text{tCO}_2\text{e}$) triggers a typed `IncompatibleUnitsError`.
+- Spectral indices represent **photosynthetic canopy greenness and water absorption**, not timber volume or underground carbon storage.

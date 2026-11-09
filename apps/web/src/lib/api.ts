@@ -22,6 +22,15 @@ export function getApiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 }
 
+/**
+ * The API origin as the BROWSER reaches it. Use it for any URL that is rendered into HTML or a link
+ * (map data URLs, download hrefs): getApiBaseUrl() returns INTERNAL_API_URL (e.g. http://api:8000 in
+ * Docker) during server rendering, a host name no browser can resolve.
+ */
+export function getPublicApiUrl(): string {
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+}
+
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 /**

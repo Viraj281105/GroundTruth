@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { errorMessage, isValidEmail, passwordChecks, passwordProblem, safeNextPath, strengthScore } from './validate';
+import { errorMessage, isValidEmail, passwordChecks, passwordProblem, safeAppNextPath, safeNextPath, strengthScore } from './validate';
 
 describe('isValidEmail', () => {
   it('accepts normal addresses and rejects junk', () => {
@@ -51,6 +51,26 @@ describe('safeNextPath', () => {
     }
     expect(safeNextPath(null)).toBe('/');
     expect(safeNextPath(undefined, '/home')).toBe('/home');
+  });
+});
+
+describe('safeAppNextPath', () => {
+  it('keeps same-origin paths under /app, with query and hash', () => {
+    for (const ok of ['/app', '/app/', '/app/demo-ngo/dashboard', '/app/demo-ngo/projects?tab=a%26b', '/app#x']) expect(safeAppNextPath(ok), ok).toBe(ok);
+  });
+  it('falls back to /app for anything outside the app or unsafe', () => {
+    const bad = ['//evil.com', '/\\evil.com', 'https://evil.com/app', 'javascript:alert(1)', '/application', '/appx/y', '/cases/x', '/', '/login', 'app/x', '', '/%2F%2Fevil.com', '/app/\nfoo', '/app\\evil.com', '/app://x'];
+    for (const b of bad) expect(safeAppNextPath(b), b).toBe('/app');
+    expect(safeAppNextPath(null)).toBe('/app');
+    expect(safeAppNextPath(undefined)).toBe('/app');
+  });
+});
+
+describe('safeAppNextPath dot segments', () => {
+  it('rejects . and .. segments, literal or encoded (fallback /app)', () => {
+    for (const b of ['/app/../x', '/app/%2e%2e/x', '/app/%2E%2E/x', '/app/./x', '/app/%2e/x', '/app/a/..']) expect(safeAppNextPath(b), b).toBe('/app');
+    expect(safeAppNextPath('/app/a..b/x')).toBe('/app/a..b/x');
+    expect(safeAppNextPath('/app/x?u=../y')).toBe('/app/x?u=../y');
   });
 });
 

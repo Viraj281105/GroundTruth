@@ -7,7 +7,7 @@
 }
 
 .adrRef {
-  color: var(--gt-text-secondary);
+  color: var(--text-secondary);
   font-weight: 600;
 }
 
@@ -31,7 +31,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--gt-text-secondary);
+  color: var(--text-secondary);
   margin-bottom: 10px;
 }
 
@@ -41,20 +41,20 @@
   align-items: flex-start;
   gap: 8px;
   padding: 12px 14px;
-  background-color: var(--gt-bg-subtle);
-  border: 1px dashed var(--gt-border-default);
-  border-radius: var(--gt-radius-md);
+  background-color: var(--surface-sunken);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
 }
 
 .emptyNoticeIcon {
   flex-shrink: 0;
   margin-top: 1px;
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
 }
 
 .emptyNoticeText {
   font-size: 13px;
-  color: var(--gt-text-secondary);
+  color: var(--text-secondary);
   line-height: 1.5;
   margin: 0;
 }
@@ -72,20 +72,20 @@
 
 .table th {
   padding: 10px 12px;
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: var(--gt-text-muted);
-  border-bottom: 1px solid var(--gt-border-subtle);
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
   background-color: color-mix(in srgb, var(--text-primary) 20%, transparent);
   white-space: nowrap;
 }
 
 .table td {
   padding: 11px 12px;
-  border-bottom: 1px solid var(--gt-border-subtle);
-  color: var(--gt-text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
   vertical-align: top;
 }
 
@@ -94,8 +94,8 @@
 }
 
 td.numeric {
-  font-family: var(--gt-font-mono);
-  color: var(--gt-text-primary);
+  font-family: var(--font-mono);
+  color: var(--text-primary);
 }
 
 .table tbody tr:last-child td {
@@ -103,12 +103,12 @@ td.numeric {
 }
 
 .table tbody tr:hover {
-  background-color: var(--gt-bg-card-hover);
+  background-color: var(--surface-hover);
 }
 
 /* Applied to any cell/value rendering "Not measured", so it reads as an
    explicit absence rather than another data point at a glance. */
 .notMeasured {
-  color: var(--gt-text-subtle);
+  color: var(--text-muted);
   font-style: italic;
 }

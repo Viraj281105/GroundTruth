@@ -23,6 +23,18 @@ spec:
             capabilities: { drop: [ALL] }
           ports:
             - containerPort: {{ .Values.web.port }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.web.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.web.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
           {{- include "gt.env" . | nindent 10 }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
 ---

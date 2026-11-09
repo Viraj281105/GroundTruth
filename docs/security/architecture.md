@@ -1,109 +1,138 @@
-# Security architecture
+# Security Architecture
 
-The threat model, reporting process and current gaps live in
-[`SECURITY.md`](../../SECURITY.md). This document covers the *design* —
-how the system is structured to make certain failures impossible rather than
-merely unlikely.
+**Domain**: Platform Security, Multi-Tenant Isolation, Cryptographic Integrity  
+**Implementation**: `groundtruth.platform.auth`, `groundtruth.platform.tenancy`, `groundtruth.provenance`
 
-**Status: the design is settled; most controls are not built.** The service is
-not exposed publicly, which bounds current risk — but "not exposed yet" is a
-deployment fact, not a security control.
+The primary failure mode GroundTruth 2.0 defends against is not merely conventional data exfiltration or injection attacks. The catastrophic failure mode is **the system producing an ungrounded, fabricated, or mathematically manipulated carbon additionality verdict that misleads regulatory authorities or capital markets**.
+
+```mermaid
+graph TB
+    subgraph UntrustedZone["Untrusted Client Perimeter"]
+        Browser["User Browser / Client API"]
+    end
+
+    subgraph SecurityPerimeter["API Gateway Security Controls"]
+        CORS["Strict CORS Origin Allow-List"]
+        CSRF["Origin / Referer + SameSite=Lax CSRF Guard"]
+        RateLimiter["Token-Bucket Rate Limiter"]
+        SessionAuth["Session Cookie Authenticator"]
+        RBAC["Scoped RBAC Gate (view, audit, contribute)"]
+    end
+
+    subgraph PlatformCore["Platform Core Services"]
+        TenancySvc["Multi-Tenant Isolation Service"]
+        AuditLog["Append-Only SHA-256 Audit Logger"]
+    end
+
+    subgraph SandboxedEngine["Sandboxed Analytical Engine (NumPy)"]
+        Engine["Pure Analytical Engine<br/>• NO NETWORK SOCKETS<br/>• NO DATABASE HANDLES<br/>• NO CREDENTIALS"]
+    end
+
+    subgraph OutputVerifier["GenAI Downstream Verification Gate"]
+        LLM["Generative Model (Narration Only)"]
+        Grounding["Grounding Verifier (contracts/grounding.py)<br/>• 2% Numeric Check<br/>• Accusation Filter<br/>• Mandatory Caveat Enforcer"]
+    end
+
+    subgraph PersistentStorage["Tamper-Evident Storage"]
+        DB[("PostgreSQL 16 Database<br/>(Immutable Trigger on Evidence)")]
+        BlobStore["Tiered Blob Storage<br/>(SHA-256 Checksum Sidecars)"]
+        Sigstore["Sigstore Rekor Public Transparency Log"]
+    end
+
+    Browser -->|HTTPS| CORS --> CSRF --> RateLimiter --> SessionAuth --> RBAC
+    RBAC --> TenancySvc
+    RBAC --> AuditLog
+    TenancySvc --> Engine
+    Engine --> OutputVerifier
+    OutputVerifier --> PersistentStorage
+    PersistentStorage --> Sigstore
+```
+
+![Cross-Organization Access Denied](../product/screens/cross-org-denied.png)
 
 ---
 
-## Trust boundaries
+## 1. Trust Boundaries & Seams
 
+GroundTruth 2.0 establishes four distinct security rings:
+
+### 1.1 The Engine Sandbox (Ring 0)
+The analytical engine (`groundtruth.engine`) is architecturally sandboxed by design:
+- Opens **zero network sockets**.
+- Reads **zero filesystem paths** or environment variables.
+- Holds **zero API keys or database connection strings**.
+The engine cannot leak a credential or exfiltrate customer data because it never possesses credentials or network capabilities.
+
+### 1.2 The Platform Gateway (Ring 1)
+The FastAPI gateway (`groundtruth.platform.api`) terminates client TLS, validates session cookies, enforces tenant organization scoping, and logs append-only audit records.
+
+### 1.3 The Generative Narration Boundary (Ring 2)
+The model receives only the verified `EvidenceBundle` and the deterministic report. It is never exposed to raw user documents, untrusted HTML, or unvalidated datasets, removing direct prompt-injection vectors by construction.
+
+### 1.4 Persistent Storage & Audit Log (Ring 3)
+Database rows in `evidence_bundles` are guarded by PostgreSQL triggers that reject all `UPDATE` commands. Re-running an analysis creates a new `run_id`, guaranteeing an append-only historical audit trail.
+
+---
+
+## 2. Multi-Tenant Organization Isolation & Scoped Grants
+
+GroundTruth 2.0 strictly enforces tenant boundary separation. A user belongs to one or more Organizations, and receives explicit Grants to individual Projects:
+
+```mermaid
+flowchart TD
+    Req["API Request: /projects/{id}/*"] --> GetSession{"Valid Authenticated Session?"}
+    GetSession -- No --> Err401["401 Unauthorized"]
+    GetSession -- Yes --> TenantCheck{"Does Actor hold an Active Grant<br/>for project_id?"}
+    TenantCheck -- No --> Err403["403 Forbidden<br/>(Cross-Organization Access Denied)"]
+    TenantCheck -- Yes --> ScopeCheck{"Grant role matches operation?<br/>• view: Read-only<br/>• audit: Full inspection & placebos<br/>• contribute: Upload & run execution"}
+    ScopeCheck -- No --> Err403Scope["403 Forbidden (Insufficient Grant Scope)"]
+    ScopeCheck -- Yes --> AuditLog["Append to Audit Log<br/>(actor_id, action, target, IP, sha256)"]
+    AuditLog --> Exec["Dispatch Request"]
 ```
- browser ──HTTPS──► API ──► engine (no I/O, no credentials)
-    │                │
-    │                ├──► database        credentials from env
-    │                ├──► object storage  credentials from env
-    │                ├──► Earth Engine    service account from env
-    │                └──► GenAI provider  API key from env
-    │
- untrusted input     the only place credentials exist
+
+### 2.1 Cross-Organization Isolation
+Any attempt to access a project, evidence bundle, or donor candidate matrix belonging to another organization without an explicit grant triggers an immediate HTTP 403 Forbidden error:
+
+```json
+{
+  "code": "cross_organization_denied",
+  "message": "User does not possess an active grant for the requested project.",
+  "project_id": "proj_9b8a...",
+  "actor_organization": "org_auditor_alpha"
+}
 ```
 
-**The engine holds no credentials and opens no sockets.** That is not primarily
-a security decision — it comes from reproducibility (ADR-002, ADR-006) — but it
-removes the entire analytical core from the credential-handling surface. The
-engine cannot leak a key it never sees.
+---
 
-## Secrets
+## 3. Secrets Management & Credential Hygiene
 
-| Control | Status |
-| --- | --- |
-| Credentials as `SecretStr`, never logged | Implemented |
-| `.env` gitignored, `.env.example` names only | Implemented |
-| `groundtruth doctor` reports presence, never value | Implemented |
-| Platform secret store in production | Planned |
-| Rotation procedure documented | Planned |
+- **Strongly Typed `SecretStr`**: All credentials (database passwords, STAC API tokens, cloud storage keys) are wrapped in Pydantic's `SecretStr`. They cannot be serialized into logs or exception traces.
+- **`groundtruth doctor` Diagnostic Tool**: Validates whether external credentials are present without displaying string values.
+- **Git Commit Immunity**: CI scans all pull requests for committed tokens using pre-commit hooks and SecretLint. If a key is accidentally committed, the key must be **rotated at the upstream provider immediately**, rather than merely scrubbing git history.
 
-If a key is committed: **rotate at the provider first**, then rewrite history. A
-key removed from history is still a key that was published.
+---
 
-## Input handling
+## 4. Evidence Integrity & Cryptographic Attestation
 
-| Surface | Treatment |
-| --- | --- |
-| API request bodies | Validated by Pydantic at the boundary; structured errors, no stack traces |
-| Case YAML | Validated on load; unknown fields ignored, malformed rejected |
-| Dataset responses | Treated as data; non-finite values rejected rather than imputed |
-| GenAI output | **Verified, never trusted.** See below. |
+To guarantee that evidence bundles cannot be altered by rogue administrators or compromised database hosts:
 
-## The GenAI boundary as a security control
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Engine as Engine Assembler
+    participant DB as PostgreSQL 16
+    participant Cosign as Sigstore Cosign
+    participant Rekor as Rekor Transparency Log
 
-The model receives only the evidence bundle and the deterministic report —
-never raw web content, user documents or dataset metadata. That removes the
-usual prompt-injection surface by construction.
+    Engine->>DB: INSERT into evidence_bundles (run_id, bundle_json)
+    Note over DB: Database Trigger rejects any future UPDATE
+    Engine->>Cosign: Generate Keyless Signature (OIDC Workflow Identity)
+    Cosign->>Rekor: Publish Attestation to Public Transparency Log
+    Rekor-->>Cosign: Return Inclusion Proof & Cryptographic Timestamp
+    Cosign-->>Engine: Bundle Signed
+```
 
-If a future feature lets user-supplied text reach a prompt (a project
-description, an analyst note), it is data rather than instruction, **and the
-grounding verifier still applies to the output**. The verifier is the last line:
-even a fully compromised prompt cannot get an ungrounded number or an accusation
-into a published report, because the check runs on the output rather than
-trusting the input.
+- **Canonical JSON Hashing**: Bundles are serialized according to RFC 8785 (deterministic key sorting, strict float formatting, zero superfluous whitespace) and hashed via SHA-256.
+- **Sigstore Cosign Attestation**: Keyless signatures link the published evidence manifest directly to the GitHub Actions workflow identity and git commit SHA that produced it.
 
-This is the general pattern worth preserving — validate the output, not only the
-input.
-
-## Planned controls
-
-| Control | Where it lands |
-| --- | --- |
-| Authentication on write endpoints | Production hardening |
-| Rate limiting on analysis submission | Production hardening |
-| Audit log: who requested which analysis | Production hardening |
-| Security headers | Production hardening |
-| Dependency vulnerability scanning | CI |
-| Evidence bundle signing | Future |
-
-## Evidence integrity
-
-Provenance proves **derivation**, not **authenticity**. Anyone with write access
-to the store could alter a bundle, and fingerprints would be recomputed.
-
-Signing closes that gap and is a future item. Until then, integrity rests on
-access control and on bundles being immutable by convention (a re-run is a new
-`run_id`, never an update) — which is enforced in the store design but not
-cryptographically.
-
-## Scientific integrity as a security property
-
-The failure that matters most here is not a conventional vulnerability. It is
-**the system producing a confident, wrong, publishable claim about a real
-project**.
-
-The controls are the same rules enforced everywhere else:
-
-| Rule | Enforcement |
-| --- | --- |
-| Simulated data cannot be labelled observed | `AnalysisRequest` validator |
-| Spectral indices cannot become carbon | `assert_not_index_to_carbon` |
-| Generated text cannot contain unverifiable numbers | Grounding verifier |
-| Generated text cannot allege wrongdoing | Prohibited-assertion patterns |
-| A failed robustness gate cannot become a weak positive | Verdict gate chain |
-| An unavailable provider cannot silently serve fixtures | `DataUnavailableError`, no fallback |
-
-Each is enforced in code and asserted in the CI `scientific-integrity` job,
-because a convention would not survive a deadline.
+![Auditor Dashboard](../product/screens/auditor-dashboard.png)

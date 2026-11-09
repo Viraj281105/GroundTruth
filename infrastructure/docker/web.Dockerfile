@@ -21,6 +21,7 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 COPY --chown=node:node --from=build /web/package.json /web/package-lock.json ./
 COPY --chown=node:node --from=build /web/node_modules ./node_modules
 COPY --chown=node:node --from=build /web/.next ./.next
+COPY --chown=node:node --from=build /web/public ./public
 COPY --chown=node:node --from=build /web/next.config.mjs ./
 USER node
 EXPOSE 3000

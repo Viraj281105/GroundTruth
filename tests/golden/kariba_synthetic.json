@@ -812,7 +812,7 @@
    ],
    "divergence_ratio": null,
    "label": "inconclusive",
-   "rationale": "A robust incremental effect on the observed indicator was estimated, but the developer's claim is not expressed in commensurable units, so no comparison against the claim can be made without a biomass conversion step.",
+   "rationale": "INCONCLUSIVE / NOT CALIBRATED: an effect on the observed indicator was estimated, but it cannot be expressed in tCO2e because no validated, site-calibrated biomass model is available. The claim and the effect are not in commensurable units, so no comparison against the developer's claim is made, and NDVI is not carbon.",
    "supporting_evidence_ids": []
   },
   "warnings": [
@@ -833,6 +833,6 @@
  },
  "error": null,
  "seed": 20260101,
- "spec_hash": "1363c32087b4ffe9dcbeb48bdd3ed95a",
+ "spec_hash": "ba9ce83acf51b7cea53fbd998a65df0c",
  "status": "completed"
 }

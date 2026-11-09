@@ -76,6 +76,11 @@ class RunSummary(BaseModel):
     contract_version: str
     created_at: datetime
     """When the store wrote the run (UTC). The ordering key for "most recent"."""
+    project_id: str | None = None
+    """The tenant project the run is filed under; ``None`` for a legacy, unfiled run.
+
+    Internal: authorization reads it, no response schema exposes it.
+    """
     failure_reason: str | None = None
     """Why a failed run failed, when no engine error was stored for it.
 
@@ -138,6 +143,10 @@ class RunFilter(BaseModel):
     """Inclusive lower bound on ``created_at``. Must be timezone-aware."""
     created_before: datetime | None = None
     """Exclusive upper bound on ``created_at``. Must be timezone-aware."""
+    project_ids: tuple[str, ...] | None = None
+    """Only runs filed under these projects. ``None`` means no restriction; an empty tuple
+    matches nothing. Set by the API from the caller's access, never from a query parameter,
+    so it is not part of the cursor fingerprint (a grant added mid-scroll must not void it)."""
 
 
 class RunCursor(BaseModel):

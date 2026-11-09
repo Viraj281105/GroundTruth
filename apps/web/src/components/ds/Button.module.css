@@ -13,3 +13,5 @@
 .ghost:hover:not(:disabled) { background: var(--accent-soft); color: var(--text-primary); }
 .spinner { width: 1em; height: 1em; border-radius: var(--radius-full); border: 2px solid currentColor; border-right-color: transparent; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.danger { background: var(--danger-bg); color: var(--danger-text); border-color: var(--danger-border); }
+.danger:hover:not(:disabled) { background: var(--danger-bg); border-color: var(--danger-text); }

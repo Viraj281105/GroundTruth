@@ -44,6 +44,24 @@ class Provenance(BaseModel):
     notes: str | None = Field(default=None, description="Caveats a human auditor should read.")
 
     @classmethod
+    def observed(
+        cls,
+        source: str,
+        stage: str = "geospatial",
+        *,
+        source_uri: str | None = None,
+        notes: str | None = None,
+    ) -> Provenance:
+        """Provenance for an unmodelled direct physical observation."""
+        return cls(
+            source=source,
+            method="direct-physical-observation",
+            stage=stage,
+            source_uri=source_uri,
+            notes=notes,
+        )
+
+    @classmethod
     def external(
         cls, source: str, source_uri: str | None = None, notes: str | None = None
     ) -> Provenance:

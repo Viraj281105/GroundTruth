@@ -133,7 +133,14 @@ class RedisJobQueue:
 
     # -- JobControl -------------------------------------------------------------------
 
-    def submit(self, case: CaseDefinition, request: AnalysisRequest) -> Submission:
+    def submit(
+        self,
+        case: CaseDefinition,
+        request: AnalysisRequest,
+        *,
+        requested_by: str | None = None,
+        project_id: str | None = None,
+    ) -> Submission:
         """Queue ``request``, or return its cached result or the identical in-flight job."""
         spec_key = SPEC_PREFIX + request.spec_hash
         run_id = new_run_id()
@@ -153,6 +160,8 @@ class RedisJobQueue:
             mapping={
                 "run_id": run_id,
                 "case_id": case.case_id,
+                "project_id": project_id or "",
+                "requested_by": requested_by or "",
                 "spec_hash": request.spec_hash,
                 "status": _QUEUED.value,
                 "data_mode": request.data_mode,
@@ -194,6 +203,7 @@ class RedisJobQueue:
         return JobStatus(
             run_id=run_id,
             case_id=row["case_id"],
+            project_id=row.get("project_id") or None,
             status=AnalysisStatus(row["status"]),
             engine_status=result.status.value if result is not None else None,
             data_mode=row["data_mode"],

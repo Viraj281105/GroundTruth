@@ -9,7 +9,7 @@ import {
   formatSignAgreement,
   formatSpecCurveMedian,
 } from '../../lib/spec-curve';
-import { Badge } from '../ui/Badge';
+import { Badge } from '../ds/Badge';
 import styles from './SpecificationCurve.module.css';
 
 export interface SpecificationCurveProps {

@@ -14,6 +14,7 @@ type Catalog = Record<string, string>;
 const en: Catalog = {
   'nav.home': 'Home',
   'nav.cases': 'Cases',
+  'nav.workspace': 'Workspace',
   'nav.compare': 'Compare',
   'nav.claims': 'Claims',
   'nav.method': 'Method',

@@ -129,3 +129,24 @@ export function errorMessage(code: string | null | undefined, retryAfterSeconds?
       return 'Something went wrong. Please try again.';
   }
 }
+
+/** Where sign-in and sign-up land when there is no valid `next`. */
+export const POST_LOGIN_HOME = '/app';
+
+/**
+ * `next` after login must be a same-origin relative path inside the app (`/app` or `/app/...`).
+ * Anything else, including every open-redirect shape `safeNextPath` rejects, falls back to `/app`.
+ */
+export function safeAppNextPath(next: string | null | undefined): string {
+  const safe = safeNextPath(next, '');
+  if (!safe) return POST_LOGIN_HOME;
+  if (!/^\/app(?:[/?#]|$)/.test(safe)) return POST_LOGIN_HOME;
+  // Dot segments (literal or percent-encoded once) could climb out of /app after normalisation.
+  let path = safe.split(/[?#]/)[0];
+  try {
+    path = decodeURIComponent(path);
+  } catch {
+    return POST_LOGIN_HOME;
+  }
+  return path.split('/').some((seg) => seg === '.' || seg === '..') ? POST_LOGIN_HOME : safe;
+}

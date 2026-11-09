@@ -199,8 +199,8 @@ class TestDocumentedErrorsMatchWhatIsSent:
             schema = self._body_schema(served, path, method, "404")
             assert schema == {"$ref": "#/components/schemas/MessageErrorBody"}
 
-    def test_an_unknown_case_sends_the_documented_body(self):
-        client = TestClient(app)
+    def test_an_unknown_case_sends_the_documented_body(self, tenant_world):
+        client = tenant_world.client("ref")
         for response in (
             client.get("/cases/no-such-case"),
             client.post("/cases/no-such-case/verify", json={"synthetic": True}),
@@ -208,19 +208,23 @@ class TestDocumentedErrorsMatchWhatIsSent:
             assert response.status_code == 404
             MessageErrorBody.model_validate(response.json())
 
-    def test_observed_data_sends_the_documented_501_body(self):
-        response = TestClient(app).post("/cases/kariba-redd/verify", json={"synthetic": False})
+    def test_observed_data_sends_the_documented_501_body(self, tenant_world):
+        response = tenant_world.client("ref").post(
+            "/cases/mikoko-pamoja/verify", json={"synthetic": False}
+        )
         assert response.status_code == 501
         MessageErrorBody.model_validate(response.json())
 
-    def test_a_bad_body_sends_a_validation_error(self):
-        response = TestClient(app).post("/cases/kariba-redd/verify", json={"min_donors": 1})
+    def test_a_bad_body_sends_a_validation_error(self, tenant_world):
+        response = tenant_world.client("ref").post(
+            "/cases/kariba-redd/verify", json={"min_donors": 1}
+        )
         assert response.status_code == 422
         assert isinstance(response.json()["detail"], list)  # FastAPI's validation shape
 
-    def test_a_refusal_sends_the_documented_engine_failure_body(self):
+    def test_a_refusal_sends_the_documented_engine_failure_body(self, tenant_world):
         """A real engine refusal, through the real endpoint (SIMULATED DATA)."""
-        response = TestClient(app).post(
+        response = tenant_world.client("ref").post(
             "/cases/kariba-redd/verify", json={"synthetic": True, "min_donors": 500}
         )
         assert response.status_code == 422
@@ -234,9 +238,11 @@ class TestNarrowedVerifyFields:
         assert props["verdict_label"] == {"$ref": "#/components/schemas/VerdictLabel"}
         assert props["data_mode"]["enum"] == ["simulated", "observed"]
 
-    def test_the_json_sent_is_unchanged(self):
+    def test_the_json_sent_is_unchanged(self, tenant_world):
         """Still the plain strings the UI already reads."""
-        response = TestClient(app).post("/cases/kariba-redd/verify", json={"synthetic": True})
+        response = tenant_world.client("ref").post(
+            "/cases/kariba-redd/verify", json={"synthetic": True}
+        )
         body = response.json()
         assert body["verdict_label"] in {label.value for label in VerdictLabel}
         assert isinstance(body["verdict_label"], str) and body["data_mode"] == "simulated"

@@ -1,129 +1,111 @@
-# Continuous monitoring architecture
+# Continuous Monitoring Architecture
 
-**Status: FUTURE. None of this is built.** The extension points exist; the
-capability does not.
+**Platform**: `packages/groundtruth/src/groundtruth/platform/compare/` & `jobs/`  
+**Core Concept**: Shift from static snapshot verification to perpetual, automated observation.
 
-The long-term shift: **verify once → keep watching.** A verification is a
-snapshot. A project that looked sound in 2022 can be cleared in 2024, and a
-buyer holding those credits has no mechanism to find out.
+A project verified in 2022 can suffer illegal logging, canopy dieback, or severe drought in 2024. Continuous monitoring enables GroundTruth 2.0 to re-evaluate interventions automatically as new satellite overpasses and climate grids arrive, detecting reversals before credits are traded.
 
----
+```mermaid
+flowchart TD
+    subgraph Trigger["1. Automated Schedule Trigger"]
+        Cron["Continuous Monitoring Cron<br/>(Monthly / Annual Satellite Composites)"]
+        Event["New Earth Observation Ingestion<br/>(Sentinel-2 / Landsat-9 Overpass)"]
+    end
 
-## Why the groundwork already exists
+    subgraph Execution["2. Automated Spec Replay"]
+        StoredSpec["Retrieve Stored Specification<br/>(Pinned Request & Unit Boundary)"]
+        ExtendWindow["Extend Analysis Window<br/>(e.g., append post_end + 1 year)"]
+        WorkerQueue["Submit to Asynchronous Worker Queue"]
+        WorkerRun["Execute run_analysis()<br/>(Engine runs with identical code)"]
+        NewBundle["Emit New Immutable EvidenceBundle"]
+    end
 
-Continuous monitoring is mostly *re-running a stored specification and
-comparing*. Three existing design decisions make that cheap rather than a
-rewrite:
+    subgraph Comparison["3. Algorithmic Bundle Comparison (platform/compare/)"]
+        PriorBundle["Retrieve Prior Verified Bundle"]
+        DiffEngine["Diff Engine by Evidence ID<br/>• Value shifts (relative tolerance 1e-9)<br/>• Confidence bound movements<br/>• Non-Comparability Guards"]
+    end
 
-| Existing | Why it matters here |
-| --- | --- |
-| `spec_hash` (ADR-006) | A stored spec can be replayed exactly. Re-analysis is "same spec, later window". |
-| `DatasetRef` pinning (ADR-009) | The delta between two runs is attributable to new data rather than to a silently reprocessed archive. |
-| Immutable `EvidenceBundle` (ADR-004) | Two bundles diff cleanly by evidence id. |
-| Job lifecycle (ADR-008) | Scheduled work is the same machinery as user-requested work. |
+    subgraph Evaluation["4. Review Triggers & Alert Delivery"]
+        AlertRule{"Evaluate Alert Rules<br/>• Significant Canopy Drop (>5%)?<br/>• Post-Treatment SCM Divergence?<br/>• Severe SPI-12 Drought Spike?"}
+        ReviewFlag["Raise Automated Due-Diligence Review Flag<br/>(Dispatch Webhook & Funder Notification)"]
+        StableLog["Record Stable Monitoring Checkpoint<br/>(Append to Project Audit History)"]
+    end
 
-None of this was built *for* monitoring. It is a consequence of taking
-reproducibility seriously, which is the usual pattern: the discipline pays
-somewhere you did not plan for.
-
----
-
-## Shape
-
-```
-schedule ──► replay stored spec with an extended window
-                      │
-                      ▼
-             run_analysis (unchanged)
-                      │
-                      ▼
-             new EvidenceBundle
-                      │
-                      ▼
-             diff against the previous bundle by evidence id
-                      │
-         ┌────────────┴────────────┐
-         ▼                         ▼
-   material change            no material change
-         │                         │
-         ▼                         ▼
-   raise a review trigger     record and continue
+    Cron --> StoredSpec
+    Event --> StoredSpec
+    StoredSpec --> ExtendWindow --> WorkerQueue --> WorkerRun --> NewBundle
+    NewBundle --> DiffEngine
+    PriorBundle --> DiffEngine
+    DiffEngine --> AlertRule
+    AlertRule -- Threshold Exceeded --> ReviewFlag
+    AlertRule -- Within Tolerance --> StableLog
 ```
 
-**The engine does not change.** Monitoring is a platform capability built on
-scheduling, storage and comparison — all Bhumi-side.
+![Funder Dashboard](../product/screens/funder-dashboard.png)
 
 ---
 
-## Capabilities and what each needs
+## 1. Why GroundTruth 2.0 Makes Monitoring Seamless
 
-| Capability | Needs | Engine change? |
-| --- | --- | --- |
-| Periodic re-analysis | Scheduler, stored specs, result history | No |
-| Restoration progress tracking | Bundle diff over time | No |
-| Deforestation alerts | GFW integrated alerts as a provider | New indicator (minor) |
-| Fire events | FIRMS / MCD64 as a provider | New indicator (minor) |
-| Ecological deterioration | Trend test over successive estimates | New estimator |
-| Intervention changes | Registry metadata monitoring | No — platform |
-| Anomaly detection | Deviation from a project's own trajectory | New estimator |
-| Project health score | Aggregation over evidence | Reporting only |
-| Automated review triggers | Threshold rules over diffs | No — platform |
+Continuous monitoring is architecturally trivial in GroundTruth 2.0 because of foundational design choices:
+
+| Architectural Primitive | Foundation | Role in Continuous Monitoring |
+| :--- | :--- | :--- |
+| **`spec_hash`** | ADR-006 | Guarantees that re-running an analysis with an extended window executes the exact same mathematical model without manual parameter re-entry. |
+| **Pinned `DatasetRef`** | ADR-009 | Ensures any measured delta is caused by real ecological changes on the ground, not silent upstream archive reprocessing. |
+| **Immutable `EvidenceBundle`** | ADR-004 | Prior and current states can be diffed element-by-element across stable dotted IDs. |
+| **Decoupled Jobs** | ADR-008 | Scheduled re-runs execute on existing background workers without consuming API gateway resources. |
 
 ---
 
-## Design constraints
+## 2. Algorithmic Run Comparison (`platform/compare/`)
 
-These are the parts that are easy to get wrong, and are worth writing down
-before anyone builds it.
+The comparison service evaluates differences across two verified runs, categorizing evidence identifiers as `added`, `removed`, `changed`, or `unchanged`.
 
-**Distinguish a real change from a methodological one.** If the engine version
-changed between runs, a bundle difference may be a methodology fix rather than a
-change on the ground. `EngineRef` is stored with every result precisely so a
-diff can say which it is. **A diff across engine versions must be labelled as
-not comparable** rather than reported as an ecological change.
+```mermaid
+graph TD
+    CompReq["GET /runs/compare?baseline={runA}&candidate={runB}"] --> Guards{"Evaluate Non-Comparability Guards"}
+    
+    Guards -- "Different Case IDs" --> NonComp["Return comparable: false<br/>Reason: different_case"]
+    Guards -- "One Simulated, One Observed" --> NonComp2["Return comparable: false<br/>Reason: different_data_mode"]
+    Guards -- "Different Engine Versions" --> NonComp3["Return comparable: false<br/>Reason: different_engine_version"]
+    Guards -- "Contract Major Mismatch" --> NonComp4["Return comparable: false<br/>Reason: different_contract_major"]
+    Guards -- "Run Lacks Bundle (Refused/Failed)" --> NonComp5["Return comparable: false<br/>Reason: no_bundle"]
+    
+    Guards -- "All Guards Satisfied" --> ExecuteDiff["Execute Evidence-by-Evidence Diff"]
+    ExecuteDiff --> DiffOutput["Emit Diff Matrix:<br/>• Numerical changes (|delta| > 1e-9)<br/>• Confidence interval shifts<br/>• Neutral verdict diff<br/>• Warning transitions"]
+```
 
-**Alerts must inherit the same restraint as verdicts.** "This project warrants
-re-review" is the strongest claim available. Not "this project is failing", and
-never anything implying misconduct. The same prohibited-assertion rules apply to
-alert copy as to reports.
-
-**Alert fatigue is a correctness problem.** A monitoring system that fires
-constantly gets muted, and a muted system is worse than none because it creates
-false assurance. Thresholds must be calibrated against the placebo distribution
-— the same logic as the verdict gate chain: a change is worth reporting when it
-is unusual relative to what comparable untreated regions did.
-
-**Cost scales with frequency × projects.** Monthly re-analysis of 1,000 projects
-is 12,000 analyses a year, each a placebo suite. `spec_hash` caching, incremental
-windows and cheap screening before expensive confirmation are all required. This
-is the main reason the worker is a separate process.
-
-**Seasonality is not deterioration.** A monthly cadence on an annual-composite
-indicator will mostly measure phenology. Either the cadence matches the
-indicator's temporal resolution, or the comparison is year-over-year.
+### 2.1 The Non-Negotiable Non-Comparability Guards
+A measurement change between two runs could stem from methodology revisions rather than ecological reality. To protect due-diligence teams from measurement artifacts, the engine strictly refuses to generate a diff if:
+- `different_engine_version`: The runs were executed on different versions of the analytical engine.
+- `different_data_mode`: Comparing a simulated benchmark run against a real observation run.
+- `different_case`: The runs evaluate different geographic projects.
 
 ---
 
-## What must not be built into this
+## 3. Alert Triggers & Reversal Detection
 
-| Not building | Why |
-| --- | --- |
-| Automated de-listing or credit suspension | No project should lose status on a screening signal |
-| Real-time alerting on raw imagery | The unit of analysis is a counterfactual estimate, not a pixel change |
-| Alerts to third parties without the developer seeing them first | Basic fairness, and it is how a screening tool earns cooperation |
+When new observations are processed, threshold rules detect environmental reversal events:
 
----
+```mermaid
+stateDiagram-v2
+    [*] --> MonitorIdle: Awaiting New Overpass
+    MonitorIdle --> ReplaySpec: Scheduled Window Extension
+    ReplaySpec --> DiffBundles: Generate Evidence Delta
+    
+    DiffBundles --> NormalCheck: Delta Within Baseline Bounds
+    NormalCheck --> MonitorIdle: Log Green Status Checkpoint
 
-## Prerequisites
+    DiffBundles --> ReversalDetected: Significant Canopy Decline (>10%)
+    ReversalDetected --> IssueAuditAlert: Trigger Review Flag (Amber)
+    
+    DiffBundles --> ClimateShockDetected: SPI-12 Drought Spike (SPI < -1.5)
+    ClimateShockDetected --> AnnotateClimate: Tag Decline as Weather-Driven (Do Not Penalize Project)
+    
+    IssueAuditAlert --> NotifyFunder: Notify Funder & Auditor Personas
+    AnnotateClimate --> NotifyFunder
+```
 
-Monitoring is meaningless until a single analysis is trustworthy. In order:
-
-1. A real analysis on real data (MVP)
-2. Validated against Kariba
-3. Persistence and job infrastructure (Stage 2)
-4. Automated ingestion so projects are onboarded without hand-configuration
-   (Stage 3)
-5. Only then: scheduling and diffing
-
-Building this earlier would produce a system that continuously monitors
-something we have not yet shown we can measure once.
+* **Canopy Loss Alert**: Detects sharp negative shifts in `effect.point_estimate` or `assessment.vegetation_trajectory`.
+* **Climate Attribution Isolator**: Checks whether vegetation decline coincides with severe regional drought ($\text{SPI-12} < -1.5$). If the regional synthetic control also declines, the reversal is attributed to drought stress rather than project failure.

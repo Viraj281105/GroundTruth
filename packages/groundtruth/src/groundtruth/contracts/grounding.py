@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 
 from groundtruth.contracts.errors import GroundingViolationError
 from groundtruth.contracts.evidence import EvidenceBundle
+from groundtruth.contracts.types import VerdictLabel
 
 # A leading '-' counts as a minus sign only when it does not follow a word
 # character, so identifiers like 'donor-031' are not read as the value -31.
@@ -35,7 +36,11 @@ URL_PATTERN = re.compile(r"https?://\S+|<[^>\s]+>")
 NEGATED_ASSERTION_PATTERNS: tuple[str, ...] = (
     r"not evidence of (?:fraud|wrongdoing|deception)",
     r"not a finding of (?:fraud|wrongdoing|deception)",
-    r"(?:is|are|does|do) not (?:prove|proves|imply|implies|mean|means|establish)",
+    r"(?:(?:is|are|does|do|did|can|cannot) not|never) "
+    r"(?:prove|proves|imply|implies|mean|means|establish|show|shows|demonstrate|demonstrates)"
+    r"(?:\s+(?:that\s+)?(?:the\s+)?(?:project|intervention)\s+(?:caused|causes|drove|created))?",
+    r"not (?:evidence|proof|a finding) (?:of|that) (?:the )?(?:project|intervention) "
+    r"(?:caused|causes|drove|created)",
     r"never (?:a finding of|evidence of|proof of)",
     r"is not a probability (?:of|that)",
     r"(?:must|should) not be (?:presented|read|reported) as (?:the |a )?"
@@ -52,6 +57,11 @@ safe fallback would fire on every correctly-caveated report.
 PROHIBITED_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bfraud(?:ulent|ulently)?\b", "alleges fraud"),
     (r"\bscam\b", "alleges a scam"),
+    (r"\b(?:grift|hoax|swindle|ponzi|sham)\b", "alleges a scam or hoax"),
+    (
+        r"\b(?:embezzl\w*|brib\w*|corrupt\w*|kickback\w*|launder\w*|theft|stole)\b",
+        "alleges criminal misconduct",
+    ),
     (r"\bdeliberate(?:ly)? (?:inflat|overstat|falsif|misrepresent)", "alleges intent"),
     (r"\b(?:lied|lying|deceiv\w*)\b", "alleges deception"),
     (r"\bcriminal\b", "asserts a legal conclusion"),
@@ -62,8 +72,78 @@ PROHIBITED_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bdefinitiv(?:e|ely)\b", "overstates evidential strength"),
     (r"\bcertainly\b", "overstates evidential strength"),
     (
+        r"\b(?:project|intervention)\s+(?:caused|causes|drove|created)\b",
+        "asserts direct causal attribution beyond observational screening",
+    ),
+    (
         r"ndvi\s+(?:of\s+)?[\d.]+\s*(?:=|equals|means|is)\s*[\d.]+\s*(?:tco2e?|tonnes? of carbon)",
         "converts a spectral index directly into carbon",
+    ),
+)
+
+_CARBON_UNIT_PATTERN = re.compile(
+    r"\b(?:tonnes?\s+of\s+carbon(?:\s+credits?)?|tons?\s+of\s+carbon(?:\s+credits?)?"
+    r"|t\s*co2e?|tonnes?\s+of\s+co2e?|tons?\s+of\s+co2e?"
+    r"|carbon\s+credits?|credits?\s+per\s+hectare)\b",
+    re.IGNORECASE,
+)
+
+_NEGATED_CARBON_UNIT_PATTERN = re.compile(
+    r"\b(?:not|no|never|without|cannot\s+be\s+converted\s+(?:to|into))\s+"
+    r"(?:in\s+|expressed\s+in\s+|into\s+)?"
+    r"(?:tonnes?\s+of\s+carbon|tons?\s+of\s+carbon|t\s*co2e?|carbon\s+credits?"
+    r"|credits?\s+per\s+hectare|tonnes?\s+of\s+co2e?|tons?\s+of\s+co2e?)\b",
+    re.IGNORECASE,
+)
+
+_CONTEXT_INVERSION_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"\b(?:caused|resulted in|led to|suffered|experienced|drove|triggered|accelerated"
+        r"|worsened)\b(?![^.]*\b(?:avoided|reduced|prevented|halted|curbed|less)\b)"
+        r"[^.]{0,60}\b(?:forest destruction|habitat loss|deforestation|ecocide|ecosystem collapse"
+        r"|ecological destruction|canopy loss|severe degradation)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b\d+\.\d+\s*(?:in\s+|of\s+|units?\s+of\s+)?(?:forest destruction|habitat loss"
+        r"|deforestation|ecocide|ecosystem collapse|ecological destruction)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?:forest destruction|habitat loss|deforestation|ecocide|ecosystem collapse"
+        r"|ecological destruction)\s+(?:of|by|at|reaching)\s+\d+\.\d+\b",
+        re.IGNORECASE,
+    ),
+)
+
+_NEGATED_VERDICT_PATTERN = re.compile(
+    r"\b(?:not|never|neither|nor|cannot\s+be\s+considered|is\s+not|are\s+not|was\s+not"
+    r"|were\s+not|does\s+not|did\s+not|rather\s+than|instead\s+of|whether\s+(?:it\s+is\s+)?)\s+"
+    r"(?:fully\s+|partially\s+|deemed\s+|considered\s+)?"
+    r"(?:consistent\s+with|confirm\w*|verif\w*|validat\w*|substantiat\w*)",
+    re.IGNORECASE,
+)
+
+_VERDICT_CONSISTENT_ASSERTION_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"\b(?:verdict|outcome|finding|result|screening|analysis|evidence)\s+is\s+consistent\s+"
+        r"with\s+(?:the\s+)?(?:developer'?s?\s+)?claim\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bconsistent\s+with\s+(?:the\s+)?(?:developer'?s?\s+)?claim\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\bconsistent_with_claim\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:confirms?|verifies|verified|validates?|validated|substantiates?)\s+"
+        r"(?:the\s+)?(?:developer'?s?\s+)?claim\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(?:developer'?s?\s+)?claim\s+(?:is|was|has\s+been)\s+(?:fully\s+)?"
+        r"(?:verified|confirmed|validated|substantiated)\b",
+        re.IGNORECASE,
     ),
 )
 
@@ -225,6 +305,62 @@ def verify_grounding(
     for pattern, description in pol.prohibited_patterns:
         if re.search(pattern, scannable, re.IGNORECASE):
             prohibited.append(description)
+
+    # Unit smuggling check: attaching carbon/credit units to an indicator effect value.
+    indicator_values: list[float] = []
+    for item in bundle.items:
+        if (
+            item.id == "effect.point_estimate"
+            or item.id.startswith("effect.")
+            or item.unit.lower() in {"ndvi", "evi", "nbr", "lai", "fpar", "kndvi", "index"}
+        ):
+            if isinstance(item.value, (int, float)) and not isinstance(item.value, bool):
+                indicator_values.append(float(item.value))
+            if item.confidence is not None:
+                indicator_values.extend([item.confidence.lower, item.confidence.upper])
+
+    if indicator_values or "carbon.estimated_tco2e" not in bundle:
+        for sentence in re.split(r"(?<!\d)\.(?!\d)|[!?;\n]+", scannable_numbers.lower()):
+            cleaned_sentence = _NEGATED_CARBON_UNIT_PATTERN.sub(" ", sentence)
+            if not _CARBON_UNIT_PATTERN.search(cleaned_sentence):
+                continue
+            for num_match in NUMBER_PATTERN.finditer(cleaned_sentence):
+                num_val = _parse_number(num_match.group(0))
+                if num_val is None:
+                    continue
+                unit_window = cleaned_sentence[
+                    max(0, num_match.start() - 35) : num_match.end() + 50
+                ]
+                if (
+                    indicator_values
+                    and _CARBON_UNIT_PATTERN.search(unit_window)
+                    and _matches_any(num_val, indicator_values, pol.relative_tolerance)
+                ):
+                    prohibited.append(
+                        "converts an indicator value into carbon/credit units without calibration"
+                    )
+                    break
+
+    # Semantic polarity / context inversion check: positive indicator effect narrated
+    # as ecological destruction.
+    effect_item = bundle.get("effect.point_estimate")
+    if (
+        effect_item is not None
+        and isinstance(effect_item.value, (int, float))
+        and not isinstance(effect_item.value, bool)
+        and float(effect_item.value) > 0
+        and any(p.search(scannable) for p in _CONTEXT_INVERSION_PATTERNS)
+    ):
+        prohibited.append("inverts positive indicator effect into ecological destruction")
+
+    # Verdict contradiction guard: narrative contradicts the bundle's screening verdict.
+    verdict_label = (
+        getattr(bundle.verdict, "label", bundle.verdict) if bundle.verdict is not None else None
+    )
+    if verdict_label in (VerdictLabel.INCONCLUSIVE, VerdictLabel.DIVERGENT_FROM_CLAIM):
+        verdict_scannable = _NEGATED_VERDICT_PATTERN.sub(" ", scannable)
+        if any(p.search(verdict_scannable) for p in _VERDICT_CONSISTENT_ASSERTION_PATTERNS):
+            prohibited.append("contradicts the bundle's screening verdict")
 
     missing = tuple(p for p in pol.required_phrases if p.lower() not in lowered)
 

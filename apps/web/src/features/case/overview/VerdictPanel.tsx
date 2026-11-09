@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Chip } from '../../../components/ds';
-import { RefusalDetails } from '../../../components/ui/RefusalDetails';
+import { RefusalDetails } from '../../../components/ds/RefusalDetails';
 import { refusalStageLabel } from '../../../lib/refusal';
 import type { OverviewModel } from './model';
 import { overviewCopy as c } from './copy';

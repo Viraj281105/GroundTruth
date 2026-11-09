@@ -17,6 +17,12 @@ import styles from "./run.module.css";
 
 const jobsApi = createJobsApi();
 
+/** Evidence link that names this run, so the screen shows it and never an older precomputed fixture. */
+export function evidenceHref(caseId: string, runId: string | null): string {
+  const base = `/cases/${caseId}/evidence`;
+  return runId ? `${base}?run=${encodeURIComponent(runId)}` : base;
+}
+
 function Stepper({ index }: { index: number }) {
   return (
     <ol className={styles.stepper} aria-label="Progress">
@@ -168,6 +174,7 @@ export function RunFlow({ caseId }: { caseId: string }) {
         <Card>
           <h2 className={styles.heading}>{runCopy.results.heading}</h2>
           {state.job?.is_simulated && <Chip tone="sim">{runCopy.run.simulatedBadge}</Chip>}
+          <p className={styles.stamps}>{runCopy.results.notLive}</p>
           {headline && (
             <p className={styles.headline}>
               {runCopy.results.headline}: {headline}
@@ -193,7 +200,7 @@ export function RunFlow({ caseId }: { caseId: string }) {
             </p>
           </Lens>
           <div className={styles.row}>
-            <LinkButton href={`/cases/${caseId}/evidence`}>{runCopy.results.evidence}</LinkButton>
+            <LinkButton href={evidenceHref(caseId, state.runId)}>{runCopy.results.evidence}</LinkButton>
             <LinkButton variant="secondary" href={`/cases/${caseId}`}>
               {runCopy.results.overview}
             </LinkButton>

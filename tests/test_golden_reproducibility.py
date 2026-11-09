@@ -25,6 +25,7 @@ VOLATILE = {
     "timestamp",
     "retrieved_at",
     "metrics",
+    "state",
 }
 DECIMALS = 6
 

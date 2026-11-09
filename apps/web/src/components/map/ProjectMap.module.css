@@ -1,0 +1,41 @@
+.wrap {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+
+.map {
+  position: absolute;
+  inset: 0;
+}
+
+.map :global(.maplibregl-canvas-container),
+.map :global(.maplibregl-canvas) {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.legend {
+  position: absolute;
+  left: var(--space-2);
+  bottom: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.75rem;
+  background: var(--surface-raised, var(--surface-sunken));
+  border-radius: var(--radius-md, 4px);
+}

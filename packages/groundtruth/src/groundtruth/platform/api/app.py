@@ -13,9 +13,9 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from groundtruth import __version__
@@ -27,8 +27,12 @@ from groundtruth.observability import setup_telemetry
 from groundtruth.platform.api.auth import router as auth_router
 from groundtruth.platform.api.claims import router as claims_router
 from groundtruth.platform.api.events import router as events_router
+from groundtruth.platform.api.exports import router as exports_router
 from groundtruth.platform.api.jobs import router as jobs_router
 from groundtruth.platform.api.openapi_schema import install_openapi
+from groundtruth.platform.api.orgs import router as orgs_router
+from groundtruth.platform.api.portfolio import router as portfolio_router
+from groundtruth.platform.api.projects import router as projects_router
 from groundtruth.platform.api.runs import router as runs_router
 from groundtruth.platform.api.schemas import (
     CaseDetail,
@@ -40,7 +44,9 @@ from groundtruth.platform.api.schemas import (
     VerificationRequest,
     VerificationResponse,
 )
+from groundtruth.platform.api.scope import accessible_projects, audit, case_dependency
 from groundtruth.platform.api.tiles import router as tiles_router
+from groundtruth.platform.auth.authz import Action, Capability, Context, ProjectAccess
 from groundtruth.platform.auth.csrf import CsrfOriginMiddleware
 from groundtruth.platform.auth.deps import require_role
 from groundtruth.platform.cases.creator import create_and_register_case
@@ -56,9 +62,10 @@ _log = logging.getLogger("groundtruth.auth")
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     if not get_settings().auth_required:
         _log.warning(
-            "AUTH_REQUIRED is false: starting/cancelling analyses and the claims workbench "
-            "are open to anyone who can reach this API. Set AUTH_REQUIRED=true for any "
-            "shared deployment."
+            "AUTH_REQUIRED is false: the role gates on case creation, the claims workbench and "
+            "the legacy /verify path are off for anyone who can reach this API (project-scoped "
+            "reads and runs still require a session). Set AUTH_REQUIRED=true for any shared "
+            "deployment."
         )
     yield
 
@@ -95,6 +102,10 @@ app.include_router(events_router)
 app.include_router(tiles_router)
 app.include_router(claims_router)
 app.include_router(auth_router)
+app.include_router(orgs_router)
+app.include_router(portfolio_router)
+app.include_router(projects_router)
+app.include_router(exports_router, include_in_schema=False)
 
 # The frontend's TypeScript types are generated from this schema (issue #17); the served
 # /openapi.json and the committed snapshot are built by the same function.
@@ -154,20 +165,31 @@ def health() -> HealthResponse:
     )
 
 
-@app.get("/cases", response_model=list[CaseSummary], tags=["cases"])
-def list_case_summaries() -> list[CaseSummary]:
-    """List every case definition."""
-    return [_summary(cid) for cid in load_all_cases()]
+@app.get(
+    "/cases",
+    response_model=list[CaseSummary],
+    tags=["cases"],
+    responses={401: {"model": MessageErrorBody, "description": "Not signed in."}},
+)
+def list_case_summaries(request: Request, ctx: Context) -> list[CaseSummary]:
+    """List the case definitions whose projects the active organization owns or was granted."""
+    visible = {p.case_id for p in accessible_projects(request, ctx) if p.case_id is not None}
+    return [_summary(cid) for cid in load_all_cases() if cid in visible]
 
 
 @app.get(
     "/cases/{case_id}",
     response_model=CaseDetail,
     tags=["cases"],
-    responses={404: {"model": MessageErrorBody, "description": "Unknown case."}},
+    dependencies=[Depends(case_dependency(Capability.OVERVIEW))],
+    responses={404: {"model": MessageErrorBody, "description": "Unknown case, or no access."}},
 )
 def get_case_detail(case_id: str) -> CaseDetail:
     """Return one case definition in full."""
+    return _case_detail(case_id)
+
+
+def _case_detail(case_id: str) -> CaseDetail:
     try:
         case = get_case(case_id)
     except CaseDefinitionError as exc:
@@ -211,7 +233,7 @@ def create_case(body: CreateCaseRequest) -> CaseDetail:
         boundary_geojson=body.boundary_geojson,
         custom_case_id=body.case_id,
     )
-    return get_case_detail(case.case_id)
+    return _case_detail(case.case_id)
 
 
 @app.post(
@@ -220,7 +242,7 @@ def create_case(body: CreateCaseRequest) -> CaseDetail:
     tags=["verification"],
     dependencies=[Depends(require_role("user"))],
     responses={
-        404: {"model": MessageErrorBody, "description": "Unknown case."},
+        404: {"model": MessageErrorBody, "description": "Unknown case, or no access."},
         409: {**_ENGINE_FAILURE, "description": "Unsupported contract version."},
         # 422 means two different things here, and both are documented, not one or other.
         422: {
@@ -238,8 +260,19 @@ def create_case(body: CreateCaseRequest) -> CaseDetail:
         503: {**_ENGINE_FAILURE, "description": "A required dataset could not be retrieved."},
     },
 )
-def verify(case_id: str, request: VerificationRequest) -> VerificationResponse:
+def verify(
+    case_id: str,
+    request: VerificationRequest,
+    http_request: Request,
+    access: Annotated[
+        ProjectAccess,
+        Depends(case_dependency(Capability.EDIT, action=Action.START_RUN)),
+    ],
+) -> VerificationResponse:
     """Run the verification pipeline for a case.
+
+    Needs what starting a job needs: a role that may start runs in the organization that owns
+    the case's project. The run is audited (`run.start`).
 
     Synchronous today. The analysis job lifecycle (queue, poll, cancel) is
     tracked separately; this endpoint keeps the same response shape so the
@@ -251,8 +284,15 @@ def verify(case_id: str, request: VerificationRequest) -> VerificationResponse:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     settings = get_settings()
+    # Check explicit data_mode or fallback to request.synthetic
+    if request.data_mode is not None:
+        mode_str = str(request.data_mode).upper()
+        is_synthetic = mode_str not in ("REAL_OBSERVATIONS", "OBSERVED", "REAL")
+    else:
+        is_synthetic = request.synthetic
+
     analysis_request = case.to_request(
-        data_mode="simulated" if request.synthetic else "observed",
+        data_mode="simulated" if is_synthetic else "observed",
         seed=settings.random_seed,
         min_donors=request.min_donors,
     )
@@ -260,13 +300,21 @@ def verify(case_id: str, request: VerificationRequest) -> VerificationResponse:
     try:
         data = (
             synthetic_access(analysis_request, true_effect=request.true_effect)
-            if request.synthetic
+            if is_synthetic
             else earth_engine_access(analysis_request)
         )
     except DataUnavailableError as exc:
         # Observed-data access is refused, never silently served from fixtures.
         raise HTTPException(status_code=501, detail=str(exc)) from exc
 
+    audit(
+        http_request,
+        access.ctx,
+        action="run.start",
+        resource_type="project",
+        resource_id=access.project.id,
+        details={"case_id": case_id, "path": "verify", "data_mode": analysis_request.data_mode},
+    )
     result: AnalysisResult = run_analysis(analysis_request, data)
 
     if result.status is not EngineStatus.COMPLETED:

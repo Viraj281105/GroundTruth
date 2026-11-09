@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { ErrorState, LoadingState } from '../src/components/ui/States';
+import { ErrorState, LoadingState } from '../src/components/ds/States';
 
 /**
  * The two optional props added for issue #40. Without them both components

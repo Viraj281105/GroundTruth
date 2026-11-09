@@ -9,7 +9,17 @@ behind the ``ObservationAccess`` port. Methodology here; credentials, retries
 and caching there.
 """
 
-from groundtruth.engine.observation.indices import evi, nbr, ndvi, savi
+from groundtruth.engine.observation.harmonization import (
+    HarmonizationMethod,
+    LinearCoefficients,
+    SensorHarmonizationAudit,
+    SensorReferenceFrame,
+    get_harmonization_coefficients,
+    harmonize_reflectance,
+    validate_band_overlap,
+    validate_ndvi_overlap,
+)
+from groundtruth.engine.observation.indices import evi, nbr, ndmi, ndvi, savi
 from groundtruth.engine.observation.masking import (
     SCL_INVALID_CLASSES,
     MaskingReport,
@@ -28,18 +38,27 @@ from groundtruth.engine.observation.zonal import (
 
 __all__ = [
     "SCL_INVALID_CLASSES",
+    "HarmonizationMethod",
+    "LinearCoefficients",
     "MaskingReport",
+    "SensorHarmonizationAudit",
+    "SensorReferenceFrame",
     "ZonalStats",
     "apply_edge_buffer_note",
     "apply_mask",
     "audit_masking",
     "composite_median",
     "evi",
+    "get_harmonization_coefficients",
+    "harmonize_reflectance",
     "leakage_belt_note",
     "nbr",
+    "ndmi",
     "ndvi",
     "savi",
     "scl_cloud_mask",
     "valid_observation_counts",
+    "validate_band_overlap",
+    "validate_ndvi_overlap",
     "zonal_stats",
 ]

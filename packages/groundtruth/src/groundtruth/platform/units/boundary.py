@@ -161,3 +161,113 @@ def load_registry_boundary(path: str | Path, *, case_id: str | None = None) -> R
         report=report,
         content_sha256=hashlib.sha256(raw).hexdigest(),
     )
+
+
+@dataclass(frozen=True, slots=True)
+class DonorBoundaryRecord:
+    """One verified candidate donor administrative boundary and its provenance."""
+
+    unit_id: str
+    geometry: dict[str, Any]
+    properties: dict[str, Any]
+    report: GeometryReport
+
+
+@dataclass(frozen=True, slots=True)
+class DonorBoundaryCollection:
+    """A validated collection of candidate donor boundaries and their provenance manifest."""
+
+    case_id: str
+    path: Path
+    content_sha256: str
+    records: dict[str, DonorBoundaryRecord]
+    provenance_manifest: dict[str, Any]
+
+    def feature_map(self) -> dict[str, dict[str, Any] | None]:
+        """Return a mapping of ``unit_id -> GeoJSON Feature | None`` for eligibility checks.
+
+        Includes unverified candidates declared in the provenance manifest with ``None``
+        so ``validate_donor_eligibility(..., require_spatial_provenance=True)`` rejects
+        them explicitly.
+        """
+        out: dict[str, dict[str, Any] | None] = {}
+        for cand in self.provenance_manifest.get("candidates", []):
+            uid = cand.get("unit_id")
+            if isinstance(uid, str):
+                out[uid] = None
+        for uid, rec in self.records.items():
+            out[uid] = {
+                "type": "Feature",
+                "id": uid,
+                "properties": dict(rec.properties),
+                "geometry": dict(rec.geometry),
+            }
+        return out
+
+
+def load_donor_boundaries(
+    path: str | Path,
+    *,
+    provenance_path: str | Path | None = None,
+    case_id: str = "kariba-redd",
+) -> DonorBoundaryCollection:
+    """Load and validate a committed candidate donor boundary GeoJSON FeatureCollection."""
+    p = Path(path)
+    if not p.exists():
+        raise DataUnavailableError(f"no donor boundary artifact at {p}")
+
+    raw = p.read_bytes()
+    content_sha256 = hashlib.sha256(raw).hexdigest()
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except json.JSONDecodeError as exc:
+        raise DataUnavailableError(f"{p} is not valid GeoJSON: {exc}") from exc
+
+    if payload.get("type") != "FeatureCollection":
+        raise DataUnavailableError(f"{p} must be a GeoJSON FeatureCollection")
+
+    features = payload.get("features") or []
+    if not features:
+        raise DataUnavailableError(f"{p} contains zero donor boundary features")
+
+    records: dict[str, DonorBoundaryRecord] = {}
+    for feat in features:
+        if not isinstance(feat, dict) or feat.get("type") != "Feature":
+            raise DataUnavailableError(f"{p} contains a non-Feature entry")
+        props = dict(feat.get("properties") or {})
+        uid = str(feat.get("id") or props.get("unit_id") or "")
+        if not uid:
+            raise DataUnavailableError(f"{p} contains a feature without unit_id")
+        geometry = dict(feat.get("geometry") or {})
+        coords = _multipolygon_coordinates(geometry)
+        report = describe_multipolygon(coords, overlap_bands=400)
+        if not report.is_valid:
+            raise DataUnavailableError(
+                f"donor {uid!r} in {p} fails geometry validation: "
+                f"unclosed={report.unclosed_rings}, "
+                f"self_intersecting={report.self_intersecting_rings}, "
+                f"out_of_range={report.out_of_range_vertices}"
+            )
+        records[uid] = DonorBoundaryRecord(
+            unit_id=uid,
+            geometry=geometry,
+            properties=props,
+            report=report,
+        )
+
+    prov_file = (
+        Path(provenance_path)
+        if provenance_path is not None
+        else p.with_name(f"{p.stem}.provenance.json")
+    )
+    prov_manifest: dict[str, Any] = {}
+    if prov_file.is_file():
+        prov_manifest = json.loads(prov_file.read_text(encoding="utf-8"))
+
+    return DonorBoundaryCollection(
+        case_id=case_id,
+        path=p,
+        content_sha256=content_sha256,
+        records=records,
+        provenance_manifest=prov_manifest,
+    )

@@ -39,6 +39,7 @@ function evidence(overrides: Partial<Evidence> & Pick<Evidence, 'id' | 'value'>)
     confidence: null,
     provenance: provenance(),
     qualifiers: {},
+    state: 'DERIVED',
     ...overrides,
   };
 }

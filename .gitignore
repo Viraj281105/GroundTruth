@@ -44,3 +44,9 @@ artifacts/
 htmlcov/
 .coverage
 .coverage.*
+
+# Test artifacts
+test-results/
+playwright-report/
+cases/e2e-*.yaml
+cases/boundaries/e2e-*.geojson

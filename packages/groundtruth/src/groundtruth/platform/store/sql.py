@@ -216,6 +216,7 @@ def _summary(run: AnalysisRunRow, last_error: dict[str, Any] | None = None) -> R
         engine_version=run.engine_version,
         contract_version=run.contract_version,
         created_at=_as_utc(run.created_at),
+        project_id=run.project_id,
         failure_reason=failure_reason_for(run, last_error),
     )
 
@@ -408,6 +409,8 @@ class SqlEvidenceStore:
             query = query.where(AnalysisRunRow.created_at >= filters.created_after)
         if filters.created_before is not None:
             query = query.where(AnalysisRunRow.created_at < filters.created_before)
+        if filters.project_ids is not None:
+            query = query.where(AnalysisRunRow.project_id.in_(filters.project_ids))
         if after is not None:
             query = query.where(
                 sa.tuple_(AnalysisRunRow.created_at, AnalysisRunRow.run_id)

@@ -26,7 +26,8 @@ export type ConfidenceKind =
   | "permutation"
   | "bootstrap"
   | "analytic"
-  | "sensitivity-envelope";
+  | "sensitivity-envelope"
+  | "assumed-1sigma-interval";
 
 /** An interval with its interpretation. `kind` is a string; see `ConfidenceKind`. */
 export type Confidence = Schemas["Confidence"];

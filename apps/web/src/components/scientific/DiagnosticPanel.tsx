@@ -4,7 +4,7 @@ import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Evidence } from '../../lib/types';
 import { DiagnosticGroup } from '../../lib/diagnostics';
-import { Badge } from '../ui/Badge';
+import { Badge } from '../ds/Badge';
 import styles from './DiagnosticPanel.module.css';
 
 export interface DiagnosticPanelProps {

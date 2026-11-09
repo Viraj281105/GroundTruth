@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, LinkButton } from '../../components/ds';
-import { getApiBaseUrl } from '../../lib/api';
+import { createCase } from './create-case';
 import styles from './NewCaseForm.module.css';
 
 interface Preset {
@@ -162,33 +162,22 @@ export function NewCaseForm() {
       boundary_geojson: parsedGeojson,
     };
 
-    try {
-      const res = await fetch(`${getApiBaseUrl()}/cases`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        router.push(`/cases/${encodeURIComponent(data.case_id)}`);
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        setError(errData.detail || 'Could not create project. Ensure you are signed in.');
-        setLoading(false);
-      }
-    } catch {
-      setError('Network error: Unable to reach analysis service.');
-      setLoading(false);
+    const result = await createCase(payload);
+    if (result.ok) {
+      router.push(`/cases/${encodeURIComponent(result.caseId)}`);
+      return;
     }
+    setError(result.message);
+    setLoading(false);
   }
 
   return (
     <div className={`gt-container ${styles.wrap}`}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Ingest Real Carbon Project</h1>
+        <h1 className={styles.title}>Register a Carbon Project</h1>
         <p className={styles.intro}>
           Register any voluntary carbon market or restoration project for independent causal screening.
-          The platform will configure its donor search region, calibrate comparable non-treated control areas, and fit an empirical synthetic twin.
+          The platform will configure its donor search region and comparable non-treated control areas. Analyses currently run on a synthetic benchmark data provider: live satellite ingestion is not enabled, and the results are not observations of this project.
         </p>
       </header>
 

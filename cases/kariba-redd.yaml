@@ -8,7 +8,7 @@
 # IMPORTANT: `known_reference` below is a published third-party finding. It is
 # NOT an input to the estimate, and the pipeline never reads it. It exists so
 # the validation harness can compare our independent result against it AFTER
-# the fact. No GroundTruth analysis of this project has been run yet.
+# the fact. No real-data GroundTruth analysis of this project has been run; runs to date used SYNTHETIC fixtures only.
 
 case_id: kariba-redd
 status: scaffolded
@@ -56,7 +56,45 @@ analysis:
     Zimbabwe, Zambia and Mozambique miombo woodland outside any registered
     REDD+ or protected-area boundary
   donor_pool_size: 80
-  excluded_donor_ids: []  # populate with districts inside the 10 km leakage belt
+  donor_boundaries_path: cases/boundaries/kariba-donors.geojson
+  donor_provenance_path: cases/boundaries/kariba-donors.provenance.json
+  leakage_belt_km: 10.0
+  # Authoritative ADM2 boundaries obtained from geoBoundaries v6.0.0 (commit 9469f09):
+  #   - Zimbabwe: ZWE-ADM2-62879985 (ZIMSTAT / UN OCHA ROSEA, CC BY 3.0 IGO)
+  #   - Zambia:   ZMB-ADM2-96606910 (GRID3 / Office of the Surveyor General, CC BY 4.0)
+  # Exclusions verified geometrically against cases/boundaries/kariba-redd.geojson:
+  #   1. Primary host districts overlapping the project area (SUTVA violation):
+  #      zw-nyaminyami (3,562.62 km2), zw-mbire (3,445.37 km2),
+  #      zw-binga (2,100.94 km2), zw-hurungwe (1,523.94 km2).
+  #   2. Adjacent districts whose ADM2 boundaries directly overlap the project KML
+  #      (distance = 0.00 km; SUTVA violation):
+  #      zw-gokwe-north (31.78 km2 overlap), zw-makonde (28.74 km2 overlap),
+  #      zw-muzarabani (6.68 km2 overlap), zw-guruve (0.12 km2 overlap).
+  #   3. Duplicate administrative unit & project boundary overlap:
+  #      zw-centenary maps to the same ZIMSTAT ADM2 polygon ('Centenary/ Muzarabani',
+  #      shapeID 62879985B33993196799610) as zw-muzarabani.
+  #   4. Unverified / non-existent administrative boundary:
+  #      zw-uree matches no official ZIMSTAT/geoBoundaries or GADM ADM2 district.
+  #   5. Within the 10.0 km spatial exclusion buffer (ADR-011 leakage belt):
+  #      zm-luangwa (0.30 km across Zambezi River), zm-gwembe (5.25 km across Lake Kariba).
+  #   6. Pre-committed precautionary cross-Zambezi leakage belt exclusions:
+  #      zm-siavonga (15.60 km to project, 0.00 km to host district),
+  #      zm-chirundu (53.24 km to project, 0.00 km to host district Hurungwe).
+  excluded_donor_ids:
+    - zw-hurungwe
+    - zw-binga
+    - zw-mbire
+    - zw-nyaminyami
+    - zw-gokwe-north
+    - zw-makonde
+    - zw-muzarabani
+    - zw-centenary
+    - zw-guruve
+    - zw-uree
+    - zm-luangwa
+    - zm-gwembe
+    - zm-siavonga
+    - zm-chirundu
   covariates:
     - rainfall_mm
     - elevation_m

@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import styles from './Button.module.css';
 
-type Variant = 'primary' | 'secondary' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
 interface CommonProps {

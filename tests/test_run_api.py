@@ -21,6 +21,9 @@ import sqlalchemy as sa
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "tenancy"))
+from world import ORIGIN, build_world, configure_auth, register
+
 from groundtruth.contracts.identifiers import EngineRef, new_run_id
 from groundtruth.contracts.result import (
     AnalysisError,
@@ -119,10 +122,16 @@ def queue(sessions, clock, store) -> JobQueue:
 
 
 @pytest.fixture
-def client(store):
+def client(store, sessions, monkeypatch):
+    """The Reference org's owner, signed in: every run route is project-scoped now.
+
+    Runs these tests create through the store and queue are filed under their case's project
+    before each request (the seed's backfill), as they would be on a seeded database.
+    """
+    configure_auth(monkeypatch)
     app.dependency_overrides[get_store] = lambda: store
-    with TestClient(app) as test_client:
-        yield test_client
+    with TestClient(app, base_url=ORIGIN) as root:
+        yield build_world(root, sessions, wire_jobs=False, backfill=True).client("ref")
     app.dependency_overrides.clear()
 
 
@@ -454,8 +463,9 @@ class TestPaginationIsStable:
             cursor = page["next_cursor"]
         assert [i["run_id"] for page in rest for i in page] == ids[::-1]
 
-    def test_paging_while_another_thread_writes(self, sessions, clock, completed):
+    def test_paging_while_another_thread_writes(self, sessions, clock, completed, monkeypatch):
         """Invariants that hold however the two interleave; nothing depends on timing."""
+        configure_auth(monkeypatch)
         store = SqlEvidenceStore(sessions, clock=clock)
         store.upsert_case(get_case("kariba-redd"))
         originals = [_save(store, clock, completed) for _ in range(40)]
@@ -476,7 +486,8 @@ class TestPaginationIsStable:
         thread = threading.Thread(target=write, daemon=True)
         thread.start()
         try:
-            with TestClient(app) as client:
+            with TestClient(app, base_url=ORIGIN) as root:
+                client = build_world(root, sessions, wire_jobs=False, backfill=True).client("ref")
                 start.wait()
                 seen = _walk(client, limit=7)
         finally:
@@ -984,9 +995,18 @@ class TestStoreUnavailable:
         return TestClient(app)
 
     def _assert_old_endpoints_work(self, client: TestClient) -> None:
+        """``/health`` needs nothing. The case routes are project-scoped now: with no session
+        they answer 401 on their own, without touching the (missing or broken) store."""
         assert client.get("/health").status_code == 200
-        assert client.get("/cases").status_code == 200
-        assert client.get("/cases/kariba-redd").status_code == 200
+        assert client.get("/cases").status_code == 401
+        assert client.get("/cases/kariba-redd").status_code == 401
+
+    def _sign_in(self, client: TestClient, monkeypatch) -> None:
+        """Register and give the user an organization, on the database the app now builds."""
+        configure_auth(monkeypatch)
+        client.headers["Origin"] = ORIGIN
+        assert register(client, "a@example.org").status_code in (200, 201)
+        assert client.post("/orgs", json={"name": "Org", "type": "ngo"}).status_code == 201
 
     def test_no_database_url(self, monkeypatch):
         monkeypatch.setattr(database, "get_settings", lambda: SimpleNamespace(database_url=None))
@@ -1030,6 +1050,7 @@ class TestStoreUnavailable:
     def test_a_configured_database_is_built_once_and_kept(self, monkeypatch, url, sessions):
         monkeypatch.setattr(database, "get_settings", lambda: SimpleNamespace(database_url=url))
         client = self._plain_client()
+        self._sign_in(client, monkeypatch)
         assert client.get("/runs").json()["items"] == []
         first = dependencies.get_store()
         assert dependencies.get_store() is first
@@ -1039,32 +1060,31 @@ class TestStoreUnavailable:
         client = self._plain_client()
         assert client.get("/runs").status_code == 503  # not migrated yet
         migrate.upgrade(url)
+        self._sign_in(client, monkeypatch)
         assert client.get("/runs").status_code == 200  # fixed, with no restart
 
-    def test_a_database_that_stops_answering_mid_request(self):
+    def test_a_database_that_stops_answering_mid_request(self, client, sessions):
         class Dying:
+            _sessions = sessions  # sign-in still works; only the run listing fails
+
             def list_runs(self, *a, **k):
                 raise sa.exc.OperationalError(
                     "SELECT", {}, Exception("server closed the connection")
                 )
 
         app.dependency_overrides[get_store] = lambda: Dying()
-        try:
-            response = TestClient(app).get("/runs")
-        finally:
-            app.dependency_overrides.clear()
+        response = client.get("/runs")
         assert response.status_code == 503 and _error(response)["code"] == "store_unavailable"
 
-    def test_inconsistent_stored_data_is_a_500_with_a_code(self):
+    def test_inconsistent_stored_data_is_a_500_with_a_code(self, client, sessions):
         class Corrupt:
+            _sessions = sessions
+
             def list_runs(self, *a, **k):
                 raise StoreError("run 'x' completed but has no stored bundle")
 
         app.dependency_overrides[get_store] = lambda: Corrupt()
-        try:
-            response = TestClient(app).get("/runs")
-        finally:
-            app.dependency_overrides.clear()
+        response = client.get("/runs")
         assert response.status_code == 500 and _error(response)["code"] == "store_error"
 
 

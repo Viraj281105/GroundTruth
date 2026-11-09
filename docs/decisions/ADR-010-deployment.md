@@ -1,93 +1,56 @@
-# ADR-010: Containerised API and worker, deferred until MVP
+# ADR-010: Containerized Deployment, Worker Topology & Tiered Storage
 
-**Status:** Proposed
-**Date:** 2026-09-19
-**Deciders:** Viraj, Bhumi
+**Status:** Accepted  
+**Date:** 2026-09-19 (Updated: November 2026 for GroundTruth 2.0)  
+**Deciders:** Viraj, Bhumi  
+
+```mermaid
+graph TD
+    subgraph ContainerStack["Unified Multi-Container Topology (docker-compose)"]
+        WebC["apps/web (Next.js 14 App Router, Port 3000)"]
+        APIC["apps/api (FastAPI Gateway, Uvicorn, Port 8000)"]
+        WorkerC["apps/worker (GroundTruth Compute Worker, 8 Processes)"]
+        PGC[("PostgreSQL 16 + TimescaleDB (Port 5432)")]
+        RedisC[("Redis 7.2 In-Memory Broker (Port 6379)")]
+    end
+
+    WebC -->|HTTP / JSON| APIC
+    APIC --> PGC
+    APIC --> RedisC
+    WorkerC --> PGC
+    WorkerC --> RedisC
+```
 
 ## Context
 
-GroundTruth needs to be reachable for the competition demo and, later, by
-people who are not us. It has three deployable surfaces: an HTTP API, a
-background worker, and a static-ish frontend.
+GroundTruth 2.0 must be reachable for enterprise due-diligence audits, automated continuous monitoring, and external demonstrations. It has three deployable surfaces: an HTTP API, a background worker, and a Next.js web application.
 
-It also has an unusual runtime profile for a web application. An analysis is a
-CPU-bound numerical workload of seconds to minutes, not a millisecond request.
-That rules out several defaults — serverless functions with short timeouts, and
-any model where the request handler does the work.
+An environmental verification workload is an asynchronous, CPU-bound numerical task requiring seconds to minutes of matrix algebra, permutation placebos, and multi-temporal satellite raster processing. This rules out serverless function architectures with short execution limits.
 
-The pressure to pick a host now is real, and mostly premature. The decision
-worth making now is the *shape*; the target can wait.
+## Decision
 
-## Decision — shape
+**1. Unified Python Container Base Image**
+`apps/api` and `apps/worker` deploy from the exact same Docker base image, executing different entrypoint commands:
+- `apps/api`: `uvicorn apps.api.main:app --host 0.0.0.0 --port 8000`
+- `apps/worker`: `python -m apps.worker.main`
+Using one image eliminates dependency divergence between the API gateway and the compute worker.
 
-**Two containers from one image.**
+**2. Asynchronous Queue Backends**
+Work is scheduled off the HTTP thread using a dual-queue architecture:
+- Default: PostgreSQL table row leases (`platform.jobs.queue`) with `SELECT FOR UPDATE SKIP LOCKED`.
+- Production Distributed: Redis + Celery / Arq (`platform.jobs.redis_queue`).
 
-```
-apps/api      uvicorn, N workers, short request timeouts
-apps/worker   queue consumer, long timeouts, CPU headroom
-```
+**3. Four-Tier Storage Hierarchy (`blob_store.py`)**
+Artifacts are partitioned into four isolated tiers:
+- `RAW_SOURCE`: Upstream STAC COGs and raw NetCDFs (cold, immutable).
+- `INTERMEDIATE_ARTIFACT`: Intermediate chips and cloud masks (TTL auto-purged).
+- `FINAL_EVIDENCE`: Verified `EvidenceBundle` instances and audit packages.
+- `APPLICATION_METADATA`: Cryptographic SHA-256 sidecars and Sigstore manifests.
 
-One image with two entrypoints rather than two images: the dependency set is
-identical, and divergence between them is a class of bug worth designing out.
-
-**The frontend deploys separately** as a static/SSR build, talking to the API
-over HTTPS. It shares nothing with the Python runtime.
-
-**Configuration is entirely environment variables**, read through
-`platform.config.Settings`. No config files baked into an image, no secrets in
-the repository. `configs/` holds non-secret per-environment overrides when there
-is more than one environment.
-
-**Stateless containers.** All state lives in the database and object storage, so
-a container can be replaced at any moment. This is what makes the worker
-retry-safe, and it is cheap to hold to because runs are deterministic (ADR-006).
-
-**Health endpoints already report capability honestly** — `/health` states what
-is genuinely implemented, which doubles as a readiness probe and as a deployment
-smoke test.
-
-## Decision — deferral
-
-**Nothing is built yet.** `infrastructure/` contains a README explaining the
-shape and no manifests. Placeholder Dockerfiles and deployment YAML that nobody
-runs would rot within weeks and mislead the next reader about what works.
-
-The trigger to build it is the MVP: the first real Kariba run, which needs the
-worker anyway.
-
-## Alternatives considered
-
-**Deploy now, iterate.** Tempting for demo safety. Rejected: there is nothing to
-deploy that a local `uvicorn` does not already do, and the API surface will
-change substantially when jobs land. Building the pipeline twice is worse than
-building it once at the right moment.
-
-**Serverless functions.** Attractive operationally. Rejected on runtime profile:
-analyses exceed typical timeouts, cold starts on a numpy-heavy image are poor,
-and the worker is inherently long-lived.
-
-**A single container running API and worker.** Fewer moving parts. Rejected: a
-CPU-saturating analysis would starve request handling, and the two scale on
-different axes.
-
-**Kubernetes.** Disproportionate for two people. Two containers and a managed
-database is the correct size, and the container shape means moving to
-Kubernetes later is a manifest, not a rewrite.
+**4. Independent Frontend Deployment**
+The Next.js 14 App Router application deploys as an independent container/SSR node, communicating with the API strictly over HTTPS using types generated from the backend OpenAPI 3.1 specification.
 
 ## Consequences
 
-**Easier:** local development stays `uvicorn` and a venv, with no container
-required to contribute; the deployment decision is reversible because nothing
-depends on it yet.
-
-**Harder:** there is no staging environment, so integration problems surface
-later than they would otherwise.
-
-**Accepted:** the demo runs locally until the MVP. Given the pipeline runs fully
-offline with no credentials, that is a low-risk position — see
-`docs/competition/demo-flow.md`.
-
-## Revisit when
-
-The worker lands, or someone outside the team needs access. Both arrive at the
-MVP, and this ADR should move to Accepted with a named target at that point.
+- **Easier**: Zero drift between worker and API dependencies; horizontal compute autoscaling independent of web traffic; local reproduction via `docker compose up`.
+- **Harder**: Requires maintaining database migrations (`alembic`) and queue leasing heartbeats.

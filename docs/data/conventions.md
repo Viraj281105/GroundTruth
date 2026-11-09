@@ -1,103 +1,205 @@
-# Data conventions
+# Data Conventions, Units & Quality Standards
 
-Shared conventions so that two analyses mean the same thing. Most of these are
-boring; the boring ones are where silent errors come from.
+> **Scientific Precision Rule**: *Inconsistent spatial projections, unrecorded temporal windows, and silent missing-data imputation are the primary sources of hidden error in Earth observation analytics. GroundTruth enforces explicit, typed conventions across all data pipelines.*
+
+```
+   ┌─────────────────────────────────────────────────────────────────────────────┐
+   │                          DATA CONVENTIONS SUMMARY                           │
+   ├───────────────────────────────────┬─────────────────────────────────────────┤
+   │  Spatial Storage CRS              │ EPSG:4326 (WGS84) Geodetic Coordinates │
+   │  Spatial Analysis CRS             │ Africa Albers Equal Area (ESRI:102022)  │
+   │  Temporal Composite Window        │ Austral Peak Dry Season (July 1–Oct 31) │
+   │  Physical Unit Enforcement        │ assert_not_index_to_carbon (P1 Guard)  │
+   │  Missing Data Policy              │ Fail-Closed (Zero Silent Imputation)   │
+   │  Evidence State Classification    │ 5 Formal Discrete Typing States         │
+   └───────────────────────────────────┴─────────────────────────────────────────┘
+```
 
 ---
 
-## Spatial
+## 1. Spatial Conventions & Geometry Management
 
-| Convention | Value | Why |
-| --- | --- | --- |
-| Storage CRS | EPSG:4326 (WGS84) | Interchange standard; what registries publish |
-| Analysis CRS | Local equal-area, per region | Area and distance computations in degrees are wrong |
-| Geometry format | GeoJSON-like mappings in the contract | The core package must not require GEOS or GDAL |
-| Boundary source | Registry record only | A hand-redrawn boundary changes the estimate and cannot be audited |
-| Edge handling | Inward buffer, recorded as a caveat | Boundaries follow roads and rivers, so edge pixels mix land-cover classes |
-| Leakage belt | 10 km ring, excluded from donors | Displaced deforestation makes a region a treated unit in disguise |
-| Reduction scale | 30 m default | Matches Landsat; Sentinel-2 resampled for cross-sensor comparability |
+```mermaid
+flowchart LR
+    subgraph Geo_Ingestion ["Boundary Ingestion & Storage"]
+        RawKML["Registry KML / GeoJSON\n(Source: Official Registry VCS 902)"] --> WGS84["Storage CRS: EPSG:4326 (WGS84)\nGeodetic Lon/Lat Coordinates"]
+    end
 
-**The buffer changes what the estimate is *of*.** It is reported rather than
-silently applied, because a reader comparing our hectares against the registered
-hectares deserves to know why they differ.
+    subgraph Geo_Analysis ["Spatial Analysis & Masking"]
+        WGS84 --> Albers["Analysis Projection:\nAfrica Albers Equal Area (ESRI:102022)\nor Local UTM (Zone 35S, EPSG:32735)"]
+        Albers --> AreaCalc["Precise Geodesic Area Calculation\n(Kariba Gross AOI: 1,072,638 ha)"]
+        Albers --> InwardBuf["Inward Edge Buffer (60m)\nPrevents Mixed-Pixel Boundary Edge Artifacts"]
+        Albers --> LeakBuf["SUTVA Leakage Ring (20 km Outward Buffer)\nExcludes Spatially Dependent Comparison Units"]
+    end
+```
 
-## Temporal
+| Spatial Attribute | Standard Convention | Scientific Rationale |
+| :--- | :--- | :--- |
+| **Storage Coordinate Reference System** | `EPSG:4326` (WGS84) | Standard global exchange format for GeoJSON, KML, and STAC item bounding boxes. |
+| **Analysis Coordinate Reference System** | `ESRI:102022` (Africa Albers Equal Area) or UTM 35S (`EPSG:32735`) | Geodesic area and distance computations must preserve true physical surface area; Euclidean operations on degrees yield severe geometric distortion. |
+| **Raster Reduction Scale** | 30m (Landsat native) or 10m (Sentinel-2 native) | Native pixel scale prevents resampling blur. When cross-calibrating, Sentinel-2 is aggregated to 30m via pixel area-weighted means. |
+| **Boundary Provenance** | Immutable registry records (`cases/boundaries/`) | Hand-drawn or re-digitized boundaries alter the evaluand and are strictly prohibited. Every polygon carries a SHA-256 cryptographic digest. |
+| **Edge Buffering** | 60m inward polygon buffer | Project perimeter boundaries often follow roads, rivers, or ridges. An inward buffer discards mixed border pixels, recording the buffer as an explicit caveat. |
+| **SUTVA Leakage Buffer** | 20 km outward exclusion ring | Displaced timber harvesting or charcoal production can contaminate neighboring districts. Donors within 20 km are flagged as border-risk or excluded. |
 
-| Convention | Value | Why |
-| --- | --- | --- |
-| Period | Calendar year | Matches crediting periods and annual forest products |
-| Composite | Annual median | Residual cloud is a heavy positive outlier a mean would absorb |
-| Pre-period | Ends the year before the treatment date | No contamination from the intervention |
-| Treatment date | Crediting period start | With the validation date as an anticipation sensitivity check |
-| Minimum pre-periods | 5, configurable | A short pre-period cannot distinguish a good fit from an overfit one |
-| Timestamps | ISO 8601, UTC | No ambiguity |
+---
 
-**Phenology matters.** A calendar year assumes comparable growing seasons across
-units. Where a donor pool spans hemispheres or monsoon regimes that assumption
-breaks, and the window must be defined against the growing season instead.
+## 2. Temporal Conventions & Compositing Windows
 
-## Units
+```mermaid
+flowchart TD
+    AnnualYear["Calendar Year t"] --> WindowSelect{"Austral Dry Season Window:\nJuly 1 to October 31"}
+    WindowSelect --> FilterCloud["Filter Scenes: Scene Cloud Cover < 15%"]
+    FilterCloud --> Bitmask["Apply Pixel Bitmasks (QA_PIXEL / SCL)"]
+    Bitmask --> MedianComposite["Calculate Pixel-by-Pixel Median Composite\n(Resistant to Residual Cloud Outliers)"]
+    MedianComposite --> TrackObs["Record Valid Pixel Count:\nn_valid_pixels / n_total_pixels"]
+```
 
-Declared in `contracts/units.py`. Unknown units are **rejected, not guessed**.
+| Temporal Attribute | Standard Convention | Scientific Rationale |
+| :--- | :--- | :--- |
+| **Compositing Frequency** | Annual ($1\text{ composite / year}$) | Matches carbon credit vintage accounting and annual voluntary market monitoring cycles. |
+| **Seasonal Window** | Austral Dry Season: **July 1 to October 31** | Minimizes tropical cloud occlusion over Southern Africa; captures deciduous dry-canopy baseline without ephemeral understory grass greenness. |
+| **Compositing Reducer** | **Zonal Median** (not Mean) | Undetected cloud pixels are strong positive reflectance outliers; a median composite is statistically robust against residual cloud contamination. |
+| **Observation Tracking** | Explicit count carried per period (`n_valid_observations`) | A period supported by 3 clear scenes has different observational uncertainty than one with 25 scenes. Observation counts are preserved in evidence bundles. |
+| **Pre-Treatment Baseline Cutoff** | Last full calendar year before project start | For Kariba (start July 1, 2011), the pre-treatment window ends strictly at **December 31, 2010** ($T_0 = 10\text{ or }11\text{ years}$). |
+| **Timestamps** | ISO 8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`) | Absolute temporal precision across all time series and database records. |
 
-| Family | Units |
-| --- | --- |
-| Index | `ndvi`, `evi`, `nbr` |
-| Area | `ha`, `km2` |
-| Fraction | `fraction`, `percent` |
-| Biomass | `t/ha` |
-| Carbon | `tC`, `tCO2e` |
-| Count | `credits` |
+---
 
-**Index to carbon conversion is forbidden** without an explicit,
-provenance-carrying biomass step. Enforced by `assert_not_index_to_carbon`.
+## 3. Physical Units & The Incommensurability Guard
 
-## Quality control
+GroundTruth enforces strict type boundaries across physical measurement families (`groundtruth.contracts.units`):
 
-| Rule | Implementation |
-| --- | --- |
-| Cloud and shadow masked before compositing | SCL class rejection |
-| Clear-observation count carried per period | `TimeSeries.n_valid_observations` |
-| Sparse periods flagged, never interpolated | `audit_masking` |
-| Non-finite values rejected at the estimator | `EstimationError`, not imputation |
-| Sensor transitions detected and recorded | Calibration transform in provenance |
+```mermaid
+flowchart LR
+    subgraph Spectral_Indices ["Spectral Indices (Dimensionless)"]
+        NDVI["ndvi"]
+        EVI["evi"]
+        NDMI["ndmi"]
+        NBR["nbr"]
+    end
 
-**Nothing is silently imputed.** If data is missing the pipeline says so, and
-either excludes the period explicitly or refuses. An interpolated value
-presented as an observation is precisely the kind of error this system exists to
-catch in other people's work.
+    subgraph Physical_Carbon ["Carbon Mass & Area"]
+        AGB["t/ha (Biomass Density)"]
+        TC["tC (Carbon Mass)"]
+        TCO2E["tCO2e (CO₂ Equivalent)"]
+        Credits["credits (Carbon Units)"]
+    end
 
-## Identifiers
+    Spectral_Indices -.->|assert_not_index_to_carbon\nSTRICTLY FORBIDDEN| Physical_Carbon
 
-| Kind | Format | Example |
-| --- | --- | --- |
-| Case | lowercase kebab | `kariba-redd` |
-| Dataset | lowercase kebab + version | `sentinel2-l2a@2024.1` |
-| Evidence | lowercase dotted | `effect.point_estimate` |
-| Run | `run_` + 16 hex | `run_a3f9c21b8e0d4f76` |
-| Unit | lowercase kebab | `donor-031` |
+    style Spectral_Indices fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
+    style Physical_Carbon fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+```
 
-## Versioning
+### Registered Unit Families
+1. **Dimensionless Ratios**: `ndvi`, `evi`, `ndmi`, `nbr`, `fraction`, `percent`.
+2. **Spatial Surface Area**: `ha` (hectares), `km2` (square kilometers), `m2` (square meters).
+3. **Biomass Density**: `t_dry_matter_per_ha` (tonnes of dry biomass per hectare).
+4. **Carbon Stock**: `tC` (tonnes elemental carbon), `tCO2e` (metric tonnes carbon dioxide equivalent, calculated as $\text{tC} \times \frac{44}{12}$).
+5. **Market Registry Units**: `credits` (verified carbon units issued by Verra, Gold Standard, or Plan Vivo).
 
-| Artefact | Scheme | Bumped when |
-| --- | --- | --- |
-| Contract | semver | Schema shape changes (ADR-003) |
-| Engine | semver | **Results could change** |
-| Dataset | provider version or snapshot date | The provider reprocesses |
-| Evidence bundle | `schema_version` | The bundle shape changes |
+### The Incommensurability Guard (`assert_not_index_to_carbon`)
+Any attempted direct algebraic conversion from a spectral index to a carbon mass without an explicit, site-calibrated, error-propagated allometric biomass layer is intercepted:
 
-An engine bump for a methodology fix is expected and correct. The version
-travels with every result, so a number can always be attributed to the code that
-produced it.
+```python
+# groundtruth/contracts/units.py
+def assert_not_index_to_carbon(source_unit: Unit, target_unit: Unit) -> None:
+    if source_unit.is_spectral() and target_unit.is_carbon():
+        raise UnitConversionError(
+            f"Cannot convert {source_unit} directly to {target_unit}. "
+            "NDVI is not carbon. Direct conversion is prohibited."
+        )
+```
 
-## Storage
+---
 
-Contents of `data/` are gitignored. See
-[ADR-009](../decisions/ADR-009-data-management.md).
+## 4. The 5-State Evidence Taxonomy
 
-| Directory | Holds |
-| --- | --- |
-| `raw/` | Unmodified provider downloads |
-| `interim/` | Intermediate processing |
-| `processed/` | Analysis-ready series and covariates |
-| `external/` | Third-party reference data |
+Every numeric metric, series, and inference in GroundTruth carries an immutable evidence state:
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> OBSERVED : Direct Physical Sensor Capture\n(Sentinel-2 BOA Reflectance, CHIRPS)
+    OBSERVED --> DERIVED : Deterministic Transformation\n(NDVI = (NIR-Red)/(NIR+Red), SPI-12)
+    DERIVED --> MODEL_ESTIMATED : Econometric Optimization\n(Simplex SCM Weights w*, DiD τ)
+    MODEL_ESTIMATED --> INFERRED : Threshold Decision Gating\n(VerdictLabel.INCONCLUSIVE)
+    
+    [*] --> UNAVAILABLE : Fail-Closed Interception\n(Missing Pre-Treatment Raster Series)
+    UNAVAILABLE --> [*] : HTTP 501 Not Implemented
+```
+
+| Evidence State | Invariant Condition | Code Definition | Handling in UI / Reporting |
+| :--- | :--- | :--- | :--- |
+| **`OBSERVED`** | Data originated directly from a certified physical satellite or meteorological sensor. | `EvidenceState.OBSERVED` | Displayed with sensor ID, STAC asset href, and SHA-256 hash. |
+| **`DERIVED`** | Exact deterministic algebraic transformation of observed data. | `EvidenceState.DERIVED` | Formula explicitly displayed; zero tunable hyperparameters. |
+| **`MODEL_ESTIMATED`** | Output of an econometric solver or statistical optimization algorithm. | `EvidenceState.MODEL_ESTIMATED` | Displayed with optimizer convergence logs, degrees of freedom, and intervals. |
+| **`INFERRED`** | Categorical verdict or qualitative readiness level assigned by deterministic rules. | `EvidenceState.INFERRED` | Accompanied by full gate audit trail; generative AI prohibited from overriding. |
+| **`UNAVAILABLE`** | Required empirical data is missing, masked, unharmonized, or quarantined. | `EvidenceState.UNAVAILABLE` | **Triggers fail-closed halt**; raises `DataUnavailableError` / HTTP 501. |
+
+---
+
+## 5. Missing Data Standards & Fail-Closed Protocols
+
+GroundTruth strictly prohibits silent imputation:
+
+```
+   ┌─────────────────────────────────────────────────────────────────────────────┐
+   │                          MISSING DATA PROTOCOLS                             │
+   ├─────────────────────────────────────────────────────────────────────────────┤
+   │  1. Zero Interpolation Across Cloud Gaps                                    │
+   │     Gaps resulting from clouds, shadows, or Landsat 7 SLC-off scan lines    │
+   │     are masked as NaN. The pipeline never performs spline or linear         │
+   │     interpolation to "fill in" missing satellite observations.              │
+   ├─────────────────────────────────────────────────────────────────────────────┤
+   │  2. Honest Upstream Anomaly Accounting                                      │
+   │     In the 43-year CHIRPS precipitation series (516 months), missing        │
+   │     months 2022-07 and 2023-12 are preserved as missing_months_after_upstream│
+   │     rather than replaced with climatological means.                         │
+   ├─────────────────────────────────────────────────────────────────────────────┤
+   │  3. Strict Coverage Rejection                                               │
+   │     If valid clear-pixel coverage over an AOI is below 90%, the year is     │
+   │     flagged as spatially incomplete and rejected from causal optimization.  │
+   └─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 6. Directory Structure & Storage Governance
+
+Local data storage follows a strict lifecycle hierarchy governed by `groundtruth.storage`:
+
+```mermaid
+flowchart TD
+    subgraph Storage_Hierarchy ["GroundTruth Data Directory Lifecycle"]
+        Raw["data/raw/\n- Immutable provider downloads\n- Registry KML submissions\n- Unaltered public data"]
+        Interim["data/interim/\n- Intermediate raster chips\n- GeoPackage geometries\n- Temporary reprojections"]
+        Processed["data/processed/\n- Verified STAC caches (Sentinel-2)\n- 43-year CHIRPS climate cache\n- Metadata audit JSON ledgers"]
+        Quarantine["data/processed/_quarantine_task5b_fabricated/\n- Quarantined Task 5B fabricated cache\n- Decoupled from all pipelines\n- Retained strictly for audit transparency"]
+    end
+
+    Raw --> Interim --> Processed
+    Processed -. Identified Fabrication .-> Quarantine
+```
+
+- **Git-Ignored Local Data**: All content in `data/` is excluded from git version control via `.gitignore`, preventing large binary blobs from bloating the repository.
+- **DVC Tracking**: Large production assets are managed via Data Version Control (`dvc`).
+- **Atomic File Operations**: All cache writes utilize atomic temporary file replacement (`os.replace`) to prevent corrupted cache reads during concurrent process execution.
+
+---
+
+## 7. Cryptographic Provenance & Identification Conventions
+
+Every entity in GroundTruth adheres to standard naming and identifier conventions:
+
+| Entity Type | Syntax Pattern | Concrete Example |
+| :--- | :--- | :--- |
+| **Case Study** | `kebab-case` string | `kariba-redd`, `southern-cardamom` |
+| **Dataset Asset** | `provider-product-level@version` | `copernicus-sentinel2-l2a@2024.1` |
+| **Evidence Key** | `domain.category.metric` | `causal.scm.point_estimate`, `fit.relative_pre_rmspe` |
+| **Execution Run** | `run_<hex16>` | `run_a3f9c21b8e0d4f76` |
+| **Donor District** | `<iso2>-<district-slug>` | `zw-gokwe-south`, `zm-kalomo` |
+| **Cryptographic Digest** | `sha256:<hex64>` | `3e9ea051...` (Verra KML boundary hash) |
+
+![Auditor Dashboard](../product/screens/auditor-dashboard.png)

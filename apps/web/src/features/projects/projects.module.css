@@ -1,0 +1,24 @@
+.header { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); }
+.header h1 { font-size: var(--text-3xl); margin: 0; }
+.meta { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); }
+.badges { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.stack { display: flex; flex-direction: column; gap: var(--space-5); margin-top: var(--space-4); }
+.grid2 { display: grid; gap: var(--space-5); grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
+.tableWrap { overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); }
+.table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.table th { text-align: left; font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; color: var(--text-muted); padding: var(--space-2) var(--space-3); background: var(--surface-sunken); white-space: nowrap; }
+.table td { padding: var(--space-2) var(--space-3); border-top: 1px solid var(--border-subtle); vertical-align: top; }
+.libraryNote { color: var(--text-muted); font-style: italic; }
+.form { display: grid; gap: var(--space-4); max-width: 36rem; }
+.field { display: flex; flex-direction: column; gap: var(--space-1); }
+.field label { font-size: var(--text-sm); font-weight: 600; }
+.field input, .field select { padding: var(--space-2) var(--space-3); border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--text-primary); font: inherit; }
+.hint { color: var(--text-muted); font-size: var(--text-xs); }
+.error { color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: var(--space-3); background: var(--surface-sunken); font-size: var(--text-sm); }
+.actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.muted { color: var(--text-muted); font-size: var(--text-sm); }
+.section { display: flex; flex-direction: column; gap: var(--space-3); }
+.section h2 { font-size: var(--text-lg); margin: 0; }
+.inline { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: end; }
+.inline select, .inline input { padding: var(--space-2) var(--space-3); border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--text-primary); font: inherit; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

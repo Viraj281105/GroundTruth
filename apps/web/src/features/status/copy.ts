@@ -1,3 +1,13 @@
+/** Scientific integrity notices for data mode, biomass calibration, and uncertainty reporting. */
+export const SCIENTIFIC_INTEGRITY_NOTICES = {
+  dataModeNotice:
+    'All bundled demonstrations run on deterministic SYNTHETIC fixtures. Real satellite ingestion is not enabled unless live Earth Observation credentials and pipelines are active.',
+  calibrationNotice:
+    'NOT CALIBRATED: NDVI is a spectral reflectance ratio, not a carbon stock. Carbon conversion is refused unless a sourced, site-calibrated biomass model is supplied.',
+  uncertaintyNotice:
+    'Sensitivity envelopes report the range across specifications or leave-one-out refits (not a 95% confidence interval). Calibrated biomass error propagation reports a one-sigma (~68%) interval under assumed model error.',
+} as const;
+
 /** English copy for the status page. Honest status: implemented or not, nothing in between. */
 export const STATUS_COPY = {
   title: 'System status',
@@ -44,4 +54,18 @@ export const STATUS_COPY = {
     earth_observation: 'Earth-observation data retrieval',
     genai_narration: 'AI-written report narration',
   } as Record<string, string>,
+  capabilityDescriptions: {
+    synthetic_control: 'Constrained convex combination of untreated donor units tracking pre-intervention series.',
+    placebo_inference: 'Finite-sample permutation inference across untreated donor units with floor 1 / (N + 1).',
+    in_space_placebo: 'Reassigns the intervention to each eligible untreated donor unit in turn.',
+    in_time_placebo: 'Backdates the intervention within the pre-intervention window.',
+    leave_one_out: 'Re-estimates the synthetic control while omitting one active donor at a time.',
+    specification_curve: 'Evaluates sensitivity across alternative donor pools and covariate specifications.',
+    biomass_carbon_conversion:
+      'Requires a sourced, site-calibrated biomass model (NOT CALIBRATED by default because NDVI is a spectral reflectance ratio, not carbon).',
+    cross_sensor_calibration: 'Harmonizes spectral measurements across satellite sensors before comparison.',
+    earth_observation: 'Retrieves satellite series when live Earth Observation credentials and pipelines are active.',
+    genai_narration: 'Summarizes verified evidence bundle numbers without computing or altering estimates.',
+  } as Record<string, string>,
+  scientificIntegrityNotices: SCIENTIFIC_INTEGRITY_NOTICES,
 } as const;

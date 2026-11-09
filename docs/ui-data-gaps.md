@@ -1,38 +1,43 @@
-# UI data gaps
+# UI Data Gaps & Scientific Transparency
 
-Places where the UI cannot show something because the API does not return it. The UI says so
-instead of computing or inventing values (R6).
+**Standard**: Non-Negotiable Presentation Invariant (R6)  
+**Core Rule**: If the analytical engine or API does not serve a real measurement, the user interface **states so explicitly** rather than computing, interpolating, or inventing values.
 
-## Counterfactual Playground (`src/features/case/playground`)
+```mermaid
+stateDiagram-v2
+    [*] --> RequestData: View Component Mounted
+    RequestData --> CheckAPIResponse: Parse Response Payload
+    
+    CheckAPIResponse --> RenderMeasured: Data Returned & Verified
+    RenderMeasured --> [*]: Render Scientific Chart & Provenance
 
-True live scrubbing needs the API to return, or compute on request:
+    CheckAPIResponse --> RenderExplicitGap: Data Field Not Served / Null
+    RenderExplicitGap --> ShowHonestNotice: Display "Not Served by Engine" Label
+    ShowHonestNotice --> [*]: Zero Speculative Extrapolation
 
-- **Per-year counterfactual.** The counterfactual path is only served for the engine's own
-  intervention year, and only in the demo fixture (`not_served_by_api.counterfactual_path`).
-  Moving the intervention year therefore moves the marker and post-period shading only. Showing a
-  re-fitted path needs a `POST /runs` variant that accepts `treatment_year` and returns the series.
-- **Estimate for an arbitrary year.** Only the engine's `treatment-N-earlier` specifications
-  (`robustness.spec_curve.estimate.*`) are shown, when they exist. Later-than-engine years have none.
-- **Leave-one-out per donor.** Only the aggregate `robustness.max_absolute_shift` and
-  `robustness.sign_stable` are returned. Toggling a donor off cannot show a new estimate; the view
-  sums the returned weights of the donors switched off and offers "Re-run with this change".
-- **All donor weights.** `fit.donor_weight.N` carries only the largest weights, so the Playground
-  lists those donors only.
-- **Run parameters.** `/cases/{id}/run?treatment_year=..&exclude_donors=..` is a proposed
-  contract. `SubmitJobRequest` has no field for a treatment year or a donor exclusion list yet.
+    CheckAPIResponse --> RenderRefusal: Response is Engine Refusal
+    RenderRefusal --> ShowRefusalPanel: Display Structured Remediation Guidance
+    ShowRefusalPanel --> [*]
+```
 
-## Evidence page
+![Cross-Organization Access Denied](product/screens/cross-org-denied.png)
 
-- The observed/synthetic series, the placebo distribution and the per-candidate donor table are not
-  returned by `GET /runs/{id}`; they exist only in the demo fixture. For a stored run the page shows
-  an explicit "not served" note and the numeric evidence.
-- There is no "latest run for a case" endpoint, so a stored run is opened with `?run=<run_id>`.
+---
 
-## Donor map (`src/features/case/map`)
+## 1. Documented UI Data Gaps & Honest States
 
-- `GET /cases/{id}/boundary.geojson` gives the project boundary only. Donor regions are shaded by
-  weight only when a feature carries `properties.role = "donor"` and a numeric `properties.weight`;
-  no donor geometry exists in the data today, and the map says so.
-- Basemap tiles are not requested (no external tile dependency); the map is boundary-only.
-- `maplibre-gl` 4.7.1 is a dependency; if it cannot load, the map falls back to a text summary
-  (bounding box, centre).
+### 1.1 Counterfactual Playground (`src/features/case/playground`)
+- **Scrubbing Intervention Years**: True live counterfactual scrubbing requires re-solving the simplex quadratic program for each candidate year. When moving the intervention year marker to an uncomputed year, the UI shifts the marker line and shading, but explicitly displays:
+  > *"Counterfactual path is computed for the declared intervention boundary (2011). Re-running the econometric estimator is required to generate counterfactuals for alternative years."*
+- **Leave-One-Out Donor Toggling**: When a user toggles a donor off in the interactive playground, the UI sums the weights of deactivated donors and offers a *"Re-run analysis with these exclusions"* button, rather than attempting to guess the re-weighted synthetic trajectory in the browser.
+
+### 1.2 Real-Data Observations & Readiness Gaps
+- **Real-Data Attribution**: In `REAL_OBSERVATIONS` mode, when pre-treatment Landsat 5/7 surface reflectance mosaics are incomplete or sensor harmonization is pending validation, the UI displays:
+  > *"ATTRIBUTION VERDICT: INCONCLUSIVE (not estimable from available real data)"*
+- It never substitutes simulated benchmark numbers under a real-data label.
+
+![Kariba Overview](product/screens/kariba-overview.png)
+
+### 1.3 Geospatial Boundary & Donor Mapping (`src/features/case/map`)
+- When viewing candidate donor districts, only features with verified geometries from `kariba-donors.geojson` are rendered.
+- If donor boundary geometries are pending cloud ingestion, the map falls back to an honest vector boundary view of the treated project AOI ($1,072,638\text{ ha}$) rather than displaying synthetic bounding boxes.

@@ -12,7 +12,7 @@ import { FitDiagnostics } from '../../../components/scientific/FitDiagnostics';
 import { PlaceboDiagnostics } from '../../../components/scientific/PlaceboDiagnostics';
 import { DonorPoolPanel } from '../../../components/scientific/DonorPoolPanel';
 import { DonorCandidatePanel } from '../../../components/scientific/DonorCandidatePanel';
-import { ProvenanceDrawer } from '../../../components/ui/ProvenanceDrawer';
+import { ProvenanceDrawer } from '../../../components/ds/ProvenanceDrawer';
 import { getDonorCandidateSummary } from '../../../lib/api';
 import { Playground } from '../playground/Playground';
 import { DonorMap } from '../map/DonorMap';
@@ -23,6 +23,7 @@ import { Section, Term } from './Term';
 import { BigNumbers, Card, FitAndPDonuts, LensCaption, TimelineStrip } from './VizBits';
 import { donorBars, gapSeries, placeboBins, storyNumbers, storySentence } from './viz-model';
 import { COPY } from './copy';
+import { EvidenceScope, KindBadge, SourceBanner, VizLimitation } from './EvidenceProvenance';
 import styles from './evidence.module.css';
 import vz from './viz.module.css';
 
@@ -35,7 +36,7 @@ export function EvidenceView() {
   return (
     <div className={styles.page}>
       <CaseDataGate state={state} caseId={caseId}>
-        {({ caseDetail, items, viz, isDemo }) => {
+        {({ caseDetail, items, viz, origin, runId }) => {
           const treatmentYear =
             numberValue(findEvidence(items, 'fit.treatment_boundary_period')) ??
             (caseDetail ? parseInt(caseDetail.post_period.split('-')[0], 10) : undefined);
@@ -44,7 +45,9 @@ export function EvidenceView() {
           return (
             <>
               <LensCaption />
-              {isDemo && <p className={styles.empty}>{COPY.demoNote}</p>}
+              <SourceBanner origin={origin} runId={runId} />
+              {origin === 'fresh-run' && <VizLimitation />}
+              <EvidenceScope caseId={caseId} withReconciliation />
 
               <Section
                 id="chart"
@@ -55,6 +58,7 @@ export function EvidenceView() {
                   </>
                 }
               >
+                {viz && <KindBadge kind="synthetic-benchmark" />}
                 {viz && caseDetail ? (
                   <CounterfactualChart
                     data={viz.chartSeries}

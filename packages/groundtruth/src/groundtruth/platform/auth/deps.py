@@ -100,4 +100,5 @@ def require_role(minimum: Role, *, always: bool = False) -> Callable[[Request], 
             raise auth_error("forbidden", "Your account is not allowed to do this.")
         return user
 
+    dependency.__gt_authz__ = "role"  # type: ignore[attr-defined]
     return dependency

@@ -1,165 +1,179 @@
-# Glossary
+# GroundTruth 2.0 — Scientific & Technical Glossary
 
-Terms that mean something specific here. Where a word has a loose everyday
-meaning and a precise meaning in this repository, the precise one wins.
+**One platform. Four perspectives. One scientifically consistent source of truth.**  
+*Definitive glossary of domain, econometric, remote-sensing, and architectural terms used across GroundTruth 2.0.*
 
-## Domain
+---
 
-**Additionality** — the climate benefit that exists *because* a project
-happened and would not have existed otherwise. Counterfactual by definition, so
-it must be estimated rather than measured. The quantity carbon markets actually
-sell.
+## 1. Domain Ontology & System Concepts
 
-**Baseline** — the developer's claimed counterfactual: what they assert would
-have happened without the project. Under test here, never an input to our
-estimate.
+```mermaid
+flowchart TD
+    subgraph Personas["4 Tailored Personas"]
+        P1["Restoration NGO"]
+        P2["CSR / Funder"]
+        P3["Auditor / MRV"]
+        P4["Government / Regulator"]
+    end
 
-**Counterfactual** — what the project area would have done absent the
-intervention. Unobservable. Estimated from a weighted combination of comparable
-untreated regions.
+    subgraph Framework["8-Dimension Assessment Framework"]
+        D1["Trajectory"] --- D2["Spatial"]
+        D3["Climate"] --- D4["Risk"]
+        D5["Progress"] --- D6["Comparison"]
+        D7["Evidence Quality"] --- D8["Attribution"]
+    end
 
-**Donor pool** — the admitted set of untreated regions from which the
-counterfactual is built. Its composition determines the answer, which is why the
-pool, its exclusions and its balance statistics are reported as evidence rather
-than kept as implementation detail.
+    subgraph Ladder["Graduation Levels"]
+        L0["Level 0: Unverified"] --> L1["Level 1: Observed"]
+        L1 --> L2["Level 2: Contextual"]
+        L2 --> L3["Level 3: Matched"]
+        L3 --> L4["Level 4: Causal"]
+        L4 --> L5["Level 5: Verified"]
+    end
 
-**Leakage** — deforestation displaced by a project into surrounding areas. A
-region inside the leakage belt is a treated unit in disguise and is excluded
-from the donor pool.
+    Personas --> Framework
+    Framework --> Ladder
+```
 
-**Leakage belt** — the monitored ring around a project boundary (10 km by
-default) whose units are excluded from donor eligibility.
+---
 
-**Crediting period** — the window over which a project issues credits. Used as
-the default treatment date, with an earlier validation date available as an
-anticipation sensitivity check.
+## 2. The Four Personas
 
-**REDD+** — Reducing Emissions from Deforestation and forest Degradation. The
-project category most of our cases fall under.
+**Restoration NGO / Developer** — The on-ground conservation or reforestation project operator responsible for establishing project boundaries, executing management activities, and registering crediting claims. GroundTruth equips NGOs with transparent baselines, seasonal vegetation tracking, and meteorological drought evidence to defend real ecological gains.
 
-**Registry** — the body that certifies and issues credits (Verra/VCS, Gold
-Standard, Plan Vivo).
+**CSR & Impact Funder** — Corporate sustainability officers, institutional ESG allocators, and carbon-credit buyers who finance restoration projects or purchase carbon credits. GroundTruth provides pre-purchase additionality screening, portfolio risk oversight, and non-accusatory accredited review triggers.
 
-## Method
+**Auditor / MRV Specialist** — Measurement, Reporting, and Verification (MRV) consultants and accredited third-party certification auditors. GroundTruth provides auditors with cryptographic SHA-256 evidence dossiers, raw STAC scene metadata, sensor cross-calibration verification, and fail-closed inspection tools.
 
-**Synthetic control** — the primary estimator. Weights donors to track the
-treated unit through the pre-period, then reads the post-period gap as the
-estimated effect. Weights are constrained to the unit simplex.
+**Government & Territorial Regulator** — Environmental ministries, national park authorities, and regional territorial planners. GroundTruth provides regional jurisdictional oversight, administrative district comparison, 10 km leakage belt monitoring, and SPI-12 drought emergency coordination.
 
-**Unit simplex** — the constraint `w ≥ 0, Σw = 1`. Forbids extrapolation outside
-the convex hull of observed donors, so the counterfactual is always an
-attainable combination of real places.
+---
 
-**Difference-in-differences (DiD)** — a transparent cross-check estimator. Valid
-only under parallel trends, so it always reports its own pre-trend divergence
-diagnostic.
+## 3. The 8 Assessment Dimensions
 
-**Parallel trends** — the DiD identifying assumption: absent the intervention,
-treated and control units would have moved together. Not testable; its
-pre-period analogue is.
+**1. Trajectory Dimension** — Decadal multi-sensor spectral trend analysis (NDVI, EVI, NDMI, NBR) across annual dry-season composites. Evaluates whether vegetative canopy is recovering, stable, or degrading while controlling for seasonal phenology.
 
-**RMSPE** — root mean squared prediction error. Pre-period RMSPE measures fit
-quality; the post/pre ratio is the placebo test statistic.
+**2. Spatial Dimension** — Pixel-level spatial distribution and zonal canopy variance across the project boundary. Requires $>65\%$ valid clear-pixel coverage after cloud and shadow masking to validate spatial completeness.
 
-**In-space placebo** — refitting the model pretending each donor was treated, to
-build a reference distribution. Answers "would a gap this large appear for an
-untreated place?"
+**3. Climate Dimension** — Integration of 43-year continuous monthly rainfall (CHIRPS) and 2m ambient temperatures (NASA POWER). Evaluates historical droughts and separates weather-induced fluctuations from human-induced degradation.
 
-**In-time placebo** — moving the treatment date earlier within the pre-period. A
-model that detects an effect before anything happened is detecting its own
-misspecification.
+**4. Risk Dimension** — Monitoring of a 10 km peripheral buffer (leakage belt) surrounding the project boundary alongside active fire alerts to detect displacement of deforestation into adjoining communities.
 
-**Add-one correction** — Phipson–Smyth. A permutation p-value is
-`(1 + #{placebos ≥ observed}) / (1 + J)`, so it is never reported as zero. With
-*J* donors the floor is `1/(J+1)`.
+**5. Progress Dimension** — Empirical comparison between the developer's claimed credit issuance schedule and the observed biomass trajectory over the crediting timeline.
 
-**Leave-one-out** — refitting with each contributing donor removed. If the sign
-flips, the finding belongs to one comparison region and is not a project-level
-conclusion.
+**6. Comparison Dimension** — Screening of a 50 ADM2 candidate donor pool (geoBoundaries) to establish an uncontaminated control group, enforcing SUTVA by excluding host districts and leakage belts.
 
-**Specification curve** — the estimate across all equally defensible
-specifications, reported instead of the single best-looking one.
+**7. Evidence Quality Dimension** — Comprehensive audit of STAC scene availability, cloud masking flags, sensor transitions (Landsat 5/7/8/Sentinel-2), and data completeness.
 
-**Standardised mean difference (SMD)** — post-match covariate balance. Above
-~0.25 is conventionally poor and blocks a substantive verdict here.
+**8. Attribution Dimension** — The isolated causal treatment effect determined by synthetic control and difference-in-differences estimators, gated by permutation placebo testing and leave-one-out stability.
 
-**Common support** — the covariate range spanned by the donor pool. Candidates
-outside it are excluded rather than extrapolated over.
+---
 
-**Sensitivity envelope** — the *range* across specifications or leave-one-out
-refits. **Not a confidence interval**, and must never be rendered as one.
-Carried as `Confidence.kind = "sensitivity-envelope"`.
+## 4. Graduation Levels (0 to 5)
 
-## Remote sensing
+**Level 0 (Unverified Claim)** — Initial registration of project metadata and developer-reported crediting assertions. Contains no empirical satellite validation.
 
-**NDVI** — Normalised Difference Vegetation Index, `(NIR − Red)/(NIR + Red)`. A
-reflectance ratio. Saturates over closed canopy. **Not carbon.**
+**Level 1 (Empirical Observation)** — Spatial project boundary (GeoJSON) validated and multi-year high-resolution satellite imagery (Sentinel-2 / Landsat) successfully ingested with spatial coverage $>65\%$.
 
-**EVI** — Enhanced Vegetation Index. Less prone to canopy saturation, used where
-NDVI would lose sensitivity.
+**Level 2 (Contextual Intelligence)** — Long-term 43-year historical climate patterns, baseline weather anomalies, and Standardized Precipitation Index (SPI-12) droughts evaluated. *(Current status of Kariba REDD+ in GroundTruth 2.0).*
 
-**NBR** — Normalised Burn Ratio. Separates fire disturbance from clearing.
+**Level 3 (Donor Counterfactual)** — Spatially eligible, uncontaminated donor pool established outside the project's leakage belt with proven common support on baseline elevation, slope, and rainfall.
 
-**SCL** — Sentinel-2 Scene Classification Layer, the band used for cloud and
-shadow masking.
+**Level 4 (Weather-Residualized Causal Model)** — Synthetic control estimator fitted on weather-residualized vegetation series, passing in-space placebos, in-time placebos, and leave-one-out sign stability tests.
 
-**Composite** — the temporal reduction of many scenes to one value per period.
-Median, not mean, because residual undetected cloud is a heavy positive outlier.
+**Level 5 (Accredited Carbon Verification)** — Verified canopy structural gains converted to net metric tonnes of $\text{CO}_2\text{e}$ additionality using site-validated destructive biomass allometry with propagated uncertainty envelopes.
 
-**Clear observation count** — how many usable scenes back a period. A year with
-two is not the same measurement as a year with twenty, and the difference is
-carried rather than smoothed over.
+---
 
-**Canopy saturation** — above roughly NDVI 0.8, additional biomass produces no
-index change. Why a forest can double its carbon with no NDVI signal.
+## 5. The Five Evidence States
 
-**Allometry** — species- and site-specific equations relating structure to
-biomass. Typically 20–30% error at plot level, worse extrapolated.
+Every empirical value inside an `EvidenceBundle` carries an explicit **Evidence State** reflecting its processing depth:
 
-## Codebase
+```mermaid
+stateDiagram-v2
+    RAW_OBSERVED --> PREPROCESSED_OBSERVED: Cloud Masking & Zonal Aggregation
+    PREPROCESSED_OBSERVED --> HARMONIZED_OBSERVED: Sensor Cross-Calibration (Roy et al.)
+    HARMONIZED_OBSERVED --> MODEL_ESTIMATED: Synthetic Control / DiD Fitting
+    SYNTHETIC_SIMULATED: Isolated Latent Factor Simulator (Benchmark Only)
+```
 
-**Contract** — `groundtruth.contracts`. The shared, versioned boundary between
-engine and platform. Changing it requires both owners.
+- **`RAW_OBSERVED`:** Unprocessed satellite digital numbers (DN) or surface reflectance rasters fetched directly from provider STAC assets.
+- **`PREPROCESSED_OBSERVED`:** Pixel values after QA cloud masking, nodata filtering, and geometric zonal aggregation over project polygons.
+- **`HARMONIZED_OBSERVED`:** Spectral values transformed across sensor transitions (e.g., Landsat 7 ETM+ to Landsat 8 OLI) using verified cross-calibration functions.
+- **`MODEL_ESTIMATED`:** Counterfactual estimates and causal treatment effects produced by econometric estimators (SCM, DiD).
+- **`SYNTHETIC_SIMULATED`:** Artificially generated values produced by the latent factor simulator for testing or demonstration. Always accompanied by explicit simulation warnings.
 
-**Engine** — `groundtruth.engine`. Pure computation, no I/O. Viraj.
+---
 
-**Platform** — `groundtruth.platform`. API, data services, jobs, persistence,
-reporting, deployment. Bhumi.
+## 6. Causal Inference & Econometrics
 
-**AnalysisRequest** — the engine's only input. Self-contained and serialisable.
+**Additionality** — The climate or ecological benefit that exists *because* a conservation intervention occurred, which would not have occurred otherwise. Counterfactual by definition, requiring mathematical estimation rather than direct physical measurement.
 
-**AnalysisResult** — the engine's only output, returned for every outcome
-including refusal.
+**Counterfactual** — The unobserved state that the project area would have exhibited absent the project. GroundTruth estimates this using an optimal weighted combination of comparable untreated donor regions.
 
-**EvidenceBundle** — the structured evidence object. Immutable collection of
-`Evidence` items with a verdict and warnings.
+**Synthetic Control Method (SCM)** — Econometric estimator that determines a vector of non-negative weights $\mathbf{w}$ over untreated donor units minimizing pre-treatment discrepancy between treated and synthetic units:
+$$\min_{\mathbf{w}} \|\mathbf{Y}_{1,\text{pre}} - \mathbf{Y}_{0,\text{pre}}\mathbf{w}\|_2^2 \quad \text{s.t.} \quad w_j \ge 0, \; \sum w_j = 1$$
 
-**Evidence** — one auditable value with unit, optional interval, mandatory
-provenance and structured qualifiers.
+**Unit Simplex Constraint** — The mathematical restriction $w_j \ge 0$ and $\sum w_j = 1$. Prevents spatial extrapolation outside the convex hull of real observed donors.
 
-**Provenance** — where a value came from and how it was produced: source,
-method, parameters, upstream evidence ids, fingerprint.
+**FISTA (Fast Iterative Shrinkage-Thresholding Algorithm)** — An accelerated first-order proximal gradient optimization method used by GroundTruth to solve the simplex-constrained synthetic control problem efficiently in pure NumPy.
 
-**spec_hash** — deterministic hash of an analysis specification. The
-reproducibility key and the platform cache key. Same hash + same seed + same
-engine version yields identical numbers.
+**SUTVA (Stable Unit Treatment Value Assumption)** — Fundamental causal assumption that the intervention on the treated unit does not affect the potential outcomes of untreated control units. Violated if donor districts include project host districts or regions within the 10 km leakage belt.
 
-**DataAccess ports** — the interfaces through which the engine asks for data.
-The seam between methodology and plumbing.
+**Difference-in-Differences (DiD)** — A secondary transparent causal estimator comparing pre-to-post changes between treated and control groups. Requires the **Parallel Trends Assumption**, which GroundTruth validates using a formal pre-trend test.
 
-**Refusal** — `EngineStatus.REFUSED`. The system correctly declining to produce
-a fragile number. A legitimate scientific outcome, styled differently from an
-error.
+**In-Space Placebo Inference** — Permutation testing procedure where each untreated donor district is iteratively reassigned as a "fake" treated unit. Generates a non-parametric null distribution of post/pre RMSPE ratios to compute empirical p-values.
 
-**Verdict gate chain** — the ordered checks (donor count, pre-treatment fit,
-convex-hull containment, placebo distinguishability, in-time placebo and specification-curve sign agreement when requested, leave-one-out sign stability, covariate balance).
-Any failure short-circuits to `INCONCLUSIVE`; there is no weak-positive path.
+**Phipson-Smyth Add-One Correction** — Formula for exact permutation p-values:
+$$p = \frac{1 + \sum_{j=1}^J \mathbb{I}(R_j \ge R_1)}{1 + J}$$
+Ensures a p-value is never falsely reported as zero. For a pool of 50 donors, the theoretical minimum p-value is $1/51 \approx 0.0196$.
 
-**Grounding** — verification that generated narrative contains only numbers
-present in the evidence bundle and no prohibited assertions.
+**Standardized Mean Difference (SMD)** — Diagnostic metric assessing covariate balance between the treated unit and synthetic control:
+$$\text{SMD} = \frac{|\bar{X}_{\text{treated}} - \bar{X}_{\text{synthetic}}|}{\sigma_{\text{donor pool}}}$$
+Values $< 0.10$ indicate excellent balance; values $> 0.25$ indicate severe imbalance and trigger an inconclusive verdict.
 
-**data_mode** — `observed` or `simulated`. Declared by the platform, validated so
-synthetic datasets cannot be labelled observed, and propagated to the UI banner.
+**Weather Residualization** — Regressing vegetation index series on continuous monthly rainfall and temperature covariates prior to SCM optimization, ensuring that residual series isolate human conservation impact from climate cycles.
 
-**known_reference** — a published third-party finding recorded in a case
-definition for post-hoc validation. The pipeline never reads it.
+---
+
+## 7. Remote Sensing & Climate Science
+
+**NDVI (Normalized Difference Vegetation Index)** — $(\text{NIR} - \text{Red}) / (\text{NIR} + \text{Red})$. Unitless reflectance ratio measuring photosynthetic greenness. **Not carbon.**
+
+**EVI (Enhanced Vegetation Index)** — Modified vegetation index incorporating blue reflectance to minimize atmospheric aerosols and reduce canopy saturation over dense tropical rainforests.
+
+**NDMI (Normalized Difference Moisture Index)** — $(\text{NIR} - \text{SWIR1}) / (\text{NIR} + \text{SWIR1})$. Measures canopy water content and drought-induced foliar dehydration.
+
+**NBR (Normalized Burn Ratio)** — $(\text{NIR} - \text{SWIR2}) / (\text{NIR} + \text{SWIR2})$. Used to detect fire scar severity and post-fire ecological regeneration.
+
+**STAC (SpatioTemporal Asset Catalog)** — Open specification for structuring and querying geospatial metadata across satellite imagery archives (USGS, Copernicus, Planetary Computer).
+
+**Sentinel-2 L2A** — Bottom-of-Atmosphere (BOA) surface reflectance imagery captured by the European Space Agency's twin Sentinel-2 satellites at 10m to 20m spatial resolution.
+
+**Landsat Collection 2 Level 2** — Surface reflectance products from Landsat 5 TM, Landsat 7 ETM+, Landsat 8 OLI, and Landsat 9 OLI-2, distributed by the USGS with consistent radiometric calibration.
+
+**SLC-off (Scan Line Corrector Failure)** — Mechanical failure of the Scan Line Corrector on Landsat 7 in May 2003, resulting in ~22% data loss per scene in diagonal striping patterns outside the central ground track.
+
+**CHIRPS** — Climate Hazards Group InfraRed Precipitation with Stations. High-resolution ($0.05^\circ$) quasi-global rainfall dataset spanning 1981 to present.
+
+**NASA POWER** — Prediction of Worldwide Energy Resources. Satellite-derived surface meteorology (temperature, relative humidity, solar irradiance) on a $0.5^\circ \times 0.625^\circ$ global grid.
+
+**SPI-12 (Standardized Precipitation Index, 12-Month)** — Standard meteorological drought index fitting a gamma distribution to 12-month accumulated precipitation against a 30-year baseline. Values $\le -1.5$ indicate severe drought; values $\le -2.0$ indicate extreme drought.
+
+---
+
+## 8. Platform Architecture & Security
+
+**Fail-Closed Scientific Guard** — System policy where analytical pipelines raise an explicit exception (`DataUnavailableError`) and return `HTTP 501` when required empirical data is incomplete, rather than silently substituting synthetic approximations.
+
+**`spec_hash`** — A deterministic cryptographic Blake2b hash computed over all analysis parameters. Serves as a persistent cache key and deduplication identifier for identical requests.
+
+**`EvidenceBundle`** — An immutable, versioned JSON data structure encapsulating the full empirical results, dimensional scores, sensor provenance, and verdict gates of an analysis.
+
+**Scrypt Password Hashing** — Memory-hard key derivation function ($N=32768, r=8, p=1$) protecting user credentials against GPU-accelerated brute-force attacks, augmented with timing attack mitigation.
+
+**Role-Based Access Control (RBAC)** — Tenant authorization model enforcing least-privilege access across `viewer`, `contributor`, `auditor`, and `admin` roles, preventing unauthorized cross-organization data leakage.
+
+---
+
+> GroundTruth 2.0 Glossary · *PCCOE International Grand Challenge 2026*

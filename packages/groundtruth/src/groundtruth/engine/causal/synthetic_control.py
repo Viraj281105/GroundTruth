@@ -121,6 +121,83 @@ def convex_hull_diagnostic(treated_pre: np.ndarray, donors_pre: np.ndarray) -> H
 
 
 @dataclass(frozen=True)
+class CollinearityDiagnostic:
+    """Collinearity and rank-deficiency diagnostics for pre-treatment donor series."""
+
+    max_pairwise_correlation: float
+    condition_number: float
+    rank: int
+    n_periods: int
+    n_donors: int
+    is_rank_deficient: bool
+    is_highly_collinear: bool
+
+    @property
+    def n_Periods(self) -> int:  # noqa: N802
+        """Alias for ``n_periods``."""
+        return self.n_periods
+
+
+def diagnose_donor_collinearity(
+    donors_pre: np.ndarray,
+    *,
+    corr_threshold: float = 0.98,
+    cond_threshold: float = 1e6,
+) -> CollinearityDiagnostic:
+    """Assess collinearity and rank deficiency of the pre-treatment donor matrix.
+
+    Args:
+        donors_pre: ``(n_periods, n_donors)`` pre-treatment donor outcomes.
+        corr_threshold: Absolute pairwise correlation threshold flagging collinearity.
+        cond_threshold: Condition-number threshold flagging ill-conditioning.
+
+    Returns:
+        A :class:`CollinearityDiagnostic` summarising donor matrix conditioning.
+    """
+    mat = np.asarray(donors_pre, dtype=float)
+    if mat.ndim != 2:
+        raise EstimationError("donors_pre must be two-dimensional (periods x donors)")
+    n_periods, n_donors = mat.shape
+    if n_periods == 0 or n_donors == 0:
+        raise EstimationError("donors_pre must have at least one period and one donor")
+
+    rank = int(np.linalg.matrix_rank(mat))
+    is_rank_deficient = rank < n_donors
+
+    singular_values = np.linalg.svd(mat, compute_uv=False)
+    if singular_values.size == 0 or singular_values[-1] <= 1e-15 or rank < min(n_periods, n_donors):
+        cond = float("inf")
+    else:
+        cond = float(singular_values[0] / singular_values[-1])
+
+    max_corr = 0.0
+    if n_donors >= 2 and n_periods >= 2:
+        centred = mat - mat.mean(axis=0, keepdims=True)
+        norms = np.linalg.norm(centred, axis=0)
+        for i in range(n_donors):
+            for j in range(i + 1, n_donors):
+                if np.allclose(mat[:, i], mat[:, j]):
+                    max_corr = 1.0
+                elif norms[i] > 1e-12 and norms[j] > 1e-12:
+                    corr = abs(float(np.dot(centred[:, i], centred[:, j]) / (norms[i] * norms[j])))
+                    max_corr = max(max_corr, min(corr, 1.0))
+
+    is_highly_collinear = bool(
+        max_corr >= corr_threshold or cond >= cond_threshold or is_rank_deficient
+    )
+
+    return CollinearityDiagnostic(
+        max_pairwise_correlation=float(max_corr),
+        condition_number=cond,
+        rank=rank,
+        n_periods=n_periods,
+        n_donors=n_donors,
+        is_rank_deficient=is_rank_deficient,
+        is_highly_collinear=is_highly_collinear,
+    )
+
+
+@dataclass(frozen=True)
 class SyntheticControlFit:
     """Fitted weights and diagnostics for one synthetic control."""
 
@@ -202,6 +279,29 @@ class SyntheticControlFit:
         if self.pre_rmspe < 1e-12:
             return float("inf") if self.post_rmspe > 1e-12 else 0.0
         return float(self.post_rmspe / self.pre_rmspe)
+
+    @property
+    def effective_donor_count(self) -> float:
+        """Inverse Herfindahl index (``1 / sum(w_j^2)``) of the donor weights.
+
+        Ranges from ``1.0`` (all weight on a single donor) to ``len(donor_ids)``
+        (uniform ``1/J`` weights across every donor).
+        """
+        hhi = float(np.sum(self.weights**2))
+        return 1.0 / hhi if hhi > 0.0 else 0.0
+
+    @property
+    def is_uniform_degenerate(self) -> bool:
+        """True when the simplex solver remains at uniform ``1/J`` weights.
+
+        Detects under-identified collinear donor pools (with at least 5 donors)
+        where the synthetic control fails to differentiate donors and collapses
+        to an unweighted mean of the donor pool.
+        """
+        n_donors = len(self.donor_ids)
+        if n_donors < 5 or self.weights.size != n_donors:
+            return False
+        return float(np.max(np.abs(self.weights - 1.0 / n_donors))) < 1e-3
 
     def contributing_donors(self, threshold: float = 1e-3) -> dict[str, float]:
         """Donors with non-trivial weight, descending.

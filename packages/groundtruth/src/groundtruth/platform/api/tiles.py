@@ -3,6 +3,12 @@
 Tiles need a PostGIS database (``DATABASE_URL`` on PostgreSQL) holding a ``case_boundaries``
 table with ``case_id text`` and ``geom geometry(Geometry, 4326)``. Without one the tile
 endpoint answers ``503 postgis_not_configured``; it never returns made-up tiles.
+
+Both routes need a session. The boundary route authorizes the case's project (``OVERVIEW``).
+A tile covers many cases at once and names none, so its query is restricted to the
+``case_id`` of every project the active organization owns or has been granted: the same
+check, applied as a filter instead of a lookup. A tile never contains another tenant's
+geometry.
 """
 
 from __future__ import annotations
@@ -10,11 +16,13 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi import Path as PathParam
 
 from groundtruth.contracts.errors import CaseDefinitionError
 from groundtruth.platform.api.errors import ApiErrorBody, ApiErrorCode, api_error
+from groundtruth.platform.api.scope import accessible_projects, case_dependency
+from groundtruth.platform.auth.authz import Capability, Context
 from groundtruth.platform.cases.registry import cases_directory, get_case
 from groundtruth.platform.config import get_settings
 
@@ -29,7 +37,7 @@ mvtgeom AS (
     SELECT b.case_id,
            ST_AsMVTGeom(ST_Transform(b.geom, 3857), bounds.env, 4096, 64, true) AS geom
     FROM case_boundaries b, bounds
-    WHERE ST_Transform(b.geom, 3857) && bounds.env
+    WHERE b.case_id IN :case_ids AND ST_Transform(b.geom, 3857) && bounds.env
 )
 SELECT COALESCE(ST_AsMVT(mvtgeom.*, 'boundaries', 4096, 'geom'), ''::bytea) FROM mvtgeom
 """
@@ -50,8 +58,13 @@ def _unavailable(message: str, hint: str | None = None) -> HTTPException:
             "content": {"application/geo+json": {"schema": {"type": "object"}}},
             "description": "The boundary.",
         },
-        404: {"model": ApiErrorBody, "description": "Unknown case or no boundary file."},
+        401: {"model": ApiErrorBody, "description": "Not signed in."},
+        404: {
+            "model": ApiErrorBody,
+            "description": "Unknown case, no access to its project, or no boundary file.",
+        },
     },
+    dependencies=[Depends(case_dependency(Capability.OVERVIEW, structured=True))],
 )
 def case_boundary(case_id: str) -> Response:
     """The boundary file named by the case's `boundary_path`, served as stored."""
@@ -87,14 +100,22 @@ def _engine(url: str) -> Any:
             "content": {MVT_MEDIA_TYPE: {"schema": {"type": "string", "format": "binary"}}},
             "description": "A Mapbox Vector Tile.",
         },
+        401: {"model": ApiErrorBody, "description": "Not signed in."},
         404: {"model": ApiErrorBody, "description": "Tile coordinates out of range."},
         503: {"model": ApiErrorBody, "description": "PostGIS is not configured or not answering."},
     },
 )
 def boundary_tile(
-    z: int = PathParam(ge=0, le=22), x: int = PathParam(ge=0), y: int = PathParam(ge=0)
+    request: Request,
+    ctx: Context,
+    z: int = PathParam(ge=0, le=22),
+    x: int = PathParam(ge=0),
+    y: int = PathParam(ge=0),
 ) -> Response:
-    """Case boundaries clipped to tile z/x/y by `ST_AsMVT`; layer name `boundaries`."""
+    """Case boundaries clipped to tile z/x/y by `ST_AsMVT`; layer name `boundaries`.
+
+    Only the boundaries of projects the active organization owns or has been granted.
+    """
     if x >= 2**z or y >= 2**z:
         raise HTTPException(status_code=404, detail={"code": "tile_out_of_range"})
     url = get_settings().database_url
@@ -105,9 +126,15 @@ def boundary_tile(
         )
     import sqlalchemy as sa
 
+    case_ids = sorted(
+        {p.case_id for p in accessible_projects(request, ctx) if p.case_id is not None}
+    )
+    statement = sa.text(_TILE_SQL).bindparams(sa.bindparam("case_ids", expanding=True))
     try:
         with _engine(url).connect() as conn:
-            tile = conn.execute(sa.text(_TILE_SQL), {"z": z, "x": x, "y": y}).scalar_one()
+            tile = conn.execute(
+                statement, {"z": z, "x": x, "y": y, "case_ids": case_ids}
+            ).scalar_one()
     except sa.exc.SQLAlchemyError as exc:
         raise _unavailable(
             "PostGIS did not answer the tile query.",
