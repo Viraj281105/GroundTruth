@@ -59,7 +59,8 @@ def load_observations(
 ) -> ObservationsResult:
     """Load the provenance-checked annual observations of ``project`` for ``indicator``.
 
-    The cache is keyed by the project's case id. Absent files, malformed JSON, a bundle that
+    The cache is keyed by the project's case id, or by the project's own id when it has no case.
+    Absent files, malformed JSON, a bundle that
     fails the real-provenance integrity check, and synthetic bundles all yield ``unavailable``
     with the specific reason, never an exception and never a fabricated series.
 
@@ -68,7 +69,11 @@ def load_observations(
     """
     case_id = project.case_id
     if not case_id:
-        return _obs_unavailable("This project is not linked to a case with ingested observations")
+        # A project defined by an uploaded boundary has no case. Observations ingested for it are
+        # stored under its own id, so it can only ever read its own data (never another project's).
+        return load_unit_observations(
+            project.id, indicator, data_dir=data_dir, label="this project"
+        )
     return load_unit_observations(case_id, indicator, data_dir=data_dir, label=repr(case_id))
 
 

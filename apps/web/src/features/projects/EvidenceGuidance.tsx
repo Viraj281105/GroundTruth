@@ -1,12 +1,19 @@
 import React from 'react';
-import { Card, Chip } from '../../components/ds';
+import { Card, Chip, LinkButton } from '../../components/ds';
 import type { Schemas } from '../../lib/api-client';
 import styles from './documents.module.css';
 
 type Inventory = Schemas['EvidenceInventoryView'];
 
 /** What is missing and what the user can do next, exactly as the API states it. Renders nothing it was not given. */
-export function EvidenceGuidance({ inventory }: { inventory: Pick<Inventory, 'missing_evidence' | 'next_steps' | 'observation_ingestion'> }) {
+export function EvidenceGuidance({
+  inventory,
+  observationHref,
+}: {
+  inventory: Pick<Inventory, 'missing_evidence' | 'next_steps' | 'observation_ingestion'>;
+  /** The project's Earth Observation tab. When given and ingestion is available, the card links there. */
+  observationHref?: string;
+}) {
   const missing = inventory.missing_evidence ?? [];
   const steps = inventory.next_steps ?? [];
   const ing = inventory.observation_ingestion;
@@ -17,6 +24,11 @@ export function EvidenceGuidance({ inventory }: { inventory: Pick<Inventory, 'mi
       {ing && (
         <p className={styles.ingestion} data-ingestion-available={ing.available}>
           <Chip tone={ing.available ? 'accent' : 'caution'}>{ing.available ? 'Satellite data can be added' : 'Satellite data cannot be added here'}</Chip> {ing.message}
+          {ing.available && observationHref && (
+            <LinkButton href={observationHref} variant="secondary" size="sm">
+              Request satellite data
+            </LinkButton>
+          )}
         </p>
       )}
       {missing.length > 0 && (

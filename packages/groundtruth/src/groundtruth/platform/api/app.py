@@ -33,7 +33,9 @@ from groundtruth.platform.api.ledger import router as ledger_router
 from groundtruth.platform.api.openapi_schema import install_openapi
 from groundtruth.platform.api.orgs import router as orgs_router
 from groundtruth.platform.api.portfolio import router as portfolio_router
+from groundtruth.platform.api.project_claims import router as project_claims_router
 from groundtruth.platform.api.project_documents import router as project_documents_router
+from groundtruth.platform.api.project_observations import router as project_observations_router
 from groundtruth.platform.api.projects import router as projects_router
 from groundtruth.platform.api.runs import router as runs_router
 from groundtruth.platform.api.schemas import (
@@ -122,7 +124,9 @@ app.include_router(orgs_router)
 app.include_router(portfolio_router)
 app.include_router(projects_router)
 app.include_router(project_documents_router)
+app.include_router(project_claims_router)
 app.include_router(ledger_router)
+app.include_router(project_observations_router)
 app.include_router(v2_router)
 app.include_router(exports_router, include_in_schema=False)
 

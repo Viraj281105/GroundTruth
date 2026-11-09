@@ -59,7 +59,7 @@ export function LifecycleProgress({ orgSlug, projectSlug, steps }: { orgSlug: st
               className={[
                 styles.stepItem,
                 step.status === 'done' ? styles.completed : '',
-                step.status === 'current' ? styles.active : '',
+                step.status === 'current' || step.status === 'in_progress' ? styles.active : '',
                 step.status === 'blocked' || step.status === 'unavailable' || step.status === 'unknown' ? styles.muted : '',
                 step.status === 'blocked' ? styles.blocked : '',
               ].join(' ')}

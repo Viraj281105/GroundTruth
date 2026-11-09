@@ -5,16 +5,18 @@ type Project = Schemas['ProjectView'];
 type Inventory = Schemas['EvidenceInventoryView'];
 type Assessment = Schemas['AssessmentView'];
 type Ledger = Schemas['LedgerView'];
+type IngestionStatus = Schemas['IngestionView']['status'];
 
 /**
  * done        - the data shows it happened
+ * in_progress - a request is under way (for example a satellite data request waiting or running)
  * current     - the first step still to do (the suggested next action)
  * pending     - still to do, after the current one
  * blocked     - something that exists is failing (for example a ledger check)
  * unavailable - cannot be done for this project (no boundary, no ingestion path)
  * unknown     - the status could not be read; nothing is asserted
  */
-export type StepStatus = 'done' | 'current' | 'pending' | 'blocked' | 'unavailable' | 'unknown';
+export type StepStatus = 'done' | 'in_progress' | 'current' | 'pending' | 'blocked' | 'unavailable' | 'unknown';
 
 export interface LifecycleStep {
   id: number;
@@ -33,10 +35,13 @@ export interface LifecycleInput {
   assessment: Pick<Assessment, 'level' | 'level_name'> | null;
   claims: ClaimSummary | null;
   ledger: Pick<Ledger, 'status' | 'record_count' | 'message'> | null;
+  /** Satellite data requests. Omitted or null when they could not be read; nothing is then asserted about them. */
+  ingestions?: { active?: boolean; ingestions: { status: IngestionStatus }[] } | null;
 }
 
 export const STATUS_LABEL: Record<StepStatus, string> = {
   done: 'Done',
+  in_progress: 'In progress',
   current: 'Next',
   pending: 'Not done yet',
   blocked: 'Blocked',
@@ -95,6 +100,14 @@ export function lifecycleSteps(i: LifecycleInput): LifecycleStep[] {
         status: 'done',
         description: `Stored observations exist for ${stored.map((x) => x.indicator.toUpperCase()).join(', ')}.`,
       });
+    } else if (i.ingestions && (i.ingestions.active || i.ingestions.ingestions.some((r) => r.status === 'queued' || r.status === 'running'))) {
+      steps.push({
+        label: 'Satellite data',
+        shortLabel: 'Satellite',
+        segment: 'observation',
+        status: 'in_progress',
+        description: 'A satellite data request is waiting or running. Nothing is stored until it finishes.',
+      });
     } else if (!hasBoundary || inv.observation_ingestion?.available === false) {
       steps.push({
         label: 'Satellite data',
@@ -104,7 +117,17 @@ export function lifecycleSteps(i: LifecycleInput): LifecycleStep[] {
         description: inv.observation_ingestion?.message || 'No satellite observations are stored and none can be added to this project here.',
       });
     } else {
-      steps.push({ label: 'Satellite data', shortLabel: 'Satellite', segment: 'observation', status: 'pending', description: 'No satellite observations are stored yet.' });
+      const last = i.ingestions?.ingestions[0]?.status;
+      steps.push({
+        label: 'Satellite data',
+        shortLabel: 'Satellite',
+        segment: 'observation',
+        status: 'pending',
+        description:
+          last === 'failed' || last === 'partial'
+            ? 'Request satellite data. The last request left no usable stored values, so nothing is stored yet.'
+            : 'Request satellite data. No satellite observations are stored yet.',
+      });
     }
   }
 

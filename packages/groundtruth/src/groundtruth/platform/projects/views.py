@@ -36,6 +36,7 @@ from groundtruth.platform.api.project_schemas import (
     StatusKind,
 )
 from groundtruth.platform.api.schemas import SIMULATED_NOTICE
+from groundtruth.platform.config import get_settings
 from groundtruth.platform.projects.assessment import (
     INDICATORS,
     _read_boundary,
@@ -209,7 +210,12 @@ def _ingestion_status(project: ProjectRow) -> ObservationIngestionStatus:
                 "with the `groundtruth ingest-stac` command; the app does not start ingestion."
             ),
         )
-    return ObservationIngestionStatus(available=False, message=NO_INGESTION_PATH)
+    if not get_settings().observation_ingestion_enabled:
+        return ObservationIngestionStatus(
+            available=False,
+            message="Observation ingestion is switched off on this server. Ask your administrator.",
+        )
+    return ObservationIngestionStatus(available=True, message=NO_INGESTION_PATH)
 
 
 def build_inventory(

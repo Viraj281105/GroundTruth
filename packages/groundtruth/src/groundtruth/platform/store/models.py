@@ -541,6 +541,85 @@ DOCUMENT_STATUSES: tuple[str, ...] = (
 )
 
 
+INGESTION_STATUSES: tuple[str, ...] = (
+    "queued",
+    "running",
+    "succeeded",
+    "partial",
+    "failed",
+    "cancelled",
+)
+
+
+class ProjectClaimRow(Base):
+    """A claim a person chose to add to a project's verification (revision 0012).
+
+    A row exists only because a user explicitly promoted an extracted statement (or typed a claim);
+    nothing is ever promoted automatically. ``original_*`` preserve exactly what the extractor read
+    and are never changed; the unprefixed fields are what the user confirms or corrects, and what
+    is matched against evidence. ``withdrawn_at`` is a soft delete: the row and its history stay.
+    """
+
+    __tablename__ = "project_claims"
+    __table_args__ = (sa.Index("ix_project_claims_project_id", "project_id"),)
+
+    id: Mapped[str] = mapped_column(sa.String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(sa.ForeignKey("projects.id", ondelete="CASCADE"))
+    source_document_id: Mapped[str | None] = mapped_column(
+        sa.ForeignKey("project_documents.id", ondelete="SET NULL")
+    )
+    source_document_name: Mapped[str | None] = mapped_column(sa.String(255))
+    source_document_sha256: Mapped[str | None] = mapped_column(sa.String(64))
+    source_start: Mapped[int | None] = mapped_column(sa.Integer)
+    source_end: Mapped[int | None] = mapped_column(sa.Integer)
+    original_text: Mapped[str] = mapped_column(sa.Text)
+    original_kind: Mapped[str | None] = mapped_column(sa.String(48))
+    original_value: Mapped[float | None] = mapped_column(sa.Float)
+    original_unit: Mapped[str | None] = mapped_column(sa.String(40))
+    original_period: Mapped[str | None] = mapped_column(sa.String(60))
+    statement_text: Mapped[str] = mapped_column(sa.String(1000))
+    kind: Mapped[str] = mapped_column(sa.String(48))
+    claimed_value: Mapped[float | None] = mapped_column(sa.Float)
+    claimed_unit: Mapped[str | None] = mapped_column(sa.String(40))
+    claimed_period: Mapped[str | None] = mapped_column(sa.String(60))
+    created_by: Mapped[str | None] = mapped_column(sa.ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    updated_by: Mapped[str | None] = mapped_column(sa.ForeignKey("users.id", ondelete="SET NULL"))
+    updated_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    withdrawn_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+
+
+class ObservationIngestionRow(Base):
+    """A request to ingest satellite observations for one project's boundary (revision 0011).
+
+    ``queued`` -> ``running`` -> ``succeeded`` | ``partial`` | ``failed``. ``partial`` means some
+    requested years have no usable value (cloud cover, missing tiles, coverage below the
+    threshold); it is never reported as complete. ``result`` holds only what the pipeline
+    measured: per-year scenes, tiles, coverage and the fingerprints of the stored bundles.
+    """
+
+    __tablename__ = "observation_ingestions"
+    __table_args__ = (
+        sa.CheckConstraint(_in_list("status", INGESTION_STATUSES), name="status_valid"),
+        sa.Index("ix_observation_ingestions_project_created", "project_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(sa.String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(sa.ForeignKey("projects.id", ondelete="CASCADE"))
+    requested_by: Mapped[str | None] = mapped_column(sa.ForeignKey("users.id", ondelete="SET NULL"))
+    status: Mapped[str] = mapped_column(sa.String(16))
+    params: Mapped[dict[str, Any]] = mapped_column(JsonDocument)
+    status_detail: Mapped[str | None] = mapped_column(sa.String(1000))
+    error_code: Mapped[str | None] = mapped_column(sa.String(48))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    started_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    heartbeat_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    worker_id: Mapped[str | None] = mapped_column(sa.String(100))
+    result: Mapped[dict[str, Any] | None] = mapped_column(JsonDocument, nullable=True)
+    ledger_record_id: Mapped[str | None] = mapped_column(sa.String(64))
+
+
 class ProjectDocumentRow(Base):
     """A document an organization uploaded to one of its projects (revision 0010).
 

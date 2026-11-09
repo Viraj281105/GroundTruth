@@ -211,8 +211,10 @@ def _portfolio_for(
     mode = "synthetic" if project.data_mode == "simulated" else "observed"
     missing: list[dict[str, Any]] = []
     steps: list[str] = []
-    if not is_kariba and not custom_claims:
-        missing, steps = claim_gaps(project, get_settings().data_dir)
+    if not is_kariba:
+        missing, steps = claim_gaps(
+            project, get_settings().data_dir, has_claims=bool(custom_claims)
+        )
     try:
         portfolio = verify_project_claims(
             project_id=project.id,
@@ -232,8 +234,17 @@ def _portfolio_for(
 @router.get(
     "/api/v1/claims/structured/{project_id}", summary="Get structured claim verifications (v1)"
 )
-def get_structured_claims(access: ClaimsReader) -> dict[str, Any]:
-    return _portfolio_for(access.project)
+def get_structured_claims(request: Request, access: ClaimsReader) -> dict[str, Any]:
+    from groundtruth.platform.projects import claims_service
+
+    # Claims a person promoted (never auto-created) are matched against the evidence on file.
+    with resolve_sessions(request)() as db:
+        rows = claims_service.list_claims(db, access.project.id)
+        project = db.get(ProjectRow, access.project.id) or access.project
+        promoted = claims_service.custom_claims_for_portfolio(
+            project, rows, get_settings().data_dir
+        )
+    return _portfolio_for(access.project, promoted or None)
 
 
 @router.post("/claims/verify-structured", summary="Run claim-level verification")

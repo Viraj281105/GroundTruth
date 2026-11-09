@@ -16,13 +16,14 @@ export const dynamic = 'force-dynamic';
 export default async function ProjectLayout({ children, params }: { children: React.ReactNode; params: { org: string; project: string } }) {
   const project = await loadProject(params.project);
   const path = { params: { path: { project_id: project.id } } };
-  const [inventory, assessment, claims, ledger] = await Promise.all([
+  const [inventory, assessment, claims, ledger, ingestions] = await Promise.all([
     fetched(() => serverApi().GET('/projects/{project_id}/evidence-inventory', path)),
     fetched(() => serverApi().GET('/projects/{project_id}/assessment', path)),
     fetched(() => serverApi().GET('/claims/structured/{project_id}', path)),
     fetched(() => serverApi().GET('/projects/{project_id}/ledger', path)),
+    fetched(() => serverApi().GET('/projects/{project_id}/observations/ingestions', path)),
   ]);
-  const steps = lifecycleSteps({ project, inventory: inventory.data, assessment: assessment.data, claims: claimSummary(claims.data), ledger: ledger.data });
+  const steps = lifecycleSteps({ project, inventory: inventory.data, assessment: assessment.data, claims: claimSummary(claims.data), ledger: ledger.data, ingestions: ingestions.data });
   return (
     <>
       <SetDataMode mode={projectDataMode(project)} />

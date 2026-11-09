@@ -160,6 +160,8 @@ def test_owner_reads_the_same_routes_it_denies_others(world: World, completed) -
             or "/export/" in template
             or template.endswith("/events")
             or "{doc_id}" in template  # needs a real document; see test_project_documents.py
+            or "{ingestion_id}"
+            in template  # needs a real request; see test_observation_ingestion.py
         ):
             continue
         path = _fill(

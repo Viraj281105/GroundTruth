@@ -4128,6 +4128,361 @@
         }
       }
     },
+    "/projects/{project_id}/claims": {
+      "get": {
+        "tags": [
+          "project-claims"
+        ],
+        "summary": "Claims promoted for this project, each matched against the evidence on file",
+        "operationId": "list_claims_projects__project_id__claims_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimListView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The claim cannot be accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "project-claims"
+        ],
+        "summary": "Promote a statement from a document, or add a claim, for verification",
+        "operationId": "create_claim_projects__project_id__claims_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The claim cannot be accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/claims/{claim_id}": {
+      "patch": {
+        "tags": [
+          "project-claims"
+        ],
+        "summary": "Correct a claim's wording, type, value, unit or period",
+        "operationId": "edit_claim_projects__project_id__claims__claim_id__patch",
+        "parameters": [
+          {
+            "name": "claim_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Claim Id"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The claim cannot be accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "project-claims"
+        ],
+        "summary": "Withdraw a claim (the record and its history remain)",
+        "operationId": "withdraw_claim_projects__project_id__claims__claim_id__delete",
+        "parameters": [
+          {
+            "name": "claim_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Claim Id"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with the current state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The claim cannot be accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/projects/{project_id}/ledger": {
       "get": {
         "tags": [
@@ -4439,6 +4794,400 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/observations/ingestions": {
+      "get": {
+        "tags": [
+          "project-observations"
+        ],
+        "summary": "Observation ingestion requests for a project, newest first",
+        "operationId": "list_ingestions_projects__project_id__observations_ingestions_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionListView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or ingestion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An ingestion is already queued or running.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request cannot be accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database, or ingestion is switched off.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "project-observations"
+        ],
+        "summary": "Request satellite observations for the project boundary",
+        "operationId": "request_ingestion_projects__project_id__observations_ingestions_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or ingestion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An ingestion is already queued or running.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request cannot be accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database, or ingestion is switched off.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/observations/ingestions/{ingestion_id}": {
+      "get": {
+        "tags": [
+          "project-observations"
+        ],
+        "summary": "One ingestion request",
+        "operationId": "get_ingestion_projects__project_id__observations_ingestions__ingestion_id__get",
+        "parameters": [
+          {
+            "name": "ingestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ingestion Id"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or ingestion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An ingestion is already queued or running.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request cannot be accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database, or ingestion is switched off.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/observations/ingestions/{ingestion_id}/cancel": {
+      "post": {
+        "tags": [
+          "project-observations"
+        ],
+        "summary": "Cancel a request that has not started",
+        "operationId": "cancel_ingestion_projects__project_id__observations_ingestions__ingestion_id__cancel_post",
+        "parameters": [
+          {
+            "name": "ingestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ingestion Id"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestionView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level or role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown project or ingestion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An ingestion is already queued or running.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The request cannot be accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database, or ingestion is switched off.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
                 }
               }
             }
@@ -6006,6 +6755,50 @@
               }
             ],
             "title": "Quote"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "evidence_gap": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Gap"
           }
         },
         "type": "object",
@@ -6015,7 +6808,11 @@
           "unit",
           "start",
           "end",
-          "quote"
+          "quote",
+          "period",
+          "status",
+          "reason",
+          "evidence_gap"
         ],
         "title": "ClaimCandidate"
       },
@@ -6053,6 +6850,527 @@
           "note"
         ],
         "title": "ClaimComparison"
+      },
+      "ClaimCreate": {
+        "properties": {
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id",
+            "description": "The source document."
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start",
+            "description": "Start of the statement in the document text."
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End",
+            "description": "End of the statement in the document text."
+          },
+          "statement_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement Text",
+            "description": "Corrected or typed claim wording."
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind",
+            "description": "Claim type; defaults to the extracted one."
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          }
+        },
+        "type": "object",
+        "title": "ClaimCreate",
+        "description": "Promote a statement from a document (document_id + start + end) or type one (statement_text)."
+      },
+      "ClaimListView": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/ClaimView"
+            },
+            "type": "array",
+            "title": "Claims"
+          },
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/KindView"
+            },
+            "type": "array",
+            "title": "Kinds"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note",
+            "default": "A claim is what someone said, not a finding. Each one is compared with the evidence on file. UNVERIFIED means the evidence needed to test it is missing or of a kind that cannot establish it; it does not mean the claim is false."
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "claims",
+          "kinds",
+          "note"
+        ],
+        "title": "ClaimListView"
+      },
+      "ClaimOutcomeView": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "SUPPORTED",
+              "PARTIALLY_SUPPORTED",
+              "CONTRADICTED",
+              "UNVERIFIED"
+            ],
+            "title": "Status"
+          },
+          "headline": {
+            "type": "string",
+            "title": "Headline"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "supporting": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Supporting"
+          },
+          "contradicting": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Contradicting"
+          },
+          "required_evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required Evidence"
+          },
+          "available_evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Evidence"
+          },
+          "missing_evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Evidence"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          },
+          "observed_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Value"
+          },
+          "observed_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed Unit"
+          },
+          "discrepancy_percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discrepancy Percentage"
+          },
+          "methodology": {
+            "type": "string",
+            "title": "Methodology"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "headline",
+          "reasons",
+          "supporting",
+          "contradicting",
+          "required_evidence",
+          "available_evidence",
+          "missing_evidence",
+          "limitations",
+          "observed_value",
+          "observed_unit",
+          "discrepancy_percentage",
+          "methodology"
+        ],
+        "title": "ClaimOutcomeView"
+      },
+      "ClaimPatch": {
+        "properties": {
+          "statement_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Statement Text"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          }
+        },
+        "type": "object",
+        "title": "ClaimPatch",
+        "description": "Corrections. Only the fields sent change; the original extraction is never altered."
+      },
+      "ClaimSourceView": {
+        "properties": {
+          "project_claim_id": {
+            "type": "string",
+            "title": "Project Claim Id"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "document_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Name"
+          },
+          "document_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Sha256"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "original_text": {
+            "type": "string",
+            "title": "Original Text",
+            "description": "Exactly what the document said. Never edited."
+          },
+          "original_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Kind"
+          },
+          "original_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Value"
+          },
+          "original_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Unit"
+          },
+          "original_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Period"
+          },
+          "statement_text": {
+            "type": "string",
+            "title": "Statement Text"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "edited": {
+            "type": "boolean",
+            "title": "Edited",
+            "description": "True when the tested claim differs from what was extracted."
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_claim_id",
+          "document_id",
+          "document_name",
+          "document_sha256",
+          "start",
+          "end",
+          "original_text",
+          "original_kind",
+          "original_value",
+          "original_unit",
+          "original_period",
+          "statement_text",
+          "kind",
+          "value",
+          "unit",
+          "period",
+          "edited",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ClaimSourceView"
       },
       "ClaimSpan": {
         "properties": {
@@ -6202,6 +7520,38 @@
         },
         "type": "object",
         "title": "ClaimVerificationRequest"
+      },
+      "ClaimView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind_label": {
+            "type": "string",
+            "title": "Kind Label"
+          },
+          "checkable": {
+            "type": "boolean",
+            "title": "Checkable",
+            "description": "Whether the platform has any check for this kind of claim."
+          },
+          "source": {
+            "$ref": "#/components/schemas/ClaimSourceView"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/ClaimOutcomeView"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind_label",
+          "checkable",
+          "source",
+          "outcome"
+        ],
+        "title": "ClaimView"
       },
       "ClaimsRequest": {
         "properties": {
@@ -8541,6 +9891,661 @@
         ],
         "title": "IndicatorInventory"
       },
+      "IngestionCoverageView": {
+        "properties": {
+          "threshold_pct": {
+            "type": "number",
+            "title": "Threshold Pct"
+          },
+          "complete_years": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Complete Years"
+          },
+          "partial_years": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Partial Years"
+          },
+          "years_without_data": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Years Without Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "threshold_pct",
+          "complete_years",
+          "partial_years",
+          "years_without_data"
+        ],
+        "title": "IngestionCoverageView"
+      },
+      "IngestionLimitsView": {
+        "properties": {
+          "first_year": {
+            "type": "integer",
+            "title": "First Year"
+          },
+          "last_year": {
+            "type": "integer",
+            "title": "Last Year"
+          },
+          "max_years": {
+            "type": "integer",
+            "title": "Max Years"
+          },
+          "max_total_scenes": {
+            "type": "integer",
+            "title": "Max Total Scenes"
+          },
+          "min_resolution_m": {
+            "type": "number",
+            "title": "Min Resolution M"
+          },
+          "max_resolution_m": {
+            "type": "number",
+            "title": "Max Resolution M"
+          },
+          "max_grid_pixels": {
+            "type": "integer",
+            "title": "Max Grid Pixels"
+          },
+          "coverage_threshold_pct": {
+            "type": "number",
+            "title": "Coverage Threshold Pct"
+          },
+          "indicators": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Indicators"
+          },
+          "default_indicators": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Default Indicators"
+          }
+        },
+        "type": "object",
+        "required": [
+          "first_year",
+          "last_year",
+          "max_years",
+          "max_total_scenes",
+          "min_resolution_m",
+          "max_resolution_m",
+          "max_grid_pixels",
+          "coverage_threshold_pct",
+          "indicators",
+          "default_indicators"
+        ],
+        "title": "IngestionLimitsView"
+      },
+      "IngestionListView": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "description": "True while a request is queued or running."
+          },
+          "limits": {
+            "$ref": "#/components/schemas/IngestionLimitsView"
+          },
+          "ingestions": {
+            "items": {
+              "$ref": "#/components/schemas/IngestionView"
+            },
+            "type": "array",
+            "title": "Ingestions"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "enabled",
+          "active",
+          "limits",
+          "ingestions",
+          "explanation"
+        ],
+        "title": "IngestionListView"
+      },
+      "IngestionParamsView": {
+        "properties": {
+          "start_year": {
+            "type": "integer",
+            "title": "Start Year"
+          },
+          "end_year": {
+            "type": "integer",
+            "title": "End Year"
+          },
+          "window_start": {
+            "type": "string",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "title": "Window End"
+          },
+          "max_cloud_cover": {
+            "type": "number",
+            "title": "Max Cloud Cover"
+          },
+          "indicators": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Indicators"
+          },
+          "resolution_m": {
+            "type": "number",
+            "title": "Resolution M"
+          },
+          "max_scenes_per_year": {
+            "type": "integer",
+            "title": "Max Scenes Per Year"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform",
+            "default": "sentinel-2"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_year",
+          "end_year",
+          "window_start",
+          "window_end",
+          "max_cloud_cover",
+          "indicators",
+          "resolution_m",
+          "max_scenes_per_year",
+          "platform"
+        ],
+        "title": "IngestionParamsView"
+      },
+      "IngestionRequest": {
+        "properties": {
+          "start_year": {
+            "type": "integer",
+            "title": "Start Year",
+            "description": "First calendar year (Sentinel-2 L2A starts in 2017)."
+          },
+          "end_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Year",
+            "description": "Last year; defaults to start_year."
+          },
+          "window_start": {
+            "type": "string",
+            "title": "Window Start",
+            "description": "Season start, MM-DD.",
+            "default": "06-01"
+          },
+          "window_end": {
+            "type": "string",
+            "title": "Window End",
+            "description": "Season end, MM-DD (same calendar year).",
+            "default": "06-30"
+          },
+          "max_cloud_cover": {
+            "type": "number",
+            "title": "Max Cloud Cover",
+            "description": "Scene cloud cover limit, percent.",
+            "default": 25.0
+          },
+          "indicators": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indicators",
+            "description": "Subset of ndvi, evi, ndmi, nbr. NDVI is always stored."
+          },
+          "resolution_m": {
+            "type": "number",
+            "title": "Resolution M",
+            "description": "Analysis grid size in metres.",
+            "default": 100.0
+          },
+          "max_scenes_per_year": {
+            "type": "integer",
+            "title": "Max Scenes Per Year",
+            "description": "Scenes combined per year.",
+            "default": 3
+          }
+        },
+        "type": "object",
+        "required": [
+          "start_year"
+        ],
+        "title": "IngestionRequest",
+        "description": "What to ingest. Every field has a default, and the server re-validates all of them."
+      },
+      "IngestionResultView": {
+        "properties": {
+          "catalog_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Url"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform"
+          },
+          "collection": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection"
+          },
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Bbox",
+            "default": []
+          },
+          "years_requested": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Years Requested",
+            "default": []
+          },
+          "years": {
+            "items": {
+              "$ref": "#/components/schemas/IngestionYearView"
+            },
+            "type": "array",
+            "title": "Years",
+            "default": []
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IngestionCoverageView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stored_bundles": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/StoredBundleView"
+            },
+            "type": "object",
+            "title": "Stored Bundles",
+            "default": {}
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations",
+            "default": []
+          },
+          "code_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code Version"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
+          }
+        },
+        "type": "object",
+        "title": "IngestionResultView",
+        "required": [
+          "catalog_url",
+          "platform",
+          "collection",
+          "bbox",
+          "years_requested",
+          "years",
+          "coverage",
+          "stored_bundles",
+          "limitations",
+          "code_version",
+          "method"
+        ]
+      },
+      "IngestionView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "succeeded",
+              "partial",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "status_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Detail"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "params": {
+            "$ref": "#/components/schemas/IngestionParamsView"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "age_seconds": {
+            "type": "integer",
+            "title": "Age Seconds",
+            "description": "Seconds since the request was made (or finished)."
+          },
+          "waiting_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiting Hint",
+            "description": "Set when a queued request has waited unusually long."
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IngestionResultView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ledger_record_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Record Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "status",
+          "status_detail",
+          "error_code",
+          "params",
+          "requested_by",
+          "created_at",
+          "started_at",
+          "finished_at",
+          "age_seconds",
+          "waiting_hint",
+          "result",
+          "ledger_record_id"
+        ],
+        "title": "IngestionView"
+      },
+      "IngestionYearView": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "partial_coverage",
+              "no_usable_data"
+            ],
+            "title": "State",
+            "description": "observed: value and coverage ok; partial_coverage: value exists but the area is not fully covered; no_usable_data: left empty, never estimated."
+          },
+          "n_scenes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Scenes"
+          },
+          "scene_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scene Ids",
+            "default": []
+          },
+          "acquisition_dates": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Acquisition Dates",
+            "default": []
+          },
+          "contributing_tiles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Contributing Tiles",
+            "default": []
+          },
+          "aoi_coverage_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aoi Coverage Pct"
+          },
+          "clear_pixel_fraction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clear Pixel Fraction"
+          },
+          "is_spatially_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Spatially Complete"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Values",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "state",
+          "n_scenes",
+          "scene_ids",
+          "acquisition_dates",
+          "contributing_tiles",
+          "aoi_coverage_pct",
+          "clear_pixel_fraction",
+          "is_spatially_complete",
+          "values"
+        ],
+        "title": "IngestionYearView"
+      },
       "IntelligenceMode": {
         "type": "string",
         "enum": [
@@ -9009,6 +11014,34 @@
         ],
         "title": "JobView",
         "description": "A job's status and progress, small enough to poll every second.\n\nA **refusal** is a completed job: ``status`` is ``succeeded``, ``result_state`` is\n``refused``, ``terminal`` is true and ``error.is_refusal`` is true. It is never\n``failed``. ``is_simulated`` and ``data_mode`` are always present, and a simulated job\ncarries a ``notice``."
+      },
+      "KindView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "checkable": {
+            "type": "boolean",
+            "title": "Checkable"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "label",
+          "checkable",
+          "note"
+        ],
+        "title": "KindView"
       },
       "LedgerFailureView": {
         "properties": {
@@ -11351,6 +13384,24 @@
         ],
         "title": "StageView",
         "description": "One live stage of a job, as it was observed."
+      },
+      "StoredBundleView": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "sha256"
+        ],
+        "title": "StoredBundleView"
       },
       "SubmitJobRequest": {
         "properties": {

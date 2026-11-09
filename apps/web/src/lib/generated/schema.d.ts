@@ -891,6 +891,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{project_id}/claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Claims promoted for this project, each matched against the evidence on file */
+        get: operations["list_claims_projects__project_id__claims_get"];
+        put?: never;
+        /** Promote a statement from a document, or add a claim, for verification */
+        post: operations["create_claim_projects__project_id__claims_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/claims/{claim_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Withdraw a claim (the record and its history remain) */
+        delete: operations["withdraw_claim_projects__project_id__claims__claim_id__delete"];
+        options?: never;
+        head?: never;
+        /** Correct a claim's wording, type, value, unit or period */
+        patch: operations["edit_claim_projects__project_id__claims__claim_id__patch"];
+        trace?: never;
+    };
     "/projects/{project_id}/ledger": {
         parameters: {
             query?: never;
@@ -953,6 +989,58 @@ export interface paths {
         get: operations["list_reports_orgs__slug__reports_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/observations/ingestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Observation ingestion requests for a project, newest first */
+        get: operations["list_ingestions_projects__project_id__observations_ingestions_get"];
+        put?: never;
+        /** Request satellite observations for the project boundary */
+        post: operations["request_ingestion_projects__project_id__observations_ingestions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/observations/ingestions/{ingestion_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One ingestion request */
+        get: operations["get_ingestion_projects__project_id__observations_ingestions__ingestion_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/observations/ingestions/{ingestion_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a request that has not started */
+        post: operations["cancel_ingestion_projects__project_id__observations_ingestions__ingestion_id__cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1558,6 +1646,14 @@ export interface components {
             end: number | null;
             /** Quote */
             quote: string | null;
+            /** Period */
+            period: string | null;
+            /** Status */
+            status: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Evidence Gap */
+            evidence_gap: string | null;
         };
         /** ClaimComparison */
         ClaimComparison: {
@@ -1569,6 +1665,152 @@ export interface components {
             estimated: number | null;
             /** Note */
             note: string;
+        };
+        /**
+         * ClaimCreate
+         * @description Promote a statement from a document (document_id + start + end) or type one (statement_text).
+         */
+        ClaimCreate: {
+            /**
+             * Document Id
+             * @description The source document.
+             */
+            document_id?: string | null;
+            /**
+             * Start
+             * @description Start of the statement in the document text.
+             */
+            start?: number | null;
+            /**
+             * End
+             * @description End of the statement in the document text.
+             */
+            end?: number | null;
+            /**
+             * Statement Text
+             * @description Corrected or typed claim wording.
+             */
+            statement_text?: string | null;
+            /**
+             * Kind
+             * @description Claim type; defaults to the extracted one.
+             */
+            kind?: string | null;
+            /** Value */
+            value?: number | null;
+            /** Unit */
+            unit?: string | null;
+            /** Period */
+            period?: string | null;
+        };
+        /** ClaimListView */
+        ClaimListView: {
+            /** Project Id */
+            project_id: string;
+            /** Claims */
+            claims: components["schemas"]["ClaimView"][];
+            /** Kinds */
+            kinds: components["schemas"]["KindView"][];
+            /**
+             * Note
+             * @default A claim is what someone said, not a finding. Each one is compared with the evidence on file. UNVERIFIED means the evidence needed to test it is missing or of a kind that cannot establish it; it does not mean the claim is false.
+             */
+            note: string;
+        };
+        /** ClaimOutcomeView */
+        ClaimOutcomeView: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "SUPPORTED" | "PARTIALLY_SUPPORTED" | "CONTRADICTED" | "UNVERIFIED";
+            /** Headline */
+            headline: string;
+            /** Reasons */
+            reasons: string[];
+            /** Supporting */
+            supporting: string[];
+            /** Contradicting */
+            contradicting: string[];
+            /** Required Evidence */
+            required_evidence: string[];
+            /** Available Evidence */
+            available_evidence: string[];
+            /** Missing Evidence */
+            missing_evidence: string[];
+            /** Limitations */
+            limitations: string[];
+            /** Observed Value */
+            observed_value: number | null;
+            /** Observed Unit */
+            observed_unit: string | null;
+            /** Discrepancy Percentage */
+            discrepancy_percentage: number | null;
+            /** Methodology */
+            methodology: string;
+        };
+        /**
+         * ClaimPatch
+         * @description Corrections. Only the fields sent change; the original extraction is never altered.
+         */
+        ClaimPatch: {
+            /** Statement Text */
+            statement_text?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Value */
+            value?: number | null;
+            /** Unit */
+            unit?: string | null;
+            /** Period */
+            period?: string | null;
+        };
+        /** ClaimSourceView */
+        ClaimSourceView: {
+            /** Project Claim Id */
+            project_claim_id: string;
+            /** Document Id */
+            document_id: string | null;
+            /** Document Name */
+            document_name: string | null;
+            /** Document Sha256 */
+            document_sha256: string | null;
+            /** Start */
+            start: number | null;
+            /** End */
+            end: number | null;
+            /**
+             * Original Text
+             * @description Exactly what the document said. Never edited.
+             */
+            original_text: string;
+            /** Original Kind */
+            original_kind: string | null;
+            /** Original Value */
+            original_value: number | null;
+            /** Original Unit */
+            original_unit: string | null;
+            /** Original Period */
+            original_period: string | null;
+            /** Statement Text */
+            statement_text: string;
+            /** Kind */
+            kind: string;
+            /** Value */
+            value: number | null;
+            /** Unit */
+            unit: string | null;
+            /** Period */
+            period: string | null;
+            /**
+             * Edited
+             * @description True when the tested claim differs from what was extracted.
+             */
+            edited: boolean;
+            /** Created At */
+            created_at: string | null;
+            /** Updated At */
+            updated_at: string | null;
         };
         /** ClaimSpan */
         ClaimSpan: {
@@ -1621,6 +1863,20 @@ export interface components {
             custom_claims?: {
                 [key: string]: unknown;
             }[] | null;
+        };
+        /** ClaimView */
+        ClaimView: {
+            /** Id */
+            id: string;
+            /** Kind Label */
+            kind_label: string;
+            /**
+             * Checkable
+             * @description Whether the platform has any check for this kind of claim.
+             */
+            checkable: boolean;
+            source: components["schemas"]["ClaimSourceView"];
+            outcome: components["schemas"]["ClaimOutcomeView"];
         };
         /** ClaimsRequest */
         ClaimsRequest: {
@@ -2637,6 +2893,255 @@ export interface components {
             /** Data Origin */
             data_origin: string | null;
         };
+        /** IngestionCoverageView */
+        IngestionCoverageView: {
+            /** Threshold Pct */
+            threshold_pct: number;
+            /** Complete Years */
+            complete_years: number[];
+            /** Partial Years */
+            partial_years: number[];
+            /** Years Without Data */
+            years_without_data: number[];
+        };
+        /** IngestionLimitsView */
+        IngestionLimitsView: {
+            /** First Year */
+            first_year: number;
+            /** Last Year */
+            last_year: number;
+            /** Max Years */
+            max_years: number;
+            /** Max Total Scenes */
+            max_total_scenes: number;
+            /** Min Resolution M */
+            min_resolution_m: number;
+            /** Max Resolution M */
+            max_resolution_m: number;
+            /** Max Grid Pixels */
+            max_grid_pixels: number;
+            /** Coverage Threshold Pct */
+            coverage_threshold_pct: number;
+            /** Indicators */
+            indicators: string[];
+            /** Default Indicators */
+            default_indicators: string[];
+        };
+        /** IngestionListView */
+        IngestionListView: {
+            /** Project Id */
+            project_id: string;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Active
+             * @description True while a request is queued or running.
+             */
+            active: boolean;
+            limits: components["schemas"]["IngestionLimitsView"];
+            /** Ingestions */
+            ingestions: components["schemas"]["IngestionView"][];
+            /** Explanation */
+            explanation: string;
+        };
+        /** IngestionParamsView */
+        IngestionParamsView: {
+            /** Start Year */
+            start_year: number;
+            /** End Year */
+            end_year: number;
+            /** Window Start */
+            window_start: string;
+            /** Window End */
+            window_end: string;
+            /** Max Cloud Cover */
+            max_cloud_cover: number;
+            /** Indicators */
+            indicators: string[];
+            /** Resolution M */
+            resolution_m: number;
+            /** Max Scenes Per Year */
+            max_scenes_per_year: number;
+            /**
+             * Platform
+             * @default sentinel-2
+             */
+            platform: string;
+        };
+        /**
+         * IngestionRequest
+         * @description What to ingest. Every field has a default, and the server re-validates all of them.
+         */
+        IngestionRequest: {
+            /**
+             * Start Year
+             * @description First calendar year (Sentinel-2 L2A starts in 2017).
+             */
+            start_year: number;
+            /**
+             * End Year
+             * @description Last year; defaults to start_year.
+             */
+            end_year?: number | null;
+            /**
+             * Window Start
+             * @description Season start, MM-DD.
+             * @default 06-01
+             */
+            window_start?: string;
+            /**
+             * Window End
+             * @description Season end, MM-DD (same calendar year).
+             * @default 06-30
+             */
+            window_end?: string;
+            /**
+             * Max Cloud Cover
+             * @description Scene cloud cover limit, percent.
+             * @default 25
+             */
+            max_cloud_cover?: number;
+            /**
+             * Indicators
+             * @description Subset of ndvi, evi, ndmi, nbr. NDVI is always stored.
+             */
+            indicators?: string[] | null;
+            /**
+             * Resolution M
+             * @description Analysis grid size in metres.
+             * @default 100
+             */
+            resolution_m?: number;
+            /**
+             * Max Scenes Per Year
+             * @description Scenes combined per year.
+             * @default 3
+             */
+            max_scenes_per_year?: number;
+        };
+        /** IngestionResultView */
+        IngestionResultView: {
+            /** Catalog Url */
+            catalog_url: string | null;
+            /** Platform */
+            platform: string | null;
+            /** Collection */
+            collection: string | null;
+            /**
+             * Bbox
+             * @default []
+             */
+            bbox: number[];
+            /**
+             * Years Requested
+             * @default []
+             */
+            years_requested: number[];
+            /**
+             * Years
+             * @default []
+             */
+            years: components["schemas"]["IngestionYearView"][];
+            coverage: components["schemas"]["IngestionCoverageView"] | null;
+            /**
+             * Stored Bundles
+             * @default {}
+             */
+            stored_bundles: {
+                [key: string]: components["schemas"]["StoredBundleView"];
+            };
+            /**
+             * Limitations
+             * @default []
+             */
+            limitations: string[];
+            /** Code Version */
+            code_version: string | null;
+            /** Method */
+            method: string | null;
+        };
+        /** IngestionView */
+        IngestionView: {
+            /** Id */
+            id: string;
+            /** Project Id */
+            project_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "succeeded" | "partial" | "failed" | "cancelled";
+            /** Status Detail */
+            status_detail: string | null;
+            /** Error Code */
+            error_code: string | null;
+            params: components["schemas"]["IngestionParamsView"];
+            /** Requested By */
+            requested_by: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Age Seconds
+             * @description Seconds since the request was made (or finished).
+             */
+            age_seconds: number;
+            /**
+             * Waiting Hint
+             * @description Set when a queued request has waited unusually long.
+             */
+            waiting_hint: string | null;
+            result: components["schemas"]["IngestionResultView"] | null;
+            /** Ledger Record Id */
+            ledger_record_id: string | null;
+        };
+        /** IngestionYearView */
+        IngestionYearView: {
+            /** Year */
+            year: number;
+            /**
+             * State
+             * @description observed: value and coverage ok; partial_coverage: value exists but the area is not fully covered; no_usable_data: left empty, never estimated.
+             * @enum {string}
+             */
+            state: "observed" | "partial_coverage" | "no_usable_data";
+            /** N Scenes */
+            n_scenes: number | null;
+            /**
+             * Scene Ids
+             * @default []
+             */
+            scene_ids: string[];
+            /**
+             * Acquisition Dates
+             * @default []
+             */
+            acquisition_dates: string[];
+            /**
+             * Contributing Tiles
+             * @default []
+             */
+            contributing_tiles: string[];
+            /** Aoi Coverage Pct */
+            aoi_coverage_pct: number | null;
+            /** Clear Pixel Fraction */
+            clear_pixel_fraction: number | null;
+            /** Is Spatially Complete */
+            is_spatially_complete: boolean | null;
+            /**
+             * Values
+             * @default {}
+             */
+            values: {
+                [key: string]: number | null;
+            };
+        };
         /**
          * IntelligenceMode
          * @description Supported intelligence research modes.
@@ -2825,6 +3330,17 @@ export interface components {
              * Note
              * @default There is no percentage because none can be known: the analysis engine runs as one step and reports its internal timings only when it finishes. `stages` are observed as they happen; `engine_metrics` fills in afterwards.
              */
+            note: string;
+        };
+        /** KindView */
+        KindView: {
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Checkable */
+            checkable: boolean;
+            /** Note */
             note: string;
         };
         /** LedgerFailureView */
@@ -3751,6 +4267,13 @@ export interface components {
              * @description Time spent in the active stage so far. A clock reading, not a fraction of anything.
              */
             elapsed_ms: number | null;
+        };
+        /** StoredBundleView */
+        StoredBundleView: {
+            /** File */
+            file: string;
+            /** Sha256 */
+            sha256: string;
         };
         /**
          * SubmitJobRequest
@@ -7181,6 +7704,282 @@ export interface operations {
             };
         };
     };
+    list_claims_projects__project_id__claims_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimListView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or claim. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Conflicts with the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description The claim cannot be accepted. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    create_claim_projects__project_id__claims_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or claim. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Conflicts with the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description The claim cannot be accepted. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    withdraw_claim_projects__project_id__claims__claim_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                claim_id: string;
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or claim. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Conflicts with the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description The claim cannot be accepted. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    edit_claim_projects__project_id__claims__claim_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                claim_id: string;
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or claim. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Conflicts with the current state. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description The claim cannot be accepted. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
     get_project_ledger_projects__project_id__ledger_get: {
         parameters: {
             query?: never;
@@ -7420,6 +8219,316 @@ export interface operations {
                 };
             };
             /** @description No database. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    list_ingestions_projects__project_id__observations_ingestions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestionListView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or ingestion. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description An ingestion is already queued or running. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description The request cannot be accepted. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database, or ingestion is switched off. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    request_ingestion_projects__project_id__observations_ingestions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngestionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestionView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or ingestion. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description An ingestion is already queued or running. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description The request cannot be accepted. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database, or ingestion is switched off. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_ingestion_projects__project_id__observations_ingestions__ingestion_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ingestion_id: string;
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestionView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or ingestion. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description An ingestion is already queued or running. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description The request cannot be accepted. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database, or ingestion is switched off. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    cancel_ingestion_projects__project_id__observations_ingestions__ingestion_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ingestion_id: string;
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestionView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level or role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown project or ingestion. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description An ingestion is already queued or running. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description The request cannot be accepted. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database, or ingestion is switched off. */
             503: {
                 headers: {
                     [name: string]: unknown;

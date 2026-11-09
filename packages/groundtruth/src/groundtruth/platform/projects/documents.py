@@ -155,6 +155,10 @@ def claim_candidates(text: str, doc_id: str) -> list[dict[str, Any]]:
                 "start": st.start,
                 "end": st.end,
                 "quote": st.text,
+                "period": st.period,
+                "status": getattr(st.status, "value", str(st.status)),
+                "reason": st.reason,
+                "evidence_gap": st.evidence_gap,
             }
         )
     return out

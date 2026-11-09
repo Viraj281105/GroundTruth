@@ -64,6 +64,20 @@ class Settings(BaseSettings):
         description="Largest accepted project document upload (env PROJECT_DOCUMENT_MAX_BYTES).",
     )
 
+    observation_ingestion_enabled: bool = Field(
+        default=True,
+        description="Accept observation-ingestion requests for user projects (env "
+        "OBSERVATION_INGESTION_ENABLED). Requests are executed by the worker process.",
+    )
+    ingestion_poll_seconds: float = Field(
+        default=10.0, gt=0, description="How often the worker looks for queued ingestions."
+    )
+    ingestion_stale_minutes: int = Field(
+        default=45,
+        ge=1,
+        description="A running ingestion with no heartbeat for this long is marked failed.",
+    )
+
     # --- earth observation providers --------------------------------------
     google_cloud_project: str | None = None
     gee_service_account_json: str | None = None

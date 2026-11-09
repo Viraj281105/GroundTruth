@@ -169,12 +169,12 @@ def _observed(records: tuple[AnnualObservationRecord, ...]) -> list[AnnualObserv
 
 
 NO_INGESTION_PATH = (
-    "Satellite observation ingestion for a project defined by an uploaded boundary is not "
-    "available from the app yet (only an operator can ingest observations, and only for "
-    "configured reference cases). You can upload project documents now; the observation "
-    "criteria stay unavailable until observations are ingested for this project."
+    "No satellite observations have been ingested for this project yet. Request them from the "
+    "Earth observation tab: a GroundTruth worker downloads and processes Sentinel-2 scenes "
+    "inside your boundary, and the request's status is shown there. You can upload project "
+    "documents in the meantime."
 )
-"""Said only when the project has no linked case: that is the real state of the platform."""
+"""Said when a project has no linked case and nothing ingested: the real state of that project."""
 
 
 def _unavailable(

@@ -211,6 +211,17 @@ def main(argv: list[str] | None = None) -> int:
         int(queue.lease.total_seconds()),
         extra=startup,
     )
+    poller = None
+    if not args.exit_when_idle and settings.observation_ingestion_enabled:
+        # Satellite-observation requests made in the app are executed here, beside the analysis
+        # jobs, so one worker process serves both.
+        from groundtruth.platform.projects.ingestion import IngestionPoller
+
+        poller = IngestionPoller(
+            create_session_factory(db), worker.worker_id, settings.ingestion_poll_seconds
+        )
+        poller.start()
+        logger.info("observation ingestion poller started", extra=startup)
     try:
         processed = worker.run(exit_when_idle=args.exit_when_idle, max_jobs=args.max_jobs)
     except KeyboardInterrupt:
@@ -221,6 +232,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         return EXIT_INTERRUPTED
     finally:
+        if poller is not None:
+            poller.stop()
+            poller.join(timeout=120)  # let a request in progress finish; the sweep handles the rest
         restore_signal_handlers(previous)
         db.dispose()
     logger.info("worker stopped after %d job(s)", processed, extra={"stage": "shutdown"})

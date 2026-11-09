@@ -150,6 +150,10 @@ class StructuredClaimVerification:
     discrepancy_percentage: float | None
     corrective_action_request: str | None
     decomposed_statements: list[DecomposedStatement]
+    # Additive (user-promoted claims): where the claim came from, and the outcome in plain words.
+    source: dict[str, Any] | None = None
+    headline: str | None = None
+    reasons: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -173,6 +177,9 @@ class StructuredClaimVerification:
             "discrepancy_percentage": self.discrepancy_percentage,
             "corrective_action_request": self.corrective_action_request,
             "decomposed_statements": [s.to_dict() for s in self.decomposed_statements],
+            "source": self.source,
+            "headline": self.headline,
+            "reasons": self.reasons,
         }
 
 
@@ -854,7 +861,7 @@ def verify_project_claims(
                 missing = ["No evidence has been linked to this claim yet."]
             claims.append(
                 StructuredClaimVerification(
-                    claim_id=f"CLM-{idx:02d}",
+                    claim_id=str(item.get("claim_id") or f"CLM-{idx:02d}"),
                     claim_type=kind,
                     title=item.get("title", f"Claim {idx}"),
                     definition=item.get("definition", "Restoration claim"),
@@ -877,7 +884,21 @@ def verify_project_claims(
                     status=status,
                     discrepancy_percentage=item.get("discrepancy_percentage"),
                     corrective_action_request=item.get("corrective_action_request"),
-                    decomposed_statements=[],
+                    decomposed_statements=[
+                        DecomposedStatement(
+                            statement_id=str(st.get("statement_id", f"CLM-{idx:02d}-ST-{n}")),
+                            statement_text=str(st.get("statement_text", "")),
+                            target_metric=str(st.get("target_metric", "")),
+                            claimed_value=st.get("claimed_value", ""),
+                            observed_value=st.get("observed_value"),
+                            status=VerificationStatus(st.get("status", "UNVERIFIED")),
+                            rationale=str(st.get("rationale", "")),
+                        )
+                        for n, st in enumerate(item.get("statements", []), start=1)
+                    ],
+                    source=item.get("source"),
+                    headline=item.get("headline"),
+                    reasons=list(item.get("reasons", [])),
                 )
             )
 

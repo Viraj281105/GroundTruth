@@ -54,6 +54,7 @@ HASH_SCHEME = "gt-merkle-v2"
 GENESIS = "genesis"
 KIND_ASSESSMENT = "assessment"
 KIND_REPORT_SEALED = "report.sealed"
+KIND_OBSERVATION_INGESTED = "observation.ingested"
 _MAX_APPEND_ATTEMPTS = 12
 
 STATUS_EMPTY = "empty"
@@ -491,6 +492,37 @@ class AuditLedger:
             },
             report_version=report_kind,
             methodology_version="unspecified",
+            deterministic_reproducible=False,
+            timestamp=None,
+        )
+
+    def record_observation_ingest(
+        self,
+        project_id: str,
+        *,
+        boundary_geometry_hash: str,
+        parameters: dict[str, Any],
+        stored_bundles: dict[str, str],
+        findings: dict[str, Any],
+        code_version: str,
+    ) -> AuditRecord:
+        """Record what an ingestion fetched: its parameters and the hash of every bundle it stored.
+
+        ``stored_bundles`` maps a bundle name (for example ``ndvi``) to the SHA-256 of the exact
+        file written, so the observations a later assessment used can be traced back to this
+        record and re-checked against the file on disk.
+        """
+        return self._append(
+            project_id=project_id,
+            record_kind=KIND_OBSERVATION_INGESTED,
+            boundary_geometry_hash=boundary_geometry_hash,
+            input_files_hashes=dict(stored_bundles),
+            dataset_versions_hashes={},
+            analytical_parameters=parameters,
+            intermediate_hashes={},
+            final_findings=findings,
+            report_version=f"observation-ingestion/{code_version}",
+            methodology_version="aoi-zonal-median-mean",
             deterministic_reproducible=False,
             timestamp=None,
         )

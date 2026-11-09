@@ -75,6 +75,10 @@ class ClaimCandidate(BaseModel):
     start: int | None = None
     end: int | None = None
     quote: str | None = None
+    period: str | None = None
+    status: str | None = None
+    reason: str | None = None
+    evidence_gap: str | None = None
 
 
 class ExtractionView(BaseModel):

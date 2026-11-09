@@ -15,29 +15,35 @@ from groundtruth.platform.store.models import ProjectRow
 
 _ACTIONS = {
     "boundary_verified": "Add the project boundary (GeoJSON polygon) in project settings.",
-    "observation_years": "Ingest annual satellite observations for the project area.",
-    "pre_treatment_observations": "Ingest observations from before the intervention started.",
+    "observation_years": "Request satellite observations on the Earth observation tab.",
+    "pre_treatment_observations": "Request observations that include years before the intervention started.",
     "climate_covariates": "Ingest climate covariates (rainfall, temperature) for the area.",
     "donor_panel": "Provide comparison areas (donor pool) outside the project boundary.",
     "sensor_continuity": "Ingest observations from a consistent sensor across the period.",
 }
 
 
-def claim_gaps(project: ProjectRow, data_dir: Path) -> tuple[list[dict[str, Any]], list[str]]:
+def claim_gaps(
+    project: ProjectRow, data_dir: Path, *, has_claims: bool = False
+) -> tuple[list[dict[str, Any]], list[str]]:
     """Return ``(missing_information, next_steps)`` for ``project``.
 
-    Each missing item is ``{"id", "label", "status", "detail", "action"}``. Always includes the
-    fact that no claims have been submitted, since this is called only for an empty portfolio.
+    Each missing item is ``{"id", "label", "status", "detail", "action"}``. Includes the fact
+    that no claims have been submitted unless ``has_claims`` says some exist.
     """
-    missing: list[dict[str, Any]] = [
-        {
-            "id": "claims_submitted",
-            "label": "Claims to verify",
-            "status": "not_met",
-            "detail": "No claims have been submitted for this project.",
-            "action": "Upload a project document or paste claim text to extract claims.",
-        }
-    ]
+    missing: list[dict[str, Any]] = (
+        []
+        if has_claims
+        else [
+            {
+                "id": "claims_submitted",
+                "label": "Claims to verify",
+                "status": "not_met",
+                "detail": "No claims have been submitted for this project.",
+                "action": "Upload a document on the Evidence tab and promote statements from it, or add a claim on this page.",
+            }
+        ]
+    )
     try:
         readiness = compute_project_readiness(project, data_dir=data_dir)
         for c in readiness.criteria:
@@ -63,8 +69,8 @@ def claim_gaps(project: ProjectRow, data_dir: Path) -> tuple[list[dict[str, Any]
         )
     steps = [
         "Add the project boundary.",
-        "Upload project documents containing the claims you want checked.",
-        "Ingest observations (satellite series) for the project area.",
+        "Upload project documents on the Evidence tab, then promote the statements you want checked.",
+        "Request satellite observations for the project area on the Earth observation tab.",
         "Return here to compare each claim with the available evidence.",
     ]
     return missing, steps

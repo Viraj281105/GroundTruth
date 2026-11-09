@@ -21,7 +21,7 @@ export default async function EvidencePage({ params }: { params: { org: string; 
   const role = org?.role ?? null;
   return (
     <>
-      {inventory.data && <EvidenceGuidance inventory={inventory.data} />}
+      {inventory.data && <EvidenceGuidance inventory={inventory.data} observationHref={`/app/${params.org}/projects/${params.project}/observation`} />}
       {docs.data ? (
         <DocumentsPanel
           projectId={project.id}

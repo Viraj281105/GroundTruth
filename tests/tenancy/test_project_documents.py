@@ -289,13 +289,13 @@ def test_user_project_without_observations_says_what_is_missing(
     up = _up(out, "baseline.md", b"# Baseline\nArea is 300 hectares.\n", project=pid)
     assert up.status_code == 201
     inv = out.get(f"/projects/{pid}/evidence-inventory").json()
-    assert inv["documents_count"] == 1 and inv["observation_ingestion"]["available"] is False
-    assert "not available from the app" in inv["observation_ingestion"]["message"]
+    assert inv["documents_count"] == 1 and inv["observation_ingestion"]["available"] is True
+    assert "Request them from the Earth observation tab" in inv["observation_ingestion"]["message"]
     assert any("No satellite observations" in m for m in inv["missing_evidence"])
     assert not any("boundary" in m.lower() for m in inv["missing_evidence"])
     ready = out.get(f"/projects/{pid}/readiness").json()
     needs = " ".join(c["evidence_needed"] for c in ready["criteria"])
-    assert "upload project documents" in needs
+    assert "Earth observation tab" in needs
     assert ready["attribution_ready"] is False
 
 

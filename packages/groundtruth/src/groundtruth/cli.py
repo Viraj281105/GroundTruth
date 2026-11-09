@@ -18,6 +18,7 @@ import argparse
 import contextlib
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -241,6 +242,18 @@ def _cmd_submit(args: argparse.Namespace) -> int:
         else "queued; start a worker to run it"
     )
     print(f"run_id={submission.run_id} status={submission.status.value} ({how})")
+    return 0
+
+
+def _cmd_process_ingestions(args: argparse.Namespace) -> int:
+    """Run queued observation-ingestion requests now (operator-supervised), then exit."""
+    from groundtruth.platform.projects.ingestion import process_pending
+
+    sessions = _job_sessions()
+    if sessions is None:
+        return 2
+    done = process_pending(sessions, f"cli-{os.getpid()}", limit=args.limit)
+    print(f"process-ingestions: ran {done} queued request(s)")
     return 0
 
 
@@ -524,6 +537,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="With --demo: write email<TAB>password lines here (mode 600) instead of printing.",
     )
     seed_cmd.set_defaults(func=_cmd_seed)
+
+    proc = subparsers.add_parser(
+        "process-ingestions",
+        help="Run queued satellite-observation requests for user projects now, then exit.",
+    )
+    proc.add_argument("--limit", type=int, default=None, help="Run at most this many requests.")
+    proc.set_defaults(func=_cmd_process_ingestions)
 
     doctor = subparsers.add_parser("doctor", help="Report what is configured and implemented.")
     doctor.set_defaults(func=_cmd_doctor)
