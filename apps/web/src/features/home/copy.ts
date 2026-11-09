@@ -3,7 +3,7 @@ export const homeCopy = {
   headline: 'Verify what changed, not just what was claimed.',
   promise:
     'GroundTruth is an independent check on carbon-credit and forest-restoration claims. It compares a project with a synthetic twin built from similar untouched land and shows how far the two paths diverge. All data shown is simulated.',
-  primary: 'Explore a case',
+  primary: 'Open your workspace',
   secondary: 'How it works',
   illustrative: 'Illustrative simulation',
   heroAlt:

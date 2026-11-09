@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from '../ui/Badge';
+import { Badge } from '../ds/Badge';
 import { FileText, ShieldCheck, AlertCircle } from 'lucide-react';
 import styles from './NarrativeReport.module.css';
 

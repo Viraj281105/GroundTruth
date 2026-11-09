@@ -1,0 +1,16 @@
+.chip { display: inline-flex; align-items: center; gap: var(--space-2); padding: 5px var(--space-2); border: 1px solid var(--bd); border-radius: var(--radius-sm); background: var(--bg); color: var(--fg); font-size: var(--text-xs); font-weight: 500; line-height: 1; white-space: nowrap; }
+.glyph { width: 8px; height: 8px; flex: none; border: 1.5px solid currentColor; }
+.improving { --fg: var(--status-improving-fg); --bg: var(--status-improving-bg); --bd: var(--status-improving-border); }
+.improving .glyph { clip-path: polygon(50% 0, 100% 100%, 0 100%); background: currentColor; border: 0; }
+.deteriorating { --fg: var(--status-deteriorating-fg); --bg: var(--status-deteriorating-bg); --bd: var(--status-deteriorating-border); }
+.deteriorating .glyph { clip-path: polygon(0 0, 100% 0, 50% 100%); background: currentColor; border: 0; }
+.stable { --fg: var(--status-stable-fg); --bg: var(--status-stable-bg); --bd: var(--status-stable-border); }
+.stable .glyph { height: 0; border-width: 0 0 2px; }
+.mixed { --fg: var(--status-mixed-fg); --bg: var(--status-mixed-bg); --bd: var(--status-mixed-border); }
+.mixed .glyph { background: linear-gradient(90deg, currentColor 50%, transparent 50%); }
+.risk { --fg: var(--status-risk-fg); --bg: var(--status-risk-bg); --bd: var(--status-risk-border); }
+.risk .glyph { background: currentColor; transform: rotate(45deg); }
+.noclear { --fg: var(--status-noclear-fg); --bg: var(--status-noclear-bg); --bd: var(--status-noclear-border); }
+.noclear .glyph { border-radius: var(--radius-full); }
+.insufficient { --fg: var(--status-insufficient-fg); --bg: var(--status-insufficient-bg); --bd: var(--status-insufficient-border); border-style: dashed; }
+.insufficient .glyph { border-style: dashed; border-radius: var(--radius-full); }

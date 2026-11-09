@@ -45,9 +45,9 @@ export function FinalCta() {
     <section className="gt-container" aria-labelledby="cta-title">
       <Reveal variant="scale" className={styles.cta}>
         <h2 id="cta-title">See the gap for yourself</h2>
-        <p className={styles.lead} style={{ marginInline: 'auto' }}>Open a simulated benchmark case, or read how the method works.</p>
+        <p className={styles.lead} style={{ marginInline: 'auto' }}>Sign in to open a workspace, or read how the method works.</p>
         <div className={styles.ctaActions}>
-          <LinkButton href="/cases" size="lg">Explore a case</LinkButton>
+          <LinkButton href="/login?next=%2Fapp" size="lg">Sign in to your workspace</LinkButton>
           <LinkButton href="/method" variant="secondary" size="lg">Read how it works</LinkButton>
         </div>
       </Reveal>

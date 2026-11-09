@@ -130,7 +130,7 @@ export function CounterfactualHero() {
           <h1 id="hero-title">{c.headline}</h1>
           <p className={styles.promise}>{c.promise}</p>
           <div className={styles.actions}>
-            <LinkButton href="/cases" size="lg">{c.primary}</LinkButton>
+            <LinkButton href="/app" size="lg">{c.primary}</LinkButton>
             <LinkButton href="/method" variant="secondary" size="lg">{c.secondary}</LinkButton>
           </div>
         </div>

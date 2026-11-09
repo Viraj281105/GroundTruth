@@ -1,0 +1,6 @@
+.panel { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); min-width: 0; padding: var(--space-6); border: 1.5px dashed var(--border-default); border-radius: var(--radius-lg); background: repeating-linear-gradient(135deg, transparent 0 9px, var(--surface-sunken) 9px 10px); }
+.title { font-size: var(--text-lg); }
+.reason { font-size: var(--text-sm); color: var(--text-secondary); }
+.need { font-size: var(--text-sm); color: var(--text-muted); }
+.need b { font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; margin-right: var(--space-2); }
+.action { margin-top: var(--space-1); }

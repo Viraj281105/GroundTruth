@@ -6,9 +6,9 @@ import {
   resultStateTone,
 } from '../../lib/types';
 import { formatMeasurement } from '../../lib/formatters';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/Card';
-import { Badge } from '../ui/Badge';
-import { MetricDisplay } from '../ui/MetricDisplay';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ds/Card';
+import { Badge } from '../ds/Badge';
+import { MetricDisplay } from '../ds/MetricDisplay';
 import { Info } from 'lucide-react';
 import styles from './DonorCandidatePanel.module.css';
 
@@ -46,7 +46,7 @@ export const DonorCandidatePanel: React.FC<DonorCandidatePanelProps> = ({
   className = '',
 }) => {
   return (
-    <Card variant="default" className={className}>
+    <Card padded={false} className={className}>
       <CardHeader>
         <div className={styles.headerRow}>
           <CardTitle>Donor Candidate Generation</CardTitle>

@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChartDataPoint } from '../../lib/fixtures/simulated-data';
 import { Evidence } from '../../lib/types';
 import { NOT_MEASURED, booleanValue, findEvidence, numberValue, sig } from '../../lib/evidence';
-import { Badge } from '../ui/Badge';
+import { Badge } from '../ds/Badge';
 import { Info, ZoomIn, Calendar, Sliders } from 'lucide-react';
 import styles from './CounterfactualChart.module.css';
 

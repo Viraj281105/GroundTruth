@@ -10,7 +10,7 @@ import { SignedBars } from '../../../components/charts/SignedBars';
 import { SpecDots } from '../../../components/charts/SpecDots';
 import { SpecificationCurve } from '../../../components/scientific/SpecificationCurve';
 import { DidCrossCheck } from '../../../components/scientific/DidCrossCheck';
-import { ProvenanceDrawer } from '../../../components/ui/ProvenanceDrawer';
+import { ProvenanceDrawer } from '../../../components/ds/ProvenanceDrawer';
 import { CaseDataGate } from '../evidence/CaseDataGate';
 import { useCaseEvidence } from '../evidence/useCaseEvidence';
 import { Section, Term } from '../evidence/Term';

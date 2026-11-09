@@ -14,7 +14,7 @@
 
 import { API_BASE_URL, ApiUnreachableError, type RefusalInfo } from "./api";
 import { createApiClient, type ApiClientOptions, type Schemas } from "./api-client";
-import type { LoadingStage } from "../components/ui/States";
+import type { LoadingStage } from "../components/ds/States";
 import type { VerificationResponse } from "./types";
 
 export type JobView = Schemas["JobView"];

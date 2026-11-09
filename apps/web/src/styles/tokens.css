@@ -1,24 +1,26 @@
-/* GroundTruth design tokens — three tiers.
+/* GroundTruth design tokens (approved palette, GT2 prototype) - two tiers.
  *   1. Reference   (--ref-*)   raw palette and scales; never used by components.
  *   2. Semantic    (--*)       meaning-based, switched per theme in themes.css.
- *   3. Compat      (--gt-*)    legacy names mapped onto the semantic tokens so
- *                              not-yet-migrated components follow the theme too.
- * Components use tier 2 only. No raw hex or px magic numbers in component CSS.
+ * Components use tier 2 only. The legacy --gt-* tier was removed; do not reintroduce it.
  */
 
 :root {
   /* ---- Tier 1: reference scales ---------------------------------------- */
-  --ref-paper-50: #fbf9f5;  --ref-paper-100: #f4f1ea;  --ref-paper-200: #e8e3d8;
-  --ref-paper-300: #d6cfbf; --ref-paper-500: #8b8577;
-  --ref-ink-900: #19211d;   --ref-ink-700: #424d47;    --ref-ink-600: #5a655f;
-  --ref-night-950: #0d1210; --ref-night-900: #131a17;  --ref-night-850: #19221e;
-  --ref-night-800: #1f2a25; --ref-night-700: #2b3832;  --ref-night-600: #3b4a43;
-  --ref-mist-100: #edf0ea;  --ref-mist-300: #b7c1ba;   --ref-mist-400: #8f9b94;
-  --ref-green-700: #1b6a4c; --ref-green-600: #237f5d;  --ref-green-300: #62c79d;
-  --ref-amber-700: #a64b06; --ref-amber-300: #e8a653;
-  --ref-red-700: #b42318;   --ref-red-300: #f2897e;
-  --ref-violet-700: #6d3fd1; --ref-violet-300: #b9a2ff;
-  --ref-slate-700: #4b5a6b; --ref-slate-300: #a9b8c9;
+  --ref-bg-light: #edf0ea;   --ref-bg2-light: #e3e8df;  --ref-surface-light: #f7f8f4;
+  --ref-surface2-light: #f0f2ec; --ref-line-light: #cdd4c8; --ref-line2-light: #b7c0b1;
+  --ref-ink-900: #15211b;    --ref-ink-700: #3f4f46;     --ref-ink-600: #5a695f;
+  --ref-night-950: #0c1311;  --ref-night-900: #131d19;   --ref-night-850: #18241f;
+  --ref-night-800: #25332c;  --ref-night-700: #33443b;   --ref-night-600: #3f5247;
+  --ref-night-bg2: #101a16;
+  --ref-mist-100: #e6ebe4;   --ref-mist-300: #b2bfb5;    --ref-mist-400: #8c9a91;
+  --ref-forest-700: #1f6b4a; --ref-forest-800: #17553a;  --ref-forest-300: #4fb383; --ref-forest-200: #6cc699;
+  --ref-gold-700: #8a6610;   --ref-gold-300: #d2aa45;
+  --ref-warn-700: #8f5309;   --ref-warn-300: #e0a44f;
+  --ref-red-700: #b42318;    --ref-red-300: #f2897e;
+  --ref-blue-700: #2b6f9e;   --ref-blue-300: #6aaedb;
+  --ref-violet-700: #6f4fa0; --ref-violet-300: #b197db;
+  --ref-slate-700: #5f6d65;  --ref-slate-300: #93a097;
+  --ref-sim-700: #5c1b49;    --ref-sim-300: #f6cde8;
 
   /* ---- Scales (theme independent) -------------------------------------- */
   --space-0: 0;
@@ -32,8 +34,8 @@
   --leading-tight: 1.15; --leading-snug: 1.3; --leading-normal: 1.55; --leading-relaxed: 1.7;
   --tracking-tight: -0.02em; --tracking-wide: 0.04em;
 
-  --radius-sm: 0.375rem; --radius-md: 0.625rem; --radius-lg: 0.875rem;
-  --radius-xl: 1.25rem;  --radius-full: 999px;
+  --radius-xs: 2px; --radius-sm: 2px; --radius-md: 4px; --radius-lg: 6px;
+  --radius-xl: 6px;  --radius-full: 999px; /* --radius-full only for dots/spinners, never chips */
 
   --duration-fast: 120ms; --duration-base: 200ms; --duration-slow: 360ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -43,68 +45,4 @@
   --reading-width: 42rem;     /* long-form prose */
   --header-height: 3.75rem;
   --z-header: 40; --z-overlay: 60; --z-toast: 80;
-
-  /* ---- Tier 3: legacy --gt-* names -> semantic tokens ------------------- */
-  --gt-bg-root: var(--surface-base);
-  --gt-bg-surface: var(--surface-sunken);
-  --gt-bg-card: var(--surface-raised);
-  --gt-bg-card-hover: var(--surface-hover);
-  --gt-bg-subtle: var(--surface-sunken);
-  --gt-bg-overlay: var(--surface-overlay);
-  --gt-border-subtle: var(--border-subtle);
-  --gt-border-default: var(--border-default);
-  --gt-border-strong: var(--border-strong);
-  --gt-border-cyan-trace: var(--accent-soft-border);
-  --gt-border-focus: var(--focus-ring);
-  --gt-text-primary: var(--text-primary);
-  --gt-text-secondary: var(--text-secondary);
-  --gt-text-muted: var(--text-muted);
-  --gt-text-subtle: var(--text-muted);
-  --gt-text-mono: var(--text-muted);
-  --gt-text-inverse: var(--text-on-accent);
-  --gt-accent-cyan: var(--accent);
-  --gt-accent-cyan-glow: var(--accent-strong);
-  --gt-accent-cyan-dim: var(--accent-soft);
-  --gt-accent-cyan-alpha: var(--accent-soft);
-  --gt-accent-forest: var(--accent);
-  --gt-accent-forest-dim: var(--accent-soft);
-  --gt-accent-forest-glow: var(--accent-soft);
-  --gt-series-observed: var(--series-observed);
-  --gt-series-synthetic: var(--series-synthetic);
-  --gt-series-envelope: var(--series-envelope);
-  --gt-series-gap: var(--series-gap);
-  --gt-series-pre-bg: var(--series-pre);
-  --gt-series-post-bg: var(--series-post);
-  --gt-verdict-consistent-bg: var(--ok-bg);
-  --gt-verdict-consistent-border: var(--ok-border);
-  --gt-verdict-consistent-text: var(--ok-text);
-  --gt-verdict-divergent-bg: var(--caution-bg);
-  --gt-verdict-divergent-border: var(--caution-border);
-  --gt-verdict-divergent-text: var(--caution-text);
-  --gt-verdict-inconclusive-bg: var(--neutral-bg);
-  --gt-verdict-inconclusive-border: var(--neutral-border);
-  --gt-verdict-inconclusive-text: var(--neutral-text);
-  --gt-banner-simulated-bg: var(--sim-bg);
-  --gt-banner-simulated-border: var(--sim-border);
-  --gt-banner-simulated-text: var(--sim-text);
-  --gt-banner-simulated-badge: var(--sim-solid);
-  --gt-error-bg: var(--danger-bg);
-  --gt-error-border: var(--danger-border);
-  --gt-error-text: var(--danger-text);
-  --gt-font-display: var(--font-display);
-  --gt-font-sans: var(--font-sans);
-  --gt-font-mono: var(--font-mono);
-  --gt-radius-xs: 0.25rem;
-  --gt-radius-sm: var(--radius-sm);
-  --gt-radius-md: var(--radius-md);
-  --gt-radius-lg: var(--radius-lg);
-  --gt-radius-xl: var(--radius-xl);
-  --gt-radius-full: var(--radius-full);
-  --gt-shadow-card: var(--shadow-1);
-  --gt-shadow-elevated: var(--shadow-3);
-  --gt-shadow-glow-cyan: var(--shadow-2);
-  --gt-shadow-glow-amber: var(--shadow-2);
-  --gt-transition-fast: var(--duration-fast) var(--ease-out);
-  --gt-transition-normal: var(--duration-base) var(--ease-out);
-  --gt-transition-slow: var(--duration-slow) var(--ease-out);
 }

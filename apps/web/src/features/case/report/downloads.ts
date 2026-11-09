@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from '../../../lib/api';
+import { getPublicApiUrl } from '../../../lib/api';
 import { notifySessionExpired } from '../../../lib/session-events';
 
 export type ReportFormat = 'pdf' | 'csv';
@@ -14,7 +14,7 @@ type Fetch = typeof globalThis.fetch;
 const MIME: Record<ReportFormat, string> = { pdf: 'application/pdf', csv: 'text/csv' };
 
 export function exportUrl(caseId: string, format: ReportFormat): string {
-  return `${getApiBaseUrl()}/cases/${encodeURIComponent(caseId)}/export/${format}`;
+  return `${getPublicApiUrl()}/cases/${encodeURIComponent(caseId)}/export/${format}`;
 }
 
 /** Filename from a Content-Disposition header, falling back to a predictable name. */

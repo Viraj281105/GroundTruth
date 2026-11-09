@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { PlaceboDistributionData } from '../../lib/fixtures/simulated-data';
-import { Badge } from '../ui/Badge';
+import { Badge } from '../ds/Badge';
 import { sig } from '../../lib/evidence';
 import { Info } from 'lucide-react';
 import styles from './PlaceboDistribution.module.css';

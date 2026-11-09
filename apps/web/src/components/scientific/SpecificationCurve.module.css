@@ -4,9 +4,9 @@
   gap: 14px;
   min-width: 0;
   padding: 20px;
-  background-color: var(--gt-bg-card);
-  border: 1px solid var(--gt-border-default);
-  border-radius: var(--gt-radius-lg);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
 }
 
 .header {
@@ -23,10 +23,10 @@
 }
 
 .title {
-  font-family: var(--gt-font-display);
+  font-family: var(--font-display);
   font-size: 16px;
   font-weight: 600;
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -36,13 +36,13 @@
 .empty {
   font-size: 13px;
   line-height: 1.5;
-  color: var(--gt-text-secondary);
+  color: var(--text-secondary);
   margin: 0;
 }
 
 .subtitle,
 .note {
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
 }
 
 .facts {
@@ -61,37 +61,37 @@
 .fact {
   min-width: 0;
   padding: 10px 12px;
-  background-color: var(--gt-bg-subtle);
-  border: 1px solid var(--gt-border-subtle);
-  border-radius: var(--gt-radius-md);
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
 }
 
 .fact dt {
   font-size: 12px;
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
   margin-bottom: 4px;
 }
 
 .fact dd {
   margin: 0;
   font-size: 13px;
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
   overflow-wrap: anywhere;
 }
 
 .factButton,
 .cellButton {
   font: inherit;
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-mono);
   font-weight: 600;
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
   text-align: left;
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
   text-decoration: underline;
-  text-decoration-color: var(--gt-border-strong);
+  text-decoration-color: var(--border-strong);
   text-underline-offset: 3px;
   min-height: 44px;
   display: inline-flex;
@@ -100,15 +100,15 @@
 
 .factButton:focus-visible,
 .cellButton:focus-visible {
-  outline: 2px solid var(--gt-border-focus);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
 .svgWrapper {
   width: 100%;
-  background-color: var(--gt-bg-subtle);
-  border: 1px solid var(--gt-border-subtle);
-  border-radius: var(--gt-radius-md);
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   padding: 8px 4px 4px;
 }
 
@@ -119,56 +119,56 @@
 }
 
 .gridLine {
-  stroke: var(--gt-border-subtle);
+  stroke: var(--border-subtle);
   stroke-dasharray: 4 4;
 }
 
 .tickY {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-mono);
   font-size: 10px;
-  fill: var(--gt-text-subtle);
+  fill: var(--text-muted);
   text-anchor: end;
 }
 
 .axisLabel {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-mono);
   font-size: 10px;
-  fill: var(--gt-text-muted);
+  fill: var(--text-muted);
 }
 
 .envelope {
-  fill: var(--gt-series-envelope);
+  fill: var(--series-envelope);
 }
 
 .zeroLine {
-  stroke: var(--gt-text-subtle);
+  stroke: var(--text-muted);
   stroke-width: 1;
 }
 
 .medianLine {
-  stroke: var(--gt-series-synthetic);
+  stroke: var(--series-synthetic);
   stroke-width: 1.5;
   stroke-dasharray: 6 4;
 }
 
 .medianLabel,
 .centreLabel {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-mono);
   font-size: 10px;
-  fill: var(--gt-text-secondary);
+  fill: var(--text-secondary);
 }
 
 .point {
-  fill: var(--gt-series-observed);
+  fill: var(--series-observed);
 }
 
 .flipPoint {
-  fill: var(--gt-verdict-divergent-text);
+  fill: var(--caution-text);
 }
 
 .centreRing {
   fill: none;
-  stroke: var(--gt-text-secondary);
+  stroke: var(--text-secondary);
   stroke-width: 1.5;
 }
 
@@ -186,7 +186,7 @@
 .caption {
   text-align: left;
   font-size: 12px;
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
   padding-bottom: 8px;
 }
 
@@ -194,8 +194,8 @@
 .table td {
   text-align: left;
   padding: 8px 10px;
-  border-bottom: 1px solid var(--gt-border-subtle);
-  color: var(--gt-text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
   vertical-align: top;
 }
 
@@ -204,12 +204,12 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
 }
 
 .table tbody th {
   font-weight: 500;
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
 }
 
 /* The specification name already says which choice changed, so the column is

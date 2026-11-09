@@ -1,22 +1,22 @@
 .container {
   display: flex;
   flex-direction: column;
-  background-color: var(--gt-bg-card);
-  border: 1px solid var(--gt-border-default);
-  border-radius: var(--gt-radius-lg);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
 .empty {
   padding: 40px;
   text-align: center;
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
 }
 
 .header {
   padding: 16px 20px;
-  background-color: var(--gt-bg-surface);
-  border-bottom: 1px solid var(--gt-border-subtle);
+  background-color: var(--surface-sunken);
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -31,13 +31,13 @@
 }
 
 .icon {
-  color: var(--gt-accent-cyan);
+  color: var(--accent);
 }
 
 .title {
   font-size: 16px;
   font-weight: 600;
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
 }
 
 .headerRight {
@@ -52,23 +52,23 @@
   gap: 10px;
   padding: 12px 20px;
   background-color: color-mix(in srgb, var(--ok-text) 5%, transparent);
-  border-bottom: 1px solid var(--gt-border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .groundingIcon {
-  color: var(--gt-accent-forest);
+  color: var(--accent);
   flex-shrink: 0;
   margin-top: 2px;
 }
 
 .groundingText {
   font-size: 12px;
-  color: var(--gt-text-secondary);
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
 .groundingText strong {
-  color: var(--gt-verdict-consistent-text);
+  color: var(--ok-text);
 }
 
 .markdownContent {
@@ -77,9 +77,9 @@
 }
 
 .renderedText {
-  font-family: var(--gt-font-sans);
+  font-family: var(--font-sans);
   font-size: 14px;
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
   line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-word;

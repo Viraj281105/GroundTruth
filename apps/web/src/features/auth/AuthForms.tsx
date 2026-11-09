@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '../../components/ds/Button';
 import { Card, Skeleton } from '../../components/ds/Card';
 import { Reveal } from '../../components/ds/Reveal';
@@ -10,7 +10,7 @@ import { useToast } from '../../components/ds/Overlay';
 import { useAuth } from '../../lib/auth';
 import { login, register } from './auth-api';
 import { Field, FormError } from './Field';
-import { isValidEmail, passwordChecks, passwordProblem, safeNextPath, strengthScore } from './validate';
+import { isValidEmail, passwordChecks, passwordProblem, POST_LOGIN_HOME, safeAppNextPath, strengthScore } from './validate';
 import styles from './auth.module.css';
 
 export function Unavailable() {
@@ -30,12 +30,11 @@ export function Unavailable() {
 /** Shared guard: skeleton while loading, redirect away when signed in, clear state when auth is absent. */
 function useAuthPage() {
   const auth = useAuth();
-  const router = useRouter();
   const params = useSearchParams();
-  const next = safeNextPath(params.get('next'));
+  const next = safeAppNextPath(params.get('next'));
   useEffect(() => {
-    if (auth.status === 'signed-in') router.replace(next);
-  }, [auth.status, next, router]);
+    if (auth.status === 'signed-in') goToNext(next);
+  }, [auth.status, next]);
   return { auth, next };
 }
 
@@ -44,6 +43,14 @@ function Gate({ children }: { children: (ctx: ReturnType<typeof useAuthPage>) =>
   if (ctx.auth.status === 'loading' || ctx.auth.status === 'signed-in') return <Skeleton height="16rem" />;
   if (!ctx.auth.available) return <Unavailable />;
   return <>{children(ctx)}</>;
+}
+
+/**
+ * A signed-out prefetch of /app leaves a cached redirect to /login in the client router, which a soft
+ * navigation would replay. Leave with a full navigation so the new session cookie is used.
+ */
+export function goToNext(next: string): void {
+  window.location.assign(next);
 }
 
 export function LoginForm() {
@@ -55,7 +62,6 @@ export function LoginForm() {
 }
 
 function LoginBody({ registrationOpen, next, setUser }: { registrationOpen: boolean; next: string; setUser: ReturnType<typeof useAuth>['setUser'] }) {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -75,7 +81,7 @@ function LoginBody({ registrationOpen, next, setUser }: { registrationOpen: bool
       return setError(r.message);
     }
     setUser(r.data);
-    router.replace(next);
+    goToNext(next);
   }
 
   return (
@@ -97,7 +103,7 @@ function LoginBody({ registrationOpen, next, setUser }: { registrationOpen: bool
       {registrationOpen && (
         <p className={styles.muted}>
           New here?{' '}
-          <Link className={styles.link} href={next === '/' ? '/register' : `/register?next=${encodeURIComponent(next)}`}>
+          <Link className={styles.link} href={next === POST_LOGIN_HOME ? '/register' : `/register?next=${encodeURIComponent(next)}`}>
             Create an account
           </Link>
         </p>
@@ -116,7 +122,7 @@ function Closed({ next }: { next: string }) {
       <h2 className={styles.gateTitle}>New accounts are closed</h2>
       <p className={styles.muted}>This server is not accepting new sign-ups. Ask an administrator to create an account for you.</p>
       <div className={styles.row}>
-        <Link className={styles.link} href={next === '/' ? '/login' : `/login?next=${encodeURIComponent(next)}`}>
+        <Link className={styles.link} href={next === POST_LOGIN_HOME ? '/login' : `/login?next=${encodeURIComponent(next)}`}>
           Sign in instead
         </Link>
       </div>
@@ -125,7 +131,6 @@ function Closed({ next }: { next: string }) {
 }
 
 function RegisterBody({ next, setUser }: { next: string; setUser: ReturnType<typeof useAuth>['setUser'] }) {
-  const router = useRouter();
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -156,7 +161,7 @@ function RegisterBody({ next, setUser }: { next: string; setUser: ReturnType<typ
     }
     setUser(r.data);
     toast('Account created. Welcome to GroundTruth.', 'success');
-    router.replace(next);
+    goToNext(next);
   }
 
   return (
@@ -194,7 +199,7 @@ function RegisterBody({ next, setUser }: { next: string; setUser: ReturnType<typ
       </Card>
       <p className={styles.muted}>
         Already have an account?{' '}
-        <Link className={styles.link} href={next === '/' ? '/login' : `/login?next=${encodeURIComponent(next)}`}>
+        <Link className={styles.link} href={next === POST_LOGIN_HOME ? '/login' : `/login?next=${encodeURIComponent(next)}`}>
           Sign in
         </Link>
       </p>

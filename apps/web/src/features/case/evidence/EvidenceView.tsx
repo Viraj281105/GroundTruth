@@ -12,7 +12,7 @@ import { FitDiagnostics } from '../../../components/scientific/FitDiagnostics';
 import { PlaceboDiagnostics } from '../../../components/scientific/PlaceboDiagnostics';
 import { DonorPoolPanel } from '../../../components/scientific/DonorPoolPanel';
 import { DonorCandidatePanel } from '../../../components/scientific/DonorCandidatePanel';
-import { ProvenanceDrawer } from '../../../components/ui/ProvenanceDrawer';
+import { ProvenanceDrawer } from '../../../components/ds/ProvenanceDrawer';
 import { getDonorCandidateSummary } from '../../../lib/api';
 import { Playground } from '../playground/Playground';
 import { DonorMap } from '../map/DonorMap';
