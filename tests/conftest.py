@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -30,7 +32,25 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    # Tests over data that is not in git (it lives under data/processed/ on the machine that
+    # produced it) skip with the missing file named, and run wherever the file exists. They
+    # are never given stand-in data.
+    for item in items:
+        marker = item.get_closest_marker("requires_local_data")
+        if marker is None:
+            continue
+        missing = [path for path in marker.args if not (_REPO_ROOT / path).exists()]
+        if missing:
+            item.add_marker(
+                pytest.mark.skip(
+                    reason=f"requires local data not in the repository: {', '.join(missing)}"
+                )
+            )
+
     # Network tests are opt-in: skipped by default and in CI, so the suite never
     # depends on credentials, quotas or someone else's uptime.
     if config.getoption("--run-network"):

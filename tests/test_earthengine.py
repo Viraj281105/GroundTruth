@@ -766,6 +766,6 @@ class TestNoFixtureFallback:
             window=AnalysisWindow(pre_start=2001, pre_end=2010, post_start=2011, post_end=2022),
             data_mode="observed",
         )
-        with pytest.raises(DataUnavailableError, match="covariates") as caught:
+        with pytest.raises(DataUnavailableError, match="not implemented") as caught:
             earth_engine_access(request)
-        assert "#23" in str(caught.value)
+        assert "silent fallback to synthetic fixtures is strictly prohibited" in str(caught.value)

@@ -133,6 +133,12 @@ flowchart TD
 
 ## 6. Pitch Defence Strategy: Handling Hard Questions
 
+> **Withdrawn results.** An earlier draft carried a ΔNDVI value back-calculated from
+> Verra's 57% finding, and a 57.04% "recovery" claim built on it. Both are withdrawn.
+> No. GroundTruth has not reproduced Verra's 57% finding: carbon conversion is
+> NOT CALIBRATED, so the Kariba verdict is INCONCLUSIVE. See
+> `docs/competition/INDEPENDENT_POST_EXECUTION_AUDIT.md`.
+
 ### Q1: "Did you reproduce Verra's 57% Kariba over-issuance finding?"
 > *"No, and we are proud to say so. Verra's 57% finding is an unread external benchmark target in our YAML case definition. An earlier draft of our project contained a hardcoded NDVI value back-calculated from 57%; our independent audit caught this, and we formally retracted it. Converting NDVI to carbon requires site-calibrated, peer-reviewed destructive harvest plots. Because no such calibration is shipped, GroundTruth truthfully reports INCONCLUSIVE. The refusal to guess is our feature."*
 

@@ -36,8 +36,10 @@ from groundtruth.platform.datasets.access import (
 KARIBA_BOUNDARY_PATH = REPO_ROOT / "cases" / "boundaries" / "kariba-redd.geojson"
 
 
+@pytest.mark.network
 def test_live_planetary_computer_kariba_sentinel2_ingestion_and_cache(tmp_path: Path) -> None:
     """Connect to live Microsoft Planetary Computer, ingest real Kariba Sentinel-2 scenes, and verify cache."""
+    pytest.importorskip("pystac_client", reason="needs the `eo` extra")
     assert KARIBA_BOUNDARY_PATH.is_file(), f"Missing Kariba boundary at {KARIBA_BOUNDARY_PATH}"
     kariba_geojson = json.loads(KARIBA_BOUNDARY_PATH.read_text(encoding="utf-8"))
     bbox = validate_aoi_geojson(kariba_geojson)

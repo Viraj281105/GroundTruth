@@ -116,7 +116,7 @@ Permutation In-Space Placebos     : R_treated = 28.56, Rank 1/29, p = 0.0345
 In-Time Placebo (t = 2006)        : τ_fake = -0.0018 (PASSES Gate 5)
 Leave-One-Out Sign Flips          : 0 of 28 jackknife refits (PASSES Gate 6)
 Difference-in-Differences τ       : 0.0414 (Parallel Trends Bias: -0.0082)
-Claimed Carbon Quantity           : 11,600,000 tCO2e
+Claimed Carbon Quantity           : NOT POPULATED (claimed_credits_tco2e is null)
 Empirical Outcome Metric          : 0.0413 ΔNDVI
 Unit Conversion Gate              : INCOMMENSURABLE (assert_not_index_to_carbon)
 FINAL VERDICT                     : INCONCLUSIVE (Not Calibrated to Carbon)

@@ -264,6 +264,7 @@ def test_causal_readiness_kariba_partially_ready() -> None:
 # --- 7. Donor Pool Audit Completeness ------------------------------------------------
 
 
+@pytest.mark.requires_local_data("data/processed/donor_landsat_coverage_audit.json")
 def test_donor_pool_audit_records(repo_root: Path) -> None:
     """Audit records must confirm 37 donors with 100% observable benchmark epochs."""
     audit_path = repo_root / "data" / "processed" / "donor_landsat_coverage_audit.json"
