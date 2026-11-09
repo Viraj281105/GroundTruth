@@ -1,0 +1,32 @@
+case_id: katingan-mentaya-peatland
+project:
+  name: Katingan Mentaya Peatland Restoration and Conservation Project
+  country: Indonesia
+  ecosystem: tropical peat swamp forest
+  standard: VCS
+  registry_id: VCS 1477
+  area_ha: 149800
+  crediting_period_start: '2010-10-29'
+  crediting_period_end: '2070-10-28'
+  claimed_credits_tco2e: 150000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/1477
+  boundary_path: cases/boundaries/katingan.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2009
+  post_start: 2010
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Southern Borneo peat dome landscapes outside palm oil concessions
+  donor_pool_size: 70
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Largest peatland REDD+ project in Southeast Asia, vital habitat for Bornean
+  orangutans.

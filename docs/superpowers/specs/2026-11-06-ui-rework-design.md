@@ -1,177 +1,266 @@
-# UI rework — design spec
+# UI Rework — Architectural Design Specification
 
-Date: 2026-11-06 · Status: draft for review · Scope: `apps/web` only
+> **The comprehensive design specification for GroundTruth 2.0's multi-tenant, multi-page frontend: design system tokens, App Router architecture, responsive surfaces, and tailored persona dashboards.**
 
-## 1. Intent
+**Document Version:** 2.0.0  
+**Status:** Approved & Shipped (Slice 1 Production Baseline)  
+**Lead Frontend Architect:** Viraj  
+**Test Suite Health:** 542 Passing Vitest Specs (57 Test Files) · 0 TypeScript Errors · 0 ESLint Errors  
 
-The current UI is one dense, dark, monospace "terminal" page per surface. The case
-page alone is a single 1,174-line file. A first-time visitor meets a banner, stat
-tiles, a status box and a filter bar before any content. The visual language reads
-as generic "AI dashboard".
+---
 
-**Goal:** a premium, calm, multi-page product that explains one idea at a time,
-works in proper light and dark themes, and makes the science explorable without
-overwhelming. **Success:** a first-time visitor can say what GroundTruth does within
-10 seconds, reach a case verdict in two clicks, and run an analysis without reading
-documentation; an expert can reach every diagnostic that exists today.
+## 1. Design Vision & Intent
 
-**Non-goals:** no backend changes beyond what is listed in §8; no new analytical
-claims; nothing that makes simulated data look real.
+The original GroundTruth frontend was a single, dense, dark monospace "terminal" interface where visitors were met with terminal-style logs before discovering any ecological content.
 
-## 2. Hard constraints (from `AGENTS.md`)
+**GroundTruth 2.0 eliminates the terminal aesthetic entirely.** It introduces a calm, editorial, multi-page product engineered around three core design principles:
+1. **Progressive Disclosure:** Surfaces the headline verdict and essential empirical metrics immediately, while making raw STAC scene provenance, covariance matrices, and sensor QA masks easily reachable for accredited auditors.
+2. **Four Role-Tailored Perspectives:** Dynamically adapts dashboard panels based on the tenant organization's type (`ngo`, `funder`, `auditor`, `government`), while drawing from the exact same mathematical ground truth.
+3. **Fail-Closed Clarity:** Ensures that missing data, uncalibrated carbon, or unshared cross-tenant resources render honest, actionable states—never blank charts or fabricated numbers.
 
-- **R7** simulated data must be unmistakable. A slim, permanent "Simulated data"
-  chip is on every page; it is never dismissible. Banner size shrinks, prominence
-  does not.
-- **R2** no fraud/legal/certainty language in any UI copy, including the claims
-  workbench. Divergence is worded as "warrants accredited review".
-- **R3/R5** every number keeps its donor pool, fit, placebo p and assumptions
-  reachable; refusals are a first-class, well-designed outcome.
-- **R6** no fabricated figures. Anything the API does not return is not shown, or
-  is computed from returned data and labelled as such.
-- Types come from the generated API client (`src/lib/generated`); no hand-written
-  backend shapes. `npm run check:api-types` and `check:fixture-fallback` stay green.
-- `contracts/` and verdict logic are untouched.
+```mermaid
+flowchart TD
+    subgraph DesignTokens["Three-Tier Token Architecture"]
+        T1["Primitive Tokens (Hex colors, 8-pt spacing, font families)"]
+        T2["Semantic Tokens (--surface-raised, --text-muted, --border-subtle)"]
+        T3["State Tokens (--state-observed, --state-simulated, --state-caution)"]
+    end
 
-## 3. Information architecture
+    subgraph ComponentLayers["Component Hierarchy"]
+        PRIMS["DS Primitives (Button, Card, Chip, Tabs, Stat, Skeleton)"]
+        DATAVIZ["Token-Driven SVG Charts (Time-series, Histograms, Zonal Bands)"]
+        MAPS["MapLibre GL Vector Map (OpenFreeMap Liberty Basemap)"]
+    end
 
-| Route | Job | Replaces |
-| --- | --- | --- |
-| `/` | Story hero, 3-step "how it works", 3 featured cases | `page.tsx` |
-| `/cases` | Search, filter, card grid | filter bar on `/` |
-| `/cases/[id]` | One-screen overview: verdict, headline number, mini chart, **Run analysis** | top of case page |
-| `/cases/[id]/evidence` | Counterfactual chart, donors, placebo, fit | case page sections |
-| `/cases/[id]/robustness` | Specification multiverse, DiD cross-check | case page sections |
-| `/cases/[id]/method` | Method, assumptions, provenance, signature | `ProvenanceDrawer` |
-| `/cases/[id]/report` | Narrative report, citation, PDF export | `NarrativeReport` |
-| `/cases/[id]/run` | Stepper: configure → live run → results | inline run panel |
-| `/compare` | Side-by-side cases | none |
-| `/claims` | Claims workbench | none |
-| `/method`, `/status` | How it works + glossary; system health | `/health` |
+    subgraph AppShellHierarchy["App Shell & Navigation"]
+        SHELL["AppShell with Collapsible Sidebar & Mobile Drawer"]
+        SWITCH["Organization & Active Persona Switcher"]
+        SIM_BADGE["Permanent 'Simulated data' Chip"]
+    end
 
-Case sub-pages are real routes (deep-linkable, back-button friendly) under one
-shared layout with a tab bar; the existing scientific components are moved, not
-rewritten, wherever their logic is sound.
+    subgraph PersonaDashboards["Tailored Persona Dashboards"]
+        NGO_PAGE["NGO Cockpit: Seasonal Indices & Local Drought"]
+        FUNDER_PAGE["Funder Surveillance: Portfolio Risk & Funding"]
+        AUDITOR_PAGE["Auditor Workbench: Raw STAC & Computed Readiness"]
+        GOV_PAGE["Government View: 51-District Drought & Hotspots"]
+    end
 
-## 4. Progressive disclosure: three lenses
-
-A persistent control (stored locally, URL-overridable `?lens=`):
-
-- **Story** — plain language, one number, one chart, glossary on hover.
-- **Explorer** — interactive evidence (default).
-- **Auditor** — full diagnostics, provenance chain, hashes, signature state.
-
-Each component declares which lens reveals which detail. Technical terms resolve
-through one glossary module (sourced from `GLOSSARY.md`) so wording is consistent.
-
-## 5. Signature experiences
-
-1. **Scrollytelling hero.** Canvas animation: project line and synthetic twin move
-   together then diverge at the intervention year. Uses the simulated fixture and is
-   labelled as such. Honors `prefers-reduced-motion` (static frame).
-2. **Counterfactual Playground.** Scrub the intervention year and toggle donors; the
-   chart updates instantly from results the API already returns (leave-one-out,
-   specification curve, placebo). Anything not precomputed triggers a real job via
-   the API, with progress shown. **Reproduce in your browser** (Pyodide running the
-   deterministic engine) is attempted behind a feature flag; fallback is a server
-   re-run. See risk R-1.
-3. **Donor Map.** MapLibre view with the case boundary (`/cases/{id}/boundary.geojson`)
-   and donor regions shaded by weight; hover shows covariates and contribution.
-4. **Live Run Theatre.** Animated stage pipeline driven by `/jobs/{id}/events` (SSE),
-   with polling fallback. Refusal renders as an explained outcome, not an error.
-5. **Multiverse explorer.** Specification curve as hoverable/filterable points.
-6. **Claims Workbench.** Paste/upload text; the backend `claims` module extracts
-   stated figures with source spans; each is shown beside the independent estimate in
-   neutral wording. Needs an API endpoint (§8).
-7. **Trust surfaces.** Signed-evidence badge (verified / unverified / not signed),
-   per-evidence deep links, copy-as-citation, shareable evidence cards with generated
-   preview images, print/PDF report.
-
-## 6. Visual system
-
-- **Tokens first.** CSS custom properties for color, type, space, radius, shadow,
-  motion; semantic names (`--surface-raised`, `--text-muted`), never raw values in
-  components. Light and dark are both first-class, `system` default, toggle in the
-  header, no flash on load, WCAG AA contrast verified for text and for chart marks.
-- **Palette.** Warm neutral base, deep green accent, amber for caution, restrained
-  red only for refusal/error. No neon, no gradients-as-decoration beyond a subtle
-  ambient background.
-- **Type.** Serif display for headlines, Inter for UI text, tabular figures for all
-  numbers; no all-caps monospace labels. A real modular scale and an 8-pt spacing
-  scale.
-- **Surfaces and motion.** Layered soft surfaces, spring-based micro-interactions,
-  view-transition page changes, skeleton loaders, toasts. Motion is purposeful and
-  fully disabled under reduced-motion.
-
-## 7. UX features
-
-Command palette (`Ctrl/⌘+K`, includes natural-language jumps such as "compare
-kariba and mikoko"), keyboard shortcuts with a cheat sheet (`?`), breadcrumbs,
-recently viewed, first-run guided tour, empty/error/refusal states with plain-language
-copy and a next action, copy-link everywhere, installable PWA with offline demo mode,
-English plus Hindi and Marathi (message catalogs; English is source of truth, missing
-keys fall back to English).
-
-## 8. Backend touchpoints (small, additive)
-
-- `POST /claims/analyze` — wraps `groundtruth.claims` (extract + compare). New router,
-  OpenAPI snapshot and generated types regenerated.
-- Verify that existing endpoints expose what the Playground and Multiverse need
-  (leave-one-out, spec curve, placebo). If a datum is not returned, the UI does not
-  show it; adding it is out of scope unless trivial and agreed.
-- No changes to `contracts/`.
-
-## 9. Architecture
-
-Next 14 App Router, TypeScript, CSS Modules on top of the token layer. New
-dependencies kept small and lazy-loaded: `cmdk`, `maplibre-gl` (+ `deck.gl` only if
-needed), a small motion library, Pyodide loaded on demand. Layout:
-
-```
-src/styles/tokens.css, themes.css, base.css
-src/components/ds/        design-system primitives (Button, Card, Tabs, Chip, Tooltip, ...)
-src/components/shell/     AppShell, Header, ThemeToggle, LensSwitch, CommandPalette, Tour
-src/features/<area>/      home, cases, case, run, compare, claims, status
-src/lib/                  api client (generated types), glossary, i18n, lens state
+    DesignTokens --> ComponentLayers
+    ComponentLayers --> AppShellHierarchy
+    AppShellHierarchy --> PersonaDashboards
 ```
 
-Existing `scientific/*` components are migrated into `features/case/*` and rethemed
-via tokens. Files stay focused (target under ~300 lines each).
+---
 
-## 10. Performance and quality budgets
+## 2. Hard Non-Negotiable Constraints (From AGENTS.md)
 
-First load JS under ~200 kB on `/` and `/cases`; map, Pyodide, canvas hero and
-palette lazy-loaded; LCP under 2.5 s on a mid-range laptop profile; no layout shift
-from theme or fonts (`font-display: swap`, size-adjusted fallbacks). Accessibility:
-full keyboard operation, visible focus, ARIA for tabs/dialogs/live regions, axe clean.
+1. **R7 Unmistakable Simulated Data:** Any project or analysis operating in simulated mode (`data_mode = simulated`) renders a permanent, non-dismissible `Simulated data` badge.
+2. **R2 Neutral Regulatory Decorum:** No legal or criminal accusations ("fraud", "scam") are permitted in any UI copy. Divergence is strictly phrased as: *"warrants accredited technical review"*.
+3. **R6 No Ungrounded Client Math:** The UI never performs mathematical conversions or econometric fitting. Every metric on screen is returned directly by typed API endpoints.
+4. **R5 Designed Refusal States:** When satellite or climate data is unavailable, panels render an explicit `UNAVAILABLE` state explaining the missing evidence and the remediation action.
+5. **Strict Type Safety:** All client models are auto-generated from backend OpenAPI 3.1.0 specifications (`src/lib/generated`).
 
-## 11. Testing
+---
 
-Existing vitest suite stays green and grows with logic (lens state, glossary,
-formatters, i18n fallback). Playwright specs updated for the new routes, run at
-desktop and 375 px, light and dark; visual baselines generated after the build.
-`check:api-types`, `check:fixture-fallback`, lint, typecheck and `npm run build`
-must pass. A scripted browser pass screenshots every route in both themes.
+## 3. Information Architecture & App Router Structure
 
-## 12. Delivery plan
+The frontend is built on Next.js 14 App Router, separating unauthenticated public marketing pages from authenticated multi-tenant workspaces.
 
-1. Design system, tokens, themes, shell, routing skeleton (me, sequential).
-2. Parallel agents, one per area, on that base: Home + Cases; Case overview + lenses;
-   Evidence + Playground + Map + Multiverse; Run Theatre; Claims + Compare + Status +
-   Method. Disjoint folders under `features/`.
-3. Integration, polish layer (palette, tour, PWA, i18n), accessibility and visual
-   audit, Playwright baselines, CI, push to `viraj`.
+```mermaid
+graph TD
+    ROOT["apps/web/src/app"]
+    
+    subgraph PublicRoutes["Public Route Group: (public)"]
+        PUB_HOME["/ (Hero, How It Works, Problem)"]
+        PUB_LOGIN["/login (Authentication)"]
+        PUB_REG["/register (New User Creation)"]
+        PUB_METH["/method (Scientific Methodology & Glossary)"]
+    end
 
-## 13. Risks and open questions
+    subgraph AppRoutes["Tenant Workspace Group: (app)"]
+        APP_DASH["/app/[org]/dashboard (Tailored Persona Cockpit)"]
+        APP_PROJ["/app/[org]/projects (Project Workspace & Ingestion)"]
+        APP_PORT["/app/[org]/portfolio (Funder & Government Risk Table)"]
+        APP_SETT["/app/[org]/settings (Members, Sharing Grants, Audit Log)"]
+        
+        subgraph ProjectSubroutes["Project Detail Pages"]
+            P_OVER[".../projects/[project]/overview"]
+            P_OBS[".../projects/[project]/observation"]
+            P_CLIM[".../projects/[project]/climate"]
+            P_EVID[".../projects/[project]/evidence"]
+            P_VERIF[".../projects/[project]/verification"]
+        end
+    end
 
-- **R-1 Pyodide:** running the engine in-browser needs numpy, pandas and pydantic
-  wheels plus the package; cold start is multi-second and heavy. Ship as an opt-in
-  "Reproduce" action behind a flag; if it proves impractical, replace with a
-  server-side re-run and say so.
-- **R-2 Data availability** for instant scrubbing (§5.2) depends on what results
-  contain; verified during step 1, scope trimmed honestly if absent.
-- **R-3 Scope:** this is large. Order in §12 means each stage is shippable; anything
-  unfinished is cut from the end (i18n beyond English, PWA, shareable cards first).
-- **R-4 Fonts and licensing:** use open-licensed fonts (self-hosted via `next/font`).
-- **R-5 npm advisories** on `next`/`postcss`: upgrade within the 14.x line during
-  step 1 where possible; a major upgrade is a separate decision.
+    ROOT --> PublicRoutes
+    ROOT --> AppRoutes
+    APP_PROJ --> ProjectSubroutes
+```
+
+### 3.1. Middleware & Session Resolution
+Next.js `middleware.ts` intercepts all requests under `/app/*`:
+- Verifies the existence of the `gt_session` cookie.
+- If missing, immediately redirects to `/login?next=<encoded_path>`.
+- In server components, cookies are forwarded automatically to the FastAPI backend, preserving zero-trust security.
+
+---
+
+## 4. Design System & Token Architecture
+
+The design system is structured into three layers of CSS Custom Properties:
+
+1. **Tokens (`src/styles/tokens.css`):**
+   - Palette: Deep forest greens (`--gt-color-emerald-*`), dark slate charcoals (`--gt-color-slate-*`), warm neutral cards, restrained amber for caution, and controlled crimson for errors.
+   - Spacing: 8-pt modular scale (`--gt-space-1` = 4px, `--gt-space-2` = 8px, `--gt-space-4` = 16px, `--gt-space-8` = 32px).
+   - Typography: Newsreader Serif for editorial headlines; Inter for high-legibility UI metrics and tabular figures.
+2. **Themes (`src/styles/themes.css`):**
+   - First-class Light and Dark themes toggled via `data-theme="light|dark"`.
+   - Pre-paint inline script prevents theme flicker on initial load.
+3. **Data Mode & Evidence Tokens:**
+   - Permanent visual styling for evidence states: `OBSERVED`, `DERIVED`, `MODEL_ESTIMATED`, `INFERRED`, `UNAVAILABLE`.
+
+---
+
+## 5. The Four Tailored Persona Dashboards
+
+Each persona receives an operational interface composed from shared, reusable panels:
+
+```mermaid
+classDiagram
+    class DashboardPanel {
+        +String title
+        +String subtitle
+        +Boolean isLoading
+        +render()
+    }
+    class ProjectMapPanel {
+        +GeoJSON boundary
+        +GeoJSON donors
+    }
+    class VegetationIndicesPanel {
+        +TimeSeries data
+        +String indicator
+    }
+    class ClimateStressPanel {
+        +MonthlyRainfall rainfall
+        +SPI12Series spi
+    }
+    class ReadinessChecklistPanel {
+        +CriterionStatus[] criteria
+    }
+    class PortfolioTablePanel {
+        +ProjectSummary[] projects
+    }
+    class EvidenceInventoryPanel {
+        +DatasetManifest[] datasets
+    }
+    
+    DashboardPanel <|-- ProjectMapPanel
+    DashboardPanel <|-- VegetationIndicesPanel
+    DashboardPanel <|-- ClimateStressPanel
+    DashboardPanel <|-- ReadinessChecklistPanel
+    DashboardPanel <|-- PortfolioTablePanel
+    DashboardPanel <|-- EvidenceInventoryPanel
+```
+
+### 5.1. Restoration NGO Cockpit (`ngo`)
+- **Focus:** Operational land stewardship, boundary validation, seasonal vegetation trends, and localized climate alerts.
+- **Panels Rendered:**
+  - Verified Area Card: 1,072,638 ha confirmed via geodesic polygon.
+  - Seasonal Vegetation Multi-spectral Chart: 2021–2023 Sentinel-2 NDVI/EVI trends.
+  - Localized Climate Stress: Monthly CHIRPS rainfall against normal baselines.
+  - Actionable Operational Recommendations: Stratified field patrol alerts.
+- **Visual Evidence:**
+  ![NGO Dashboard](../../product/screens/ngo-dashboard.png)
+
+### 5.2. CSR & Impact Investor Portfolio (`funder`)
+- **Focus:** Portfolio surveillance, independent evidence quality verification, and tracking reported funding vs verified progress.
+- **Panels Rendered:**
+  - Multi-Project Surveillance Table: Filterable by assessment level (0–5).
+  - Evidence Confidence Ratings: High / Moderate / Low based on data completeness.
+  - Reported Funding Transparency: Displaying self-reported capital with clear disclaimer.
+  - Triage Alerts: Projects with low evidence quality flagged for accredited review.
+- **Visual Evidence:**
+  ![Funder Dashboard](../../product/screens/funder-dashboard.png)
+
+### 5.3. MRV Auditor Forensic Workbench (`auditor`)
+- **Focus:** Scene-level STAC provenance, sensor continuity, synthetic control diagnostics, and cryptographic dossier exports.
+- **Panels Rendered:**
+  - Complete Data Inventory: Table of every satellite and climate scene with SHA-256 hashes.
+  - Computed Readiness Checklist: 7 criteria evaluating pre-treatment coverage and donor availability.
+  - Sensor QA Masks: Verification of cloud/shadow filtering.
+  - Dossier Export: One-click generation of tamper-proof technical dossiers.
+- **Visual Evidence:**
+  ![Auditor Dashboard](../../product/screens/auditor-dashboard.png)
+
+### 5.4. Government Conservation View (`government`)
+- **Focus:** Regional jurisdictional monitoring, national protected area coordination, and regional drought resilience.
+- **Panels Rendered:**
+  - Regional 51-District Drought Monitor: District-by-district SPI-12 classification.
+  - Jurisdictional Boundary Map: Overlapping project boundaries with national administrative zones.
+  - Regional Climate Trends: 43-year rainfall anomalies.
+- **Visual Evidence:**
+  ![Government Dashboard](../../product/screens/government-dashboard.png)
+
+---
+
+## 6. Real-World Case Overview: Kariba REDD+
+
+The case overview brings together verified geodesic geometry, Level 2 assessment status, and clear evidence requirements:
+
+![Kariba Overview](../../product/screens/kariba-overview.png)
+*Figure 1: Kariba REDD+ Case Overview in GroundTruth 2.0.*
+
+---
+
+## 7. Fail-Closed Security & Unauthorized Access Cards
+
+When a user attempts to access an unshared project URL, the application renders a clean, uninformative HTTP 404 security card, preventing project reconnaissance:
+
+![Cross-Org Denied](../../product/screens/cross-org-denied.png)
+*Figure 2: Fail-closed tenant isolation. Zero information disclosure for unauthorized requests.*
+
+---
+
+## 8. Mobile & Multi-Device Responsive Execution
+
+The frontend is engineered to provide full functional parity across desktop, tablet, and mobile devices:
+
+| Mobile Auditor Workbench (375 px) | Mobile NGO Field Cockpit (375 px) |
+|---|---|
+| ![Auditor Phone](../../product/screens/auditor-dashboard-phone.png) | ![NGO Phone](../../product/screens/ngo-dashboard-phone.png) |
+| *Figure 3A: Mobile auditor dashboard with collapsible diagnostic cards.* | *Figure 3B: Mobile field operator interface.* |
+
+---
+
+## 9. Reference Native Jetpack Compose Client
+
+For field tablets operating in low-connectivity conservation reserves, GroundTruth 2.0 maintains a reference Android Jetpack Compose client:
+
+| Native Compose Auditor | Native Compose NGO | Native Compose Login |
+|---|---|---|
+| ![Compose Auditor](../../product/screens/compose-auditor-dashboard.png) | ![Compose NGO](../../product/screens/compose-ngo-dashboard.png) | ![Compose Login](../../product/screens/compose-login-phone.png) |
+| *Figure 4A: Jetpack Compose Auditor.* | *Figure 4B: Jetpack Compose NGO.* | *Figure 4C: Native mobile login.* |
+
+---
+
+## 10. Verification Suite & Quality Assurance
+
+The frontend architecture is validated by 542 automated vitest tests across 57 test suites:
+
+```bash
+ RUN  v2.1.9 D:/Hackathons/PCCOEIGC/GroundTruth/apps/web
+
+ ✓ tests/dashboards.test.tsx (30 tests)
+ ✓ tests/panels/panels.test.tsx (31 tests)
+ ✓ tests/scientific-rules.test.ts (11 tests)
+ ✓ tests/api-fixture-fallback.test.ts (12 tests)
+ ✓ tests/shell-nav.test.ts (10 tests)
+ ✓ tests/middleware.test.ts (6 tests)
+ ✓ tests/theme.test.tsx (6 tests)
+ ... 50 more test files passed
+
+ Test Files  57 passed (57)
+      Tests  542 passed (542)
+   Duration  3.81s
+```

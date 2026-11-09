@@ -1,0 +1,91 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.sm {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+
+.md {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
+}
+
+/* Tones - Subtle (default) */
+.subtle.neutral {
+  background-color: var(--neutral-bg);
+  color: var(--neutral-text);
+  border-color: var(--neutral-border);
+}
+
+.subtle.positive {
+  background-color: var(--ok-bg);
+  color: var(--ok-text);
+  border-color: var(--ok-border);
+}
+
+.subtle.caution {
+  background-color: var(--caution-bg);
+  color: var(--caution-text);
+  border-color: var(--caution-border);
+}
+
+.subtle.info {
+  background-color: var(--ev-derived-bg);
+  color: var(--ev-derived-fg);
+  border-color: var(--ev-derived-border);
+}
+
+.subtle.inconclusive {
+  background-color: var(--neutral-bg);
+  color: var(--neutral-text);
+  border-color: var(--neutral-border);
+}
+
+.subtle.simulated {
+  background-color: var(--sim-bg);
+  color: var(--sim-text);
+  border-color: var(--sim-border);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.subtle.error {
+  background-color: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger-border);
+}
+
+/* Outline variants */
+.outline {
+  background-color: transparent;
+}
+.outline.neutral { color: var(--text-muted); border-color: var(--border-default); }
+.outline.positive { color: var(--ok-text); border-color: var(--ok-text); }
+.outline.caution { color: var(--caution-text); border-color: var(--caution-text); }
+.outline.info { color: var(--ev-derived-fg); border-color: var(--ev-derived-border); }
+.outline.inconclusive { color: var(--neutral-text); border-color: var(--neutral-text); }
+.outline.simulated { color: var(--sim-text); border-color: var(--sim-border); }
+
+/* Solid variants */
+.solid.neutral { background-color: var(--surface-sunken); color: var(--text-primary); }
+.solid.positive { background-color: var(--accent); color: var(--text-on-accent); }
+.solid.caution { background-color: var(--warn); color: var(--surface-base); }
+.solid.simulated { background-color: var(--sim-solid); color: var(--surface-base); font-weight: 600; }

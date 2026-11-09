@@ -1,59 +1,209 @@
-import React from 'react';
-import { METHOD_COPY as C } from './copy';
+'use client';
+
+import React, { useState } from 'react';
+import {
+  Database,
+  Filter,
+  Layers,
+  TrendingUp,
+  ShieldCheck,
+  FileCheck,
+  MessageSquareQuote,
+  ChevronLeft,
+  ChevronRight,
+  Shield,
+  Binary,
+  CheckCircle2,
+  Sparkles,
+} from 'lucide-react';
+import { Badge } from '../../components/ds/Badge';
+import { METHOD_COPY as C, STAGE_DETAILS, type StageDetail } from './copy';
 import styles from './PipelineDiagram.module.css';
 
-const NODES = C.pipeline.nodes;
-const ICON_STROKE = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
-
-/** Tiny glyph per stage, drawn in a 24x24 box at (0,0). */
-function Glyph({ i }: { i: number }) {
-  switch (i) {
-    case 0: return <g {...ICON_STROKE}><ellipse cx="12" cy="6" rx="8" ry="3" /><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.300 8-3V6M4 12v6c0 1.700 3.600 3 8 3s8-1.300 8-3v-6" /></g>;
-    case 1: return <g {...ICON_STROKE}><circle cx="6" cy="7" r="2.500" /><circle cx="18" cy="7" r="2.500" /><circle cx="6" cy="17" r="2.500" /><circle cx="18" cy="17" r="2.500" /></g>;
-    case 2: return <g {...ICON_STROKE}><path d="M3 17l5-6 4 3 4-7 5 5" /><path d="M3 20h18" strokeDasharray="2 3" /></g>;
-    case 3: return <g {...ICON_STROKE}><path d="M3 18l6-6 4 3 8-9" /><path d="M21 6v5M21 6h-5" /></g>;
-    case 4: return <g {...ICON_STROKE}><path d="M3 20V12M8 20V8M13 20V14M18 20V4" /><path d="M2 20h20" /></g>;
-    case 5: return <g {...ICON_STROKE}><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></g>;
-    default: return <g {...ICON_STROKE}><circle cx="12" cy="12" r="9" /><path d="M8 12.500l3 3 5-6" /></g>;
-  }
-}
-
-function Node({ i, x, y, w, h }: { i: number; x: number; y: number; w: number; h: number }) {
-  const n = NODES[i];
-  const last = i === NODES.length - 1;
-  return (
-    <g transform={`translate(${x} ${y})`} className={last ? styles.nodeEnd : styles.node}>
-      <rect width={w} height={h} rx="12" />
-      <g transform={`translate(${w / 2 - 12} 12)`}><Glyph i={i} /></g>
-      <text x={w / 2} y={52} textAnchor="middle" className={styles.t1}>{n.label}</text>
-      <text x={w / 2} y={68} textAnchor="middle" className={styles.t2}>{n.sub}</text>
-    </g>
-  );
-}
+const STAGE_ICONS = [
+  Database,
+  Filter,
+  Layers,
+  TrendingUp,
+  ShieldCheck,
+  FileCheck,
+  MessageSquareQuote,
+];
 
 export function PipelineDiagram() {
-  const w = 96, h = 80, gap = 22;
-  const wideW = NODES.length * w + (NODES.length - 1) * gap;
-  const tallH = NODES.length * h + (NODES.length - 1) * 28;
+  const [activeStage, setActiveStage] = useState(2); // Stage 3 (Synthetic twin) selected by default
+  const stage: StageDetail = STAGE_DETAILS[activeStage];
+  const isLast = activeStage === STAGE_DETAILS.length - 1;
+  const StageIcon = STAGE_ICONS[activeStage];
+
+  const prevStage = () => setActiveStage((i) => Math.max(0, i - 1));
+  const nextStage = () => setActiveStage((i) => Math.min(STAGE_DETAILS.length - 1, i + 1));
+
   return (
-    <figure className={styles.fig}>
-      <svg className={styles.wide} viewBox={`0 0 ${wideW} ${h}`} role="img" aria-label={C.pipeline.alt}>
-        {NODES.map((_, i) => (
-          <React.Fragment key={i}>
-            {i > 0 && <path d={`M${i * (w + gap) - gap + 3} ${h / 2}h${gap - 8}m-4 -4l4 4l-4 4`} className={styles.arrow} />}
-            <Node i={i} x={i * (w + gap)} y={0} w={w} h={h} />
-          </React.Fragment>
+    <figure className={styles.fig} aria-label={C.pipeline.alt}>
+      {/* Header bar */}
+      <div className={styles.headerBar}>
+        <div className={styles.headerTitleGroup}>
+          <span className={styles.kicker}>Audit Architecture</span>
+          <h2 className={styles.headerTitle}>Seven Deterministic Stages</h2>
+        </div>
+        <div className={styles.legendGroup}>
+          <div className={styles.legendItem}>
+            <span className={styles.legendDotDeterministic} aria-hidden="true" />
+            <span>Stages 1–6: Pure Deterministic Algorithms</span>
+          </div>
+          <div className={styles.legendItem}>
+            <span className={styles.legendDotVerified} aria-hidden="true" />
+            <span>Stage 7: Constrained & Audited Narration</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stage selector track */}
+      <div className={styles.trackWrapper} role="tablist" aria-label="Pipeline stages">
+        <div className={styles.stageTrack}>
+          {STAGE_DETAILS.map((s, idx) => {
+            const Icon = STAGE_ICONS[idx];
+            const isActive = idx === activeStage;
+            const isEnd = idx === STAGE_DETAILS.length - 1;
+
+            return (
+              <button
+                key={s.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`stage-panel-${s.id}`}
+                id={`stage-tab-${s.id}`}
+                tabIndex={isActive ? 0 : -1}
+                className={`${styles.stageBtn} ${isActive ? styles.stageBtnActive : ''} ${isEnd ? styles.stageBtnEnd : ''}`}
+                onClick={() => setActiveStage(idx)}
+              >
+                <div className={styles.stageTopRow}>
+                  <span className={styles.stageNum}>{s.id}</span>
+                  <span className={styles.stageIcon} aria-hidden="true">
+                    <Icon size={16} />
+                  </span>
+                </div>
+                <div className={styles.stageLabelGroup}>
+                  <span className={styles.stageLabel}>{s.label}</span>
+                  <span className={styles.stageSub}>{s.sub}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Interactive Inspector Panel */}
+      <div
+        id={`stage-panel-${stage.id}`}
+        role="tabpanel"
+        aria-labelledby={`stage-tab-${stage.id}`}
+        className={styles.inspector}
+      >
+        <div className={styles.inspectorTop}>
+          <div className={styles.inspectorTitleGroup}>
+            <div className={styles.inspectorMeta}>
+              <span>Stage 0{stage.id} of 07</span>
+              <span>·</span>
+              <span>{stage.tag}</span>
+            </div>
+            <h3 className={styles.inspectorTitle}>
+              {stage.id}. {stage.label}: {stage.sub}
+            </h3>
+          </div>
+          <div className={styles.inspectorBadgeGroup}>
+            {stage.badge === 'deterministic' ? (
+              <Badge tone="positive" variant="subtle" icon={<Binary size={12} />}>
+                Deterministic Algorithm (No LLM)
+              </Badge>
+            ) : (
+              <Badge tone="caution" variant="subtle" icon={<Sparkles size={12} />}>
+                Verified Narration Only
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        <p className={styles.inspectorSummary}>{stage.summary}</p>
+
+        {/* Details Grid */}
+        <div className={styles.inspectorDetailsGrid}>
+          <div className={styles.detailCard}>
+            <span className={styles.detailLabel}>
+              <Binary size={13} aria-hidden="true" />
+              Method & Formulation
+            </span>
+            <div className={styles.formulaBox}>{stage.math}</div>
+          </div>
+
+          <div className={styles.detailCard}>
+            <span className={styles.detailLabel}>
+              <Shield size={13} aria-hidden="true" />
+              Input Requirements
+            </span>
+            <p className={styles.detailValue}>{stage.inputs}</p>
+          </div>
+
+          <div className={styles.detailCard}>
+            <span className={styles.detailLabel}>
+              <FileCheck size={13} aria-hidden="true" />
+              Evidence Produced
+            </span>
+            <p className={styles.detailValue}>{stage.outputs}</p>
+          </div>
+        </div>
+
+        {/* Guarantee Banner */}
+        <div className={isLast ? styles.guaranteeBoxEnd : styles.guaranteeBox} role="note">
+          <CheckCircle2 size={16} aria-hidden="true" />
+          <span>
+            <strong>Integrity Guarantee:</strong> {stage.guarantee}
+          </span>
+        </div>
+
+        {/* Navigation controls */}
+        <div className={styles.inspectorNav}>
+          <button
+            type="button"
+            className={styles.navBtn}
+            onClick={prevStage}
+            disabled={activeStage === 0}
+            aria-label="Previous stage"
+          >
+            <ChevronLeft size={16} aria-hidden="true" />
+            <span>Previous stage</span>
+          </button>
+          <span className="num" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+            Stage {stage.id} of {STAGE_DETAILS.length}
+          </span>
+          <button
+            type="button"
+            className={styles.navBtn}
+            onClick={nextStage}
+            disabled={activeStage === STAGE_DETAILS.length - 1}
+            aria-label="Next stage"
+          >
+            <span>Next stage</span>
+            <ChevronRight size={16} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      <figcaption className={styles.cap}>
+        <CheckCircle2 size={15} style={{ color: 'var(--accent)' }} aria-hidden="true" />
+        <span>{C.pipeline.caption}</span>
+      </figcaption>
+
+      {/* Hidden fallback representation for screen readers */}
+      <ol className={styles.srSvg}>
+        {STAGE_DETAILS.map((s) => (
+          <li key={s.id}>
+            Stage {s.id}: {s.label} ({s.sub}) — {s.summary}
+          </li>
         ))}
-      </svg>
-      <svg className={styles.tall} viewBox={`0 0 220 ${tallH}`} role="img" aria-label={C.pipeline.alt}>
-        {NODES.map((_, i) => (
-          <React.Fragment key={i}>
-            {i > 0 && <path d={`M110 ${i * (h + 28) - 24}v16m-4 -4l4 4l4 -4`} className={styles.arrow} />}
-            <Node i={i} x={10} y={i * (h + 28)} w={200} h={h} />
-          </React.Fragment>
-        ))}
-      </svg>
-      <figcaption className={styles.cap}>{C.pipeline.caption}</figcaption>
+      </ol>
     </figure>
   );
 }

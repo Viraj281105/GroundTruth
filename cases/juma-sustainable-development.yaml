@@ -1,0 +1,32 @@
+case_id: juma-sustainable-development
+project:
+  name: The Juma Sustainable Development Reserve Project
+  country: Brazil
+  ecosystem: dense Amazon rainforest
+  standard: VCS
+  registry_id: VCS 375
+  area_ha: 589612
+  crediting_period_start: '2006-07-01'
+  crediting_period_end: '2056-06-30'
+  claimed_credits_tco2e: 19000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/375
+  boundary_path: cases/boundaries/juma.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2005
+  post_start: 2006
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Amazonas state interfluvial forests along the BR-319 highway
+    corridor
+  donor_pool_size: 75
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: One of the earliest audited REDD+ reserves in Amazonas state.

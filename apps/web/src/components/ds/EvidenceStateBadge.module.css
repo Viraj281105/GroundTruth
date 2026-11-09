@@ -1,0 +1,12 @@
+.badge { display: inline-flex; align-items: center; gap: var(--space-2); padding: 2px var(--space-2); border: 1px solid var(--bd); border-radius: var(--radius-sm); background: var(--bg); color: var(--fg); font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.3; white-space: nowrap; }
+.mark { width: 8px; height: 8px; flex: none; }
+.observed { --fg: var(--ev-observed-fg); --bg: var(--ev-observed-bg); --bd: var(--ev-observed-border); }
+.observed .mark { background: var(--fg); border-radius: var(--radius-full); }
+.derived { --fg: var(--ev-derived-fg); --bg: var(--ev-derived-bg); --bd: var(--ev-derived-border); }
+.derived .mark { background: linear-gradient(90deg, var(--fg) 50%, transparent 50%); border: 1.5px solid var(--fg); border-radius: var(--radius-full); }
+.model { --fg: var(--ev-model-fg); --bg: var(--ev-model-bg); --bd: var(--ev-model-border); }
+.model .mark { background: var(--fg); transform: rotate(45deg); }
+.inferred { --fg: var(--ev-inferred-fg); --bg: var(--ev-inferred-bg); --bd: var(--ev-inferred-border); }
+.inferred .mark { border: 1.5px solid var(--fg); transform: rotate(45deg); }
+.unavailable { --fg: var(--ev-unavailable-fg); --bg: var(--ev-unavailable-bg); --bd: var(--ev-unavailable-border); border-style: dashed; }
+.unavailable .mark { border: 1.5px dashed var(--fg); border-radius: var(--radius-full); }

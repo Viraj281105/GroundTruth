@@ -1,0 +1,32 @@
+case_id: chaco-paraguayan-conservation
+project:
+  name: Gran Chaco Deforestation Prevention Project
+  country: Paraguay
+  ecosystem: dry Chaco thorny forest
+  standard: VCS
+  registry_id: VCS 1115
+  area_ha: 18000
+  crediting_period_start: '2011-01-01'
+  crediting_period_end: '2040-12-31'
+  claimed_credits_tco2e: 2400000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/1115
+  boundary_path: cases/boundaries/chaco.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2010
+  post_start: 2011
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Northern Paraguayan Chaco frontier rangelands
+  donor_pool_size: 50
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: High-risk deforestation boundary preventing cattle ranching expansion in the
+  Dry Chaco.

@@ -1,0 +1,32 @@
+case_id: surui-forest-carbon
+project:
+  name: Surui Forest Indigenous Carbon Project
+  country: Brazil
+  ecosystem: Amazon rainforest
+  standard: VCS
+  registry_id: VCS 1112
+  area_ha: 248147
+  crediting_period_start: '2009-01-01'
+  crediting_period_end: '2038-12-31'
+  claimed_credits_tco2e: 7000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/1112
+  boundary_path: cases/boundaries/surui.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2008
+  post_start: 2009
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Rondonia and Mato Grosso Amazon borderlands outside indigenous
+    territories
+  donor_pool_size: 65
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Pioneering indigenous-led REDD+ project in the Arc of Deforestation.

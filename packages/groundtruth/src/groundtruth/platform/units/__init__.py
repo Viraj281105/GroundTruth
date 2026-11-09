@@ -27,7 +27,13 @@ the pipeline produces.
 
 from __future__ import annotations
 
-from groundtruth.platform.units.boundary import RegistryBoundary, load_registry_boundary
+from groundtruth.platform.units.boundary import (
+    DonorBoundaryCollection,
+    DonorBoundaryRecord,
+    RegistryBoundary,
+    load_donor_boundaries,
+    load_registry_boundary,
+)
 from groundtruth.platform.units.carbon_projects import (
     CarbonProjectSnapshot,
     load_carbon_snapshot,
@@ -78,6 +84,8 @@ __all__ = [
     "Blocker",
     "CarbonProjectSnapshot",
     "DistrictFacts",
+    "DonorBoundaryCollection",
+    "DonorBoundaryRecord",
     "EarthEngineUnitConstruction",
     "Exclusion",
     "ExclusionCategory",
@@ -100,6 +108,7 @@ __all__ = [
     "generate_unit_set",
     "generation_blockers",
     "load_carbon_snapshot",
+    "load_donor_boundaries",
     "load_registry_boundary",
     "load_run_settings",
     "run_settings_path",

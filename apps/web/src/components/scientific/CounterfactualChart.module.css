@@ -1,9 +1,9 @@
 .container {
   display: flex;
   flex-direction: column;
-  background-color: var(--gt-bg-card);
-  border: 1px solid var(--gt-border-default);
-  border-radius: var(--gt-radius-lg);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
   padding: 20px;
   gap: 16px;
   position: relative;
@@ -11,14 +11,14 @@
 }
 
 .container:focus-visible {
-  border-color: var(--gt-border-focus);
-  box-shadow: 0 0 0 2px var(--gt-accent-forest-glow);
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 .empty {
   padding: 40px;
   text-align: center;
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
 }
 
 .header {
@@ -41,21 +41,21 @@
 }
 
 .title {
-  font-family: var(--gt-font-display);
+  font-family: var(--font-display);
   font-size: 17px;
   font-weight: 700;
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
 }
 
 .keyboardHint {
   font-family: var(--font-sans);
   font-size: 11px;
-  color: var(--gt-text-subtle);
+  color: var(--text-muted);
 }
 
 .subtitle {
   font-size: 13px;
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
 }
 
 .controlRow {
@@ -77,9 +77,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background-color: var(--gt-bg-surface);
-  border: 1px solid var(--gt-border-subtle);
-  border-radius: var(--gt-radius-md);
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   padding: 3px 6px;
 }
 
@@ -87,7 +87,7 @@
   font-family: var(--font-sans);
   font-size: 10px;
   font-weight: 600;
-  color: var(--gt-text-subtle);
+  color: var(--text-muted);
   margin-right: 4px;
 }
 
@@ -96,20 +96,20 @@
   border: none;
   font-family: var(--font-sans);
   font-size: 11px;
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
   padding: 4px 8px;
-  border-radius: var(--gt-radius-sm);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all var(--gt-transition-fast);
+  transition: all var(--duration-fast) var(--ease-out);
 }
 
 .filterBtn:hover {
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
 }
 
 .filterBtnActive {
-  background-color: var(--gt-bg-subtle);
-  color: var(--gt-text-primary);
+  background-color: var(--surface-sunken);
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -117,9 +117,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background-color: var(--gt-bg-surface);
-  border: 1px solid var(--gt-border-subtle);
-  border-radius: var(--gt-radius-md);
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   padding: 3px 8px;
 }
 
@@ -127,7 +127,7 @@
   font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
-  color: var(--gt-accent-cyan-glow);
+  color: var(--accent-strong);
 }
 
 .legend {
@@ -136,9 +136,9 @@
   flex-wrap: wrap;
   gap: 14px;
   padding: 6px 12px;
-  background-color: var(--gt-bg-surface);
-  border: 1px solid var(--gt-border-subtle);
-  border-radius: var(--gt-radius-md);
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
 }
 
 .legendItem {
@@ -150,21 +150,21 @@
 .legendObservedLine {
   width: 16px;
   height: 3px;
-  background-color: var(--gt-series-observed);
+  background-color: var(--series-observed);
   border-radius: 2px;
 }
 
 .legendSyntheticLine {
   width: 16px;
   height: 2px;
-  background-color: var(--gt-series-synthetic);
-  border-top: 2px dashed var(--gt-series-synthetic);
+  background-color: var(--series-synthetic);
+  border-top: 2px dashed var(--series-synthetic);
 }
 
 .legendGapBox {
   width: 12px;
   height: 12px;
-  background-color: var(--gt-series-gap);
+  background-color: var(--series-gap);
   border: 1px solid color-mix(in srgb, var(--caution-text) 40%, transparent);
   border-radius: 2px;
 }
@@ -172,7 +172,7 @@
 .legendEnvelopeBox {
   width: 12px;
   height: 12px;
-  background-color: var(--gt-series-envelope);
+  background-color: var(--series-envelope);
   border: 1px solid color-mix(in srgb, var(--ok-text) 40%, transparent);
   border-radius: 2px;
 }
@@ -185,7 +185,7 @@
 
 .legendText {
   font-size: 11px;
-  color: var(--gt-text-secondary);
+  color: var(--text-secondary);
 }
 
 /* SVG Chart */
@@ -193,9 +193,9 @@
   position: relative;
   width: 100%;
   overflow: hidden;
-  border-radius: var(--gt-radius-md);
+  border-radius: var(--radius-md);
   background-color: var(--surface-sunken);
-  border: 1px solid var(--gt-border-subtle);
+  border: 1px solid var(--border-subtle);
 }
 
 .svg {
@@ -205,18 +205,18 @@
 }
 
 .preBg {
-  fill: var(--gt-series-pre-bg);
+  fill: var(--series-pre);
 }
 
 .postBg {
-  fill: var(--gt-series-post-bg);
+  fill: var(--series-post);
 }
 
 .phaseLabel {
   font-family: var(--font-sans);
   font-size: 9px;
   font-weight: 600;
-  fill: var(--gt-text-subtle);
+  fill: var(--text-muted);
   letter-spacing: 0;
 }
 
@@ -238,14 +238,14 @@
 .tickLabelY {
   font-family: var(--font-sans);
   font-size: 11px;
-  fill: var(--gt-text-subtle);
+  fill: var(--text-muted);
   text-anchor: end;
 }
 
 .tickLabelX {
   font-family: var(--font-sans);
   font-size: 11px;
-  fill: var(--gt-text-subtle);
+  fill: var(--text-muted);
   text-anchor: middle;
 }
 
@@ -255,12 +255,12 @@
 }
 
 .gapPolygon {
-  fill: var(--gt-series-gap);
+  fill: var(--series-gap);
   stroke: none;
 }
 
 .envelopePolygon {
-  fill: var(--gt-series-envelope);
+  fill: var(--series-envelope);
   stroke: color-mix(in srgb, var(--ok-text) 35%, transparent);
   stroke-width: 1;
   stroke-dasharray: 3 3;
@@ -268,14 +268,14 @@
 
 .syntheticLine {
   fill: none;
-  stroke: var(--gt-series-synthetic);
+  stroke: var(--series-synthetic);
   stroke-width: 2.2;
   stroke-dasharray: 6 4;
 }
 
 .observedLine {
   fill: none;
-  stroke: var(--gt-series-observed);
+  stroke: var(--series-observed);
   stroke-width: 2.6;
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 35%, transparent));
 }
@@ -285,12 +285,12 @@
 }
 
 .syntheticDot {
-  fill: var(--gt-series-synthetic);
+  fill: var(--series-synthetic);
   transition: r 0.15s ease;
 }
 
 .observedDot {
-  fill: var(--gt-series-observed);
+  fill: var(--series-observed);
   transition: r 0.15s ease;
 }
 
@@ -335,8 +335,8 @@
   background-color: color-mix(in srgb, var(--surface-overlay) 94%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--gt-border-default);
-  border-radius: var(--gt-radius-md);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   padding: 10px 14px;
   box-shadow: 0 12px 36px color-mix(in srgb, var(--text-primary) 65%, transparent);
   pointer-events: none;
@@ -352,19 +352,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  border-bottom: 1px solid var(--gt-border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
   padding-bottom: 4px;
 }
 
 .tooltipYear {
   font-family: var(--font-sans);
   font-size: 13px;
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
 }
 
 .tooltipPhase {
   font-size: 10px;
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
 }
 
 .tooltipRow {
@@ -376,19 +376,19 @@
 }
 
 .tooltipKey {
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
 }
 
 .tooltipValObs {
   font-family: var(--font-sans);
   font-weight: 600;
-  color: var(--gt-series-observed);
+  color: var(--series-observed);
 }
 
 .tooltipValSyn {
   font-family: var(--font-sans);
   font-weight: 600;
-  color: var(--gt-series-synthetic);
+  color: var(--series-synthetic);
 }
 
 .tooltipValGap {
@@ -403,14 +403,14 @@
   justify-content: space-between;
   gap: 8px;
   font-size: 10px;
-  border-top: 1px dashed var(--gt-border-subtle);
+  border-top: 1px dashed var(--border-subtle);
   padding-top: 4px;
   margin-top: 2px;
 }
 
 .tooltipValEnv {
   font-family: var(--font-sans);
-  color: var(--gt-series-synthetic);
+  color: var(--series-synthetic);
 }
 
 /* Diagnostics Bar */
@@ -420,9 +420,9 @@
   flex-wrap: wrap;
   gap: 20px;
   padding: 10px 16px;
-  background-color: var(--gt-bg-surface);
-  border: 1px solid var(--gt-border-subtle);
-  border-radius: var(--gt-radius-md);
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
 }
 
 .diagItem {
@@ -435,12 +435,12 @@
 .diagLabel {
   font-family: var(--font-sans);
   font-size: 10px;
-  color: var(--gt-text-subtle);
+  color: var(--text-muted);
   letter-spacing: 0;
 }
 
 .diagVal {
   font-family: var(--font-sans);
   font-weight: 600;
-  color: var(--gt-text-secondary);
+  color: var(--text-secondary);
 }

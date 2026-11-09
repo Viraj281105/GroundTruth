@@ -12,7 +12,7 @@
           "runs"
         ],
         "summary": "List stored runs, newest first",
-        "description": "Runs matching the filters, newest first, in pages.\n\nPagination is by cursor, not offset: the sort key (`created_at`, `run_id`) never\nchanges, so runs written while you page cannot shift or repeat a page. A run whose\nwrite commits late can be missing from the scroll in progress and appears in the\nnext one. There is no total count; it would be stale as soon as it was read.",
+        "description": "Runs matching the filters, newest first, in pages.\n\nPagination is by cursor, not offset: the sort key (`created_at`, `run_id`) never\nchanges, so runs written while you page cannot shift or repeat a page. A run whose\nwrite commits late can be missing from the scroll in progress and appears in the\nnext one. There is no total count; it would be stale as soon as it was read.\n\nOnly runs filed under a project the active organization owns or has been granted are\nlisted; the scope is applied here, never taken from the query.",
         "operationId": "list_runs_runs_get",
         "parameters": [
           {
@@ -174,6 +174,16 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
           "503": {
             "description": "The run store is not available.",
             "content": {
@@ -203,7 +213,7 @@
           "runs"
         ],
         "summary": "Compare two runs by evidence id",
-        "description": "A per-evidence-id diff: each id is `added`, `removed`, `changed` or `unchanged`.\n\n**NOT COMPARABLE.** When the runs are for different cases, differ in data mode or\nengine version, were written under incompatible contracts, or one has no evidence\nbundle (refused, failed, queued, cancelled), the response says `comparable: false`\nwith every reason and returns **no diff**. A difference across engine versions is\nnot presented as a change. Runs from different specifications are comparable, with\n`same_specification: false`.",
+        "description": "A per-evidence-id diff: each id is `added`, `removed`, `changed` or `unchanged`.\n\n**NOT COMPARABLE.** When the runs are for different cases, differ in data mode or\nengine version, were written under incompatible contracts, or one has no evidence\nbundle (refused, failed, queued, cancelled), the response says `comparable: false`\nwith every reason and returns **no diff**. A difference across engine versions is\nnot presented as a change. Runs from different specifications are comparable, with\n`same_specification: false`.\n\nBoth runs must be filed under projects the caller can read with diagnostics access (the\ncomparison exposes evidence values); otherwise the pair is `404`, or `403` when the\nproject is visible but the level is too low.",
         "operationId": "compare_runs_compare_get",
         "parameters": [
           {
@@ -252,8 +262,28 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "No such run.",
+            "description": "No such run, or no access to its project.",
             "content": {
               "application/json": {
                 "schema": {
@@ -291,7 +321,7 @@
           "runs"
         ],
         "summary": "Fetch one stored run",
-        "description": "One run with its outcome and, when it has one, its evidence bundle.\n\nA refused run returns `200` with `result_state: \"refused\"` and the structured\nerror (code, stage, message, remediation, detail). A run still queued or running\nreturns its state with no bundle.\n\nWith `include_report=true` a run that has a bundle also carries `report_markdown`,\nrendered on read by the deterministic renderer. No language model narrates a\nstored run.",
+        "description": "One run with its outcome and, when it has one, its evidence bundle.\n\nA refused run returns `200` with `result_state: \"refused\"` and the structured\nerror (code, stage, message, remediation, detail). A run still queued or running\nreturns its state with no bundle.\n\nWith `include_report=true` a run that has a bundle also carries `report_markdown`,\nrendered on read by the deterministic renderer. No language model narrates a\nstored run.\n\nThe run is authorized through its project. The evidence bundle and the report built from\nit carry the causal diagnostics, so they are returned only to an owner or `audit` grant;\nother levels get the same run without those two fields (redaction removes fields and\nnever changes values). `404` when the run is missing, unfiled, or in a project the caller\ncannot see.",
         "operationId": "get_run_runs__run_id__get",
         "parameters": [
           {
@@ -339,8 +369,28 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "No such run.",
+            "description": "No such run, or no access to its project.",
             "content": {
               "application/json": {
                 "schema": {
@@ -388,7 +438,7 @@
           "jobs"
         ],
         "summary": "Queue an analysis",
-        "description": "Queue a simulated analysis for a case and return at once; poll `status_url`.\n\n* **`202`**: a new job was queued.\n* **`200`**: nothing new was queued. Either a stored result already answers this exact\n  request (`from_cache`), or an identical job is already in flight (`deduplicated`).\n  `run_id` is that existing run.\n\nOnly simulated data can run, and the response says so (`is_simulated`, `notice`).\n`synthetic: false` is refused with `501`; it is never quietly simulated. There is no\n`true_effect` field: it is not part of the specification hash, so accepting it would\nlet two different simulations share one cached answer.",
+        "description": "Queue a simulated analysis for a case and return at once; poll `status_url`.\n\n* **`202`**: a new job was queued.\n* **`200`**: nothing new was queued. Either a stored result already answers this exact\n  request (`from_cache`), or an identical job is already in flight (`deduplicated`).\n  `run_id` is that existing run.\n\nOnly simulated data can run, and the response says so (`is_simulated`, `notice`).\n`synthetic: false` is refused with `501`; it is never quietly simulated. There is no\n`true_effect` field: it is not part of the specification hash, so accepting it would\nlet two different simulations share one cached answer.\n\nThe case must belong to a project the caller's organization owns, and the caller's role\nmust allow starting runs; the run is recorded with the caller as `requested_by`.",
         "operationId": "submit_job_jobs_post",
         "requestBody": {
           "content": {
@@ -422,7 +472,7 @@
             }
           },
           "404": {
-            "description": "Unknown case.",
+            "description": "Unknown case, or no access to its project.",
             "content": {
               "application/json": {
                 "schema": {
@@ -433,6 +483,26 @@
           },
           "501": {
             "description": "Observed data is not implemented.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
             "content": {
               "application/json": {
                 "schema": {
@@ -495,7 +565,27 @@
             }
           },
           "404": {
-            "description": "No such job.",
+            "description": "No such job, or no access to its project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
             "content": {
               "application/json": {
                 "schema": {
@@ -568,7 +658,7 @@
             }
           },
           "404": {
-            "description": "No such job.",
+            "description": "No such job, or no access to its project.",
             "content": {
               "application/json": {
                 "schema": {
@@ -579,6 +669,26 @@
           },
           "409": {
             "description": "Already finished; nothing to cancel.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
             "content": {
               "application/json": {
                 "schema": {
@@ -616,7 +726,7 @@
           "jobs"
         ],
         "summary": "Stream a job's progress (SSE)",
-        "description": "Emit a `progress` event with the full job view on every change, then a final `done`.\n\nThe stream ends once the job is terminal. Unknown jobs are `404` and an unavailable\nstore is `503` before any event is sent, exactly as for `GET /jobs/{run_id}`.",
+        "description": "Emit a `progress` event with the full job view on every change, then a final `done`.\n\nThe stream ends once the job is terminal. Unknown jobs are `404` and an unavailable\nstore is `503` before any event is sent, exactly as for `GET /jobs/{run_id}`. So is a job\nin a project the caller cannot read: authorization comes first, then the stream.",
         "operationId": "job_events_jobs__job_id__events_get",
         "parameters": [
           {
@@ -640,8 +750,18 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "No such job.",
+            "description": "No such job, or no access to its project.",
             "content": {
               "application/json": {
                 "schema": {
@@ -706,8 +826,18 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Unknown case or no boundary file.",
+            "description": "Unknown case, no access to its project, or no boundary file.",
             "content": {
               "application/json": {
                 "schema": {
@@ -735,7 +865,7 @@
           "geo"
         ],
         "summary": "Boundary vector tile (PostGIS)",
-        "description": "Case boundaries clipped to tile z/x/y by `ST_AsMVT`; layer name `boundaries`.",
+        "description": "Case boundaries clipped to tile z/x/y by `ST_AsMVT`; layer name `boundaries`.\n\nOnly the boundaries of projects the active organization owns or has been granted.",
         "operationId": "boundary_tile_tiles__z___x___y__mvt_get",
         "parameters": [
           {
@@ -785,6 +915,16 @@
               }
             }
           },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Tile coordinates out of range.",
             "content": {
@@ -801,6 +941,48 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/claims/extract-pdf": {
+      "post": {
+        "tags": [
+          "claims"
+        ],
+        "summary": "Extract raw text from an uploaded PDF document",
+        "description": "Extract plain text from base64 PDF bytes (PDD or monitoring report).",
+        "operationId": "extract_pdf_claims_extract_pdf_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PdfExtractRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PdfExtractResponse"
                 }
               }
             }
@@ -1271,6 +1453,2188 @@
         }
       }
     },
+    "/orgs": {
+      "get": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Organizations you belong to",
+        "operationId": "list_orgs_orgs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OrgView"
+                  },
+                  "type": "array",
+                  "title": "Response List Orgs Orgs Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Create an organization (you become its owner)",
+        "operationId": "create_org_orgs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrgRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/active": {
+      "post": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Choose the organization you are acting for",
+        "description": "A slug you are not a member of answers 404, exactly like an unknown slug.",
+        "operationId": "switch_org_orgs_active_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchOrgRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{slug}/members": {
+      "get": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "List members of the active organization",
+        "operationId": "list_members_orgs__slug__members_get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemberView"
+                  },
+                  "title": "Response List Members Orgs  Slug  Members Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Add an existing account to the active organization",
+        "operationId": "add_member_orgs__slug__members_post",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMemberRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Would break an organization invariant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{slug}/members/{user_id}": {
+      "patch": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Change a member's role",
+        "operationId": "set_role_orgs__slug__members__user_id__patch",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Would break an organization invariant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Remove a member",
+        "operationId": "remove_member_orgs__slug__members__user_id__delete",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Would break an organization invariant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{slug}/portfolio": {
+      "get": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Assessment level, dimension statuses and top recommendation per project",
+        "description": "Every project the organization owns or was granted. Simulated projects are listed apart\nand nothing is aggregated across projects. Fields the project's access level may not see are\nremoved, never altered.",
+        "operationId": "get_portfolio_orgs__slug__portfolio_get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{slug}/audit": {
+      "get": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "The organization's audit log, newest first (owners and admins)",
+        "operationId": "get_audit_orgs__slug__audit_get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`next_cursor` of the previous page.",
+              "title": "Cursor"
+            },
+            "description": "`next_cursor` of the previous page."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid cursor or limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{slug}/activity": {
+      "get": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Recent project, run and export activity (every member)",
+        "description": "Only `project.*`, `run.*` and `export.*` events on projects the organization can access:\nits own actions, and anyone's on a project it owns. No authentication, membership or\nauthorization events, and no actor, IP address, user agent or details.",
+        "operationId": "get_activity_orgs__slug__activity_get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ActivityItem"
+                  },
+                  "title": "Response Get Activity Orgs  Slug  Activity Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid cursor or limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{slug}/projects": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Projects the organization owns or has been granted",
+        "operationId": "list_projects_orgs__slug__projects_get",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectView"
+                  },
+                  "title": "Response List Projects Orgs  Slug  Projects Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Create a project from a boundary file (GeoJSON or KML, max 5 MB)",
+        "operationId": "create_project_orgs__slug__projects_post",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectUploadForm"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid fields or boundary file.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "One project by id or slug",
+        "operationId": "get_project_projects__project_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/readiness": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Computed readiness: can causal attribution be attempted?",
+        "operationId": "get_readiness_projects__project_id__readiness_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/observations": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Annual observations of one vegetation index",
+        "description": "Scene ids and checksums appear only for levels with full evidence access.",
+        "operationId": "get_observations_projects__project_id__observations_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "indicator",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "ndvi",
+                "evi",
+                "ndmi",
+                "nbr"
+              ],
+              "type": "string",
+              "description": "ndvi, evi, ndmi or nbr.",
+              "default": "ndvi",
+              "title": "Indicator"
+            },
+            "description": "ndvi, evi, ndmi or nbr."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationsView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid fields or boundary file.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/climate": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Annual climate series for the project",
+        "operationId": "get_climate_projects__project_id__climate_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClimateView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/evidence-inventory": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "What evidence exists for the project",
+        "description": "Counts, kinds, states and sources for everyone; checksums, scene ids and the item list\nonly for levels that hold full evidence access (a `view` grant gets the summary).",
+        "operationId": "get_evidence_inventory_projects__project_id__evidence_inventory_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceInventoryView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/verification": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Latest completed verification run, or not_estimable",
+        "description": "The newest completed run for the project. With none, `status` is `not_estimable` and\n`readiness` says why. A simulated project or run is labelled `simulated` with the\nSIMULATED DATA warning. The evidence bundle and spec hash need diagnostics access.",
+        "operationId": "get_verification_projects__project_id__verification_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/assessment": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "The eight-dimension assessment of the project",
+        "description": "Serializes the engine assessment built from the project's real artifacts. Each\ndimension carries `status_kind` so `status` is never ambiguous. References into causal\ndiagnostics (`diagnostic_refs`) need diagnostics access; values are never altered.",
+        "operationId": "get_assessment_projects__project_id__assessment_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/boundary.geojson": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "The project boundary as GeoJSON",
+        "description": "The stored boundary with `data_mode` and `access_level` as foreign members.",
+        "operationId": "get_boundary_projects__project_id__boundary_geojson_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Boundary.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/geo+json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/donors.geojson": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Screened donor regions for the project, if any",
+        "description": "The donor features screened for this project's case. A project without a screening\nfile answers 200 with an empty FeatureCollection and the header `X-GT-Available: false`\n(`true` otherwise); there is no 404 and no invented donor.",
+        "operationId": "get_donors_projects__project_id__donors_geojson_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Donors.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/geo+json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/grants": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Organizations the project is currently granted to",
+        "operationId": "list_grants_projects__project_id__grants_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GrantView"
+                  },
+                  "title": "Response List Grants Projects  Project Id  Grants Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A concurrent change conflicted; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid fields or boundary file.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Grant another organization access to the project",
+        "description": "Creates the grant, or reactivates a revoked one (with the new level).",
+        "operationId": "create_grant_projects__project_id__grants_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrantView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A concurrent change conflicted; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid fields or boundary file.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/grants/{org_slug}": {
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Revoke an organization's access to the project",
+        "description": "Sets ``revoked_at``; the grantee loses access on its next request.",
+        "operationId": "revoke_grant_projects__project_id__grants__org_slug__delete",
+        "parameters": [
+          {
+            "name": "org_slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Slug"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A concurrent change conflicted; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid fields or boundary file.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/projects/{project_id}/export/dossier": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Technical dossier (ZIP) for audit",
+        "description": "README with limitations, readiness, evidence inventory, assessment, observations, climate,\nprovenance and a sha256 manifest. Owner and audit levels only; the download is audited.",
+        "operationId": "export_dossier_projects__project_id__export_dossier_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role or access level does not allow this.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown organization or project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No database is configured.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -1299,7 +3663,7 @@
           "cases"
         ],
         "summary": "List Case Summaries",
-        "description": "List every case definition.",
+        "description": "List the case definitions whose projects the active organization owns or was granted.",
         "operationId": "list_case_summaries_cases_get",
         "responses": {
           "200": {
@@ -1312,6 +3676,56 @@
                   },
                   "type": "array",
                   "title": "Response List Case Summaries Cases Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Create Case",
+        "description": "Create, calibrate and register a new project case.",
+        "operationId": "create_case_cases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1350,7 +3764,7 @@
             }
           },
           "404": {
-            "description": "Unknown case.",
+            "description": "Unknown case, or no access.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1378,7 +3792,7 @@
           "verification"
         ],
         "summary": "Verify",
-        "description": "Run the verification pipeline for a case.\n\nSynchronous today. The analysis job lifecycle (queue, poll, cancel) is\ntracked separately; this endpoint keeps the same response shape so the\nfrontend contract does not change when it moves behind a job.",
+        "description": "Run the verification pipeline for a case.\n\nNeeds what starting a job needs: a role that may start runs in the organization that owns\nthe case's project. The run is audited (`run.start`).\n\nSynchronous today. The analysis job lifecycle (queue, poll, cancel) is\ntracked separately; this endpoint keeps the same response shape so the\nfrontend contract does not change when it moves behind a job.",
         "operationId": "verify_cases__case_id__verify_post",
         "parameters": [
           {
@@ -1413,7 +3827,7 @@
             }
           },
           "404": {
-            "description": "Unknown case.",
+            "description": "Unknown case, or no access.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1492,6 +3906,103 @@
   },
   "components": {
     "schemas": {
+      "ActivityItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "project_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Slug"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "own": {
+            "type": "boolean",
+            "title": "Own",
+            "description": "True when the organization itself did this."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "occurred_at",
+          "action",
+          "outcome",
+          "project_id",
+          "project_slug",
+          "project_name",
+          "own"
+        ],
+        "title": "ActivityItem",
+        "description": "One feed entry: no actor, address, user agent or details."
+      },
+      "AddMemberRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "title": "Email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "member",
+              "viewer"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "role"
+        ],
+        "title": "AddMemberRequest"
+      },
       "AnalysisStatus": {
         "type": "string",
         "enum": [
@@ -1546,6 +4057,272 @@
           "hint"
         ],
         "title": "ApiErrorDetail"
+      },
+      "AssessmentView": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "simulated"
+            ],
+            "title": "Data Mode",
+            "description": "'simulated' data is never real data (R7)."
+          },
+          "access_level": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "audit",
+              "contribute",
+              "view"
+            ],
+            "title": "Access Level",
+            "description": "The caller's level on this project."
+          },
+          "level": {
+            "type": "integer",
+            "title": "Level"
+          },
+          "level_name": {
+            "type": "string",
+            "title": "Level Name"
+          },
+          "evidence_confidence": {
+            "type": "string",
+            "title": "Evidence Confidence"
+          },
+          "simulated_banner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Simulated Banner"
+          },
+          "observed_outcome": {
+            "$ref": "#/components/schemas/ConclusionView"
+          },
+          "ecological_assessment": {
+            "$ref": "#/components/schemas/ConclusionView"
+          },
+          "climate_adjusted_interpretation": {
+            "$ref": "#/components/schemas/ConclusionView"
+          },
+          "comparative_assessment": {
+            "$ref": "#/components/schemas/ConclusionView"
+          },
+          "attribution": {
+            "$ref": "#/components/schemas/AttributionView"
+          },
+          "dimensions": {
+            "items": {
+              "$ref": "#/components/schemas/DimensionView"
+            },
+            "type": "array",
+            "title": "Dimensions"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/RecommendationView"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data_mode",
+          "access_level",
+          "level",
+          "level_name",
+          "evidence_confidence",
+          "simulated_banner",
+          "observed_outcome",
+          "ecological_assessment",
+          "climate_adjusted_interpretation",
+          "comparative_assessment",
+          "attribution",
+          "dimensions",
+          "recommendations"
+        ],
+        "title": "AssessmentView"
+      },
+      "AttributionView": {
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "title": "Verdict"
+          },
+          "methodology": {
+            "type": "string",
+            "title": "Methodology"
+          },
+          "limitation": {
+            "type": "string",
+            "title": "Limitation"
+          },
+          "finding": {
+            "type": "string",
+            "title": "Finding"
+          },
+          "evidence_needed": {
+            "type": "string",
+            "title": "Evidence Needed"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Refs"
+          },
+          "diagnostic_refs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnostic Refs",
+            "min_level": "audit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict",
+          "methodology",
+          "limitation",
+          "finding",
+          "evidence_needed",
+          "evidence_refs",
+          "diagnostic_refs"
+        ],
+        "title": "AttributionView"
+      },
+      "AuditEventView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "resource_type": {
+            "type": "string",
+            "title": "Resource Type"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "outcome": {
+            "type": "string",
+            "title": "Outcome"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Agent"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "occurred_at",
+          "actor_user_id",
+          "action",
+          "resource_type",
+          "resource_id",
+          "outcome",
+          "ip",
+          "user_agent",
+          "details"
+        ],
+        "title": "AuditEventView"
+      },
+      "AuditPage": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEventView"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "events",
+          "next_cursor"
+        ],
+        "title": "AuditPage"
       },
       "BundleDiff": {
         "properties": {
@@ -1894,6 +4671,278 @@
         ],
         "title": "ClaimsResponse"
       },
+      "ClimateSourceView": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "citation": {
+            "type": "string",
+            "title": "Citation"
+          },
+          "temporal_coverage_start": {
+            "type": "string",
+            "title": "Temporal Coverage Start"
+          },
+          "temporal_coverage_end": {
+            "type": "string",
+            "title": "Temporal Coverage End"
+          },
+          "known_coverage_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Known Coverage Gaps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "dataset_id",
+          "provider",
+          "citation",
+          "temporal_coverage_start",
+          "temporal_coverage_end",
+          "known_coverage_gaps"
+        ],
+        "title": "ClimateSourceView"
+      },
+      "ClimateView": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "simulated"
+            ],
+            "title": "Data Mode",
+            "description": "'simulated' data is never real data (R7)."
+          },
+          "access_level": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "audit",
+              "contribute",
+              "view"
+            ],
+            "title": "Access Level",
+            "description": "The caller's level on this project."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ClimateSourceView"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "missing_months": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Months"
+          },
+          "years": {
+            "items": {
+              "$ref": "#/components/schemas/ClimateYearView"
+            },
+            "type": "array",
+            "title": "Years"
+          },
+          "bundle_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bundle Sha256",
+            "min_level": "contribute"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data_mode",
+          "access_level",
+          "status",
+          "reason",
+          "case_id",
+          "sources",
+          "missing_months",
+          "years",
+          "bundle_sha256"
+        ],
+        "title": "ClimateView"
+      },
+      "ClimateYearView": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "valid_months": {
+            "type": "integer",
+            "title": "Valid Months"
+          },
+          "is_complete_year": {
+            "type": "boolean",
+            "title": "Is Complete Year"
+          },
+          "annual_rainfall_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Annual Rainfall Mm"
+          },
+          "rainfall_anomaly_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rainfall Anomaly Mm"
+          },
+          "rainfall_anomaly_z": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rainfall Anomaly Z"
+          },
+          "spi_12": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spi 12"
+          },
+          "drought_classification": {
+            "type": "string",
+            "title": "Drought Classification"
+          },
+          "mean_temp_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Temp C"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "valid_months",
+          "is_complete_year",
+          "annual_rainfall_mm",
+          "rainfall_anomaly_mm",
+          "rainfall_anomaly_z",
+          "spi_12",
+          "drought_classification",
+          "mean_temp_c"
+        ],
+        "title": "ClimateYearView"
+      },
+      "ConclusionView": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "dimension_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dimension Ids"
+          },
+          "estimable": {
+            "type": "boolean",
+            "title": "Estimable"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "dimension_ids",
+          "estimable",
+          "reason"
+        ],
+        "title": "ConclusionView"
+      },
       "Confidence": {
         "properties": {
           "lower": {
@@ -1927,6 +4976,163 @@
         ],
         "title": "Confidence",
         "description": "An interval estimate with an explicit interpretation.\n\n``kind`` records whether the interval is a classical confidence interval, a\npermutation-based range, or a sensitivity envelope. Reporting these as if\nthey were interchangeable would be misleading."
+      },
+      "CreateCaseRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Name"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2,
+            "title": "Country"
+          },
+          "ecosystem": {
+            "type": "string",
+            "title": "Ecosystem",
+            "default": "forest / woodland"
+          },
+          "standard": {
+            "type": "string",
+            "title": "Standard",
+            "default": "VCS"
+          },
+          "registry_id": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 2,
+            "title": "Registry Id"
+          },
+          "area_ha": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Area Ha"
+          },
+          "crediting_period_start": {
+            "type": "string",
+            "title": "Crediting Period Start",
+            "default": "2015-01-01"
+          },
+          "crediting_period_end": {
+            "type": "string",
+            "title": "Crediting Period End",
+            "default": "2045-12-31"
+          },
+          "claimed_credits_tco2e": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed Credits Tco2E"
+          },
+          "indicator": {
+            "type": "string",
+            "title": "Indicator",
+            "default": "ndvi"
+          },
+          "donor_pool_size": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 10.0,
+            "title": "Donor Pool Size",
+            "default": 50
+          },
+          "pre_start": {
+            "type": "integer",
+            "title": "Pre Start",
+            "default": 2005
+          },
+          "pre_end": {
+            "type": "integer",
+            "title": "Pre End",
+            "default": 2014
+          },
+          "post_start": {
+            "type": "integer",
+            "title": "Post Start",
+            "default": 2015
+          },
+          "post_end": {
+            "type": "integer",
+            "title": "Post End",
+            "default": 2022
+          },
+          "boundary_geojson": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boundary Geojson"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "country",
+          "registry_id",
+          "area_ha"
+        ],
+        "title": "CreateCaseRequest",
+        "description": "Request to define and register a new project case."
+      },
+      "CreateOrgRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "ngo",
+              "funder",
+              "auditor",
+              "government"
+            ],
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "CreateOrgRequest"
+      },
+      "DataSourceMode": {
+        "type": "string",
+        "enum": [
+          "REAL_OBSERVATIONS",
+          "SYNTHETIC_BENCHMARK"
+        ],
+        "title": "DataSourceMode",
+        "description": "Execution mode: synthetic benchmark vs genuine real observations."
       },
       "DatasetRef": {
         "properties": {
@@ -2022,6 +5228,142 @@
         ],
         "title": "DiffSummary",
         "description": "How many ids fall in each status."
+      },
+      "DimensionStatuses": {
+        "properties": {
+          "trajectory": {
+            "type": "string",
+            "title": "Trajectory",
+            "description": "Status of the vegetation trajectory dimension."
+          },
+          "risk": {
+            "type": "string",
+            "title": "Risk",
+            "description": "Status of the ecological risk dimension."
+          },
+          "evidence_quality": {
+            "type": "string",
+            "title": "Evidence Quality",
+            "description": "Evidence-quality rating."
+          }
+        },
+        "type": "object",
+        "required": [
+          "trajectory",
+          "risk",
+          "evidence_quality"
+        ],
+        "title": "DimensionStatuses"
+      },
+      "DimensionView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "status_kind": {
+            "type": "string",
+            "enum": [
+              "trend_status",
+              "quality_rating",
+              "attribution_verdict"
+            ],
+            "title": "Status Kind",
+            "description": "What `status` means: a change status (dimensions 1-6), an evidence-quality rating (7) or an attribution verdict (8)."
+          },
+          "finding": {
+            "type": "string",
+            "title": "Finding"
+          },
+          "known": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Known"
+          },
+          "suggested": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggested"
+          },
+          "cannot_establish": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cannot Establish"
+          },
+          "limitation": {
+            "type": "string",
+            "title": "Limitation"
+          },
+          "evidence_needed": {
+            "type": "string",
+            "title": "Evidence Needed"
+          },
+          "confidence": {
+            "type": "string",
+            "title": "Confidence"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Refs",
+            "description": "References to observations, climate records and other dimensions."
+          },
+          "diagnostic_refs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnostic Refs",
+            "description": "References into causal-run diagnostics.",
+            "min_level": "audit"
+          },
+          "facts": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Facts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "status",
+          "status_kind",
+          "finding",
+          "known",
+          "suggested",
+          "cannot_establish",
+          "limitation",
+          "evidence_needed",
+          "confidence",
+          "evidence_refs",
+          "diagnostic_refs",
+          "facts"
+        ],
+        "title": "DimensionView"
       },
       "EngineFailureBody": {
         "properties": {
@@ -2259,6 +5601,11 @@
           "provenance": {
             "$ref": "#/components/schemas/Provenance"
           },
+          "state": {
+            "$ref": "#/components/schemas/EvidenceState",
+            "description": "Explicit epistemological status: OBSERVED, DERIVED, MODEL_ESTIMATED, INFERRED, UNAVAILABLE, INSUFFICIENT_EVIDENCE.",
+            "default": "DERIVED"
+          },
           "qualifiers": {
             "additionalProperties": true,
             "type": "object",
@@ -2274,6 +5621,7 @@
           "unit",
           "confidence",
           "provenance",
+          "state",
           "qualifiers"
         ],
         "title": "Evidence",
@@ -2327,6 +5675,132 @@
         ],
         "title": "EvidenceBundle",
         "description": "An immutable, verified collection of evidence for one case.\n\nThe bundle is the hand-off point from the deterministic pipeline to the\nreporting layer. It is serialisable, diffable and fully reproducible from\nits provenance records."
+      },
+      "EvidenceInventoryView": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "simulated"
+            ],
+            "title": "Data Mode",
+            "description": "'simulated' data is never real data (R7)."
+          },
+          "access_level": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "audit",
+              "contribute",
+              "view"
+            ],
+            "title": "Access Level",
+            "description": "The caller's level on this project."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "kinds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kinds"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorInventory"
+            },
+            "type": "array",
+            "title": "Indicators"
+          },
+          "states": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "States"
+          },
+          "climate_status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Climate Status"
+          },
+          "climate_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Climate Reason"
+          },
+          "boundary_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boundary Sha256",
+            "min_level": "contribute"
+          },
+          "items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/InventoryItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items",
+            "min_level": "contribute"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data_mode",
+          "access_level",
+          "status",
+          "reason",
+          "kinds",
+          "indicators",
+          "states",
+          "climate_status",
+          "climate_reason",
+          "boundary_sha256",
+          "items"
+        ],
+        "title": "EvidenceInventoryView",
+        "description": "What evidence exists for the project. Everyone sees counts, kinds, states and sources;\nchecksums, scene ids and the item list need ``EVIDENCE_FULL``."
       },
       "EvidenceSnapshot": {
         "properties": {
@@ -2387,6 +5861,19 @@
         "title": "EvidenceSnapshot",
         "description": "An evidence item as one side of the diff saw it."
       },
+      "EvidenceState": {
+        "type": "string",
+        "enum": [
+          "OBSERVED",
+          "DERIVED",
+          "MODEL_ESTIMATED",
+          "INFERRED",
+          "UNAVAILABLE",
+          "INSUFFICIENT_EVIDENCE"
+        ],
+        "title": "EvidenceState",
+        "description": "Explicit epistemological status of an evidence item."
+      },
       "ExtractedClaim": {
         "properties": {
           "kind": {
@@ -2435,6 +5922,71 @@
         ],
         "title": "FieldChange",
         "description": "One field of one evidence item that differs."
+      },
+      "GrantRequest": {
+        "properties": {
+          "org_slug": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Org Slug"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "view",
+              "audit",
+              "contribute"
+            ],
+            "title": "Level"
+          }
+        },
+        "type": "object",
+        "required": [
+          "org_slug",
+          "level"
+        ],
+        "title": "GrantRequest"
+      },
+      "GrantView": {
+        "properties": {
+          "org_slug": {
+            "type": "string",
+            "title": "Org Slug"
+          },
+          "org_name": {
+            "type": "string",
+            "title": "Org Name"
+          },
+          "org_type": {
+            "type": "string",
+            "title": "Org Type"
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "view",
+              "audit",
+              "contribute"
+            ],
+            "title": "Level"
+          },
+          "granted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Granted At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "org_slug",
+          "org_name",
+          "org_type",
+          "level",
+          "granted_at"
+        ],
+        "title": "GrantView",
+        "description": "An active grant of a project to another organization."
       },
       "HTTPValidationError": {
         "properties": {
@@ -2509,6 +6061,145 @@
         ],
         "title": "HealthResponse",
         "description": "Service liveness and capability report."
+      },
+      "IndicatorInventory": {
+        "properties": {
+          "indicator": {
+            "type": "string",
+            "enum": [
+              "ndvi",
+              "evi",
+              "ndmi",
+              "nbr"
+            ],
+            "title": "Indicator"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "n_records": {
+            "type": "integer",
+            "title": "N Records",
+            "default": 0
+          },
+          "years": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Years"
+          },
+          "states": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "States"
+          },
+          "sensors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sensors"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "data_origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Origin"
+          }
+        },
+        "type": "object",
+        "required": [
+          "indicator",
+          "status",
+          "reason",
+          "n_records",
+          "years",
+          "states",
+          "sensors",
+          "source",
+          "data_origin"
+        ],
+        "title": "IndicatorInventory"
+      },
+      "InventoryItem": {
+        "properties": {
+          "indicator": {
+            "type": "string",
+            "enum": [
+              "ndvi",
+              "evi",
+              "ndmi",
+              "nbr"
+            ],
+            "title": "Indicator"
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "n_scenes": {
+            "type": "integer",
+            "title": "N Scenes"
+          },
+          "scene_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scene Ids",
+            "min_level": "contribute"
+          },
+          "scenes_sha256": {
+            "type": "string",
+            "title": "Scenes Sha256",
+            "min_level": "contribute"
+          }
+        },
+        "type": "object",
+        "required": [
+          "indicator",
+          "year",
+          "n_scenes",
+          "scene_ids",
+          "scenes_sha256"
+        ],
+        "title": "InventoryItem",
+        "description": "One stored annual record; scene-level detail for EVIDENCE_FULL levels only."
       },
       "ItemDiff": {
         "properties": {
@@ -2919,15 +6610,69 @@
                 "type": "null"
               }
             ]
+          },
+          "organizations": {
+            "items": {
+              "$ref": "#/components/schemas/OrgView"
+            },
+            "type": "array",
+            "title": "Organizations"
+          },
+          "active_organization": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrgView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
         "required": [
           "auth_required",
           "registration_open",
-          "user"
+          "user",
+          "organizations",
+          "active_organization"
         ],
         "title": "MeResponse"
+      },
+      "MemberView": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "member",
+              "viewer"
+            ],
+            "title": "Role"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "email",
+          "role",
+          "created_at"
+        ],
+        "title": "MemberView"
       },
       "MessageErrorBody": {
         "properties": {
@@ -2979,6 +6724,591 @@
         ],
         "title": "NotComparable",
         "description": "One reason two runs cannot be compared."
+      },
+      "ObservationPoint": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "Null when nothing was observed that year."
+          },
+          "evidence_state": {
+            "type": "string",
+            "enum": [
+              "DERIVED",
+              "MODEL_ESTIMATED",
+              "UNAVAILABLE"
+            ],
+            "title": "Evidence State"
+          },
+          "sensor": {
+            "type": "string",
+            "title": "Sensor"
+          },
+          "clear_pixel_fraction": {
+            "type": "number",
+            "title": "Clear Pixel Fraction",
+            "description": "Share of scene pixels that were clear."
+          },
+          "n_scenes": {
+            "type": "integer",
+            "title": "N Scenes"
+          },
+          "aoi_coverage_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aoi Coverage Pct",
+            "description": "Share of the project AOI actually observed, computed from valid pixels and the project boundary; null when it cannot be computed."
+          },
+          "scene_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scene Ids",
+            "min_level": "contribute"
+          },
+          "scenes_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenes Sha256",
+            "min_level": "contribute"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "value",
+          "evidence_state",
+          "sensor",
+          "clear_pixel_fraction",
+          "n_scenes",
+          "aoi_coverage_pct",
+          "scene_ids",
+          "scenes_sha256"
+        ],
+        "title": "ObservationPoint",
+        "description": "One calendar year of one indicator for the project AOI."
+      },
+      "ObservationsView": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "simulated"
+            ],
+            "title": "Data Mode",
+            "description": "'simulated' data is never real data (R7)."
+          },
+          "access_level": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "audit",
+              "contribute",
+              "view"
+            ],
+            "title": "Access Level",
+            "description": "The caller's level on this project."
+          },
+          "indicator": {
+            "type": "string",
+            "enum": [
+              "ndvi",
+              "evi",
+              "ndmi",
+              "nbr"
+            ],
+            "title": "Indicator"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/ObservationPoint"
+            },
+            "type": "array",
+            "title": "Points"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data_mode",
+          "access_level",
+          "indicator",
+          "status",
+          "reason",
+          "unit_id",
+          "source",
+          "points"
+        ],
+        "title": "ObservationsView"
+      },
+      "OrgView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "ngo",
+              "funder",
+              "auditor",
+              "government",
+              "reference"
+            ],
+            "title": "Type"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "member",
+              "viewer"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "type",
+          "role"
+        ],
+        "title": "OrgView",
+        "description": "An organization as seen by one of its members (``role`` is the caller's role)."
+      },
+      "PdfExtractRequest": {
+        "properties": {
+          "file_base64": {
+            "type": "string",
+            "title": "File Base64"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "default": "uploaded.pdf"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_base64"
+        ],
+        "title": "PdfExtractRequest"
+      },
+      "PdfExtractResponse": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "num_pages": {
+            "type": "integer",
+            "title": "Num Pages"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "num_pages",
+          "filename"
+        ],
+        "title": "PdfExtractResponse"
+      },
+      "PortfolioRow": {
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProjectView"
+          },
+          "access_level": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "audit",
+              "contribute",
+              "view"
+            ],
+            "title": "Access Level"
+          },
+          "assessment_level": {
+            "type": "integer",
+            "title": "Assessment Level",
+            "description": "0-5; a level, never a score."
+          },
+          "level_name": {
+            "type": "string",
+            "title": "Level Name"
+          },
+          "dimension_statuses": {
+            "$ref": "#/components/schemas/DimensionStatuses"
+          },
+          "top_recommendation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecommendationView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Highest-priority recommendation for the org's persona."
+          },
+          "attribution_verdict": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribution Verdict",
+            "description": "Null only when the row is degraded."
+          },
+          "evidence_confidence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Confidence",
+            "description": "Null only when the row is degraded."
+          },
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "simulated"
+            ],
+            "title": "Data Mode"
+          },
+          "reported_funding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportedFunding"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "degraded": {
+            "type": "boolean",
+            "title": "Degraded",
+            "description": "True when the assessment failed; the row is level 0.",
+            "default": false
+          },
+          "degraded_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Degraded Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project",
+          "access_level",
+          "assessment_level",
+          "level_name",
+          "dimension_statuses",
+          "top_recommendation",
+          "attribution_verdict",
+          "evidence_confidence",
+          "data_mode",
+          "reported_funding",
+          "degraded",
+          "degraded_reason"
+        ],
+        "title": "PortfolioRow"
+      },
+      "PortfolioView": {
+        "properties": {
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioRow"
+            },
+            "type": "array",
+            "title": "Projects",
+            "description": "Real (observed) projects only."
+          },
+          "simulated": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioRow"
+            },
+            "type": "array",
+            "title": "Simulated",
+            "description": "SIMULATED DATA projects, kept apart and never aggregated with real ones."
+          }
+        },
+        "type": "object",
+        "required": [
+          "projects",
+          "simulated"
+        ],
+        "title": "PortfolioView"
+      },
+      "ProjectUploadForm": {
+        "properties": {
+          "boundary": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Boundary",
+            "description": "Project boundary (.geojson, .json, .kml)."
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Country"
+          },
+          "ecosystem": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Ecosystem"
+          },
+          "intervention": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Intervention"
+          },
+          "treatment_start_year": {
+            "type": "integer",
+            "maximum": 2100.0,
+            "minimum": 1970.0,
+            "title": "Treatment Start Year"
+          }
+        },
+        "type": "object",
+        "required": [
+          "boundary",
+          "name",
+          "country",
+          "ecosystem",
+          "intervention",
+          "treatment_start_year"
+        ],
+        "title": "ProjectUploadForm",
+        "description": "The multipart fields of project creation (a named model keeps the OpenAPI name plain)."
+      },
+      "ProjectView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "ecosystem": {
+            "type": "string",
+            "title": "Ecosystem"
+          },
+          "intervention": {
+            "type": "string",
+            "title": "Intervention"
+          },
+          "treatment_start_year": {
+            "type": "integer",
+            "title": "Treatment Start Year"
+          },
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "simulated"
+            ],
+            "title": "Data Mode"
+          },
+          "owner_slug": {
+            "type": "string",
+            "title": "Owner Slug"
+          },
+          "owner_name": {
+            "type": "string",
+            "title": "Owner Name"
+          },
+          "access_level": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "audit",
+              "contribute",
+              "view"
+            ],
+            "title": "Access Level"
+          },
+          "boundary_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boundary Sha256"
+          },
+          "reported_funding_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Funding Amount"
+          },
+          "reported_funding_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported Funding Currency"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "country",
+          "ecosystem",
+          "intervention",
+          "treatment_start_year",
+          "data_mode",
+          "owner_slug",
+          "owner_name",
+          "access_level",
+          "boundary_sha256",
+          "reported_funding_amount",
+          "reported_funding_currency",
+          "created_at"
+        ],
+        "title": "ProjectView",
+        "description": "A project as seen by the active organization (``access_level`` is that org's level)."
       },
       "Provenance": {
         "properties": {
@@ -3078,6 +7408,173 @@
         "title": "Provenance",
         "description": "An immutable record of the origin of a single analytical value.\n\nEvery :class:`~groundtruth.contracts.evidence.Evidence` item must carry one.\nWithout provenance a number cannot be audited, and an un-auditable number is\nnot admissible in a verification report."
       },
+      "ReadinessBody": {
+        "properties": {
+          "attribution_ready": {
+            "type": "boolean",
+            "title": "Attribution Ready"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/ReadinessCriterion"
+            },
+            "type": "array",
+            "title": "Criteria"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attribution_ready",
+          "criteria"
+        ],
+        "title": "ReadinessBody",
+        "description": "Whether causal attribution can be attempted, criterion by criterion."
+      },
+      "ReadinessCriterion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "met",
+              "not_met",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "observed_value": {
+            "title": "Observed Value"
+          },
+          "required": {
+            "title": "Required"
+          },
+          "evidence_needed": {
+            "type": "string",
+            "title": "Evidence Needed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "observed_value",
+          "required",
+          "evidence_needed"
+        ],
+        "title": "ReadinessCriterion"
+      },
+      "ReadinessView": {
+        "properties": {
+          "attribution_ready": {
+            "type": "boolean",
+            "title": "Attribution Ready"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/ReadinessCriterion"
+            },
+            "type": "array",
+            "title": "Criteria"
+          },
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "simulated"
+            ],
+            "title": "Data Mode",
+            "description": "'simulated' data is never real data (R7)."
+          },
+          "access_level": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "audit",
+              "contribute",
+              "view"
+            ],
+            "title": "Access Level",
+            "description": "The caller's level on this project."
+          }
+        },
+        "type": "object",
+        "required": [
+          "attribution_ready",
+          "criteria",
+          "data_mode",
+          "access_level"
+        ],
+        "title": "ReadinessView",
+        "description": "``ReadinessBody`` as its own response (with ``data_mode`` and ``access_level``)."
+      },
+      "RecommendationView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          },
+          "priority": {
+            "type": "integer",
+            "title": "Priority"
+          },
+          "personas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Personas"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Refs"
+          },
+          "diagnostic_refs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnostic Refs",
+            "min_level": "audit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "rationale",
+          "priority",
+          "personas",
+          "evidence_refs",
+          "diagnostic_refs"
+        ],
+        "title": "RecommendationView"
+      },
       "RegisterRequest": {
         "properties": {
           "email": {
@@ -3098,6 +7595,38 @@
           "password"
         ],
         "title": "RegisterRequest"
+      },
+      "ReportedFunding": {
+        "properties": {
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "reported_by": {
+            "type": "string",
+            "title": "Reported By",
+            "description": "Name of the owning organization."
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount",
+          "currency",
+          "reported_by"
+        ],
+        "title": "ReportedFunding",
+        "description": "Funding exactly as the owning organization reported it. Never computed by GroundTruth."
       },
       "RunComparison": {
         "properties": {
@@ -3776,6 +8305,25 @@
           "n_estimator_fits"
         ]
       },
+      "SetRoleRequest": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "member",
+              "viewer"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "title": "SetRoleRequest"
+      },
       "StageView": {
         "properties": {
           "name": {
@@ -3887,6 +8435,21 @@
         ],
         "title": "SubmitJobRequest",
         "description": "Queue an analysis for a case. Simulated data only, until real providers exist."
+      },
+      "SwitchOrgRequest": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Slug"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug"
+        ],
+        "title": "SwitchOrgRequest"
       },
       "TimelineEvent": {
         "properties": {
@@ -4124,6 +8687,21 @@
             "description": "Must be true until real Earth-observation providers are implemented. A request with synthetic=false is rejected rather than silently simulated.",
             "default": true
           },
+          "data_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataSourceMode"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Mode",
+            "description": "Explicit data mode: 'REAL_OBSERVATIONS' or 'SYNTHETIC_BENCHMARK'. Takes precedence over 'synthetic' if specified."
+          },
           "true_effect": {
             "type": "number",
             "title": "True Effect",
@@ -4181,7 +8759,7 @@
               "observed"
             ],
             "title": "Data Mode",
-            "description": "Drives the persistent simulated-data banner."
+            "description": "Drives the persistent simulated-data / real-observations banner."
           },
           "verdict_label": {
             "$ref": "#/components/schemas/VerdictLabel"
@@ -4302,6 +8880,170 @@
         ],
         "title": "VerificationVerdict",
         "description": "The screening conclusion, phrased so it cannot be read as an accusation."
+      },
+      "VerificationView": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "observed",
+              "simulated"
+            ],
+            "title": "Data Mode",
+            "description": "'simulated' data is never real data (R7)."
+          },
+          "access_level": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "audit",
+              "contribute",
+              "view"
+            ],
+            "title": "Access Level",
+            "description": "The caller's level on this project."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "not_estimable"
+            ],
+            "title": "Status"
+          },
+          "readiness": {
+            "$ref": "#/components/schemas/ReadinessBody"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "description": "Includes the SIMULATED DATA notice (R7) when it applies."
+          },
+          "is_simulated": {
+            "type": "boolean",
+            "title": "Is Simulated"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "verdict_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict Label"
+          },
+          "verdict_rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict Rationale"
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Caveats"
+          },
+          "engine_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Version"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "spec_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spec Hash",
+            "min_level": "audit"
+          },
+          "bundle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceBundle"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "min_level": "audit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data_mode",
+          "access_level",
+          "status",
+          "readiness",
+          "warnings",
+          "is_simulated",
+          "run_id",
+          "case_id",
+          "verdict_label",
+          "verdict_rationale",
+          "caveats",
+          "engine_version",
+          "created_at",
+          "spec_hash",
+          "bundle"
+        ],
+        "title": "VerificationView",
+        "description": "The latest completed run for the project, or ``not_estimable`` when there is none."
       },
       "WarningsDiff": {
         "properties": {

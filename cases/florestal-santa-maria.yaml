@@ -1,0 +1,32 @@
+case_id: florestal-santa-maria
+project:
+  name: Florestal Santa Maria REDD+ Project
+  country: Brazil
+  ecosystem: Amazon-Cerrado transitional forest
+  standard: VCS
+  registry_id: VCS 875
+  area_ha: 71714
+  crediting_period_start: '2009-02-01'
+  crediting_period_end: '2039-01-31'
+  claimed_credits_tco2e: 30000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/875
+  boundary_path: cases/boundaries/santa-maria.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2008
+  post_start: 2009
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Northwest Mato Grosso transitional forest zone outside private
+    reserves
+  donor_pool_size: 60
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Privately owned native forest conservation in Colniza, Mato Grosso.

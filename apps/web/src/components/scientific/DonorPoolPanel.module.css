@@ -10,16 +10,16 @@
   gap: 12px;
   min-width: 0;
   padding: 20px;
-  background-color: var(--gt-bg-card);
-  border: 1px solid var(--gt-border-default);
-  border-radius: var(--gt-radius-lg);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
 }
 
 .title {
-  font-family: var(--gt-font-display);
+  font-family: var(--font-display);
   font-size: 16px;
   font-weight: 600;
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -27,7 +27,7 @@
 .groupDesc {
   font-size: 13px;
   line-height: 1.5;
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -36,7 +36,7 @@
   flex-direction: column;
   gap: 6px;
   padding-top: 12px;
-  border-top: 1px solid var(--gt-border-subtle);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .groupTitle {
@@ -44,12 +44,12 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--gt-text-secondary);
+  color: var(--text-secondary);
   margin: 0;
 }
 
 .count {
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
 }
 
 .tableWrapper {
@@ -67,8 +67,8 @@
 .table td {
   text-align: left;
   padding: 8px 10px;
-  border-bottom: 1px solid var(--gt-border-subtle);
-  color: var(--gt-text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
   vertical-align: top;
 }
 
@@ -77,13 +77,13 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
 }
 
 .table tbody th {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-mono);
   font-weight: 500;
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
@@ -93,15 +93,15 @@
   padding: 0 12px;
   font: inherit;
   font-size: 13px;
-  color: var(--gt-accent-cyan-glow);
+  color: var(--accent-strong);
   background: none;
-  border: 1px solid var(--gt-border-default);
-  border-radius: var(--gt-radius-md);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
 .toggle:focus-visible {
-  outline: 2px solid var(--gt-border-focus);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 

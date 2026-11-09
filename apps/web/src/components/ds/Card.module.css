@@ -15,3 +15,9 @@
 
 .skeleton { display: block; background: linear-gradient(90deg, var(--surface-sunken) 25%, var(--surface-hover) 50%, var(--surface-sunken) 75%); background-size: 200% 100%; border-radius: var(--radius-sm); animation: shimmer 1.4s ease-in-out infinite; }
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+.header { padding: var(--space-4) var(--space-5) var(--space-3); display: flex; flex-direction: column; gap: var(--space-1); }
+.title { font-size: var(--text-base); font-weight: 600; letter-spacing: -0.01em; }
+.description { font-size: var(--text-sm); color: var(--text-muted); line-height: var(--leading-snug); }
+.content { padding: var(--space-4) var(--space-5); }
+.footer { padding: var(--space-3) var(--space-5); border-top: 1px solid var(--border-subtle); background: var(--surface-sunken); display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); }

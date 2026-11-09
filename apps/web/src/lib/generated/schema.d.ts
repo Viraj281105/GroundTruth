@@ -19,6 +19,9 @@ export interface paths {
          *     changes, so runs written while you page cannot shift or repeat a page. A run whose
          *     write commits late can be missing from the scroll in progress and appears in the
          *     next one. There is no total count; it would be stale as soon as it was read.
+         *
+         *     Only runs filed under a project the active organization owns or has been granted are
+         *     listed; the scope is applied here, never taken from the query.
          */
         get: operations["list_runs_runs_get"];
         put?: never;
@@ -46,6 +49,10 @@ export interface paths {
          *     with every reason and returns **no diff**. A difference across engine versions is
          *     not presented as a change. Runs from different specifications are comparable, with
          *     `same_specification: false`.
+         *
+         *     Both runs must be filed under projects the caller can read with diagnostics access (the
+         *     comparison exposes evidence values); otherwise the pair is `404`, or `403` when the
+         *     project is visible but the level is too low.
          */
         get: operations["compare_runs_compare_get"];
         put?: never;
@@ -74,6 +81,12 @@ export interface paths {
          *     With `include_report=true` a run that has a bundle also carries `report_markdown`,
          *     rendered on read by the deterministic renderer. No language model narrates a
          *     stored run.
+         *
+         *     The run is authorized through its project. The evidence bundle and the report built from
+         *     it carry the causal diagnostics, so they are returned only to an owner or `audit` grant;
+         *     other levels get the same run without those two fields (redaction removes fields and
+         *     never changes values). `404` when the run is missing, unfiled, or in a project the caller
+         *     cannot see.
          */
         get: operations["get_run_runs__run_id__get"];
         put?: never;
@@ -106,6 +119,9 @@ export interface paths {
          *     `synthetic: false` is refused with `501`; it is never quietly simulated. There is no
          *     `true_effect` field: it is not part of the specification hash, so accepting it would
          *     let two different simulations share one cached answer.
+         *
+         *     The case must belong to a project the caller's organization owns, and the caller's role
+         *     must allow starting runs; the run is recorded with the caller as `requested_by`.
          */
         post: operations["submit_job_jobs_post"];
         delete?: never;
@@ -179,7 +195,8 @@ export interface paths {
          * @description Emit a `progress` event with the full job view on every change, then a final `done`.
          *
          *     The stream ends once the job is terminal. Unknown jobs are `404` and an unavailable
-         *     store is `503` before any event is sent, exactly as for `GET /jobs/{run_id}`.
+         *     store is `503` before any event is sent, exactly as for `GET /jobs/{run_id}`. So is a job
+         *     in a project the caller cannot read: authorization comes first, then the stream.
          */
         get: operations["job_events_jobs__job_id__events_get"];
         put?: never;
@@ -220,10 +237,32 @@ export interface paths {
         /**
          * Boundary vector tile (PostGIS)
          * @description Case boundaries clipped to tile z/x/y by `ST_AsMVT`; layer name `boundaries`.
+         *
+         *     Only the boundaries of projects the active organization owns or has been granted.
          */
         get: operations["boundary_tile_tiles__z___x___y__mvt_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/claims/extract-pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extract raw text from an uploaded PDF document
+         * @description Extract plain text from base64 PDF bytes (PDD or monitoring report).
+         */
+        post: operations["extract_pdf_claims_extract_pdf_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -381,6 +420,399 @@ export interface paths {
         patch: operations["update_user_auth_users__user_id__patch"];
         trace?: never;
     };
+    "/orgs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Organizations you belong to */
+        get: operations["list_orgs_orgs_get"];
+        put?: never;
+        /** Create an organization (you become its owner) */
+        post: operations["create_org_orgs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Choose the organization you are acting for
+         * @description A slug you are not a member of answers 404, exactly like an unknown slug.
+         */
+        post: operations["switch_org_orgs_active_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{slug}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List members of the active organization */
+        get: operations["list_members_orgs__slug__members_get"];
+        put?: never;
+        /** Add an existing account to the active organization */
+        post: operations["add_member_orgs__slug__members_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{slug}/members/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a member */
+        delete: operations["remove_member_orgs__slug__members__user_id__delete"];
+        options?: never;
+        head?: never;
+        /** Change a member's role */
+        patch: operations["set_role_orgs__slug__members__user_id__patch"];
+        trace?: never;
+    };
+    "/orgs/{slug}/portfolio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Assessment level, dimension statuses and top recommendation per project
+         * @description Every project the organization owns or was granted. Simulated projects are listed apart
+         *     and nothing is aggregated across projects. Fields the project's access level may not see are
+         *     removed, never altered.
+         */
+        get: operations["get_portfolio_orgs__slug__portfolio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{slug}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The organization's audit log, newest first (owners and admins) */
+        get: operations["get_audit_orgs__slug__audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{slug}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recent project, run and export activity (every member)
+         * @description Only `project.*`, `run.*` and `export.*` events on projects the organization can access:
+         *     its own actions, and anyone's on a project it owns. No authentication, membership or
+         *     authorization events, and no actor, IP address, user agent or details.
+         */
+        get: operations["get_activity_orgs__slug__activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{slug}/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Projects the organization owns or has been granted */
+        get: operations["list_projects_orgs__slug__projects_get"];
+        put?: never;
+        /** Create a project from a boundary file (GeoJSON or KML, max 5 MB) */
+        post: operations["create_project_orgs__slug__projects_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One project by id or slug */
+        get: operations["get_project_projects__project_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Computed readiness: can causal attribution be attempted? */
+        get: operations["get_readiness_projects__project_id__readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Annual observations of one vegetation index
+         * @description Scene ids and checksums appear only for levels with full evidence access.
+         */
+        get: operations["get_observations_projects__project_id__observations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/climate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Annual climate series for the project */
+        get: operations["get_climate_projects__project_id__climate_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/evidence-inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What evidence exists for the project
+         * @description Counts, kinds, states and sources for everyone; checksums, scene ids and the item list
+         *     only for levels that hold full evidence access (a `view` grant gets the summary).
+         */
+        get: operations["get_evidence_inventory_projects__project_id__evidence_inventory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Latest completed verification run, or not_estimable
+         * @description The newest completed run for the project. With none, `status` is `not_estimable` and
+         *     `readiness` says why. A simulated project or run is labelled `simulated` with the
+         *     SIMULATED DATA warning. The evidence bundle and spec hash need diagnostics access.
+         */
+        get: operations["get_verification_projects__project_id__verification_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/assessment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The eight-dimension assessment of the project
+         * @description Serializes the engine assessment built from the project's real artifacts. Each
+         *     dimension carries `status_kind` so `status` is never ambiguous. References into causal
+         *     diagnostics (`diagnostic_refs`) need diagnostics access; values are never altered.
+         */
+        get: operations["get_assessment_projects__project_id__assessment_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/boundary.geojson": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The project boundary as GeoJSON
+         * @description The stored boundary with `data_mode` and `access_level` as foreign members.
+         */
+        get: operations["get_boundary_projects__project_id__boundary_geojson_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/donors.geojson": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Screened donor regions for the project, if any
+         * @description The donor features screened for this project's case. A project without a screening
+         *     file answers 200 with an empty FeatureCollection and the header `X-GT-Available: false`
+         *     (`true` otherwise); there is no 404 and no invented donor.
+         */
+        get: operations["get_donors_projects__project_id__donors_geojson_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Organizations the project is currently granted to */
+        get: operations["list_grants_projects__project_id__grants_get"];
+        put?: never;
+        /**
+         * Grant another organization access to the project
+         * @description Creates the grant, or reactivates a revoked one (with the new level).
+         */
+        post: operations["create_grant_projects__project_id__grants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/grants/{org_slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke an organization's access to the project
+         * @description Sets ``revoked_at``; the grantee loses access on its next request.
+         */
+        delete: operations["revoke_grant_projects__project_id__grants__org_slug__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/export/dossier": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Technical dossier (ZIP) for audit
+         * @description README with limitations, readiness, evidence inventory, assessment, observations, climate,
+         *     provenance and a sha256 manifest. Owner and audit levels only; the download is audited.
+         */
+        get: operations["export_dossier_projects__project_id__export_dossier_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -410,11 +842,15 @@ export interface paths {
         };
         /**
          * List Case Summaries
-         * @description List every case definition.
+         * @description List the case definitions whose projects the active organization owns or was granted.
          */
         get: operations["list_case_summaries_cases_get"];
         put?: never;
-        post?: never;
+        /**
+         * Create Case
+         * @description Create, calibrate and register a new project case.
+         */
+        post: operations["create_case_cases_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -454,6 +890,9 @@ export interface paths {
          * Verify
          * @description Run the verification pipeline for a case.
          *
+         *     Needs what starting a job needs: a role that may start runs in the organization that owns
+         *     the case's project. The run is audited (`run.start`).
+         *
          *     Synchronous today. The analysis job lifecycle (queue, poll, cancel) is
          *     tracked separately; this endpoint keeps the same response shape so the
          *     frontend contract does not change when it moves behind a job.
@@ -469,6 +908,44 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ActivityItem
+         * @description One feed entry: no actor, address, user agent or details.
+         */
+        ActivityItem: {
+            /** Id */
+            id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Action */
+            action: string;
+            /** Outcome */
+            outcome: string;
+            /** Project Id */
+            project_id: string | null;
+            /** Project Slug */
+            project_slug: string | null;
+            /** Project Name */
+            project_name: string | null;
+            /**
+             * Own
+             * @description True when the organization itself did this.
+             */
+            own: boolean;
+        };
+        /** AddMemberRequest */
+        AddMemberRequest: {
+            /** Email */
+            email: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "member" | "viewer";
+        };
         /**
          * AnalysisStatus
          * @description Platform-side job lifecycle state.
@@ -493,6 +970,90 @@ export interface components {
             message: string;
             /** Hint */
             hint: string | null;
+        };
+        /** AssessmentView */
+        AssessmentView: {
+            /**
+             * Data Mode
+             * @description 'simulated' data is never real data (R7).
+             * @enum {string}
+             */
+            data_mode: "observed" | "simulated";
+            /**
+             * Access Level
+             * @description The caller's level on this project.
+             * @enum {string}
+             */
+            access_level: "owner" | "audit" | "contribute" | "view";
+            /** Level */
+            level: number;
+            /** Level Name */
+            level_name: string;
+            /** Evidence Confidence */
+            evidence_confidence: string;
+            /** Simulated Banner */
+            simulated_banner: string | null;
+            observed_outcome: components["schemas"]["ConclusionView"];
+            ecological_assessment: components["schemas"]["ConclusionView"];
+            climate_adjusted_interpretation: components["schemas"]["ConclusionView"];
+            comparative_assessment: components["schemas"]["ConclusionView"];
+            attribution: components["schemas"]["AttributionView"];
+            /** Dimensions */
+            dimensions: components["schemas"]["DimensionView"][];
+            /** Recommendations */
+            recommendations: components["schemas"]["RecommendationView"][];
+        };
+        /** AttributionView */
+        AttributionView: {
+            /** Verdict */
+            verdict: string;
+            /** Methodology */
+            methodology: string;
+            /** Limitation */
+            limitation: string;
+            /** Finding */
+            finding: string;
+            /** Evidence Needed */
+            evidence_needed: string;
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Diagnostic Refs */
+            diagnostic_refs: string[] | null;
+        };
+        /** AuditEventView */
+        AuditEventView: {
+            /** Id */
+            id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /** Action */
+            action: string;
+            /** Resource Type */
+            resource_type: string;
+            /** Resource Id */
+            resource_id: string | null;
+            /** Outcome */
+            outcome: string;
+            /** Ip */
+            ip: string | null;
+            /** User Agent */
+            user_agent: string | null;
+            /** Details */
+            details: {
+                [key: string]: unknown;
+            };
+        };
+        /** AuditPage */
+        AuditPage: {
+            /** Events */
+            events: components["schemas"]["AuditEventView"][];
+            /** Next Cursor */
+            next_cursor: string | null;
         };
         /**
          * BundleDiff
@@ -624,6 +1185,87 @@ export interface components {
             /** Disclaimer */
             disclaimer: string;
         };
+        /** ClimateSourceView */
+        ClimateSourceView: {
+            /** Name */
+            name: string;
+            /** Dataset Id */
+            dataset_id: string;
+            /** Provider */
+            provider: string;
+            /** Citation */
+            citation: string;
+            /** Temporal Coverage Start */
+            temporal_coverage_start: string;
+            /** Temporal Coverage End */
+            temporal_coverage_end: string;
+            /** Known Coverage Gaps */
+            known_coverage_gaps: string[];
+        };
+        /** ClimateView */
+        ClimateView: {
+            /**
+             * Data Mode
+             * @description 'simulated' data is never real data (R7).
+             * @enum {string}
+             */
+            data_mode: "observed" | "simulated";
+            /**
+             * Access Level
+             * @description The caller's level on this project.
+             * @enum {string}
+             */
+            access_level: "owner" | "audit" | "contribute" | "view";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "unavailable";
+            /** Reason */
+            reason: string | null;
+            /** Case Id */
+            case_id: string | null;
+            /** Sources */
+            sources: components["schemas"]["ClimateSourceView"][];
+            /** Missing Months */
+            missing_months: string[];
+            /** Years */
+            years: components["schemas"]["ClimateYearView"][];
+            /** Bundle Sha256 */
+            bundle_sha256: string | null;
+        };
+        /** ClimateYearView */
+        ClimateYearView: {
+            /** Year */
+            year: number;
+            /** Valid Months */
+            valid_months: number;
+            /** Is Complete Year */
+            is_complete_year: boolean;
+            /** Annual Rainfall Mm */
+            annual_rainfall_mm: number | null;
+            /** Rainfall Anomaly Mm */
+            rainfall_anomaly_mm: number | null;
+            /** Rainfall Anomaly Z */
+            rainfall_anomaly_z: number | null;
+            /** Spi 12 */
+            spi_12: number | null;
+            /** Drought Classification */
+            drought_classification: string;
+            /** Mean Temp C */
+            mean_temp_c: number | null;
+        };
+        /** ConclusionView */
+        ConclusionView: {
+            /** Summary */
+            summary: string;
+            /** Dimension Ids */
+            dimension_ids: string[];
+            /** Estimable */
+            estimable: boolean;
+            /** Reason */
+            reason: string | null;
+        };
         /**
          * Confidence
          * @description An interval estimate with an explicit interpretation.
@@ -649,6 +1291,94 @@ export interface components {
              */
             kind: string;
         };
+        /**
+         * CreateCaseRequest
+         * @description Request to define and register a new project case.
+         */
+        CreateCaseRequest: {
+            /** Name */
+            name: string;
+            /** Country */
+            country: string;
+            /**
+             * Ecosystem
+             * @default forest / woodland
+             */
+            ecosystem?: string;
+            /**
+             * Standard
+             * @default VCS
+             */
+            standard?: string;
+            /** Registry Id */
+            registry_id: string;
+            /** Area Ha */
+            area_ha: number;
+            /**
+             * Crediting Period Start
+             * @default 2015-01-01
+             */
+            crediting_period_start?: string;
+            /**
+             * Crediting Period End
+             * @default 2045-12-31
+             */
+            crediting_period_end?: string;
+            /** Claimed Credits Tco2E */
+            claimed_credits_tco2e?: number | null;
+            /**
+             * Indicator
+             * @default ndvi
+             */
+            indicator?: string;
+            /**
+             * Donor Pool Size
+             * @default 50
+             */
+            donor_pool_size?: number;
+            /**
+             * Pre Start
+             * @default 2005
+             */
+            pre_start?: number;
+            /**
+             * Pre End
+             * @default 2014
+             */
+            pre_end?: number;
+            /**
+             * Post Start
+             * @default 2015
+             */
+            post_start?: number;
+            /**
+             * Post End
+             * @default 2022
+             */
+            post_end?: number;
+            /** Boundary Geojson */
+            boundary_geojson?: {
+                [key: string]: unknown;
+            } | null;
+            /** Case Id */
+            case_id?: string | null;
+        };
+        /** CreateOrgRequest */
+        CreateOrgRequest: {
+            /** Name */
+            name: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "ngo" | "funder" | "auditor" | "government";
+        };
+        /**
+         * DataSourceMode
+         * @description Execution mode: synthetic benchmark vs genuine real observations.
+         * @enum {string}
+         */
+        DataSourceMode: "REAL_OBSERVATIONS" | "SYNTHETIC_BENCHMARK";
         /**
          * DatasetRef
          * @description A pinned reference to an external dataset.
@@ -700,6 +1430,67 @@ export interface components {
             changed: number;
             /** Unchanged */
             unchanged: number;
+        };
+        /** DimensionStatuses */
+        DimensionStatuses: {
+            /**
+             * Trajectory
+             * @description Status of the vegetation trajectory dimension.
+             */
+            trajectory: string;
+            /**
+             * Risk
+             * @description Status of the ecological risk dimension.
+             */
+            risk: string;
+            /**
+             * Evidence Quality
+             * @description Evidence-quality rating.
+             */
+            evidence_quality: string;
+        };
+        /** DimensionView */
+        DimensionView: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Status */
+            status: string;
+            /**
+             * Status Kind
+             * @description What `status` means: a change status (dimensions 1-6), an evidence-quality rating (7) or an attribution verdict (8).
+             * @enum {string}
+             */
+            status_kind: "trend_status" | "quality_rating" | "attribution_verdict";
+            /** Finding */
+            finding: string;
+            /** Known */
+            known: string[];
+            /** Suggested */
+            suggested: string[];
+            /** Cannot Establish */
+            cannot_establish: string[];
+            /** Limitation */
+            limitation: string;
+            /** Evidence Needed */
+            evidence_needed: string;
+            /** Confidence */
+            confidence: string;
+            /**
+             * Evidence Refs
+             * @description References to observations, climate records and other dimensions.
+             */
+            evidence_refs: string[];
+            /**
+             * Diagnostic Refs
+             * @description References into causal-run diagnostics.
+             */
+            diagnostic_refs: string[] | null;
+            /** Facts */
+            facts: {
+                [key: string]: unknown;
+            };
         };
         /**
          * EngineFailureBody
@@ -805,6 +1596,11 @@ export interface components {
             confidence: components["schemas"]["Confidence"] | null;
             provenance: components["schemas"]["Provenance"];
             /**
+             * @description Explicit epistemological status: OBSERVED, DERIVED, MODEL_ESTIMATED, INFERRED, UNAVAILABLE, INSUFFICIENT_EVIDENCE.
+             * @default DERIVED
+             */
+            state: components["schemas"]["EvidenceState"];
+            /**
              * Qualifiers
              * @description Structured caveats, e.g. {'observed_not_causal': True}.
              */
@@ -841,6 +1637,51 @@ export interface components {
             warnings: string[];
         };
         /**
+         * EvidenceInventoryView
+         * @description What evidence exists for the project. Everyone sees counts, kinds, states and sources;
+         *     checksums, scene ids and the item list need ``EVIDENCE_FULL``.
+         */
+        EvidenceInventoryView: {
+            /**
+             * Data Mode
+             * @description 'simulated' data is never real data (R7).
+             * @enum {string}
+             */
+            data_mode: "observed" | "simulated";
+            /**
+             * Access Level
+             * @description The caller's level on this project.
+             * @enum {string}
+             */
+            access_level: "owner" | "audit" | "contribute" | "view";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "unavailable";
+            /** Reason */
+            reason: string | null;
+            /** Kinds */
+            kinds: string[];
+            /** Indicators */
+            indicators: components["schemas"]["IndicatorInventory"][];
+            /** States */
+            states: {
+                [key: string]: number;
+            };
+            /**
+             * Climate Status
+             * @enum {string}
+             */
+            climate_status: "available" | "unavailable";
+            /** Climate Reason */
+            climate_reason: string | null;
+            /** Boundary Sha256 */
+            boundary_sha256: string | null;
+            /** Items */
+            items: components["schemas"]["InventoryItem"][] | null;
+        };
+        /**
          * EvidenceSnapshot
          * @description An evidence item as one side of the diff saw it.
          */
@@ -859,6 +1700,12 @@ export interface components {
             /** Provenance Fingerprint */
             provenance_fingerprint: string;
         };
+        /**
+         * EvidenceState
+         * @description Explicit epistemological status of an evidence item.
+         * @enum {string}
+         */
+        EvidenceState: "OBSERVED" | "DERIVED" | "MODEL_ESTIMATED" | "INFERRED" | "UNAVAILABLE" | "INSUFFICIENT_EVIDENCE";
         /** ExtractedClaim */
         ExtractedClaim: {
             /** Kind */
@@ -880,6 +1727,38 @@ export interface components {
             before: unknown;
             /** After */
             after: unknown;
+        };
+        /** GrantRequest */
+        GrantRequest: {
+            /** Org Slug */
+            org_slug: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "view" | "audit" | "contribute";
+        };
+        /**
+         * GrantView
+         * @description An active grant of a project to another organization.
+         */
+        GrantView: {
+            /** Org Slug */
+            org_slug: string;
+            /** Org Name */
+            org_name: string;
+            /** Org Type */
+            org_type: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "view" | "audit" | "contribute";
+            /**
+             * Granted At
+             * Format: date-time
+             */
+            granted_at: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -932,6 +1811,57 @@ export interface components {
              * @default 0
              */
             cases_available: number;
+        };
+        /** IndicatorInventory */
+        IndicatorInventory: {
+            /**
+             * Indicator
+             * @enum {string}
+             */
+            indicator: "ndvi" | "evi" | "ndmi" | "nbr";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "unavailable";
+            /** Reason */
+            reason: string | null;
+            /**
+             * N Records
+             * @default 0
+             */
+            n_records: number;
+            /** Years */
+            years: number[];
+            /** States */
+            states: {
+                [key: string]: number;
+            };
+            /** Sensors */
+            sensors: string[];
+            /** Source */
+            source: string | null;
+            /** Data Origin */
+            data_origin: string | null;
+        };
+        /**
+         * InventoryItem
+         * @description One stored annual record; scene-level detail for EVIDENCE_FULL levels only.
+         */
+        InventoryItem: {
+            /**
+             * Indicator
+             * @enum {string}
+             */
+            indicator: "ndvi" | "evi" | "ndmi" | "nbr";
+            /** Year */
+            year: number;
+            /** N Scenes */
+            n_scenes: number;
+            /** Scene Ids */
+            scene_ids: string[];
+            /** Scenes Sha256 */
+            scenes_sha256: string;
         };
         /**
          * ItemDiff
@@ -1089,6 +2019,26 @@ export interface components {
             /** Registration Open */
             registration_open: boolean;
             user: components["schemas"]["UserView"] | null;
+            /** Organizations */
+            organizations: components["schemas"]["OrgView"][];
+            active_organization: components["schemas"]["OrgView"] | null;
+        };
+        /** MemberView */
+        MemberView: {
+            /** User Id */
+            user_id: string;
+            /** Email */
+            email: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "member" | "viewer";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * MessageErrorBody
@@ -1115,6 +2065,238 @@ export interface components {
             side: "baseline" | "candidate" | "both";
             /** Message */
             message: string;
+        };
+        /**
+         * ObservationPoint
+         * @description One calendar year of one indicator for the project AOI.
+         */
+        ObservationPoint: {
+            /** Year */
+            year: number;
+            /**
+             * Value
+             * @description Null when nothing was observed that year.
+             */
+            value: number | null;
+            /**
+             * Evidence State
+             * @enum {string}
+             */
+            evidence_state: "DERIVED" | "MODEL_ESTIMATED" | "UNAVAILABLE";
+            /** Sensor */
+            sensor: string;
+            /**
+             * Clear Pixel Fraction
+             * @description Share of scene pixels that were clear.
+             */
+            clear_pixel_fraction: number;
+            /** N Scenes */
+            n_scenes: number;
+            /**
+             * Aoi Coverage Pct
+             * @description Share of the project AOI actually observed, computed from valid pixels and the project boundary; null when it cannot be computed.
+             */
+            aoi_coverage_pct: number | null;
+            /** Scene Ids */
+            scene_ids: string[] | null;
+            /** Scenes Sha256 */
+            scenes_sha256: string | null;
+        };
+        /** ObservationsView */
+        ObservationsView: {
+            /**
+             * Data Mode
+             * @description 'simulated' data is never real data (R7).
+             * @enum {string}
+             */
+            data_mode: "observed" | "simulated";
+            /**
+             * Access Level
+             * @description The caller's level on this project.
+             * @enum {string}
+             */
+            access_level: "owner" | "audit" | "contribute" | "view";
+            /**
+             * Indicator
+             * @enum {string}
+             */
+            indicator: "ndvi" | "evi" | "ndmi" | "nbr";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "available" | "unavailable";
+            /** Reason */
+            reason: string | null;
+            /** Unit Id */
+            unit_id: string | null;
+            /** Source */
+            source: string | null;
+            /** Points */
+            points: components["schemas"]["ObservationPoint"][];
+        };
+        /**
+         * OrgView
+         * @description An organization as seen by one of its members (``role`` is the caller's role).
+         */
+        OrgView: {
+            /** Id */
+            id: string;
+            /** Slug */
+            slug: string;
+            /** Name */
+            name: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "ngo" | "funder" | "auditor" | "government" | "reference";
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "member" | "viewer";
+        };
+        /** PdfExtractRequest */
+        PdfExtractRequest: {
+            /** File Base64 */
+            file_base64: string;
+            /**
+             * Filename
+             * @default uploaded.pdf
+             */
+            filename?: string;
+        };
+        /** PdfExtractResponse */
+        PdfExtractResponse: {
+            /** Text */
+            text: string;
+            /** Num Pages */
+            num_pages: number;
+            /** Filename */
+            filename: string;
+        };
+        /** PortfolioRow */
+        PortfolioRow: {
+            project: components["schemas"]["ProjectView"];
+            /**
+             * Access Level
+             * @enum {string}
+             */
+            access_level: "owner" | "audit" | "contribute" | "view";
+            /**
+             * Assessment Level
+             * @description 0-5; a level, never a score.
+             */
+            assessment_level: number;
+            /** Level Name */
+            level_name: string;
+            dimension_statuses: components["schemas"]["DimensionStatuses"];
+            /** @description Highest-priority recommendation for the org's persona. */
+            top_recommendation: components["schemas"]["RecommendationView"] | null;
+            /**
+             * Attribution Verdict
+             * @description Null only when the row is degraded.
+             */
+            attribution_verdict: string | null;
+            /**
+             * Evidence Confidence
+             * @description Null only when the row is degraded.
+             */
+            evidence_confidence: string | null;
+            /**
+             * Data Mode
+             * @enum {string}
+             */
+            data_mode: "observed" | "simulated";
+            reported_funding: components["schemas"]["ReportedFunding"] | null;
+            /**
+             * Degraded
+             * @description True when the assessment failed; the row is level 0.
+             * @default false
+             */
+            degraded: boolean;
+            /** Degraded Reason */
+            degraded_reason: string | null;
+        };
+        /** PortfolioView */
+        PortfolioView: {
+            /**
+             * Projects
+             * @description Real (observed) projects only.
+             */
+            projects: components["schemas"]["PortfolioRow"][];
+            /**
+             * Simulated
+             * @description SIMULATED DATA projects, kept apart and never aggregated with real ones.
+             */
+            simulated: components["schemas"]["PortfolioRow"][];
+        };
+        /**
+         * ProjectUploadForm
+         * @description The multipart fields of project creation (a named model keeps the OpenAPI name plain).
+         */
+        ProjectUploadForm: {
+            /**
+             * Boundary
+             * @description Project boundary (.geojson, .json, .kml).
+             */
+            boundary: string;
+            /** Name */
+            name: string;
+            /** Country */
+            country: string;
+            /** Ecosystem */
+            ecosystem: string;
+            /** Intervention */
+            intervention: string;
+            /** Treatment Start Year */
+            treatment_start_year: number;
+        };
+        /**
+         * ProjectView
+         * @description A project as seen by the active organization (``access_level`` is that org's level).
+         */
+        ProjectView: {
+            /** Id */
+            id: string;
+            /** Slug */
+            slug: string;
+            /** Name */
+            name: string;
+            /** Country */
+            country: string;
+            /** Ecosystem */
+            ecosystem: string;
+            /** Intervention */
+            intervention: string;
+            /** Treatment Start Year */
+            treatment_start_year: number;
+            /**
+             * Data Mode
+             * @enum {string}
+             */
+            data_mode: "observed" | "simulated";
+            /** Owner Slug */
+            owner_slug: string;
+            /** Owner Name */
+            owner_name: string;
+            /**
+             * Access Level
+             * @enum {string}
+             */
+            access_level: "owner" | "audit" | "contribute" | "view";
+            /** Boundary Sha256 */
+            boundary_sha256: string | null;
+            /** Reported Funding Amount */
+            reported_funding_amount: number | null;
+            /** Reported Funding Currency */
+            reported_funding_currency: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * Provenance
@@ -1175,12 +2357,94 @@ export interface components {
              */
             notes: string | null;
         };
+        /**
+         * ReadinessBody
+         * @description Whether causal attribution can be attempted, criterion by criterion.
+         */
+        ReadinessBody: {
+            /** Attribution Ready */
+            attribution_ready: boolean;
+            /** Criteria */
+            criteria: components["schemas"]["ReadinessCriterion"][];
+        };
+        /** ReadinessCriterion */
+        ReadinessCriterion: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "met" | "not_met" | "unavailable";
+            /** Observed Value */
+            observed_value: unknown;
+            /** Required */
+            required: unknown;
+            /** Evidence Needed */
+            evidence_needed: string;
+        };
+        /**
+         * ReadinessView
+         * @description ``ReadinessBody`` as its own response (with ``data_mode`` and ``access_level``).
+         */
+        ReadinessView: {
+            /** Attribution Ready */
+            attribution_ready: boolean;
+            /** Criteria */
+            criteria: components["schemas"]["ReadinessCriterion"][];
+            /**
+             * Data Mode
+             * @description 'simulated' data is never real data (R7).
+             * @enum {string}
+             */
+            data_mode: "observed" | "simulated";
+            /**
+             * Access Level
+             * @description The caller's level on this project.
+             * @enum {string}
+             */
+            access_level: "owner" | "audit" | "contribute" | "view";
+        };
+        /** RecommendationView */
+        RecommendationView: {
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
+            /** Rationale */
+            rationale: string;
+            /** Priority */
+            priority: number;
+            /** Personas */
+            personas: string[];
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Diagnostic Refs */
+            diagnostic_refs: string[] | null;
+        };
         /** RegisterRequest */
         RegisterRequest: {
             /** Email */
             email: string;
             /** Password */
             password: string;
+        };
+        /**
+         * ReportedFunding
+         * @description Funding exactly as the owning organization reported it. Never computed by GroundTruth.
+         */
+        ReportedFunding: {
+            /** Amount */
+            amount: number;
+            /** Currency */
+            currency: string | null;
+            /**
+             * Reported By
+             * @description Name of the owning organization.
+             */
+            reported_by: string;
         };
         /**
          * RunComparison
@@ -1459,6 +2723,14 @@ export interface components {
              */
             n_estimator_fits: number;
         };
+        /** SetRoleRequest */
+        SetRoleRequest: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "member" | "viewer";
+        };
         /**
          * StageView
          * @description One live stage of a job, as it was observed.
@@ -1507,6 +2779,11 @@ export interface components {
              * @default 10
              */
             min_donors?: number;
+        };
+        /** SwitchOrgRequest */
+        SwitchOrgRequest: {
+            /** Slug */
+            slug: string;
         };
         /** TimelineEvent */
         TimelineEvent: {
@@ -1601,6 +2878,11 @@ export interface components {
              */
             synthetic?: boolean;
             /**
+             * Data Mode
+             * @description Explicit data mode: 'REAL_OBSERVATIONS' or 'SYNTHETIC_BENCHMARK'. Takes precedence over 'synthetic' if specified.
+             */
+            data_mode?: components["schemas"]["DataSourceMode"] | string | null;
+            /**
              * True Effect
              * @description Effect injected into the simulated treated unit.
              * @default 0.06
@@ -1642,7 +2924,7 @@ export interface components {
             duration_ms: number;
             /**
              * Data Mode
-             * @description Drives the persistent simulated-data banner.
+             * @description Drives the persistent simulated-data / real-observations banner.
              * @enum {string}
              */
             data_mode: "simulated" | "observed";
@@ -1686,6 +2968,54 @@ export interface components {
              * @default []
              */
             supporting_evidence_ids: string[];
+        };
+        /**
+         * VerificationView
+         * @description The latest completed run for the project, or ``not_estimable`` when there is none.
+         */
+        VerificationView: {
+            /**
+             * Data Mode
+             * @description 'simulated' data is never real data (R7).
+             * @enum {string}
+             */
+            data_mode: "observed" | "simulated";
+            /**
+             * Access Level
+             * @description The caller's level on this project.
+             * @enum {string}
+             */
+            access_level: "owner" | "audit" | "contribute" | "view";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "completed" | "not_estimable";
+            readiness: components["schemas"]["ReadinessBody"];
+            /**
+             * Warnings
+             * @description Includes the SIMULATED DATA notice (R7) when it applies.
+             */
+            warnings: string[];
+            /** Is Simulated */
+            is_simulated: boolean;
+            /** Run Id */
+            run_id: string | null;
+            /** Case Id */
+            case_id: string | null;
+            /** Verdict Label */
+            verdict_label: string | null;
+            /** Verdict Rationale */
+            verdict_rationale: string | null;
+            /** Caveats */
+            caveats: string[];
+            /** Engine Version */
+            engine_version: string | null;
+            /** Created At */
+            created_at: string | null;
+            /** Spec Hash */
+            spec_hash: string | null;
+            bundle: components["schemas"]["EvidenceBundle"] | null;
         };
         /**
          * WarningsDiff
@@ -1740,6 +3070,15 @@ export interface operations {
                     "application/json": components["schemas"]["RunListPage"];
                 };
             };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -1785,7 +3124,25 @@ export interface operations {
                     "application/json": components["schemas"]["RunComparison"];
                 };
             };
-            /** @description No such run. */
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No such run, or no access to its project. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1839,7 +3196,25 @@ export interface operations {
                     "application/json": components["schemas"]["RunDetail"];
                 };
             };
-            /** @description No such run. */
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No such run, or no access to its project. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1908,7 +3283,25 @@ export interface operations {
                     "application/json": components["schemas"]["JobSubmission"];
                 };
             };
-            /** @description Unknown case. */
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown case, or no access to its project. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -1966,7 +3359,25 @@ export interface operations {
                     "application/json": components["schemas"]["JobView"];
                 };
             };
-            /** @description No such job. */
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No such job, or no access to its project. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2024,7 +3435,25 @@ export interface operations {
                     "application/json": components["schemas"]["JobView"];
                 };
             };
-            /** @description No such job. */
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No such job, or no access to its project. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2082,7 +3511,16 @@ export interface operations {
                     "text/event-stream": string;
                 };
             };
-            /** @description No such job. */
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No such job, or no access to its project. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2132,7 +3570,16 @@ export interface operations {
                     "application/geo+json": Record<string, never>;
                 };
             };
-            /** @description Unknown case or no boundary file. */
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown case, no access to its project, or no boundary file. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2175,6 +3622,15 @@ export interface operations {
                     "application/vnd.mapbox-vector-tile": string;
                 };
             };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
             /** @description Tile coordinates out of range. */
             404: {
                 headers: {
@@ -2200,6 +3656,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    extract_pdf_claims_extract_pdf_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PdfExtractRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PdfExtractResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2589,6 +4078,1710 @@ export interface operations {
             };
         };
     };
+    list_orgs_orgs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgView"][];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    create_org_orgs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrgRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    switch_org_orgs_active_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SwitchOrgRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or user. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    list_members_orgs__slug__members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberView"][];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or user. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    add_member_orgs__slug__members_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or user. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Would break an organization invariant. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    remove_member_orgs__slug__members__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or user. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Would break an organization invariant. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    set_role_orgs__slug__members__user_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or user. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Would break an organization invariant. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_portfolio_orgs__slug__portfolio_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_audit_orgs__slug__audit_get: {
+        parameters: {
+            query?: {
+                /** @description `next_cursor` of the previous page. */
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditPage"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Invalid cursor or limit. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_activity_orgs__slug__activity_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityItem"][];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Invalid cursor or limit. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    list_projects_orgs__slug__projects_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectView"][];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    create_project_orgs__slug__projects_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["ProjectUploadForm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Invalid fields or boundary file. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_project_projects__project_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_readiness_projects__project_id__readiness_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadinessView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_observations_projects__project_id__observations_get: {
+        parameters: {
+            query?: {
+                /** @description ndvi, evi, ndmi or nbr. */
+                indicator?: "ndvi" | "evi" | "ndmi" | "nbr";
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationsView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Invalid fields or boundary file. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_climate_projects__project_id__climate_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClimateView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_evidence_inventory_projects__project_id__evidence_inventory_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceInventoryView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_verification_projects__project_id__verification_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerificationView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_assessment_projects__project_id__assessment_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_boundary_projects__project_id__boundary_geojson_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Boundary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/geo+json": Record<string, never>;
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    get_donors_projects__project_id__donors_geojson_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Donors. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/geo+json": Record<string, never>;
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    list_grants_projects__project_id__grants_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantView"][];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description A concurrent change conflicted; retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Invalid fields or boundary file. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    create_grant_projects__project_id__grants_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrantView"];
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description A concurrent change conflicted; retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Invalid fields or boundary file. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    revoke_grant_projects__project_id__grants__org_slug__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_slug: string;
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description A concurrent change conflicted; retry. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Invalid fields or boundary file. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
+    export_dossier_projects__project_id__export_dossier_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/zip": string;
+                };
+            };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role or access level does not allow this. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown organization or project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description No database is configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+        };
+    };
     health_health_get: {
         parameters: {
             query?: never;
@@ -2627,6 +5820,48 @@ export interface operations {
                     "application/json": components["schemas"]["CaseSummary"][];
                 };
             };
+            /** @description Not signed in. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageErrorBody"];
+                };
+            };
+        };
+    };
+    create_case_cases_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     get_case_detail_cases__case_id__get: {
@@ -2649,7 +5884,7 @@ export interface operations {
                     "application/json": components["schemas"]["CaseDetail"];
                 };
             };
-            /** @description Unknown case. */
+            /** @description Unknown case, or no access. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2693,7 +5928,7 @@ export interface operations {
                     "application/json": components["schemas"]["VerificationResponse"];
                 };
             };
-            /** @description Unknown case. */
+            /** @description Unknown case, or no access. */
             404: {
                 headers: {
                     [name: string]: unknown;

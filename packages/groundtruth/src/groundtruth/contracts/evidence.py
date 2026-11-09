@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -23,6 +24,17 @@ from groundtruth.contracts.errors import ProvenanceError
 from groundtruth.contracts.provenance import Provenance
 from groundtruth.contracts.types import Confidence, VerificationVerdict
 from groundtruth.contracts.units import unit_family
+
+
+class EvidenceState(StrEnum):
+    """Explicit epistemological status of an evidence item."""
+
+    OBSERVED = "OBSERVED"
+    DERIVED = "DERIVED"
+    MODEL_ESTIMATED = "MODEL_ESTIMATED"
+    INFERRED = "INFERRED"
+    UNAVAILABLE = "UNAVAILABLE"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
 
 
 class Evidence(BaseModel):
@@ -39,6 +51,10 @@ class Evidence(BaseModel):
     unit: str = Field(default="", description="Unit from the declared vocabulary, or '' if none.")
     confidence: Confidence | None = None
     provenance: Provenance
+    state: EvidenceState = Field(
+        default=EvidenceState.DERIVED,
+        description="Explicit epistemological status: OBSERVED, DERIVED, MODEL_ESTIMATED, INFERRED, UNAVAILABLE, INSUFFICIENT_EVIDENCE.",
+    )
     qualifiers: dict[str, Any] = Field(
         default_factory=dict,
         description="Structured caveats, e.g. {'observed_not_causal': True}.",
@@ -96,6 +112,11 @@ class EvidenceBundle(BaseModel):
 
     def __contains__(self, evidence_id: object) -> bool:
         return any(item.id == evidence_id for item in self.items)
+
+    @property
+    def is_simulated(self) -> bool:
+        """True if this bundle was produced from simulated data."""
+        return any("SIMULATED DATA" in w for w in self.warnings)
 
     def get(self, evidence_id: str) -> Evidence | None:
         """Return the evidence item with this id, or ``None``."""
@@ -159,6 +180,7 @@ class EvidenceBuilder:
         provenance: Provenance,
         confidence: Confidence | None = None,
         qualifiers: dict[str, Any] | None = None,
+        state: EvidenceState = EvidenceState.DERIVED,
     ) -> Evidence:
         """Record one evidence item and return it."""
         item = Evidence(
@@ -168,6 +190,7 @@ class EvidenceBuilder:
             unit=unit,
             confidence=confidence,
             provenance=provenance,
+            state=state,
             qualifiers=qualifiers or {},
         )
         self._items.append(item)

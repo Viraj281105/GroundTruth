@@ -1,9 +1,9 @@
 .container {
   display: flex;
   flex-direction: column;
-  background-color: var(--gt-bg-card);
-  border: 1px solid var(--gt-border-default);
-  border-radius: var(--gt-radius-lg);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
   padding: 20px;
   gap: 16px;
 }
@@ -24,19 +24,19 @@
 .title {
   font-size: 16px;
   font-weight: 600;
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
 }
 
 .subtitle {
   font-size: 13px;
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
 }
 
 .svgWrapper {
   width: 100%;
   background-color: var(--surface-sunken);
-  border: 1px solid var(--gt-border-subtle);
-  border-radius: var(--gt-radius-md);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   padding: 8px 4px 4px 4px;
 }
 
@@ -52,16 +52,16 @@
 }
 
 .tickY {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-mono);
   font-size: 10px;
-  fill: var(--gt-text-subtle);
+  fill: var(--text-muted);
   text-anchor: end;
 }
 
 .tickX {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-mono);
   font-size: 10px;
-  fill: var(--gt-text-subtle);
+  fill: var(--text-muted);
   text-anchor: middle;
 }
 
@@ -94,7 +94,7 @@
 }
 
 .projectLabel {
-  font-family: var(--gt-font-mono);
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   fill: var(--caution-text);
@@ -106,27 +106,27 @@
   align-items: flex-start;
   gap: 12px;
   padding: 12px 16px;
-  background-color: var(--gt-bg-surface);
-  border: 1px solid var(--gt-border-subtle);
-  border-radius: var(--gt-radius-md);
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
 }
 
 .infoIcon {
-  color: var(--gt-accent-cyan);
+  color: var(--accent);
   flex-shrink: 0;
   margin-top: 2px;
 }
 
 .interpretationText {
   font-size: 13px;
-  color: var(--gt-text-secondary);
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
 .interpretationText strong {
-  color: var(--gt-text-primary);
+  color: var(--text-primary);
 }
 
 .interpretationText em {
-  color: var(--gt-text-muted);
+  color: var(--text-muted);
 }

@@ -8,6 +8,7 @@ diligence gets the full provenance in the same response.
 from __future__ import annotations
 
 from datetime import datetime
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -79,6 +80,35 @@ class CaseDetail(CaseSummary):
     notes: str = ""
 
 
+class CreateCaseRequest(BaseModel):
+    """Request to define and register a new project case."""
+
+    name: str = Field(min_length=2, max_length=120)
+    country: str = Field(min_length=2, max_length=80)
+    ecosystem: str = Field(default="forest / woodland")
+    standard: str = Field(default="VCS")
+    registry_id: str = Field(min_length=2, max_length=60)
+    area_ha: float = Field(gt=0)
+    crediting_period_start: str = Field(default="2015-01-01")
+    crediting_period_end: str = Field(default="2045-12-31")
+    claimed_credits_tco2e: float | None = None
+    indicator: str = Field(default="ndvi")
+    donor_pool_size: int = Field(default=50, ge=10, le=100)
+    pre_start: int = Field(default=2005)
+    pre_end: int = Field(default=2014)
+    post_start: int = Field(default=2015)
+    post_end: int = Field(default=2022)
+    boundary_geojson: dict[str, Any] | None = None
+    case_id: str | None = None
+
+
+class DataSourceMode(StrEnum):
+    """Execution mode: synthetic benchmark vs genuine real observations."""
+
+    REAL_OBSERVATIONS = "REAL_OBSERVATIONS"
+    SYNTHETIC_BENCHMARK = "SYNTHETIC_BENCHMARK"
+
+
 class VerificationRequest(BaseModel):
     """Options for a verification run."""
 
@@ -87,6 +117,13 @@ class VerificationRequest(BaseModel):
         description=(
             "Must be true until real Earth-observation providers are implemented. A request "
             "with synthetic=false is rejected rather than silently simulated."
+        ),
+    )
+    data_mode: DataSourceMode | str | None = Field(
+        default=None,
+        description=(
+            "Explicit data mode: 'REAL_OBSERVATIONS' or 'SYNTHETIC_BENCHMARK'. "
+            "Takes precedence over 'synthetic' if specified."
         ),
     )
     true_effect: float = Field(
@@ -109,7 +146,7 @@ class VerificationResponse(BaseModel):
     contract_version: str
     duration_ms: float = 0.0
     data_mode: Literal["simulated", "observed"] = Field(
-        description="Drives the persistent simulated-data banner."
+        description="Drives the persistent simulated-data / real-observations banner."
     )
     verdict_label: VerdictLabel
     verdict_rationale: str
@@ -635,3 +672,49 @@ class JobSubmission(BaseModel):
     )
     status_url: str
     job: JobView
+
+
+OrgTypeName = Literal["ngo", "funder", "auditor", "government", "reference"]
+MemberRoleName = Literal["owner", "admin", "member", "viewer"]
+
+
+class OrgView(BaseModel):
+    """An organization as seen by one of its members (``role`` is the caller's role)."""
+
+    id: str
+    slug: str
+    name: str
+    type: OrgTypeName
+    role: MemberRoleName
+
+
+class MemberView(BaseModel):
+    user_id: str
+    email: str
+    role: MemberRoleName
+    created_at: datetime
+
+
+ProjectLevelName = Literal["owner", "audit", "contribute", "view"]
+DataModeName = Literal["observed", "simulated"]
+
+
+class ProjectView(BaseModel):
+    """A project as seen by the active organization (``access_level`` is that org's level)."""
+
+    id: str
+    slug: str
+    name: str
+    country: str
+    ecosystem: str
+    intervention: str
+    treatment_start_year: int
+    data_mode: DataModeName
+    owner_slug: str
+    owner_name: str
+    access_level: ProjectLevelName
+    boundary_sha256: str | None = None
+    reported_funding_amount: float | None = None
+    reported_funding_currency: str | None = None
+    """Reported by the owner, shown as such; never computed."""
+    created_at: datetime

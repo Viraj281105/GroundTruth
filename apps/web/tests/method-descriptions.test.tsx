@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { KARIBA_COMPLETED } from '../src/lib/fixtures/generated';
 import { DESCRIBED_METHODS, describeMethod } from '../src/lib/method-descriptions';
-import { ProvenanceDrawer } from '../src/components/ui/ProvenanceDrawer';
+import { ProvenanceDrawer } from '../src/components/ds/ProvenanceDrawer';
 import type { Evidence } from '../src/lib/types';
 
 const items = KARIBA_COMPLETED.verification.bundle.items as Evidence[];

@@ -11,7 +11,7 @@ export function Footer() {
           <strong>GroundTruth</strong> · Independent causal screening of climate restoration and carbon-credit claims.
         </p>
         <p className={styles.note}>
-          <Link href="/method">How it works</Link> · <Link href="/cases">Cases</Link> · <Link href="/claims">Claims workbench</Link>
+          <Link href="/method">How it works</Link> · <Link href="/app">Workspace</Link> · <Link href="/claims">Claims workbench</Link>
         </p>
         <p className={styles.note}>{t('footer.note')}</p>
         <p className={styles.note}>NDVI is not carbon. Observed change is not causal effect. {t('sim.explain')}</p>

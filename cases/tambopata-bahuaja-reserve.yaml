@@ -1,0 +1,28 @@
+case_id: tambopata-bahuaja-reserve
+status: scaffolded
+project:
+  name: Tambopata-Bahuaja Biodiversity Reserve
+  country: Peru
+  ecosystem: Amazonian tropical moist forest
+  standard: VCS
+  registry_id: VCS 1067
+  area_ha: 246829
+  crediting_period_start: '2010-01-01'
+  crediting_period_end: '2039-12-31'
+  claimed_credits_tco2e: 4500000
+  boundary_path: cases/boundaries/tambopata-bahuaja-reserve.geojson
+analysis_window:
+  pre_start: 2005
+  pre_end: 2014
+  post_start: 2015
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Peru Amazonian tropical moist forest outside protected areas
+  donor_pool_size: 50
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density

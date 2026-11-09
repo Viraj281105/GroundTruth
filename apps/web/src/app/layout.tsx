@@ -2,7 +2,6 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Fraunces, Inter, IBM_Plex_Mono } from 'next/font/google';
 import '../styles/globals.css';
-import { AppShell } from '../components/shell/AppShell';
 import { ThemeProvider } from '../lib/theme';
 import { LensProvider } from '../lib/lens';
 import { AuthProvider } from '../lib/auth';
@@ -40,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <LensProvider>
             <ToastProvider>
               <AuthProvider>
-                <AppShell>{children}</AppShell>
+                {children}
               </AuthProvider>
             </ToastProvider>
           </LensProvider>

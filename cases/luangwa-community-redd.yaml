@@ -1,0 +1,32 @@
+case_id: luangwa-community-redd
+project:
+  name: Luangwa Community Forests Project
+  country: Zambia
+  ecosystem: miombo woodland
+  standard: VCS
+  registry_id: VCS 1566
+  area_ha: 944000
+  crediting_period_start: '2014-07-01'
+  crediting_period_end: '2044-06-30'
+  claimed_credits_tco2e: 40000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/1566
+  boundary_path: cases/boundaries/luangwa.geojson
+analysis_window:
+  pre_start: 2003
+  pre_end: 2013
+  post_start: 2014
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Eastern Zambezian miombo woodlands outside national parks
+  donor_pool_size: 80
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Community-led avoided deforestation across multiple chiefdoms in the Luangwa
+  Valley.

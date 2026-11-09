@@ -1,0 +1,31 @@
+case_id: envira-amazon-redd
+project:
+  name: The Envira Amazonia Project
+  country: Brazil
+  ecosystem: tropical moist Amazon forest
+  standard: VCS
+  registry_id: VCS 1382
+  area_ha: 200000
+  crediting_period_start: '2012-04-01'
+  crediting_period_end: '2042-03-31'
+  claimed_credits_tco2e: 21000000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/1382
+  boundary_path: cases/boundaries/envira.geojson
+analysis_window:
+  pre_start: 2002
+  pre_end: 2011
+  post_start: 2012
+  post_end: 2022
+analysis:
+  indicator: evi
+  donor_search_region: Acre basin tropical moist forest outside timber concessions
+  donor_pool_size: 70
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Avoided unplanned deforestation in Feijo municipality, Acre.

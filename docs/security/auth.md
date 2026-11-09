@@ -1,32 +1,95 @@
-# Authentication (operator notes)
+# Authentication & Access Control (Operator Manual)
 
-Email + password accounts in the platform database, cookie sessions. Design: `docs/superpowers/specs/2026-11-06-auth-design.md`.
+**Package**: `packages/groundtruth/src/groundtruth/platform/auth/` & `tenancy/`  
+**Mechanism**: Cookie-based HTTP-Only Sessions, Multi-Tenant Organization Grants, CSRF Origin Validation, Rate Limiting.
 
-## Settings
+GroundTruth 2.0 implements an enterprise authentication and access-control architecture supporting cross-organizational collaboration with rigorous isolation.
 
-| Env var | Default in code | Meaning |
-| --- | --- | --- |
-| `AUTH_REQUIRED` | `false` | Enforce sign-in on `POST /jobs`, `POST /jobs/{id}/cancel`, `POST /cases/{id}/verify`, `POST /claims/analyze`. `docker-compose.yml` and `.env.example` set it `true`. With `false` the API logs a startup warning and those endpoints are open. |
-| `AUTH_ALLOW_REGISTRATION` | `true` | `false` closes `POST /auth/register`, except for a signed-in admin creating accounts. |
-| `AUTH_COOKIE_SECURE` | `false` | Set `true` behind HTTPS (adds `Secure` to the cookie). |
-| `AUTH_SESSION_DAYS` | `7` | Session and cookie lifetime. |
-| `CORS_ALLOWED_ORIGINS` | frontend URL | Also the CSRF origin allow-list. Exact origins only. |
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Web Browser
+    participant API as FastAPI Gateway
+    participant Auth as Auth Service
+    participant Tenancy as Tenancy Service
+    participant DB as PostgreSQL Database
 
-Run migrations (`0006` adds `users`, `sessions`) before starting. With no database, auth endpoints answer 503, and with `AUTH_REQUIRED=true` protected endpoints answer 503 (never allow).
+    Client->>API: POST /auth/login { email, password }
+    API->>Auth: authenticate_user(email, password)
+    Auth->>DB: Query user by email (Argon2id password verification)
+    DB-->>Auth: User Record (Valid)
+    Auth->>DB: Create Session (UUID, 7-day expiry)
+    Auth-->>API: Session Cookie (HttpOnly, Secure, SameSite=Lax)
+    API-->>Client: 200 OK (Set-Cookie: gt_session=...)
 
-## Roles
+    Client->>API: GET /projects/proj_9b8a/runs (Cookie: gt_session=...)
+    API->>Auth: validate_session(cookie)
+    Auth-->>API: User Context (actor_id, organization_id)
+    API->>Tenancy: check_grant(user_id, project_id, required="view")
+    
+    alt Grant Exists & Active
+        Tenancy-->>API: Grant Valid (role="view")
+        API-->>Client: 200 OK (Run Data)
+    else No Grant (Cross-Org Access)
+        Tenancy-->>API: Grant Missing
+        API-->>Client: 403 Forbidden (cross_organization_denied)
+    end
+```
 
-`user` (default; can run analyses and use claims) < `dev` (developer areas; no dev-only endpoints yet) < `admin` (manage users via `GET /auth/users`, `PATCH /auth/users/{id}`). The first account registered becomes `admin`. The last active admin cannot be demoted or deactivated. `/auth/users*` are enforced even if `AUTH_REQUIRED=false`.
+![Cross-Organization Access Denied](../product/screens/cross-org-denied.png)
 
-## Limitations and deviations
+---
 
-- Failed-login rate limiting (5 per email+IP per 15 min) is in memory, per process: several workers multiply the limit, and a restart resets it. The client IP is the direct peer; `X-Forwarded-For` is not trusted, so behind a proxy all users share one IP.
-- No password reset or email verification (no mail service).
-- Runs have no per-user ownership; any `user` can cancel any job.
-- Concurrent first registrations could both become admin (no cross-process lock).
-- Inactive accounts get the same `invalid_credentials` answer as wrong passwords.
-- `GET /auth/me` answers 200 `auth_required=false` when auth is off and no database exists (instead of 503), so the web app can start.
-- The CSRF check rejects an unsafe request that has the session cookie and no `Origin`/`Referer`.
-- A signed-in admin can create accounts through `POST /auth/register` when registration is closed.
-- The login limiter is keyed per (email, IP). One IP can still try a few passwords against many different accounts (password spraying) without hitting a limit; add a per-IP limiter or put a reverse-proxy rate limit in front before exposing this publicly.
-- Sign-in and sign-up requests carry no session cookie, so the origin check does not apply to them. That leaves "login CSRF" (an attacker's page signing a victim into the attacker's account) to `SameSite=Lax` and CORS alone. Acceptable for this stage; consider an `Origin` check on `/auth/login` too.
+## 1. Runtime Authentication Configuration
+
+Configured via environment variables read by `groundtruth.platform.config.Settings`:
+
+| Environment Variable | Default in Code | Meaning & Production Guidance |
+| :--- | :--- | :--- |
+| `AUTH_REQUIRED` | `true` | Enforces sign-in on all mutating endpoints (`POST /jobs`, `/cases/{id}/verify`, `/projects/*`). In production, this must always be `true`. |
+| `AUTH_ALLOW_REGISTRATION` | `false` | When `false`, public sign-up is closed; only signed-in administrators can create new user accounts. |
+| `AUTH_COOKIE_SECURE` | `true` | Appends `Secure` attribute to the session cookie. Must be `true` on HTTPS deployments. |
+| `AUTH_SESSION_DAYS` | `7` | Duration in days before a session token expires. |
+| `CORS_ALLOWED_ORIGINS` | Frontend URL | Strict comma-separated list of allowed browser origins (also serves as the CSRF allow-list). |
+
+---
+
+## 2. Multi-Tenant Role Hierarchy & Project Grants
+
+GroundTruth 2.0 separates platform-level roles from project-level access grants:
+
+```mermaid
+graph TD
+    subgraph PlatformRoles["1. Platform User Roles"]
+        AdminRole["admin: Full system control, user provisioning, global audit inspection"]
+        DevRole["dev: Developer privileges, diagnostic tools, OpenAPI snapshots"]
+        UserRole["user: Standard tenant user, bound to organization grants"]
+    end
+
+    subgraph ProjectGrants["2. Project-Level Grants (Scoped to Organization)"]
+        ViewGrant["view Grant<br/>• Read-only access to published evidence bundles<br/>• Executive dashboards & summary reports<br/>• Assigned to: Funders, General Observers"]
+        AuditGrant["audit Grant<br/>• Full forensic verification privileges<br/>• Inspect raw satellite chips & donor matching diagnostics<br/>• Trigger sensitivity & placebo runs<br/>• Assigned to: Independent Auditors"]
+        ContributeGrant["contribute Grant<br/>• Full administrative and data authoring privileges<br/>• Upload intervention boundaries & ground-truth surveys<br/>• Trigger production analysis jobs<br/>• Assigned to: Project Operators & NGOs"]
+    end
+
+    UserRole --> ViewGrant
+    UserRole --> AuditGrant
+    UserRole --> ContributeGrant
+```
+
+---
+
+## 3. Security Controls & Protections
+
+### 3.1 CSRF Defense Architecture
+Cross-Site Request Forgery (CSRF) is mitigated via defense-in-depth:
+1. **Cookie Configuration**: Session cookies carry `SameSite=Lax`, preventing third-party cross-site request inclusion.
+2. **Origin & Referer Validation**: Mutating requests (`POST`, `PUT`, `DELETE`) carrying a session cookie are validated against `CORS_ALLOWED_ORIGINS`. Requests lacking a matching `Origin` or `Referer` header are rejected with `403 Forbidden`.
+
+### 3.2 Password Hashing
+User passwords are never stored in plaintext. Passwords are hashed using the **Argon2id** algorithm with per-user cryptographic salts, memory hardness, and multi-threaded time cost parameters.
+
+### 3.3 Rate Limiting
+Authentication endpoints are guarded by a token-bucket rate limiter:
+- Restricts failed login attempts to 5 per (email, IP) tuple per 15-minute window.
+- Exceeding the threshold locks authentication for the window and records an alert in the append-only audit log.

@@ -1,128 +1,172 @@
-# Documentation
+# GroundTruth 2.0 Documentation
 
-GroundTruth's documentation is the project's source of truth for developers,
-researchers, future contributors and AI coding agents. It is structured so that
-a question has one obvious place to be answered.
+GroundTruth 2.0 is an enterprise-grade, scientifically rigorous verification and continuous intelligence platform for ecosystem restoration and carbon offset interventions. It replaces self-reported spreadsheets, uncalibrated vegetation claims, and ungrounded AI hallucinations with deterministic remote sensing pipelines, causal econometric counterfactuals, multi-tenant role-based governance, and cryptographic provenance.
 
----
+```mermaid
+flowchart TD
+    subgraph MultiTenant["Multi-Tenant Persona Workspaces (Next.js 14 App Router)"]
+        A["Auditor Dashboard<br/><i>(Independent Verification)</i>"]
+        F["Funder Dashboard<br/><i>(Capital Risk & Allocation)</i>"]
+        G["Government Dashboard<br/><i>(NDC & Sovereign Registry)</i>"]
+        N["NGO Dashboard<br/><i>(Project Operator Implementation)</i>"]
+    end
 
-## Start here
+    subgraph PlatformLayer["Platform Layer (FastAPI & PostgreSQL)"]
+        Gateway["Strict RBAC Middleware & Tenant Router"]
+        OrgService["Tenancy Service (Orgs, Projects, Grants)"]
+        AuditLog["Append-Only Audit Log"]
+        JobService["Async Job Queue (Leasing & Redis/Celery)"]
+        Store["Immutable Evidence Store"]
+    end
 
-| If you are... | Read |
-| --- | --- |
-| New to the project | [`PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md) → [`ARCHITECTURE.md`](../ARCHITECTURE.md) |
-| About to write code | [`AGENTS.md`](../AGENTS.md) → [`DEVELOPMENT.md`](../DEVELOPMENT.md) |
-| An AI coding agent | [`AGENTS.md`](../AGENTS.md). It is written for you. |
-| Reviewing the science | [science/causal-inference.md](science/causal-inference.md) → [science/limitations.md](science/limitations.md) |
-| Wondering why something is the way it is | [decisions/](decisions/) |
-| Planning work | [`OWNERSHIP.md`](../OWNERSHIP.md) → [product/implementation-plan.md](product/implementation-plan.md) |
-| Checking what actually exists | [product/capability-matrix.md](product/capability-matrix.md) |
+    subgraph AnalyticalEngine["Deterministic Analytical Engine (Pure Python / NumPy)"]
+        EO["Earth Observation Reduction<br/><i>(Landsat, Sentinel-2, CHIRPS)</i>"]
+        Match["Donor Candidate Matching<br/><i>(37 Eligible ADM2 Units)</i>"]
+        Causal["Causal Counterfactual Engine<br/><i>(Synthetic Control & DiD)</i>"]
+        Uncertainty["Permutation Inference & Diagnostics<br/><i>(Placebos, LOO, Spec Curve)</i>"]
+        Assessment["8 Assessment Dimensions<br/><i>(Trajectory, Risk, Climate, Attribution)</i>"]
+    end
 
-## Root documents
+    subgraph GenAIBoundary["GenAI Verification Boundary"]
+        Bundle["Immutable EvidenceBundle (SHA-256)"]
+        Narrator["LLM Narration Layer"]
+        Grounding["Downstream Grounding Verifier"]
+        PublishedReport["Verified Audit Report"]
+    end
 
-| File | Contents |
-| --- | --- |
-| [`README.md`](../README.md) | The project in one page |
-| [`PROJECT_CONTEXT.md`](../PROJECT_CONTEXT.md) | Why it exists, who it is for, what it must never claim |
-| [`ARCHITECTURE.md`](../ARCHITECTURE.md) | The load-bearing decision and the system map |
-| [`AGENTS.md`](../AGENTS.md) | Operating instructions: rules, conventions, where code goes |
-| [`DEVELOPMENT.md`](../DEVELOPMENT.md) | Setup, commands, testing, debugging, troubleshooting |
-| [`OWNERSHIP.md`](../OWNERSHIP.md) | Responsibility matrix, coordination points, definition of done |
-| [`ROADMAP.md`](../ROADMAP.md) | NOW → MVP → Stage 2 → Stage 3 → long term |
-| [`GLOSSARY.md`](../GLOSSARY.md) | Terms that mean something specific here |
-| [`CONTRIBUTING.md`](../CONTRIBUTING.md) | How to contribute, and the non-negotiable rules |
-| [`SECURITY.md`](../SECURITY.md) | Threat model and what is not secured yet |
-| [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md) | Conduct, including scientific-integrity obligations |
-| [`CHANGELOG.md`](../CHANGELOG.md) | What changed, when |
+    MultiTenant -->|Authenticated HTTP / Session Cookie| Gateway
+    Gateway --> OrgService
+    Gateway --> AuditLog
+    Gateway --> JobService
+    JobService --> EO
+    EO --> Match --> Causal --> Uncertainty --> Assessment
+    Assessment --> Bundle
+    Bundle --> Store
+    Bundle --> Narrator
+    Narrator --> Grounding
+    Grounding -->|Pass| PublishedReport
+    Grounding -->|Violation| Fallback["Deterministic Fallback Renderer"]
+```
 
-## Architecture
-
-| Document | Contents |
-| --- | --- |
-| [system.md](architecture/system.md) | System architecture, stages, implementation status |
-| [contract.md](architecture/contract.md) | **The engine/platform contract, in full** |
-| [backend.md](architecture/backend.md) | Platform modules, request lifecycle, persistence plan |
-| [frontend.md](architecture/frontend.md) | Views, UI rules, data flow |
-| [worker.md](architecture/worker.md) | Job execution, retries, cancellation |
-| [earth-observation.md](architecture/earth-observation.md) | EO layer, sources, hazards, extension points |
-| [causal.md](architecture/causal.md) | Estimator structure, plug-in points, the verdict gate chain |
-| [evidence.md](architecture/evidence.md) | Evidence object, provenance graph, the target model |
-| [genai.md](architecture/genai.md) | Where the model sits and how grounding is enforced |
-| [monitoring.md](architecture/monitoring.md) | Continuous monitoring (future) |
-
-## Science
-
-| Document | Contents |
-| --- | --- |
-| [methodology.md](science/methodology.md) | The counterfactual approach, stage by stage |
-| [causal-inference.md](science/causal-inference.md) | Estimand, estimators, assumptions, **why NDVI is not carbon** |
-| [validation.md](science/validation.md) | Pre-registered validation plan |
-| [limitations.md](science/limitations.md) | What is not built, and where the method could be wrong |
-
-## Data
-
-| Document | Contents |
-| --- | --- |
-| [sources.md](data/sources.md) | Products, assets, and what each cannot tell you |
-| [conventions.md](data/conventions.md) | Spatial, temporal and quality conventions |
-
-## Product
-
-| Document | Contents |
-| --- | --- |
-| [problem.md](product/problem.md) | The problem in depth, with sources |
-| [capability-matrix.md](product/capability-matrix.md) | **Implemented / planned / future, per capability** |
-| [implementation-plan.md](product/implementation-plan.md) | Phased tasks, owners, dependencies, parallel order |
-| [roadmap-detail.md](product/roadmap-detail.md) | Milestone detail with exit criteria |
-
-## Engineering
-
-| Document | Contents |
-| --- | --- |
-| [testing.md](engineering/testing.md) | Testing strategy and what a good test looks like here |
-| [configuration.md](engineering/configuration.md) | Settings, secrets, environments |
-
-## Security
-
-| Document | Contents |
-| --- | --- |
-| [security/architecture.md](security/architecture.md) | Trust boundaries, secrets, the GenAI boundary as a control, planned controls |
-| [`SECURITY.md`](../SECURITY.md) | Threat model, reporting, what is not secured yet |
-
-## Decisions
-
-[decisions/](decisions/) — eleven ADRs covering the monorepo, the engine/platform
-boundary, the analysis contract, the evidence object, provenance,
-reproducibility, the GenAI boundary, job architecture, data management,
-deployment and the unit of analysis.
-
-## Competition
-
-| Document | Contents |
-| --- | --- |
-| [strategy.md](competition/strategy.md) | PCCOE IGC 2026 positioning and hard questions |
-| [demo-flow.md](competition/demo-flow.md) | A seven-minute demo that runs today |
-
-## Research
-
-[research/](research/) — reading notes and literature relevant to the method.
+![Auditor Dashboard](product/screens/auditor-dashboard.png)
 
 ---
 
-## Three rules that recur everywhere
+## The Non-Negotiable Scientific Principles
 
-1. **Observed change is not causal effect.** Everything in the pipeline exists
-   to close that gap honestly, and to state what is left open.
-2. **NDVI is not carbon.** Converting a spectral index to a mass requires a
-   biomass model with its own error budget, and the code refuses to do it
-   implicitly.
-3. **Model divergence is not fraud.** A gap between an independent estimate and
-   a claim means the claim warrants accredited review. Nothing in a satellite
-   time series can establish intent.
+Every line of code and documentation in GroundTruth 2.0 adheres to four core scientific commitments:
 
-## Status discipline
+1. **Observed change is not causal effect.** Vegetation greening or canopy loss inside an intervention boundary cannot be attributed to the project without establishing a rigorous, counterfactual comparison unit (Synthetic Control and Difference-in-Differences) that accounts for regional climate trends and macroeconomic spillovers.
+2. **NDVI is not carbon.** Spectral vegetation indices (NDVI, EVI, NDMI, NBR) measure surface greenness and moisture absorption, not woody biomass or metric tonnes of $\text{CO}_2\text{e}$. Converting indices to carbon requires verified allometric biomass equations with explicit error budgets; the system refuses implicit conversions.
+3. **Model divergence is not fraud.** A mathematical discrepancy between an issuer's claimed carbon credits and an independent causal estimate indicates that the baseline warrants accredited review. Remote sensing time series cannot establish legal intent.
+4. **Fail-closed data integrity.** In `REAL_OBSERVATIONS` mode, when pre-treatment data is incomplete, sensor harmonization is unvalidated, or spatial coverage is compromised, the pipeline **refuses to fabricate or impute data**. It raises `DataUnavailableError` (HTTP 501) and issues an honest verdict of `INCONCLUSIVE (not estimable)`.
 
-**No analysis of a real project has been run.** Every number the pipeline
-currently produces comes from a simulated fixture and is labelled as such. If
-you add a capability, update
-[product/capability-matrix.md](product/capability-matrix.md) in the same change.
+---
+
+## 4 User Personas & Scoped Workspaces
+
+GroundTruth 2.0 provides dedicated, role-tailored workspaces for four distinct ecosystem stakeholders:
+
+| Persona | Primary Needs & Scopes | Primary View |
+| :--- | :--- | :--- |
+| **Auditor** | Rigorous counterfactual evaluation, placebo permutation tests, sensitivity analysis, leave-one-out robustness, raw data provenance verification (`audit` scope). | [Auditor Workspace](architecture/frontend.md#auditor-persona) |
+| **Funder** | Portfolio-level capital risk assessment, ecological stability, delivery-vs-claim tracking, benchmark comparative performance (`view` scope). | [Funder Workspace](architecture/frontend.md#funder-persona) |
+| **Government** | Sovereign carbon accounting, Article 6 alignment, national forest monitoring, regional leakage detection (`view`, `audit` scopes). | [Government Workspace](architecture/frontend.md#government-persona) |
+| **NGO / Developer**| Intervention tracking, vegetation trajectory monitoring, drought stress indicators, ground-truth claim upload (`contribute` scope). | [NGO Workspace](architecture/frontend.md#ngo-persona) |
+
+![Kariba Overview](product/screens/kariba-overview.png)
+
+---
+
+## 8 Assessment Dimensions
+
+GroundTruth 2.0 evaluates projects across eight independent, standardized dimensions:
+
+```mermaid
+graph LR
+    D1["1. Vegetation Trajectory<br/>(Theil-Sen, Mann-Kendall)"]
+    D2["2. Spatial Performance<br/>(Spatial Gini, Variance)"]
+    D3["3. Climate Context<br/>(CHIRPS SPI-12, POWER)"]
+    D4["4. Ecological Risk<br/>(Canopy Loss, Vulnerability)"]
+    D5["5. Restoration Progress<br/>(Target Attainment)"]
+    D6["6. Comparative Performance<br/>(Regional ADM2 Donors)"]
+    D7["7. Evidence Quality<br/>(QA Masking, STAC Coverage)"]
+    D8["8. Intervention Attribution<br/>(SCM, Placebo DiD)"]
+
+    D1 --- D2 --- D3 --- D4 --- D5 --- D6 --- D7 --- D8
+```
+
+1. **Vegetation Trajectory**: Non-parametric trend estimation (Theil-Sen slope and Mann-Kendall significance) across multi-spectral indices (NDVI, EVI, NDMI, NBR).
+2. **Spatial Performance**: Internal spatial heterogeneity, canopy variance, and zonal stability across project sub-regions.
+3. **Climate Context**: Integration of 43-year CHIRPS precipitation (SPI-12 standard precipitation index) and NASA POWER temperature to isolate drought shocks from management failures.
+4. **Ecological Risk**: Detection of rapid degradation, drought vulnerability, and abrupt canopy collapse.
+5. **Restoration Progress**: Tracking observed trajectory against baseline restoration targets.
+6. **Comparative Performance**: Benchmarking project health against regional reference donor districts.
+7. **Evidence Quality**: Explicit accounting of clear-pixel fractions, sensor harmonization uncertainty, and cloud/QA masking completeness.
+8. **Intervention Attribution**: Econometric synthetic control counterfactual evaluation with in-space and in-time placebo tests, or an explicit `INCONCLUSIVE` verdict when data is inadequate.
+
+---
+
+## 5 Evidence States
+
+Every numerical observation and intermediate result is tagged with an epistemological `EvidenceState`:
+
+```mermaid
+stateDiagram-v2
+    [*] --> RAW_OBSERVED: Satellite / Sensor Acquisition
+    RAW_OBSERVED --> DERIVED: QA Masking & Zonal Statistics
+    DERIVED --> MODEL_ESTIMATED: Econometric / SCM Fitting
+    MODEL_ESTIMATED --> INFERRED: Counterfactual Projection
+    [*] --> UNAVAILABLE: Missing STAC / Pipeline Refusal
+    UNAVAILABLE --> INSUFFICIENT_EVIDENCE: Fail-Closed Gate
+```
+
+* **`RAW_OBSERVED`**: Direct, unaltered sensor telemetry (e.g., Level-2 surface reflectance DN).
+* **`DERIVED`**: Deterministically processed indices (e.g., QA-masked cloud-free zonal mean NDVI).
+* **`MODEL_ESTIMATED`**: Values fitted through mathematical optimization (e.g., SCM weights, synthetic counterfactual).
+* **`INFERRED`**: Projections, confidence intervals, or permutation p-values derived under statistical models.
+* **`UNAVAILABLE` / `INSUFFICIENT_EVIDENCE`**: Unobserved periods or refused estimates where data gaps prevent sound inference.
+
+---
+
+## Documentation Navigation
+
+### 1. Architecture
+* [System Architecture (`architecture/system.md`)](architecture/system.md) — System C4 architecture, container topology, package seams.
+* [Engine/Platform Contract (`architecture/contract.md`)](architecture/contract.md) — The `AnalysisRequest` and `AnalysisResult` boundary.
+* [Backend Platform (`architecture/backend.md`)](architecture/backend.md) — FastAPI surface, multi-tenancy, RBAC middleware, PostgreSQL store.
+* [Frontend Architecture (`architecture/frontend.md`)](architecture/frontend.md) — Next.js 14 App Router layout restructuring (`(app)` workspaces, `(public)` marketing), Design System (`ds/`), 542 unit/component/integration tests.
+* [Worker & Job Execution (`architecture/worker.md`)](architecture/worker.md) — Asynchronous job lifecycle, PostgreSQL leases, Celery/Redis queue, Temporal durable execution.
+* [Earth Observation (`architecture/earth-observation.md`)](architecture/earth-observation.md) — Ingestion chain, USGS Collection 2 L2 scaling, QA bit masking, Roy et al. sensor harmonization.
+* [Causal Inference (`architecture/causal.md`)](architecture/causal.md) — Simplex-constrained FISTA synthetic control solver, DiD cross-check, placebo permutation tests.
+* [Evidence & Provenance (`architecture/evidence.md`)](architecture/evidence.md) — Immutable `EvidenceBundle`, SHA-256 derivation chains, Sigstore signing.
+* [GenAI Grounding Boundary (`architecture/genai.md`)](architecture/genai.md) — Deterministic downstream reporting, numeric grounding verification, prohibited assertion blocking.
+* [Continuous Monitoring (`architecture/monitoring.md`)](architecture/monitoring.md) — Continuous spec re-execution, automated bundle diffing, alert triggers.
+
+### 2. Engineering & Deployment
+* [Deployment Compute Architecture (`engineering/DEPLOYMENT_COMPUTE_ARCHITECTURE.md`)](engineering/DEPLOYMENT_COMPUTE_ARCHITECTURE.md) — Tiered storage hierarchy, local workstation vs. production container topology.
+* [Local Compute Benchmarks (`engineering/LOCAL_COMPUTE_BENCHMARK.md`)](engineering/LOCAL_COMPUTE_BENCHMARK.md) — Measured multi-process scaling, 512×512 chunking benchmarks, RTX 5070 GPU optionality.
+* [Configuration Specification (`engineering/configuration.md`)](engineering/configuration.md) — Typed Pydantic settings, secrets isolation, environment overrides.
+* [Testing Strategy (`engineering/testing.md`)](engineering/testing.md) — 1,120+ backend tests, 542 web tests, AST boundary enforcement, property testing.
+
+### 3. Architecture Decisions (ADRs)
+* [ADR Index (`decisions/README.md`)](decisions/README.md) — Complete registry of eleven binding architectural decision records.
+* [ADR-001: Monorepo Structure](decisions/ADR-001-monorepo-structure.md)
+* [ADR-002: Engine/Platform Boundary](decisions/ADR-002-engine-platform-boundary.md)
+* [ADR-003: Analysis Contract](decisions/ADR-003-analysis-contract.md)
+* [ADR-004: Evidence Object Model](decisions/ADR-004-evidence-object.md)
+* [ADR-005: Provenance Model](decisions/ADR-005-provenance-model.md)
+* [ADR-006: Reproducibility & Spec Hash](decisions/ADR-006-reproducibility.md)
+* [ADR-007: GenAI Grounding Boundary](decisions/ADR-007-genai-boundary.md)
+* [ADR-008: Analysis Job Lifecycle](decisions/ADR-008-analysis-jobs.md)
+* [ADR-009: Data Management & Pinned Datasets](decisions/ADR-009-data-management.md)
+* [ADR-010: Containerised Deployment](decisions/ADR-010-deployment.md)
+* [ADR-011: Unit of Analysis & Masked Districts](decisions/ADR-011-unit-of-analysis.md)
+
+### 4. Security & Governance
+* [Security Architecture (`security/architecture.md`)](security/architecture.md) — Trust boundaries, credential isolation, output validation.
+* [Authentication & RBAC (`security/auth.md`)](security/auth.md) — Multi-tenant organization grants, session cookies, CSRF protection, rate limits.
+
+### 5. Operations & Research
+* [Operations Manual (`operations/README.md`)](operations/README.md) — Container health probes, failure runbooks, Prometheus/Grafana metrics.
+* [Scientific Research Notes (`research/README.md`)](research/README.md) — Econometric foundations, remote sensing literature, open research questions.

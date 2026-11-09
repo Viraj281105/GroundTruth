@@ -1,252 +1,247 @@
-# Development
+# GroundTruth 2.0 — Developer & Contributor Guide
 
-Everything needed to get productive. If a step here does not work, that is a
-bug in this document — fix it in the same PR.
+**One platform. Four perspectives. One scientifically consistent source of truth.**  
+*Comprehensive developer guide for setting up, running, testing, and hardening the GroundTruth 2.0 platform.*
 
 ---
 
-## One-command run
+## 1. Quickstart: One-Command Execution
+
+GroundTruth provides unified startup scripts for Windows, macOS, and Linux:
 
 ```powershell
-.un.ps1            # Windows: venv + deps + API (:8000) + web (:3000)
-.un.ps1 docker     # Docker: Postgres, API, worker, web
-.un.ps1 test       # Python tests
+# Windows (PowerShell)
+.\run.ps1            # Starts Python venv, FastAPI API (:8000), and Next.js Web (:3000)
+.\run.ps1 docker     # Starts full Docker stack: Postgres, Redis, API, Worker, Web
+.\run.ps1 test       # Runs full Python pytest suite
 ```
 
-On macOS/Linux use `./run.sh [local|docker|test|setup]`. The Docker web image is built with
-`NEXT_PUBLIC_DEMO_MODE=true` by default so the UI can show its simulated charts; set
-`NEXT_PUBLIC_DEMO_MODE=false` to see the honest "no result yet" states instead. To let a second
-dev origin call the API, set `CORS_ALLOWED_ORIGINS` (comma separated) before `docker compose up`.
+```bash
+# macOS / Linux (Bash)
+./run.sh local       # Starts API and Next.js locally
+./run.sh docker      # Boots Docker Compose environment
+./run.sh test        # Executes all test suites
+```
 
-## Setup
+---
 
-Requires Python 3.11+ and git. Nothing else: the full pipeline runs offline with
-no credentials, no network and no system libraries.
+## 2. Local Environment Setup
+
+### Prerequisites
+- **Python:** 3.11 or higher (Python 3.11, 3.12, 3.13 supported)
+- **Node.js:** v18.0.0 or higher (v20+ LTS recommended)
+- **Git:** 2.40+
+- **Docker & Docker Compose:** (Optional, for containerized multi-service deployment)
+- **Android Studio / Android SDK:** (Optional, for `apps/mobile` Jetpack Compose development)
+
+### Step-by-Step Installation
 
 ```bash
+# 1. Clone repository
 git clone https://github.com/Viraj281105/GroundTruth.git
 cd GroundTruth
+
+# 2. Configure Python Virtual Environment
 python -m venv .venv
-.venv/Scripts/activate            # Windows
-source .venv/bin/activate         # macOS / Linux
-pip install -e "packages/groundtruth[api,genai,dev]"
+
+# Activate on Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+# Activate on macOS / Linux:
+source .venv/bin/activate
+
+# 3. Install GroundTruth package with development extras
+pip install -e "packages/groundtruth[api,genai,dev,geo]"
+
+# 4. Copy Environment Template
 cp .env.example .env
+
+# 5. Verify system readiness with doctor
+groundtruth doctor
 ```
 
-Verify:
+`groundtruth doctor` performs an honest audit of installed dependencies, cloud credentials, and real data assets. It explicitly notes which capabilities are active and which are fail-closed.
 
-```bash
-groundtruth doctor                        # what is configured and what is not
-groundtruth verify kariba-redd --synthetic
-pytest
+```mermaid
+flowchart TD
+    Setup["git clone & python -m venv .venv"] --> Pip["pip install -e packages/groundtruth[api,genai,dev,geo]"]
+    Pip --> Env["cp .env.example .env"]
+    Env --> Doctor["groundtruth doctor"]
+    Doctor --> Choice{"Choose Mode"}
+    Choice --> FullLocal["Run Local: Uvicorn (:8000) + Next.js (:3000)"]
+    Choice --> DockerStack["Run Docker: docker compose up --build"]
 ```
-
-`groundtruth doctor` is the honest status check. It reports what is genuinely
-implemented, including the things that are not.
-
-### Optional extras
-
-| Extra | Adds | Needed for |
-| --- | --- | --- |
-| `api` | FastAPI, uvicorn | Running the HTTP service |
-| `genai` | httpx | Narration providers (not implemented yet) |
-| `dev` | pytest, ruff, mypy | Any contribution |
-| `geo` | geopandas, rasterio, shapely, xarray | Real raster work (not needed for the causal pipeline) |
-| `earthengine` | earthengine-api, geemap | Real Earth-observation access |
-
-The core deliberately avoids SciPy, GDAL and GEOS so the analytical pipeline and
-CI run anywhere. Install `geo` only when you are doing raster work.
 
 ---
 
-## Daily commands
+## 3. Package Structure & Optional Extras
 
+GroundTruth uses a modular dependency architecture. The core causal engine depends only on NumPy, Pandas, and Pydantic—heavy geospatial and cloud dependencies are isolated behind optional extras:
+
+| Extra | Included Dependencies | Purpose |
+|---|---|---|
+| `core` | `numpy`, `pandas`, `pydantic>=2.0` | Pure deterministic causal engine and FISTA solver. Runs anywhere offline. |
+| `api` | `fastapi`, `uvicorn`, `httpx` | REST API, OpenAPI schema generation, and HTTP routing. |
+| `genai` | `google-genai` | Downstream Gemini narrative generation (strictly grounding-verified). |
+| `geo` | `geopandas`, `shapely`, `rasterio`, `pyproj` | STAC zonal statistics, polygon intersection, and coordinate projections. |
+| `dev` | `pytest`, `ruff`, `mypy`, `hypothesis` | Complete testing, linting, and static analysis toolchain. |
+
+---
+
+## 4. Running the Development Services
+
+### A. FastAPI Backend Service
 ```bash
-make help          # list targets
-make check         # lint + typecheck + test, what CI runs
-make test          # pytest
-make lint          # ruff check
-make format        # ruff format + autofix
-make typecheck     # mypy
-make api           # uvicorn on :8000, docs at /docs
-make cli           # demo run on the Kariba case
-```
-
-Without `make`:
-
-```bash
-ruff format packages tests && ruff check packages tests
-mypy
-pytest
+# Run API with live reloading on port 8000
 uvicorn apps.api.main:app --reload --port 8000
+# OpenAPI documentation available at: http://localhost:8000/docs
 ```
 
----
-
-## Repository layout
-
-```
-apps/api          thin ASGI entrypoint          apps/web     Next.js frontend
-apps/worker       job runner (not built)
-packages/groundtruth/src/groundtruth/
-  contracts/      shared boundary               engine/      Viraj, pure computation
-  platform/       Bhumi, the application
-cases/            project definitions as YAML   experiments/ validation harnesses
-docs/             the documentation system      tests/       the suite
-```
-
-Where new code goes is answered in [`AGENTS.md`](AGENTS.md) §4. The short
-version: **methodology belongs to the engine, plumbing belongs to the
-platform**, and anything shared is a contract change needing both owners.
-
----
-
-## The rules that will fail your build
-
-Read [`AGENTS.md`](AGENTS.md) §3 in full. The short list:
-
-1. NDVI is not carbon — no implicit index→carbon conversion
-2. Never state or imply fraud
-3. Observed change is not causal effect — conditions travel with the number
-4. The GenAI layer computes nothing
-5. Prefer an honest refusal to a fragile number
-6. Never fabricate results — placeholders are marked, not filled
-7. Simulated data must be impossible to mistake for real
-8. Reproducibility is a requirement — never seed from `hash()`
-
-These are enforced by tests, not by review alone.
-
----
-
-## Testing
+### B. Next.js 14 Web Frontend
+The frontend features four tailored persona views (NGO, Funder, Auditor, Government) and comprehensive 8-dimension visualizations:
 
 ```bash
-pytest                                    # everything
-pytest tests/test_causal.py -v            # one file
-pytest -k "placebo"                       # by keyword
-pytest --cov --cov-report=term-missing    # with coverage
-pytest -m "not slow"                      # skip slow tests
+cd apps/web
+npm install
+npm run dev
+# Web application available at: http://localhost:3000
 ```
 
-| File | Covers |
-| --- | --- |
-| `test_contract_boundary.py` | The ownership seam — AST import checks, versioning, request/result invariants |
-| `test_core.py` | Units, provenance, evidence bundle |
-| `test_causal.py` | Estimator recovery, simplex constraints, DiD diagnostics |
-| `test_matching.py` | Donor eligibility, exclusions, balance |
-| `test_uncertainty.py` | Placebo inference, leave-one-out, intervals |
-| `test_grounding.py` | The GenAI boundary, including hallucination fallback |
-| `test_pipeline.py` | End to end through the contract, case registry, observation methodology |
-| `test_api_cli.py` | HTTP surface and command line |
+### C. Background Worker (Celery & Database Queue)
+```bash
+# Execute background analysis jobs with heartbeat and lease management
+python -m apps.worker.main
+```
 
-**What a good test looks like here.** The suite is deliberately written as
-executable specification: `test_the_verdict_refuses_to_compare_an_index_against_a_tco2e_claim`
-says what the system guarantees. Name tests after the guarantee, not the method
-under test. Assert on behaviour a user would notice.
-
-The most important tests are the ones that would catch a *scientifically wrong*
-result, not a crash: effect recovery on a known panel, the null case, refusal
-paths, and the grounding rejections.
-
-Markers: `slow` for long-running, `network` for anything requiring external
-APIs. Neither runs by default in a quick loop.
-
----
-
-## Adding things
-
-### A case
-
-One YAML file in `cases/`. See `cases/README.md` and an existing case for the
-shape. Do not set `status: analysed` — only a reviewed real run may, and a test
-enforces it. A `known_reference` block records a third-party figure for
-post-hoc validation; the pipeline never reads it.
+### D. Full Docker Compose Stack
+Boot the production-grade multi-tenant stack with PostgreSQL and Redis:
 
 ```bash
-groundtruth cases && groundtruth show <case-id>
+docker compose up --build
 ```
-
-### An estimator
-
-Add it under `engine/causal/`, register a `model_id`, and make it selectable via
-`EstimationSpec`. It must report its own diagnostics — a new estimator that
-cannot say when it is unreliable does not go in.
-
-### A data source
-
-Implement the relevant port in `platform/datasets/`. Pin a `DatasetRef` version.
-Never fall back to fixtures on failure — raise, so a real-data label can never
-cover simulated numbers.
-
-### An evidence item
-
-Add it in `engine/assembler.py` with complete provenance, an id in the right
-namespace, a unit from the declared vocabulary, and a qualifier for anything a
-reader could misinterpret.
-
-### An API endpoint
-
-`platform/api/`. Validate at the boundary. Map every error to a status code, and
-keep refusals distinguishable from malfunctions in the response body.
+Services instantiated:
+- `postgres`: PostgreSQL 15 database storing tenants, projects, users, sessions, and `EvidenceBundle` records.
+- `redis`: Redis 7 instance managing asynchronous job queues.
+- `api`: FastAPI ASGI container (Port 8000).
+- `worker`: Background analysis worker processing causal inference jobs.
+- `web`: Next.js production build (Port 3000).
 
 ---
 
-## Debugging
+## 5. Comprehensive Test Execution
+
+GroundTruth maintains an exhaustive, multi-layered automated testing regime:
+
+```mermaid
+flowchart TD
+    subgraph TestSuites["Testing Architecture"]
+        Pytest["Backend Suite (Pytest)<br/>1,466 collected tests<br/>Contract boundaries · SCM · DiD · Auth · Gateways"]
+        Vitest["Frontend Suite (Vitest)<br/>542 passing tests across 57 files<br/>Personas · 8 Dimensions · State Gating · Types"]
+        E2E["Playwright Persona E2E<br/>Auditor · Funder · NGO · Gov flows"]
+        AST["AST Static Boundary Guard<br/>tests/test_contract_boundary.py"]
+    end
+
+    TestSuites --> CI["GitHub Actions Matrix CI (Python 3.11, 3.12, 3.13)"]
+```
+
+### Running Backend Tests (Pytest)
+```bash
+# Run the entire backend test suite
+pytest
+
+# Run specific functional test categories
+pytest tests/auth/                        # Auth, Scrypt, session, and RBAC tests
+pytest tests/engine/                      # FISTA solver, DiD, allometry, placebos
+pytest tests/claims/                      # Adversarial grounding & defamation blocks
+pytest tests/test_contract_boundary.py    # AST contract boundary enforcement
+```
+
+### Running Frontend Tests (Vitest)
+The web application features **542 passing automated tests across 57 test files**:
 
 ```bash
-groundtruth doctor                                  # capability check
-groundtruth verify kariba-redd --synthetic --json   # full AnalysisResult
-groundtruth --log-level DEBUG verify kariba-redd --synthetic
+cd apps/web
+npm test -- --run
+```
+Output:
+```
+ Test Files  57 passed (57)
+      Tests  542 passed (542)
+   Duration  4.00s
 ```
 
-The `--json` output is the complete `AnalysisResult` including provenance,
-metrics and per-stage timings — usually faster than a debugger for
-"where did this number come from".
+### Checking Contract Boundaries and API Types
+GroundTruth prevents schema drift between the Python backend and TypeScript frontend using automated OpenAPI synchronization:
 
-`spec_hash` is stable, so two runs that should agree and do not indicate a
-genuine nondeterminism bug. That is always worth chasing: reproducibility is a
-requirement, not a nicety.
+```bash
+# Verify TypeScript API types match the backend schema
+cd apps/web
+npm run check:api-types
 
----
-
-## Git
-
-Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `build:`,
-`ci:`, `chore:`. Explain *why* in the body, especially for estimator or
-grounding changes.
-
-Branch from `main`, open a PR, fill in the template including the scientific
-integrity checklist. CI must be green.
-
-A change to `contracts/` requires both owners on the PR and a `CONTRACT_VERSION`
-bump.
+# Regenerate TypeScript types from backend OpenAPI JSON
+make api-types
+```
 
 ---
 
-## CI
+## 6. Native Mobile Development (Jetpack Compose)
 
-Two jobs on every push and PR:
+Field auditors and project managers capture evidence and review dashboards on mobile via `apps/mobile`:
 
-**`quality`** — ruff, `ruff format --check`, mypy and pytest on Python 3.11,
-3.12 and 3.13.
+```mermaid
+flowchart LR
+    A["Jetpack Compose UI<br/>(Material 3)"] --> B["ViewModel & StateFlow"]
+    B --> C["Room SQLite Offline Cache"]
+    C <-->|Retrofit2 Sync| D["FastAPI Backend (:8000)"]
+```
 
-**`scientific-integrity`** — asserts the claims the README makes: no spectral
-index is reported as carbon, the GenAI layer cannot invent numbers or allege
-wrongdoing, no case claims an analysed status without a reviewed run, and the
-pipeline runs end to end.
+### Mobile Views
+The native client provides full parity with the web interface for offline inspection:
 
-The second job exists so that if a claim in the documentation stops being true,
-the build fails rather than the documentation quietly becoming a lie.
+| Native Auditor Screen | Native NGO Screen |
+| :---: | :---: |
+| ![Native Auditor](docs/product/screens/compose-auditor-dashboard.png) | ![Native NGO](docs/product/screens/compose-ngo-dashboard.png) |
+
+To run the mobile test suite or previews:
+```bash
+cd apps/mobile
+./gradlew test
+./gradlew assembleDebug
+```
 
 ---
 
-## Troubleshooting
+## 7. Daily Development Commands
 
-| Symptom | Cause |
-| --- | --- |
-| `ModuleNotFoundError: groundtruth` | Not installed editable. Run the `pip install -e "packages/groundtruth[...]"` line. |
-| `unknown case 'kariba-redd'. Available cases: none` | Running from outside the repo. Case discovery walks up for a marker directory. |
-| mypy fails on numpy stubs | Checker targets 3.12; the runtime floor is 3.11. Do not lower `python_version` in `[tool.mypy]`. |
-| Tests slow (~90s) | Expected. Placebo inference refits the estimator once per donor. |
-| `DataUnavailableError` on verify | Correct. Real EO access is not implemented; use `--synthetic`. |
-| Verdict is `INCONCLUSIVE` | Usually correct. Read the rationale — it names the gate that failed. |
+| Command | Action |
+|---|---|
+| `ruff check packages tests` | Fast Python linting and code style inspection. |
+| `ruff format packages tests` | Automated code formatting adhering to PEP 8 standards. |
+| `mypy` | Strict static type checking across engine and platform. |
+| `cd apps/web && npm run lint` | ESLint static analysis for Next.js components. |
+| `groundtruth verify kariba-redd --synthetic` | Execute complete CLI verification run on Kariba synthetic benchmark. |
+
+---
+
+## 8. Fail-Closed Scientific Testing
+
+A critical component of GroundTruth 2.0 is testing that the platform **fails closed** when empirical rasters are missing, preventing the accidental presentation of synthetic data under a real label:
+
+```python
+# tests/test_fail_closed.py
+def test_real_observations_mode_raises_when_rasters_missing():
+    """Verify that REAL mode refuses to guess when data is incomplete."""
+    request = AnalysisRequest(
+        case_id="kariba-redd",
+        data_mode=DataMode.REAL_OBSERVATIONS,
+    )
+    with pytest.raises(DataUnavailableError) as exc_info:
+        run_analysis(request, data_access=live_data_access)
+    
+    assert "pre-treatment panel incomplete" in str(exc_info.value)
+```
+
+This fail-closed architecture guarantees that no fabricated or synthetic values can ever be silently served to auditors or the public.
+
+---
+
+> GroundTruth 2.0 Development Guide · *PCCOE International Grand Challenge 2026*

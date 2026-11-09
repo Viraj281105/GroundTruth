@@ -36,6 +36,11 @@ export function formatConfidenceInterval(confidence: Confidence | null, unit?: s
   if (confidence.kind === 'sensitivity-envelope') {
     return `[${lower}, ${upper}${unitStr}] (sensitivity-envelope: range, not a confidence interval)`;
   }
+  // A +/-1 sigma interval under an assumed model error: ~68% nominal coverage at best,
+  // and never a 95% confidence interval.
+  if (confidence.kind === 'assumed-1sigma-interval') {
+    return `[${lower}, ${upper}${unitStr}] (one-sigma interval under an assumed model error, ~68%; not a 95% confidence interval)`;
+  }
   const levelPct = Math.round(confidence.level * 100);
   return `[${lower}, ${upper}${unitStr}] (${levelPct}% ${confidence.kind})`;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { API_BASE_URL } from './api';
+import { getApiBaseUrl } from './api';
 import { parseRole, type AuthUser, type Role } from './auth-core';
 
 export type AuthStatus = 'loading' | 'signed-out' | 'signed-in';
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include', headers: { Accept: 'application/json' } });
+      const res = await fetch(`${getApiBaseUrl()}/auth/me`, { credentials: 'include', headers: { Accept: 'application/json' } });
       if (!res.ok) throw new Error(`auth/me ${res.status}`);
       const body: unknown = await res.json();
       const b = (body ?? {}) as Record<string, unknown>;
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
-      await fetch(`${API_BASE_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
+      await fetch(`${getApiBaseUrl()}/auth/logout`, { method: 'POST', credentials: 'include' });
     } finally {
       // Even if the request failed, drop the local session view; the cookie expires server-side.
       setUser(null);

@@ -5,9 +5,18 @@ estimator. It is cheaper and more transparent, but it rests entirely on the
 parallel-trends assumption: absent the intervention, treated and control units
 would have moved together.
 
-That assumption is not testable, but its pre-treatment analogue is. This module
-always reports a pre-trend divergence diagnostic alongside the estimate, so a
-reader can see how much faith the assumption deserves.
+Note that covariate standardised mean difference (SMD, e.g.
+``DonorPool.worst_balance``) measures static baseline covariate imbalance
+between the project and the donor pool during matching; it is **not** a DiD
+estimation error or a test of parallel trends. Difference-in-differences nets
+out time-invariant level differences across units and depends instead on
+whether pre-treatment outcome trajectories move in parallel.
+
+That parallel-trends assumption is not testable post-intervention, but its
+pre-treatment analogue is. This module always reports a pre-trend divergence
+diagnostic alongside the estimate, and provides :func:`check_parallel_trends`
+to test whether treated and control units were already diverging before the
+intervention.
 
 **Inference.** Neighbouring control regions share weather, markets and policy,
 so treating each as an independent draw makes the standard error too small.
@@ -108,6 +117,90 @@ def _slope(values: np.ndarray) -> float:
     if denominator < 1e-12:
         return 0.0
     return float(np.sum(x_centred * (values - values.mean())) / denominator)
+
+
+@dataclass(frozen=True)
+class ParallelTrendsDiagnostic:
+    """Pre-treatment parallel-trends diagnostic for DiD and synthetic control.
+
+    Attributes:
+        differential_pre_slope: OLS slope of the pre-treatment gap
+            ``(treated_pre - control_pre)`` against time ``0..T_0-1``.
+        pre_gap_sd: Sample standard deviation of the pre-treatment gap.
+        passes: True if ``abs(differential_pre_slope) <= max_slope_per_period``.
+    """
+
+    differential_pre_slope: float
+    pre_gap_sd: float
+    passes: bool
+
+
+def check_parallel_trends(
+    treated_pre: np.ndarray,
+    donors_pre: np.ndarray,
+    *,
+    weights: np.ndarray | None = None,
+    max_slope_per_period: float = 0.01,
+    max_slope_Per_period: float | None = None,
+) -> ParallelTrendsDiagnostic:
+    """Test whether treated and control paths were already diverging pre-treatment.
+
+    Regresses the pre-treatment gap ``(treated_pre - control_pre)`` on period
+    index ``0..T_0-1``. Unlike static covariate SMD (``DonorPool.worst_balance``),
+    which measures baseline level differences in matching covariates, this
+    diagnostic directly evaluates the pre-treatment parallel-trends assumption
+    required for Difference-in-Differences validity.
+
+    Args:
+        treated_pre: ``(n_pre,)`` pre-treatment outcome series for the treated unit.
+        donors_pre: ``(n_pre, n_donors)`` pre-treatment donor outcome matrix (or
+            ``(n_pre,)`` control series).
+        weights: Optional ``(n_donors,)`` weights for constructing the control path;
+            defaults to an unweighted mean across donors.
+        max_slope_per_period: Maximum absolute differential slope per period
+            considered consistent with parallel pre-trends.
+        max_slope_Per_period: Optional alias for ``max_slope_per_period``.
+
+    Returns:
+        A :class:`ParallelTrendsDiagnostic` with the differential pre-slope,
+        pre-gap standard deviation, and pass/fail status.
+    """
+    t_pre = np.asarray(treated_pre, dtype=float)
+    d_pre = np.asarray(donors_pre, dtype=float)
+    if t_pre.ndim != 1:
+        raise EstimationError("treated_pre must be one-dimensional")
+    if t_pre.size < 2:
+        raise InsufficientDataError("at least 2 pre-treatment periods are required")
+
+    if d_pre.ndim == 1:
+        if d_pre.shape[0] != t_pre.shape[0]:
+            raise EstimationError("treated_pre and donors_pre have different period counts")
+        control_pre = d_pre
+    elif d_pre.ndim == 2:
+        if d_pre.shape[0] != t_pre.shape[0]:
+            raise EstimationError("treated_pre and donors_pre have different period counts")
+        if d_pre.shape[1] == 0:
+            raise EstimationError("donors_pre must have at least one donor column")
+        if weights is not None:
+            w = np.asarray(weights, dtype=float)
+            if w.shape != (d_pre.shape[1],):
+                raise EstimationError("weights length does not match donors_pre columns")
+            control_pre = d_pre @ w
+        else:
+            control_pre = d_pre.mean(axis=1)
+    else:
+        raise EstimationError("donors_pre must be 1D or 2D")
+
+    gap = t_pre - control_pre
+    slope = _slope(gap)
+    gap_sd = float(np.std(gap, ddof=1)) if gap.size > 1 else 0.0
+    threshold = max_slope_Per_period if max_slope_Per_period is not None else max_slope_per_period
+
+    return ParallelTrendsDiagnostic(
+        differential_pre_slope=float(slope),
+        pre_gap_sd=gap_sd,
+        passes=bool(abs(slope) <= threshold),
+    )
 
 
 def clustered_inference(

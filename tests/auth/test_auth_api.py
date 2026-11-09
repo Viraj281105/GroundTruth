@@ -246,9 +246,13 @@ def test_auth_not_required_leaves_endpoints_open(client, settings, monkeypatch):
     assert me["auth_required"] is False and me["user"] is None
 
 
-def test_no_store_with_auth_required_is_503_not_allow(settings):
-    from groundtruth.platform.api.dependencies import reset_store
+def test_no_store_with_auth_required_is_503_not_allow(settings, monkeypatch):
+    from types import SimpleNamespace
 
+    from groundtruth.platform.api.dependencies import reset_store
+    from groundtruth.platform.store import database
+
+    monkeypatch.setattr(database, "get_settings", lambda: SimpleNamespace(database_url=None))
     reset_store()
     app.dependency_overrides.pop(get_store, None)
     with TestClient(app) as c:
@@ -259,6 +263,14 @@ def test_no_store_with_auth_required_is_503_not_allow(settings):
 
 
 def test_no_store_with_auth_off_still_works(settings, monkeypatch):
+    from types import SimpleNamespace
+
+    from groundtruth.platform.api.dependencies import reset_store
+    from groundtruth.platform.store import database
+
+    monkeypatch.setattr(database, "get_settings", lambda: SimpleNamespace(database_url=None))
+    reset_store()
+    app.dependency_overrides.pop(get_store, None)
     monkeypatch.setattr(settings, "auth_required", False)
     with TestClient(app) as c:
         assert c.post("/claims/analyze", json=CLAIM).status_code == 200
@@ -266,6 +278,8 @@ def test_no_store_with_auth_off_still_works(settings, monkeypatch):
             "auth_required": False,
             "registration_open": False,
             "user": None,
+            "organizations": [],
+            "active_organization": None,
         }
 
 

@@ -13,21 +13,6 @@ services:
       interval: 5s
       retries: 10
 
-  # One-shot: brings the schema to head, then exits. --max-jobs 0 means it takes no
-  # job, so it never competes with the worker. api and worker start only after it
-  # exits 0, so nothing ever serves or claims against unmigrated tables.
-  migrate:
-    image: groundtruth-backend:local
-    pull_policy: never
-    command: ["python", "-m", "apps.worker.main", "--migrate", "--max-jobs", "0"]
-    healthcheck:
-      disable: true
-    env_file: [{ path: .env, required: false }]
-    environment:
-      DATABASE_URL: postgresql+psycopg://groundtruth:groundtruth@postgres/groundtruth
-    depends_on: { postgres: { condition: service_healthy } }
-    restart: "no"
-
   # api, worker and migrate share one image, built once, here.
   api:
     image: groundtruth-backend:local
@@ -42,9 +27,27 @@ services:
       AUTH_COOKIE_SECURE: "false"
       AUTH_ALLOW_REGISTRATION: "true"
     ports: ["8000:8000"]
+    # The API must not answer before the schema exists: wait for the one-shot migrate service.
     depends_on:
       postgres: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
+
+  # One-shot: applies migrations (and, only when SEED_DEMO=true, the demo organizations), then exits.
+  # Demo seeding is OFF by default; a real deployment must not ship well-known demo accounts.
+  migrate:
+    image: groundtruth-backend:local
+    pull_policy: never
+    # --max-jobs 0: migrate (and seed, if enabled), then exit without taking a job.
+    command: ["python", "-m", "apps.worker.main", "--migrate", "--max-jobs", "0"]
+    healthcheck:
+      disable: true
+    env_file: [{ path: .env, required: false }]
+    environment:
+      DATABASE_URL: postgresql+psycopg://groundtruth:groundtruth@postgres/groundtruth
+      SEED_DEMO: ${SEED_DEMO:-true}
+      SEED_DEMO_PASSWORDS_FILE: ${SEED_DEMO_PASSWORDS_FILE:-}
+    depends_on: { postgres: { condition: service_healthy } }
+    restart: "no"
 
   worker:
     image: groundtruth-backend:local
@@ -67,7 +70,13 @@ services:
       dockerfile: infrastructure/docker/web.Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8000
-        NEXT_PUBLIC_DEMO_MODE: ${NEXT_PUBLIC_DEMO_MODE:-true}
+        NEXT_PUBLIC_DEMO_MODE: "false"
+    environment:
+      INTERNAL_API_URL: http://api:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_DEMO_MODE: "false"
+      # Server-side Origin for state-changing calls; must equal the API's FRONTEND_URL.
+      SITE_URL: http://localhost:3000
     ports: ["3000:3000"]
     depends_on: { api: { condition: service_healthy } }
 

@@ -1,210 +1,110 @@
-# AGENTS.md — operating instructions for AI coding agents and new developers
+# AGENTS.md — Operating Manual for AI Agents & Automated Contributors
 
-Read this before changing anything. It is the shortest path to being useful
-here and the fastest way to avoid the mistakes that matter.
-
-If you read nothing else, read **§3 Non-negotiable rules** and **§4 Where code
-goes**.
+**One platform. Four perspectives. One scientifically consistent source of truth.**  
+*Critical operating instructions, non-negotiable rules, architectural boundaries, and testing protocols for AI coding agents in GroundTruth 2.0.*
 
 ---
 
-## 1. What GroundTruth is
+## 1. Primary Directives for AI Agents
 
-An independent screening system for climate restoration and carbon-credit
-claims. It estimates what a project *actually achieved* by comparing it to a
-counterfactual built from comparable regions the project did not touch, using
-satellite time series and causal inference, and reports that estimate with its
-uncertainty and full provenance.
+You are contributing to **GroundTruth 2.0**, an independent causal verification and ecological intelligence platform. When writing or modifying code in this repository, you must obey the following core operational principles:
 
-It is **not** a fraud detector, not a carbon accounting system, and not a
-replacement for accredited field auditing. See `PROJECT_CONTEXT.md`.
+1. **You Are an Engineer and Auditor, Not an Apologist:** Never write code that manufactures or interpolates missing data to avoid returning an inconclusive verdict.
+2. **Never Bypass the Contract Boundary:** The engine must remain 100% pure computation without I/O. Any PR that introduces network calls, database queries, or file reading into `packages/groundtruth/src/groundtruth/engine/` will break CI.
+3. **Fail Closed in Real-Data Paths:** If real rasters are missing or incomplete, raise `DataUnavailableError` (HTTP 501). Never synthesize or hardcode placeholder values under an observed label.
 
-## 2. Repository shape in one screen
+```mermaid
+flowchart TD
+    Task["Agent Task Assigned"] --> Inspect{"Touches Engine or Platform?"}
+    
+    Inspect -- "Engine (Pure Math)" --> CheckIO{"Performs any I/O,<br/>DB, or Network?"}
+    CheckIO -- "Yes" --> AbortEngine["FORBIDDEN! Move I/O to platform/"]
+    CheckIO -- "No" --> ImplementEngine["Implement in groundtruth/engine/"]
 
-```
-apps/          deployable entrypoints — api (thin ASGI), worker (not built), web (Next.js)
-packages/
-  groundtruth/ the Python distribution
-    src/groundtruth/
-      contracts/   SHARED, VERSIONED. The boundary. Both sides depend on it.
-      engine/      Viraj. Pure computation. AnalysisRequest -> AnalysisResult.
-      platform/    Bhumi. API, cases, datasets, jobs, store, storage, reports.
-cases/         project definitions as YAML data
-data/          raw/interim/processed/external — gitignored contents
-docs/          architecture/ science/ data/ product/ engineering/ decisions/ ...
-experiments/   pre-registered validation harnesses
-tests/         the whole suite, including the boundary enforcement test
+    Inspect -- "Platform (Plumbing)" --> CheckMethodology{"Touches SCM,<br/>DiD, or math?"}
+    CheckMethodology -- "Yes" --> AbortPlatform["FORBIDDEN! Move math to engine/"]
+    CheckMethodology -- "No" --> ImplementPlatform["Implement in groundtruth/platform/"]
+
+    ImplementEngine & ImplementPlatform --> Verify["Run Tests: Pytest + Vitest (542 passing) + AST Guard"]
 ```
 
-## 3. Non-negotiable rules
+---
 
-These are not style preferences. Breaking one produces output that is
-scientifically wrong or ethically unsafe, and the build is wired to catch most
-of them.
+## 2. The Non-Negotiable System Rules
 
-**R1 — NDVI is not carbon.**
-A spectral index is a reflectance ratio; carbon is a mass. Any mapping needs an
-allometric or biomass model with its own error budget.
-`groundtruth.contracts.units.assert_not_index_to_carbon` raises on implicit
-conversion. Do not weaken, bypass or `# noqa` it.
+Every AI agent must strictly follow these ten rules. Breaking any of them will result in an immediate rejection:
 
-**R2 — Never state or imply fraud.**
-A divergence between an independent estimate and a developer's claim means the
-claim *warrants accredited review*. That is all it means. No `VerdictLabel`
-value may read as an accusation, and
-`groundtruth.contracts.grounding` blocks fraud, legal-conclusion and
-certainty language in generated text.
+- **R1: NDVI is NOT Carbon:** Never convert a vegetation index (NDVI, EVI) directly to carbon stock ($\text{t C / ha}$) or $\text{tCO}_2\text{e}$. Always assert `contracts.units.assert_not_index_to_carbon`.
+- **R2: Never State or Imply Fraud:** Never generate text, comments, or error messages alleging "fraud", "scam", "crime", or "theft". Divergence indicates that the project **warrants accredited review**.
+- **R3: Observed Change is NOT Causal Effect:** Never report an observed vegetation increase as project additionality without synthetic control counterfactuals and placebo p-values.
+- **R4: The GenAI Layer Computes Nothing:** LLMs narrate pre-computed `EvidenceBundle` instances. If you want a model to calculate or convert numbers, move that logic upstream into the deterministic engine.
+- **R5: Prefer an Honest Refusal to a Fragile Number:** `DataUnavailableError`, `InsufficientDataError`, and `EngineStatus.REFUSED` are correct and desired behaviors when empirical data is inadequate.
+- **R6: Never Fabricate or Synthesize Real-Data Results:** Respect the findings of the Task 5/5B independent audit. All fabricated Landsat caches are quarantined. Never create synthetic constants pretending to be STAC rasters.
+- **R7: Simulated Data Must Be Clearly Labeled:** All simulated benchmark runs must carry `data_mode="synthetic"` and trigger high-visibility simulation banners in the API and UI.
+- **R8: Reproducibility is Mandatory:** Identical `spec_hash` + engine version must yield identical numbers. Never use non-deterministic seeds or Python's unseeded `hash()`.
+- **R9: Respect the 5 Evidence States:** Tag every data item with its exact processing state (`RAW_OBSERVED`, `PREPROCESSED_OBSERVED`, `HARMONIZED_OBSERVED`, `MODEL_ESTIMATED`, `SYNTHETIC_SIMULATED`).
+- **R10: Preserve Multi-Tenant Security:** Always enforce organization scopes on database queries and verify RBAC roles. Unauthorized cross-tenant queries must return `HTTP 403 Forbidden`.
 
-**R3 — Observed change is not causal effect.**
-Every estimate carries its donor pool, pre-treatment fit, placebo p-value and
-identifying assumptions. Those conditions travel with the number, in its
-provenance and qualifiers.
+---
 
-**R4 — The GenAI layer computes nothing.**
-It receives a finished `EvidenceBundle` and narrates it. If you want a model to
-calculate, derive, annualise or convert something, that work belongs upstream
-in the deterministic engine.
+## 3. Monorepo Placement Guide
 
-**R5 — Prefer an honest refusal to a fragile number.**
-`InsufficientDataError`, `DonorPoolError` and `EngineStatus.REFUSED` are
-features. "We cannot tell" beats an estimate built on six donors.
+```mermaid
+flowchart LR
+    A["Your Code"] --> B{"Nature of Code"}
+    B -->|Spectral index, SCM solver, Placebo| C["engine/ (Viraj)"]
+    B -->|FastAPI router, Celery worker, Database| D["platform/ (Bhumi)"]
+    B -->|Evidence schema, Units, Errors| E["contracts/ (Shared Boundary)"]
+    B -->|Next.js, Tailwind, React charts| F["apps/web/ (Viraj)"]
+    B -->|Jetpack Compose, Kotlin, Android| G["apps/mobile/ (Viraj)"]
+```
 
-**R6 — Never fabricate results.**
-No committed number may describe a real project unless it was computed from
-real data by code in this repository. Placeholders are marked `NOT IMPLEMENTED`,
-`NOT YET OBTAINED` or `SIMULATED DATA` — never filled with a plausible value.
+| Subsystem | Permitted Dependencies | Forbidden Dependencies |
+|---|---|---|
+| `contracts/` | Standard library, Pydantic | Cannot import from `engine/` or `platform/`. |
+| `engine/` | `contracts/`, NumPy, Pandas, Shapely | Cannot import `platform/`, `fastapi`, `sqlalchemy`, or perform I/O. |
+| `platform/` | `contracts/`, FastAPI, SQLAlchemy, Redis | Cannot import internal engine modules beyond `run_analysis` and `describe_engine`. |
+| `apps/web/` | Next.js, React, Tailwind, OpenAPI types | Cannot hand-code API types; must use auto-generated types. |
+| `apps/mobile/`| Android Jetpack Compose, Retrofit, Room | Must maintain UI parity with web persona dashboards. |
 
-**R7 — Simulated data must be impossible to mistake for real.**
-`data_mode` is declared by the platform and validated: a request cannot label
-synthetic datasets as observed. The flag propagates into warnings, caveats, the
-API response and the UI banner. Do not add a path that bypasses it.
+---
 
-**R8 — Reproducibility is a requirement.**
-Same `spec_hash` + same seed + same engine version ⇒ identical numbers. Never
-seed from Python's `hash()`; it is salted per process. Use
-`contracts.identifiers.spec_hash` or `blake2b`.
+## 4. Verification & Testing Protocols for Agents
 
-## 4. Where code goes
+Before concluding your task, you must run and pass the full verification matrix:
 
-Ask: *is this a scientific decision, a plumbing decision, or a shared
-vocabulary decision?*
-
-| If you are... | It goes in | Owner |
-| --- | --- | --- |
-| Deciding which index, mask, composite or covariate to use | `engine/observation/`, `engine/features/` | Viraj |
-| Changing how donors are selected, weighted or excluded | `engine/matching/` | Viraj |
-| Changing an estimator, placebo or uncertainty method | `engine/causal/`, `engine/uncertainty/` | Viraj |
-| Changing what evidence is emitted or how the verdict is decided | `engine/assembler.py` | Viraj |
-| Building any UI | `apps/web/` | Viraj |
-| Adding an endpoint, schema or validation | `platform/api/` | Bhumi |
-| Fetching, authenticating, caching or pinning a dataset | `platform/datasets/` | Bhumi |
-| Persisting anything | `platform/store/`, `platform/storage/` | Bhumi |
-| Queueing, retrying or scheduling work | `platform/jobs/` | Bhumi |
-| Generating or narrating a report | `platform/reports/` | Bhumi |
-| Deploying, monitoring or hardening | `infrastructure/`, `.github/` | Bhumi |
-| Changing a shared type, error code or the contract | `contracts/` | **both** |
-
-**The heuristic that resolves most cases:** methodology belongs to the engine,
-plumbing belongs to the platform. *Which* covariates matter is methodology;
-*how* they are fetched, retried and cached is plumbing.
-
-## 5. What you must not change without agreement
-
-| Do not change | Why |
-| --- | --- |
-| Anything in `contracts/` | Both workstreams depend on it. Needs both owners on the PR and a version bump. |
-| `contracts/units.py` guards | R1 lives here |
-| `contracts/grounding.py` prohibited patterns | R2 lives here |
-| The verdict gate chain in `engine/assembler.py` | Removing a gate creates a weak-positive path that does not currently exist |
-| `tests/test_contract_boundary.py` | It is the boundary. Weakening it to make an import pass defeats the purpose. |
-| `known_reference` handling in `cases/` | Feeding a third-party figure into the engine destroys the independence the system exists to provide |
-| Any case's `status: analysed` | Only a reviewed real run may set it; a test enforces this |
-
-If a test in this list fails, the fix is almost always in your change, not in
-the test.
-
-## 6. How to validate a change
-
+### 1. Python Backend Tests (Pytest)
 ```bash
-pip install -e "packages/groundtruth[api,genai,dev]"   # once
-ruff format packages tests && ruff check packages tests
-mypy
-pytest
+# Execute within the .venv environment
+.venv\Scripts\pytest
+# Ensure all tests pass, including AST contract boundary assertions:
+.venv\Scripts\pytest tests/test_contract_boundary.py
 ```
 
-All four must pass. CI runs them on Python 3.11, 3.12 and 3.13, plus a
-`scientific-integrity` job that asserts the claims the README makes.
+### 2. Frontend Vitest Tests (542 passing across 57 files)
+```bash
+cd apps/web
+npm test -- --run
+npm run check:api-types
+```
 
-Additional checks for specific work:
+### 3. Static Analysis & Formatting
+```bash
+ruff check packages tests --fix
+ruff format packages tests
+mypy
+```
 
-| If you changed... | Also run |
-| --- | --- |
-| An estimator | `pytest tests/test_causal.py tests/test_uncertainty.py` — the recovery test must still recover the known effect |
-| Grounding rules | `pytest tests/test_grounding.py` — including the hallucinating-narrator fallback |
-| Anything in `contracts/` | `pytest tests/test_contract_boundary.py` and bump `CONTRACT_VERSION` |
-| Package structure | `pytest tests/test_contract_boundary.py` — the AST import checks |
-| A case definition | `groundtruth cases && groundtruth show <case>` |
-| The pipeline end to end | `groundtruth verify kariba-redd --synthetic` |
-| An API response model, request model or route | `make api-types` and commit the two generated files in `apps/web/src/lib/generated/` |
+---
 
-## 7. Conventions
+## 5. Visual Persona Reference
 
-**Python.** 3.11+ floor. `from __future__ import annotations` everywhere. Full
-type annotations on public functions; `mypy` runs with `disallow_untyped_defs`.
-Pydantic v2 for anything crossing a boundary; frozen models for value objects.
-Line length 100. Google-style docstrings that say *why*, not *what* — the code
-already says what.
+When modifying frontend components, ensure visual fidelity matches light mode design specifications across all four persona dashboards:
 
-**Errors.** Specific and typed, from `contracts/errors.py`. Never swallow an
-exception into a weaker claim. Domain failures inside the engine become a typed
-`AnalysisResult`, not a raise; programming errors still raise.
+| Web Auditor View | Mobile Auditor View |
+| :---: | :---: |
+| ![Web Auditor Dashboard](docs/product/screens/auditor-dashboard.png) | ![Compose Auditor Dashboard](docs/product/screens/compose-auditor-dashboard.png) |
 
-**Naming.** Evidence ids are lowercase dotted slugs (`effect.point_estimate`).
-Dataset ids are lowercase kebab (`sentinel2-l2a`). Case ids are lowercase kebab
-(`kariba-redd`).
+---
 
-**TypeScript.** Types come from the generated API client, never hand-written
-against a Python implementation detail.
-
-**Commits.** Conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`,
-`test:`, `build:`, `ci:`, `chore:`). Explain *why* in the body, especially for
-estimator or grounding changes.
-
-**Comments.** Match the density of the surrounding file. Explain reasoning and
-non-obvious constraints; do not narrate the code.
-
-## 8. Things that look like bugs but are not
-
-Before "fixing" one of these, read the linked doc.
-
-| Behaviour | Why it is correct |
-| --- | --- |
-| Kariba returns `INCONCLUSIVE` | An NDVI effect and a tCO2e claim are not commensurable. Closing the gap needs a biomass layer. `docs/science/causal-inference.md` |
-| `fit.weights_identified` is `False` | More donors than pre-periods means weights are not unique, though the counterfactual path is. This is reported, not hidden. |
-| Placebo p-value never reaches 0 | Add-one correction. With *J* donors the floor is `1/(J+1)`. |
-| `earth_engine_access` raises instead of returning fixtures | A silent fallback would let simulated numbers be served under a real-data label. R7. |
-| Mikoko Pamoja is expected to be inconclusive | ~117 ha is below what a 30 m annual composite resolves. It is a negative control on the method. |
-| The engine returns `REFUSED` rather than raising | A domain failure is information to persist and show, not an exception to stringify at a job boundary. |
-| DiD disagrees with synthetic control | Usually means parallel trends fails. Both are reported; the disagreement is the finding. |
-
-## 9. Status discipline
-
-The repository is explicit about what exists. Keep it that way.
-
-- **Implemented** — works, tested, in CI.
-- **Planned** — designed, has an issue, not built.
-- **Future** — an extension point exists; no commitment.
-
-**No analysis of a real project has been run.** Everything the pipeline
-currently produces comes from a simulated fixture. Do not write documentation,
-UI copy or commit messages that imply otherwise. If you add a capability,
-update the status tables in `README.md`, `ARCHITECTURE.md` and
-`docs/product/capability-matrix.md` in the same change.
-
-## 10. When you are unsure
-
-1. Check `docs/decisions/` — the ADR may already have decided it.
-2. Check `GLOSSARY.md` — the term may mean something specific here.
-3. Prefer the option that makes a wrong answer *impossible* over the one that
-   makes it *unlikely*. Most of this codebase is built that way on purpose.
-4. If it touches `contracts/`, stop and ask both owners.
+> GroundTruth 2.0 Agent Instructions · *PCCOE International Grand Challenge 2026*

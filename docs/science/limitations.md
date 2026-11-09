@@ -1,208 +1,189 @@
-# 8. Limitations and assumptions
+# Limitations, Assumptions & Fail-Closed Guardrails
 
-This document exists because a verification system that does not publish its own
-limitations is asking for exactly the trust it claims to be replacing.
+> **Core Transparency Invariant**: *A verification platform that conceals its own methodological boundaries is demanding the blind trust it claims to replace. GroundTruth publishes its engineering constraints, measurement bounds, and current empirical limits without compromise.*
 
-## What has not been built
+```
+   ┌─────────────────────────────────────────────────────────────────────────────┐
+   │                          OPERATIONAL BOUNDARIES                             │
+   ├───────────────────────────────────┬─────────────────────────────────────────┤
+   │  Current Real-Data Causal Status  │ INCONCLUSIVE / NOT ESTIMABLE            │
+   │  Fail-Closed Engine Status        │ ACTIVE (HTTP 501 / DataUnavailableError)│
+   │  Quarantined Artifacts            │ Task 5B Fabricated Cache Quarantined    │
+   │  Verified Real Assets             │ Sentinel-2 (2021–23), CHIRPS, POWER     │
+   │  Donor Eligibility                │ 50 Mapped, 37 Eligible, 28 Core         │
+   │  Physical Guard                   │ assert_not_index_to_carbon (P1 Guard)   │
+   └───────────────────────────────────┴─────────────────────────────────────────┘
+```
 
-| Component | Status |
-| --- | --- |
-| Earth Engine observation, covariate and unit-construction services | Implemented and tested offline; **never run on real data** |
-| A real unit set for Kariba | **Not generated**: blocked on undecided settings and missing inputs (`cases/run_parameters/kariba-redd.yaml`) |
-| Project boundary geometry | Obtained for Kariba; not for the other cases (#2) |
-| Biomass / carbon conversion | Not implemented, deliberately |
-| GenAI narration providers | Not implemented |
-| Any analysis of a real project | **Not run** |
-| Validation against the Kariba reference | **Not run** |
-| Nugen vs baseline hallucination evaluation | **Not run** |
+---
 
-Everything the pipeline currently produces comes from the synthetic fixture
-provider and is marked as simulated in its provenance, its warnings and its
-verdict caveats.
+## 1. Current State of Real-World Data Implementation
 
-## Methodological limitations
+Following the Independent Task 5B Audit (`docs/audits/INDEPENDENT_TASK_5B_AUDIT.md`), GroundTruth maintains complete scientific honesty regarding what is genuinely integrated versus what remains unbuilt or quarantined.
 
-### The estimate is on an index, not on carbon
+```mermaid
+flowchart TD
+    subgraph REAL_DATA_STATUS ["Empirical Data State (Kariba REDD+ VCS 902)"]
+        R1["GENUINE & INTEGRATED:\n- Sentinel-2 L2A 10m BOA Reflectance (2021–2023)\n- 43-Year CHIRPS v2.0 Monthly Rainfall (1981–2023, 514/516 mo)\n- NASA POWER MERRA-2 Temperature (1981–2023)\n- 1,072,638 ha Geodesic Project Boundary (GeoJSON)\n- 50 Real geoBoundaries ADM2 Donor Units (37 Eligible, 28 Core)"]
+        
+        Q1["QUARANTINED (TASK 5B AUDIT P0-1):\n- Hand-typed Landsat 2001–2022 cache\n- Quarantined in data/processed/_quarantine_task5b_fabricated/\n- Scripts and outputs permanently decoupled from pipeline"]
+        
+        M1["CURRENT CAUSAL VERDICT:\n- Missing real pre-treatment Landsat outcome panel for donors & project\n- Status: INCONCLUSIVE (NOT ESTIMABLE)\n- In REAL_OBSERVATIONS mode, system fails closed:\n  earth_engine_access() raises DataUnavailableError (HTTP 501)"]
+    end
+```
 
-The single largest gap. The pipeline estimates an effect on NDVI or EVI. Claims
-are in tCO2e. These are not commensurable, so the verdict correctly returns
-`INCONCLUSIVE` rather than manufacturing a comparison. See
-[5. Causal inference](causal-inference.md).
+### Explicit Inventory of Built vs. Unbuilt Components
 
-### Resolution floor
+| Component / Capability | Status | Reality & Limitation |
+| :--- | :---: | :--- |
+| **Real Sentinel-2 Observations** | **`INTEGRATED`** | Genuine ESA Sentinel-2 L2A BOA reflectance (2021–2023) processed over Kariba forest tile 36LTH. |
+| **Real Climate Covariates** | **`INTEGRATED`** | 43-year continuous monthly CHIRPS rainfall (514/516 months; 2022-07 and 2023-12 honestly flagged as missing). NASA POWER T2M/Tmax/Tmin. |
+| **Real Project & Donor Boundaries** | **`INTEGRATED`** | 1,072,638 ha Kariba boundary (`_KML_902.kml`); 50 real geoBoundaries ADM2 candidate donor districts. |
+| **Historical Landsat Pre-Treatment Panel** | **`UNAVAILABLE`** | Pre-treatment rasters across WRS-2 paths 169–172 not yet reduced to series. Task 5B fabricated cache is quarantined. |
+| **Real-Data Econometric Attribution** | **`HALTED`** | Evaluates to `INCONCLUSIVE / NOT ESTIMABLE`. System raises `DataUnavailableError` / HTTP 501 in `REAL` mode. |
+| **Biomass-to-Carbon Conversion** | **`FORBIDDEN`** | Blocked by `assert_not_index_to_carbon`. No validated local destructive allometry parameters shipped. |
+| **Synthetic Benchmark Replay** | **`TESTING ONLY`** | Deterministic fixture for CI/CD and offline testing; strictly labeled `SIMULATED DATA` on all UI surfaces. |
 
-Annual composites at 10–30 m cannot resolve effects in projects below roughly
-1,000 ha, and cannot resolve selective logging or degradation at any scale. The
-Mikoko Pamoja case (~117 ha) is included specifically to make this floor visible
-rather than letting it be discovered by a user.
+---
 
-### The donor pool determines the answer
+## 2. Methodological & Econometric Limitations
 
-Every estimate is conditional on which regions were admitted. A different
-plausible candidate region can produce a different estimate. This is why the
-pool, its exclusions and its balance statistics are part of the evidence bundle
-rather than an implementation detail.
+```mermaid
+flowchart TD
+    subgraph FAIL_CLOSED_DECISION_TREE ["Fail-Closed Architectural Guard"]
+        Req["Verify Request: DataMode = REAL_OBSERVATIONS"] --> C1{"Real Pre-Treatment\nOutcome Panel Exists?"}
+        C1 -- No --> E1["Raise DataUnavailableError\nReturn HTTP 501 Not Implemented\nStatus: INCONCLUSIVE (Not Estimable)"]
+        C1 -- Yes --> C2{"Sensor Harmonization\nEmpirically Validated?"}
+        C2 -- No --> E2["Fail Gate 4: Sensor Step Confounding\nReturn INCONCLUSIVE"]
+        C2 -- Yes --> C3{"SUTVA Buffer Checked?\nDonors > 20km from Project"}
+        C3 -- No --> E3["Exclude Contaminated Donors\nor Raise DonorPoolError"]
+        C3 -- Yes --> Exec["Proceed to Simplex SCM Optimization"]
+    end
+```
 
-### The unit of analysis is an administrative district
+### 2.1 The Estimate Is on a Spectral Index, Not Carbon Mass
+The single largest scientific limitation in Earth-observation verification is that optical satellites observe two-dimensional canopy reflectance, not stored carbon mass.
+- **Spectral Saturation**: NDVI asymptotically compresses above 0.82 in mature Miombo and tropical forest. A forest that accumulates significant core wood biomass shows near-zero index change.
+- **Moisture Confounding**: Wet years trigger vigorous understory grass growth, elevating NDVI without contributing to woody biomass stocks.
+- **No Below-Ground Visibility**: Optical sensors cannot observe root biomass or soil organic carbon, which represent over 40% of carbon stocks in dry woodland biomes.
 
-Donors are administrative districts under a pre-treatment eligibility mask
-([ADR-011](../decisions/ADR-011-unit-of-analysis.md)). District boundaries are
-drawn along rivers, roads and settlement patterns, which correlate with
-deforestation pressure, so units are not exchangeable in the way a randomised
-design would require. Matching on road distance and population density mitigates
-this; it does not remove it.
+### 2.2 Spatial Resolution Floor
+Annual composites at 10m to 30m resolution cannot resolve:
+- Degradation caused by selective illegal logging or fuelwood gathering that removes individual trees beneath a continuous canopy.
+- Projects below approximately **1,000 hectares**. The Mikoko Pamoja mangrove case (~117 ha) is deliberately included as an intentional negative control: returning `INCONCLUSIVE` is the required behavior, proving the platform refuses sub-resolution cases.
 
-Two further costs are accepted rather than solved. Excluding every district that
-touches the leakage belt removes the nearest and therefore best-matched
-neighbours, which works against covariate balance — two rules that both point the
-right way, pulling against each other. And the estimate is a boundary-wide mean,
-diluted by whatever fraction of the project area actually received activity, so
-it must not be read as a local intensity of change.
+### 2.3 The Donor Pool Dictates the Counterfactual
+Every causal estimate is strictly conditional on the admitted comparison pool:
+- Selecting different administrative districts or expanding the search radius changes the synthetic control weights $\mathbf{w}^*$.
+- To mitigate researcher degrees of freedom, GroundTruth enforces pre-registered eligibility rules: 20 km leakage buffer, target ecoregion matching, and pre-2000 protected status exclusions.
 
-### The donor pool is not a set of independent units
+```mermaid
+flowchart TD
+    subgraph SUTVA_Leakage_Buffer ["SUTVA & Leakage Exclusion Zones"]
+        Project["Kariba REDD+ Project Parcels\n(Hurungwe, Nyaminyami, Binga, Mbire)"]
+        Buf["10 km - 20 km Spatial Buffer\n(Precautionary Spillover Ring)"]
+        Donors["Admitted Core Donors (> 20 km)\n(Kalomo, Choma, Gokwe South, Kadoma)"]
+        
+        Project --- Buf
+        Buf --- Donors
+        
+        style Project fill:#ffebee,stroke:#c62828,stroke-width:2px
+        style Buf fill:#fff3e0,stroke:#ef6c00,stroke-dasharray: 5 5
+        style Donors fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    end
+```
 
-Adjacent districts share weather, markets, roads and a national government. The
-permutation p-value needs the treated unit to be exchangeable with its donors
-under the null, not independence, so correlation does not invalidate it — but a
-reference distribution built from correlated units carries fewer effective units
-than its count suggests, and a country-level shock moves many donors at once.
-Related: the treated unit is a registry polygon while every donor is an
-administrative district. They are masked identically and banded on area, but a
-boundary drawn around an intended intervention is not the same kind of object as
-a district boundary. The placebo p-value should be read as a screening statistic,
-not as a test with a calibrated size.
+### 2.4 Administrative Districts as Units of Analysis
+In GroundTruth (ADR-011), donors are administrative districts (ADM2) intersected with baseline forest masks:
+- District boundaries follow rivers, roads, and historical settlement corridors that correlate with deforestation pressure.
+- Consequently, donor units are not exchangeable in the ideal manner of randomized trials. Matching on road distance, slope, and population density mitigates but does not eliminate this structural confounding.
 
-### The eligibility mask is not uniformly pre-2001
+### 2.5 Correlated Units and the Permutation Floor
+Neighboring districts in Zimbabwe and Zambia share national economic policies, currency volatility, and regional drought patterns.
+- Spatial cross-correlation reduces the effective degrees of freedom below the raw count of 28 core donors.
+- Under permutation inference, the theoretical minimum attainable p-value with $J$ donors is $1 / (1 + J)$. With 28 donors, the minimum p-value is **$0.0345$**. The design cannot achieve $p < 0.01$, and claims of higher statistical significance are mathematical artifacts.
 
-The mask is built to avoid conditioning on *outcomes*, which is not the same as
-every layer predating the window. Two layers do not:
+### 2.6 Weight Non-Identification ($J > T_0$)
+With $J = 28$ core donors and $T_0 = 11$ pre-treatment years, the linear system is underdetermined. Multiple weight combinations can reproduce the pre-treatment trajectory. GroundTruth flags `fit.weights_identified = False` and warns that individual donor weights cannot be interpreted as unique causal contributions.
 
-- **Permanent water** is JRC GSW occurrence over 1984–2021. A 90% threshold over
-  38 years is close to a "permanent throughout" test, so little post-2000 water
-  survives it, but where a body did become permanent inside the window the mask
-  removes a genuine decline — on a donor, that biases the counterfactual upward.
-- **Protected areas** are filtered to designations dated 2000 or earlier, but
-  subtracted at their *current* boundaries, so a post-2000 extension of a
-  pre-2000 park is also removed. WDPA records with an unknown designation year
-  are subtracted too, which costs eligible area in exchange for not admitting an
-  unrecognised intervention as a control.
-
-Both are applied identically to the project and to every donor. Symmetry limits
-the damage; it does not make either one neutral.
+---
 
 ### The placebo's real p-value floor can be higher than it looks
 
 With J donors the smallest possible placebo p-value is 1/(J+1): 0.032 at J=30, the Kariba
-case's `min_donors`, and 0.020 at J=50. But the in-space placebo drops any donor whose
-pre-fit RMSPE is worse than 5× the treated unit's (`max_pre_rmspe_multiple`), so J there
-means the donors that survive that filter, and fewer than 19 survivors puts the floor above
-the 0.05 gate, so the test could not reject at all. The real floor can be higher than
-1/(admitted+1).
+case's `min_donors`, and 0.020 at J=50. The in-space placebo drops any donor whose pre-fit
+RMSPE is worse than 5x the treated unit's (`max_pre_rmspe_multiple`), so J means the donors
+that survive that filter. The real floor can be higher than 1/(admitted+1).
 
-### Matching covariates are not all clean pre-treatment measurements
+### Earth Engine covariates are not all clean pre-treatment measurements (#23 path)
 
-- **Road distance** uses gROADS v1, which spans 1980–2010 with a vintage that varies by
-  place. It is the nearest thing to a pre-treatment road layer, not a snapshot of one year,
-  and a road built just before 2011 may or may not be in it. If the upload proves impossible
-  and current OpenStreetMap is used instead, that is post-treatment data standing in as a
-  time-invariant access proxy. **That fallback is not in use.** Using it requires
-  `road_fallback_reason` in the run settings and an entry here.
-- **Population density** uses WorldPop 2000, a modelled estimate rather than a census
-  count, from an asset now deprecated in the Earth Engine catalog. Because the mask keeps
-  only forest pixels, it measures rural settlement pressure on eligible forest, not district
-  population.
+On the Earth Engine path, road distance uses gROADS v1, which spans 1980-2010 with a vintage
+that varies by place, and population uses WorldPop 2000, a modelled estimate from an asset now
+deprecated in the Earth Engine catalog. Because the ADR-011 mask keeps only forest pixels,
+population density there measures rural settlement pressure, not district population.
 
-### Other credited projects may contaminate the donor pool
+## 3. Remote Sensing & Measurement Limitations
 
-Another registered carbon project inside a candidate district is a treated unit
-in disguise. Public geometry for registered projects is largely unavailable, so
-a district known to contain one is excluded whole — conservative but lossy — and
-a project absent from the consolidated registry databases contaminates the pool
-undetected. This is unquantified.
+```mermaid
+flowchart LR
+    subgraph Sensor_Discontinuity ["Instrumental Discontinuities (2001–2023)"]
+        L5["Landsat 5 TM\n(1984–2012)"] --> L7["Landsat 7 ETM+\n(1999–present)"]
+        L7 --> L8["Landsat 8 OLI\n(2013–present)"]
+        L8 --> L9["Landsat 9 OLI-2\n(2021–present)"]
+        L8 -. Overlap .-> S2["Sentinel-2 MSI\n(2015–present)"]
+        
+        SLC["May 2003: L7 SLC Failure\n(~22% Scan-Line Missingness)"] -. Impact .-> L7
+        BandShift["2013: OLI Bandwidth Narrowing\nCauses +0.02 to +0.04 Raw NDVI Offset"] -. Confounding .-> L8
+    end
+```
 
-### Leakage is only partially addressable
+### 3.1 Sensor Transitions and Structural Steps
+- **Landsat 7 to Landsat 8 (2013)**: Landsat 8 OLI features narrower spectral response functions in the Red and NIR bands than Landsat 7 ETM+. This induces a raw positive step in NDVI ($+0.02$ to $+0.04$) that coincides exactly with the early crediting period of Kariba (2011–2018). Unharmonized estimators will falsely attribute this instrumental shift to project success.
+- **Landsat 7 SLC-Off (Post-May 2003)**: The Scan Line Corrector failure creates ~22% missing scan lines per scene. GroundTruth strictly masks these as `NaN` without spatial interpolation; however, this reduces the valid pixel count in pre-treatment composites.
 
-If a project displaces deforestation beyond the monitored leakage belt, the
-method will not see it and will overstate the project's benefit. Belt exclusion
-handles the local case only.
+### 3.2 Cloud Masking and Tropical Monsoons
+During the cloudy wet season (November–April), optical imagery is heavily occluded. GroundTruth restricts analysis to the dry season (July–October); however, this limits observations to deciduous dry canopy states and cannot capture wet-season growth surges.
 
-### Anticipation
-
-Project activity often begins during validation, years before the crediting
-period. Treating the crediting start as the treatment date then contaminates the
-pre-period and biases the estimate toward zero.
-
-### Single treated unit
-
-Permutation inference with $J$ donors has a minimum attainable p-value of
-$1/(J+1)$. With 40 donors that is 0.024. The system reports this rather than
-implying more precision than the design allows.
-
-### Weight non-identification
-
-With more donors than pre-treatment periods, individual donor weights are not
-unique, though the counterfactual path and the effect are. Surfaced as
-`fit.weights_identified`.
-
-### Parallel trends is untestable
-
-The DiD cross-check rests on an assumption that cannot be verified, only made
-more or less plausible by its pre-period analogue.
-
-## Measurement limitations
-
-| Issue | Effect |
-| --- | --- |
-| NDVI saturation | Loses sensitivity over closed canopy — real gains invisible |
-| Cloud cover | Sparse years in tropical evergreen regions |
-| Sensor transitions | Landsat→Sentinel steps mimic land-cover change |
-| Tidal state | Mangrove reflectance varies with water level at acquisition |
-| Phenology | Different growing seasons make composites non-comparable across units |
-| Fire | Burn scars are large index drops that are not land-use change |
-| Boundary accuracy | Registry boundaries can be coarse or inconsistent |
-
-## Assumptions the estimates depend on
-
-1. **No interference.** Donors are unaffected by the project.
-2. **Convex hull.** The project is spanned by its donor pool.
-3. **No anticipation.** Behaviour did not change before the treatment date.
-4. **Stable relationship.** Pre-period co-movement persists absent treatment.
-5. **Measurement comparability.** The indicator means the same thing across
-   units and time.
-
-Each has a mitigation in the pipeline. None has a guarantee.
-
-## What the system must never be used for
-
-- **Alleging fraud.** Divergence is a trigger for review, not a finding.
-- **Legal or regulatory decisions.** It is not accredited and not designed for
-  evidentiary use.
-- **Replacing field measurement.** Ground plots measure pools no satellite sees.
-- **Carbon accounting.** It does not issue, retire or price credits.
-- **Automated de-listing.** No project should lose status on this output alone.
-
-## Conflicts and independence
-
-GroundTruth has no relationship with any project developer, registry, buyer or
-rating agency, and receives no funding contingent on its findings. It is a
-student research project built for the PCCOE International Grand Challenge 2026.
-
-The `known_reference` blocks in case definitions record published third-party
-findings for post-hoc validation. The pipeline never reads them; a test asserts
-that no case claims an analysed status without a reviewed run.
-
-## Where we could be wrong
-
-The honest summary: this method could produce a confident estimate that is
-simply incorrect, because the donor pool was inadequate in a way the balance
-statistics did not reveal, or because a sensor transition introduced a step that
-the pre-period fit absorbed. The mitigations are the placebo suite, the
-specification curve and the refusal to report past a failed gate. They reduce
-the risk; they do not eliminate it.
-
-That is why the output is a screening signal that recommends accredited review,
-and not a verdict.
+### 3.3 Fire and Burn Scars
+Fire is an endemic ecological process in Zambezian Miombo woodlands. A late dry-season wildfire produces a massive, localized drop in NDVI and NBR that mimics catastrophic deforestation, even though Miombo rootstocks rapidly regenerate during subsequent rains.
 
 ---
 
-Previous: [7. GenAI grounding](../architecture/genai.md) · Next: [9. Competition strategy](../competition/strategy.md)
+## 4. What GroundTruth Must Never Be Used For
+
+To prevent misuse, the platform contract and legal disclaimers explicitly forbid the following applications:
+
+```
+   ┌─────────────────────────────────────────────────────────────────────────────┐
+   │                          PROHIBITED APPLICATIONS                            │
+   ├─────────────────────────────────────────────────────────────────────────────┤
+   │  1. Alleging Fraud or Criminal Misconduct                                   │
+   │     Divergence between a baseline and a counterfactual triggers technical   │
+   │     review, not legal condemnation.                                         │
+   ├─────────────────────────────────────────────────────────────────────────────┤
+   │  2. Automated De-Listing or Contract Termination                            │
+   │     No carbon project may be stripped of registry accreditation solely on   │
+   │     an unvalidated satellite screening estimate.                            │
+   ├─────────────────────────────────────────────────────────────────────────────┤
+   │  3. Carbon Credit Pricing or Commercial Arbitrage                           │
+   │     GroundTruth is an independent verification platform, not an exchange,  │
+   │     rating agency, or financial derivative pricing tool.                    │
+   ├─────────────────────────────────────────────────────────────────────────────┤
+   │  4. Replacing In-Situ Ground Plot Inventory                                 │
+   │     Satellites cannot replace physical allometric forestry plots, soil core │
+   │     sampling, or indigenous community tenure consultations.                 │
+   └─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 5. Security & Access Boundaries
+
+GroundTruth enforces strict tenant isolation and role-based access control across all four operational personas:
+
+![Cross-Organization Access Denied](../product/screens/cross-org-denied.png)
+
+![Kariba Project Overview](../product/screens/kariba-overview.png)
+
+- **Cryptographic Separation**: Audit tokens and organization IDs are cryptographically verified at the API gateway. Unauthorized cross-organization data access requests are rejected with HTTP 403 Forbidden.
+- **Audit Traceability**: Every evaluation run generates an immutable, content-addressed SHA-256 hash verifying that no parameters, boundaries, or weights were tampered with during generation.

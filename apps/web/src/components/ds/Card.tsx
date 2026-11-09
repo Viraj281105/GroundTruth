@@ -34,3 +34,23 @@ export function EmptyState({ title, body, action }: { title: string; body?: Reac
 export function Skeleton({ width = '100%', height = '1rem', radius }: { width?: string; height?: string; radius?: string }) {
   return <span className={styles.skeleton} style={{ width, height, borderRadius: radius }} aria-hidden="true" />;
 }
+
+type DivProps = React.HTMLAttributes<HTMLDivElement>;
+const join = (a: string, b?: string) => (b ? `${a} ${b}` : a);
+
+/** Compound parts for cards that need a header/content split (use with `<Card padded={false}>`). */
+export function CardHeader({ className, ...rest }: DivProps) {
+  return <div className={join(styles.header, className)} {...rest} />;
+}
+export function CardTitle({ className, ...rest }: React.HTMLAttributes<HTMLHeadingElement>) {
+  return <h3 className={join(styles.title, className)} {...rest} />;
+}
+export function CardDescription({ className, ...rest }: React.HTMLAttributes<HTMLParagraphElement>) {
+  return <p className={join(styles.description, className)} {...rest} />;
+}
+export function CardContent({ className, ...rest }: DivProps) {
+  return <div className={join(styles.content, className)} {...rest} />;
+}
+export function CardFooter({ className, ...rest }: DivProps) {
+  return <div className={join(styles.footer, className)} {...rest} />;
+}

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import pathlib
 import re
+import sys
 import threading
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -20,6 +21,9 @@ import pytest
 import sqlalchemy as sa
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "tenancy"))
+from world import ORIGIN, build_world, configure_auth
 
 from groundtruth.contracts.errors import DataUnavailableError
 from groundtruth.contracts.identifiers import new_run_id
@@ -158,13 +162,35 @@ def queue(sessions, clock, store) -> SpyQueue:
 
 
 @pytest.fixture
-def make_client(store):
-    """A client whose job service runs on the given queue."""
+def signed_in(sessions, monkeypatch):
+    """The Reference org's owner, signed in on this test's database.
+
+    Every job route is project-scoped now, so the routes under test are driven by the user who
+    owns the case's project. Call it after ``get_store`` is overridden (sign-in goes through
+    the app). Runs the tests create straight through the queue are filed under their case's
+    project before each request, as the seed's backfill would on a seeded database.
+    """
+    configure_auth(monkeypatch)
+    cache: list[TestClient] = []
+
+    def get() -> TestClient:
+        if not cache:
+            root = TestClient(app, base_url=ORIGIN)
+            world = build_world(root, sessions, wire_jobs=False, backfill=True)
+            cache.append(world.client("ref"))
+        return cache[0]
+
+    return get
+
+
+@pytest.fixture
+def make_client(store, signed_in):
+    """A signed-in client whose job service runs on the given queue."""
 
     def make(queue: JobQueue) -> TestClient:
         app.dependency_overrides[get_store] = lambda: store
         app.dependency_overrides[get_jobs] = lambda: SqlJobService(store, queue)
-        return TestClient(app)
+        return signed_in()
 
     return make
 
@@ -250,7 +276,7 @@ class TestSubmit:
                 expected.spec_hash, 20260101, "simulated",
             )  # fmt: skip
 
-    def test_the_case_is_stored_first_when_it_was_not(self, sessions, clock):
+    def test_the_case_is_stored_first_when_it_was_not(self, sessions, clock, signed_in):
         bare = SqlEvidenceStore(sessions, clock=clock)  # no upsert_case
         queue = JobQueue(sessions, clock=clock)
         app.dependency_overrides[get_store] = lambda: bare
@@ -258,7 +284,7 @@ class TestSubmit:
         with sessions() as session:
             assert session.get(CaseRow, "kariba-redd") is None
 
-        response = self._submit(TestClient(app))
+        response = self._submit(signed_in())
 
         assert response.status_code == 202
         with sessions() as session:
@@ -854,11 +880,12 @@ class TestUnavailable:
         monkeypatch.setattr(database, "get_settings", lambda: SimpleNamespace(database_url=None))
         client = self._plain()
         assert client.get("/health").status_code == 200
-        assert client.get("/cases").status_code == 200
-        assert client.get("/cases/kariba-redd").status_code == 200
+        # Project-scoped now: with no session they answer 401 by themselves, never a 503.
+        assert client.get("/cases").status_code == 401
+        assert client.get("/cases/kariba-redd").status_code == 401
         assert client.get("/runs").status_code == 503  # unchanged from issue #35
 
-    def test_a_database_that_stops_answering_is_a_503(self):
+    def test_a_database_that_stops_answering_is_a_503(self, store, signed_in):
         class Dying:
             def _down(self):
                 raise sa.exc.OperationalError("SELECT", {}, Exception("connection reset"))
@@ -869,11 +896,12 @@ class TestUnavailable:
             def cancel(self, run_id):
                 self._down()
 
-            def submit(self, case, request):
+            def submit(self, case, request, **_):
                 self._down()
 
+        app.dependency_overrides[get_store] = lambda: store
+        client = signed_in()  # sign-in works; only the job service is down
         app.dependency_overrides[get_jobs] = lambda: Dying()
-        client = TestClient(app)
         for response in (
             client.get("/jobs/run_0000000000000000"),
             client.post("/jobs/run_0000000000000000/cancel"),

@@ -43,6 +43,9 @@ class JobStatus(BaseModel):
 
     run_id: str
     case_id: str
+    project_id: str | None = None
+    """The tenant project the run is filed under. Internal: authorization reads it, and the
+    HTTP API does not expose it. ``None`` for a legacy run, which nobody may read."""
     status: AnalysisStatus
     engine_status: str | None
     """``refused`` here with ``status == succeeded`` is a legitimate scientific outcome."""
@@ -88,10 +91,18 @@ class JobStatus(BaseModel):
 class JobControl(Protocol):
     """Submit, cancel and inspect jobs."""
 
-    def submit(self, case: CaseDefinition, request: AnalysisRequest) -> Submission:
+    def submit(
+        self,
+        case: CaseDefinition,
+        request: AnalysisRequest,
+        *,
+        requested_by: str | None = None,
+        project_id: str | None = None,
+    ) -> Submission:
         """Queue ``request`` for ``case``, or return the existing result or in-flight job.
 
         The case is stored first, because a run must belong to a stored case.
+        ``requested_by`` (a user id) and ``project_id`` are recorded on the run and job.
         """
         ...
 

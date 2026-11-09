@@ -24,10 +24,17 @@ class SqlJobService:
         self._store = store
         self._queue = queue
 
-    def submit(self, case: CaseDefinition, request: AnalysisRequest) -> Submission:
+    def submit(
+        self,
+        case: CaseDefinition,
+        request: AnalysisRequest,
+        *,
+        requested_by: str | None = None,
+        project_id: str | None = None,
+    ) -> Submission:
         """Store the case, then queue the request (or return its result or in-flight job)."""
         self._store.upsert_case(case)
-        return self._queue.submit(request)
+        return self._queue.submit(request, requested_by=requested_by, project_id=project_id)
 
     def cancel(self, run_id: str) -> AnalysisStatus:
         """Cancel a job; see :meth:`JobQueue.cancel`."""

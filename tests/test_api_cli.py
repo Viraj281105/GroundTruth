@@ -6,12 +6,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from groundtruth.cli import main
-from groundtruth.platform.api.app import app
 
 
 @pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
+def client(tenant_world) -> TestClient:
+    """The Reference org's owner: the routes under test are project-scoped now."""
+    return tenant_world.client("ref")
 
 
 class TestApi:
@@ -36,7 +36,7 @@ class TestApi:
 
     def test_observed_data_verification_is_refused_not_simulated(self, client):
         """The API must never serve simulated numbers under a real-data label."""
-        response = client.post("/cases/kariba-redd/verify", json={"synthetic": False})
+        response = client.post("/cases/mikoko-pamoja/verify", json={"synthetic": False})
         assert response.status_code == 501
         assert "not implemented" in response.json()["detail"]
 
@@ -81,7 +81,7 @@ class TestCli:
         assert "error:" in capsys.readouterr().err
 
     def test_verify_without_synthetic_refuses_to_run(self, capsys):
-        assert main(["verify", "kariba-redd"]) == 2
+        assert main(["verify", "mikoko-pamoja"]) == 2
         assert "not implemented yet" in capsys.readouterr().err
 
     def test_verify_synthetic_prints_a_simulated_data_banner(self, capsys):
@@ -109,7 +109,8 @@ class TestCli:
     def test_doctor_does_not_overstate_what_is_implemented(self, capsys):
         assert main(["doctor"]) == 0
         output = capsys.readouterr().out
-        assert "earth observation implemented" in output
-        assert "no - see docs/product/roadmap-detail.md M1" in output
+        assert "earth observation ingestion implemented" in output
+        assert "calibrated for benchmark cases" not in output
+        assert "NOT CALIBRATED" in output
         assert "no - deterministic renderer is used" in output
         assert "engine: biomass carbon conversion" in output

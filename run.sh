@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # GroundTruth one-shot runner.   ./run.sh [local|docker|test|setup]
-# local  (default): create venv, install deps, start API (:8000) + web (:3000)
+# local  (default): create venv, install deps, migrate the DB, start API (:8000) + worker + web (:3000)
 # docker          : docker compose up --build (API, worker, Postgres, web)
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -18,8 +18,12 @@ case "$MODE" in
     (cd apps/web && npm ci)
     [ "$MODE" = setup ] && { echo "Setup complete."; exit 0; }
     if [ "$MODE" = test ]; then "$BIN/python" -m pytest; exit $?; fi
+    # Migrate once, then run API and worker; without the worker a queued analysis never completes.
+    "$BIN/python" -m apps.worker.main --migrate --exit-when-idle
     "$BIN/python" -m uvicorn apps.api.main:app --port 8000 &
-    API=$!; trap 'kill $API 2>/dev/null' EXIT
+    API=$!
+    "$BIN/python" -m apps.worker.main &
+    WORKER=$!; trap 'kill $API $WORKER 2>/dev/null' EXIT
     cd apps/web && NEXT_PUBLIC_API_URL=http://localhost:8000 npx next dev -p 3000 ;;
   *) echo "usage: $0 [local|docker|test|setup]"; exit 1 ;;
 esac

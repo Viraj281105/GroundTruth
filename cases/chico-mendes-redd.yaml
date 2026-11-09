@@ -1,0 +1,32 @@
+case_id: chico-mendes-redd
+project:
+  name: Chico Mendes Extractive Reserve Avoided Deforestation
+  country: Brazil
+  ecosystem: southwestern Amazon tropical rainforest
+  standard: VCS
+  registry_id: VCS 1082
+  area_ha: 24000
+  crediting_period_start: '2010-01-01'
+  crediting_period_end: '2039-12-31'
+  claimed_credits_tco2e: 1800000
+  source_uri: https://registry.verra.org/app/projectDetail/VCS/1082
+  boundary_path: cases/boundaries/chico-mendes.geojson
+analysis_window:
+  pre_start: 2001
+  pre_end: 2009
+  post_start: 2010
+  post_end: 2022
+analysis:
+  indicator: ndvi
+  donor_search_region: Acre basin rubber tapper extractive reserves
+  donor_pool_size: 55
+  excluded_donor_ids: []
+  covariates:
+  - rainfall_mm
+  - elevation_m
+  - slope_deg
+  - road_distance_km
+  - population_density
+status: scaffolded
+notes: Traditional rubber-tapping communities protecting forest cover against pasture
+  encroachment.

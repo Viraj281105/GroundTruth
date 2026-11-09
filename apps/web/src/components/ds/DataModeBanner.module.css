@@ -1,0 +1,2 @@
+.banner { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); background: var(--sim-bg); color: var(--sim-text); border-bottom: 2px solid var(--sim-border); font-size: var(--text-sm); line-height: var(--leading-snug); background-image: repeating-linear-gradient(135deg, transparent 0 10px, rgb(162 60 134 / 0.12) 10px 20px); }
+.label { font-family: var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; font-size: var(--text-xs); white-space: nowrap; }

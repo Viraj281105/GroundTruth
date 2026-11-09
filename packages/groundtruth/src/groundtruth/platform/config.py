@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import functools
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -83,9 +83,11 @@ class Settings(BaseSettings):
     global_forest_watch_api_key: SecretStr | None = None
 
     # --- generative reporting layer ---------------------------------------
-    genai_provider: Literal["none", "nugen", "openai", "anthropic"] = "none"
+    genai_provider: Literal["none", "nugen", "openai", "anthropic", "gemini"] = "none"
     genai_model: str = "unset"
     genai_base_url: str | None = None
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-flash"
     nugen_api_key: SecretStr | None = None
     openai_api_key: SecretStr | None = None
     anthropic_api_key: SecretStr | None = None
@@ -195,12 +197,51 @@ class Settings(BaseSettings):
     @property
     def genai_configured(self) -> bool:
         """True if a generative provider is selected *and* has a key."""
-        keys = {
+        if self.genai_provider == "none":
+            return False
+        keys: dict[str, Any] = {
             "nugen": self.nugen_api_key,
             "openai": self.openai_api_key,
             "anthropic": self.anthropic_api_key,
+            "gemini": self.gemini_api_key,
         }
-        return self.genai_provider != "none" and keys.get(self.genai_provider) is not None
+        val = keys.get(self.genai_provider)
+        if val is None:
+            return False
+        if isinstance(val, str):
+            return bool(val.strip())
+        return True
+
+    @property
+    def real_eo_ingestion_implemented(self) -> bool:
+        """Honest capability flag: live satellite ingestion is disabled in the default runtime."""
+        return False
+
+    @property
+    def deployment_tenancy_mode(self) -> str:
+        """Honest tenancy mode: RBAC roles ('user', 'dev', 'admin') in single-tenant workspace."""
+        return "single-tenant"
+
+    def validate_security_posture(self) -> list[str]:
+        """Return a list of security and operational warnings for the current configuration."""
+        warnings: list[str] = []
+        if self.app_env == "production" and not self.auth_required:
+            warnings.append(
+                "AUTH_REQUIRED is false in production: mutating and analysis "
+                "endpoints are unauthenticated."
+            )
+        if self.app_env == "production" and not self.auth_cookie_secure:
+            warnings.append(
+                "AUTH_COOKIE_SECURE is false in production: session cookies will not require HTTPS."
+            )
+        if "*" in self.cors_origins:
+            warnings.append("CORS_ALLOWED_ORIGINS contains wildcard '*' which is insecure.")
+        if not self.earth_observation_configured:
+            warnings.append(
+                "Earth Observation credentials are not configured; runtime operates on "
+                "bundled SYNTHETIC fixtures."
+            )
+        return warnings
 
 
 @functools.lru_cache(maxsize=1)

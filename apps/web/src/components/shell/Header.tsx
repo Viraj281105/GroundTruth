@@ -12,9 +12,8 @@ import { t } from '../../lib/i18n';
 import styles from './Header.module.css';
 
 const NAV = [
-  { href: '/cases', key: 'nav.cases' },
-  { href: '/compare', key: 'nav.compare' },
-  { href: '/claims', key: 'nav.claims' },
+  { href: '/app', key: 'nav.workspace' },
+  { href: '/method', key: 'nav.method' },
 ] as const;
 
 function BrandMark() {

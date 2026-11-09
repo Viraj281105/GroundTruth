@@ -22,6 +22,29 @@ class Severity(StrEnum):
     LARGE = "large"
 
 
+class ClaimVerificationStatus(StrEnum):
+    """Verification outcome for a quantitative developer claim against an evidence bundle."""
+
+    SUPPORTED = "SUPPORTED"
+    PARTIALLY_SUPPORTED = "PARTIALLY_SUPPORTED"
+    CONTRADICTED = "CONTRADICTED"
+    NOT_VERIFIABLE = "NOT_VERIFIABLE"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+
+
+@dataclass(frozen=True)
+class ClaimVerificationRecord:
+    """Structured verification result linking a claim to bundle evidence."""
+
+    claim: Claim
+    status: ClaimVerificationStatus
+    evidence_id: str | None
+    observed_value: float | None
+    observed_unit: str | None
+    relative_difference: float | None
+    rationale: str
+
+
 @dataclass(frozen=True)
 class Discrepancy:
     """A difference between a documented figure and the analysis figure."""
@@ -86,3 +109,221 @@ def compare_claims(
             )
         )
     return out
+
+
+def _get_bundle_item(bundle: Any, item_id: str) -> Any | None:
+    if hasattr(bundle, "get") and callable(bundle.get):
+        item = bundle.get(item_id)
+        if item is not None:
+            return item
+    for item in getattr(bundle, "items", ()):
+        if getattr(item, "id", None) == item_id:
+            return item
+    return None
+
+
+def _is_robustness_inconclusive(bundle: Any) -> bool:
+    verdict = getattr(bundle, "verdict", None)
+    if verdict is None:
+        return False
+    label = getattr(verdict, "label", verdict)
+    label_val = getattr(label, "value", str(label)).lower()
+    if label_val != "inconclusive":
+        return False
+    rationale = (getattr(verdict, "rationale", "") or "").lower()
+    return not any(k in rationale for k in ("not calibrated", "commensurable", "no validated"))
+
+
+def _extract_area_evidence(bundle: Any) -> tuple[str, float, str] | None:
+    area_item = _get_bundle_item(bundle, "claim.project_area_ha")
+    if (
+        area_item is not None
+        and isinstance(area_item.value, (int, float))
+        and not isinstance(area_item.value, bool)
+    ):
+        return (
+            "claim.project_area_ha",
+            float(area_item.value),
+            getattr(area_item, "unit", "") or "ha",
+        )
+
+    for candidate_id in ("carbon.estimated_tco2e", "biomass.delta_agb_t_per_ha"):
+        item = _get_bundle_item(bundle, candidate_id)
+        if item is None:
+            continue
+        qualifiers = getattr(item, "qualifiers", None) or {}
+        area_val = qualifiers.get("area_ha")
+        if area_val is None:
+            prov = getattr(item, "provenance", None)
+            params = getattr(prov, "parameters", None) or {}
+            area_val = params.get("area_ha")
+        if isinstance(area_val, (int, float)) and not isinstance(area_val, bool):
+            return (candidate_id, float(area_val), "ha")
+
+    return None
+
+
+def verify_claims_against_bundle(claims: list[Claim], bundle: Any) -> list[ClaimVerificationRecord]:
+    """Verify extracted quantitative claims against an :class:`EvidenceBundle`."""
+    records: list[ClaimVerificationRecord] = []
+    for claim in claims:
+        if claim.kind in (ClaimKind.CREDITS_ISSUED, ClaimKind.BASELINE):
+            carbon_item = _get_bundle_item(bundle, "carbon.estimated_tco2e")
+            if (
+                carbon_item is None
+                or isinstance(carbon_item.value, bool)
+                or not isinstance(carbon_item.value, (int, float))
+            ):
+                if _is_robustness_inconclusive(bundle):
+                    status = ClaimVerificationStatus.INSUFFICIENT_EVIDENCE
+                    rationale = (
+                        "The screening verdict is inconclusive due to failed robustness gates, "
+                        "and no calibrated biomass model (`carbon.estimated_tco2e`) is available "
+                        "in the bundle; NDVI is not carbon and cannot verify tCO2e credit claims."
+                    )
+                else:
+                    status = ClaimVerificationStatus.NOT_VERIFIABLE
+                    rationale = (
+                        "NDVI is not carbon and no calibrated biomass model "
+                        "(`carbon.estimated_tco2e`) is available in the bundle to verify "
+                        "tCO2e credit claims."
+                    )
+                records.append(
+                    ClaimVerificationRecord(
+                        claim=claim,
+                        status=status,
+                        evidence_id=None,
+                        observed_value=None,
+                        observed_unit=None,
+                        relative_difference=None,
+                        rationale=rationale,
+                    )
+                )
+                continue
+
+            observed = float(carbon_item.value)
+            observed_unit = getattr(carbon_item, "unit", "") or "tCO2e"
+            scale = max(abs(claim.value), abs(observed))
+            rel = abs(claim.value - observed) / scale if scale else 0.0
+            if rel <= 0.10:
+                status = ClaimVerificationStatus.SUPPORTED
+                verdict_desc = "is supported by"
+            elif rel <= 0.30:
+                status = ClaimVerificationStatus.PARTIALLY_SUPPORTED
+                verdict_desc = "is partially supported by"
+            else:
+                status = ClaimVerificationStatus.CONTRADICTED
+                verdict_desc = "diverges from"
+
+            records.append(
+                ClaimVerificationRecord(
+                    claim=claim,
+                    status=status,
+                    evidence_id="carbon.estimated_tco2e",
+                    observed_value=observed,
+                    observed_unit=observed_unit,
+                    relative_difference=rel,
+                    rationale=(
+                        f"Claimed {claim.kind.value} ({claim.value:g} {claim.unit}) {verdict_desc} "
+                        f"the calibration-conditional carbon estimate "
+                        f"({observed:g} {observed_unit}; relative difference {rel:.1%})."
+                    ),
+                )
+            )
+
+        elif claim.kind is ClaimKind.AREA_HECTARES:
+            area_evidence = _extract_area_evidence(bundle)
+            if area_evidence is None:
+                records.append(
+                    ClaimVerificationRecord(
+                        claim=claim,
+                        status=ClaimVerificationStatus.INSUFFICIENT_EVIDENCE,
+                        evidence_id=None,
+                        observed_value=None,
+                        observed_unit=None,
+                        relative_difference=None,
+                        rationale=(
+                            "No project area evidence (`claim.project_area_ha` or `area_ha` "
+                            "qualifier on `carbon.estimated_tco2e`) is present in the bundle."
+                        ),
+                    )
+                )
+                continue
+
+            ev_id, observed, observed_unit = area_evidence
+            scale = max(abs(claim.value), abs(observed))
+            rel = abs(claim.value - observed) / scale if scale else 0.0
+            if rel <= 0.05:
+                status = ClaimVerificationStatus.SUPPORTED
+            elif rel <= 0.20:
+                status = ClaimVerificationStatus.PARTIALLY_SUPPORTED
+            else:
+                status = ClaimVerificationStatus.CONTRADICTED
+
+            records.append(
+                ClaimVerificationRecord(
+                    claim=claim,
+                    status=status,
+                    evidence_id=ev_id,
+                    observed_value=observed,
+                    observed_unit=observed_unit,
+                    relative_difference=rel,
+                    rationale=(
+                        f"Claimed area ({claim.value:g} {claim.unit}) compared against "
+                        f"`{ev_id}` ({observed:g} {observed_unit}; relative difference {rel:.1%})."
+                    ),
+                )
+            )
+
+        elif claim.kind is ClaimKind.REDUCTION_PERCENT:
+            pct_item = _get_bundle_item(bundle, "effect.reduction_percent") or _get_bundle_item(
+                bundle, "reduction_pct"
+            )
+            if (
+                pct_item is None
+                or isinstance(pct_item.value, bool)
+                or not isinstance(pct_item.value, (int, float))
+            ):
+                records.append(
+                    ClaimVerificationRecord(
+                        claim=claim,
+                        status=ClaimVerificationStatus.NOT_VERIFIABLE,
+                        evidence_id=None,
+                        observed_value=None,
+                        observed_unit=None,
+                        relative_difference=None,
+                        rationale=(
+                            "No commensurable percentage reduction evidence exists in the bundle; "
+                            "spectral index deltas cannot verify percentage emission reductions."
+                        ),
+                    )
+                )
+                continue
+
+            observed = float(pct_item.value)
+            observed_unit = getattr(pct_item, "unit", "") or "percent"
+            scale = max(abs(claim.value), abs(observed))
+            rel = abs(claim.value - observed) / scale if scale else 0.0
+            if rel <= 0.10:
+                status = ClaimVerificationStatus.SUPPORTED
+            elif rel <= 0.30:
+                status = ClaimVerificationStatus.PARTIALLY_SUPPORTED
+            else:
+                status = ClaimVerificationStatus.CONTRADICTED
+            records.append(
+                ClaimVerificationRecord(
+                    claim=claim,
+                    status=status,
+                    evidence_id=getattr(pct_item, "id", "effect.reduction_percent"),
+                    observed_value=observed,
+                    observed_unit=observed_unit,
+                    relative_difference=rel,
+                    rationale=(
+                        f"Claimed reduction ({claim.value:g} {claim.unit}) compared against "
+                        f"observed percentage change ({observed:g} {observed_unit}; "
+                        f"relative difference {rel:.1%})."
+                    ),
+                )
+            )
+
+    return records

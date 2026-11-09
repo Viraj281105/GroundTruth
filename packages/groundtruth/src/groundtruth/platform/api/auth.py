@@ -8,9 +8,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from groundtruth.platform.api.errors import ApiErrorBody
+from groundtruth.platform.api.orgs import org_view
+from groundtruth.platform.api.schemas import OrgView
+from groundtruth.platform.audit.service import audit_throttled, note_audit_failure, record_event
 from groundtruth.platform.auth import service
 from groundtruth.platform.auth.deps import (
     Role,
@@ -26,10 +30,12 @@ from groundtruth.platform.auth.ratelimit import login_limiter
 from groundtruth.platform.auth.sessions import (
     COOKIE_NAME,
     create_session,
+    hash_token,
     revoke_token,
 )
 from groundtruth.platform.config import get_settings
-from groundtruth.platform.store.models import UserRow
+from groundtruth.platform.store.models import SessionRow, UserRow
+from groundtruth.platform.tenancy.service import list_user_memberships, set_active_org
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -66,6 +72,8 @@ class MeResponse(BaseModel):
     auth_required: bool
     registration_open: bool
     user: UserView | None
+    organizations: list[OrgView] = Field(default_factory=list)
+    active_organization: OrgView | None = None
 
 
 def _set_cookie(response: Response, token: str) -> None:
@@ -95,6 +103,30 @@ def _clear_cookie(response: Response) -> None:
 def _client_ip(request: Request) -> str:
     # The direct peer only. X-Forwarded-For is client-controlled and is not trusted.
     return request.client.host if request.client else "unknown"
+
+
+def _audit_failed_login(sessions: sessionmaker[Session], request: Request, code: str) -> None:
+    """Record a rejected sign-in in its own transaction; never alters the response.
+
+    Throttled to one write per second per client ip so a lockout cannot flood the log.
+    """
+    if audit_throttled(f"ip:{_client_ip(request)}", f"auth.login_failed:{code}"):
+        return
+    try:
+        with sessions() as db:
+            record_event(
+                db,
+                action="auth.login_failed",
+                outcome="denied",
+                actor_user_id=None,
+                organization_id=None,
+                resource_type="session",
+                request=request,
+                details={"code": code},
+            )
+            db.commit()
+    except Exception:
+        note_audit_failure("auth.login_failed")
 
 
 def _current(sessions: sessionmaker[Session], request: Request) -> UserView:
@@ -135,6 +167,17 @@ def register(
                 days=get_settings().auth_session_days,
                 user_agent=request.headers.get("user-agent"),
             )
+        record_event(
+            db,
+            action="auth.register",
+            outcome="success",
+            actor_user_id=user.id,
+            organization_id=None,
+            resource_type="user",
+            resource_id=user.id,
+            request=request,
+            details={"by_admin": by_admin},
+        )
         db.commit()
         view = to_view(user)
     if token is not None:
@@ -154,9 +197,15 @@ def register(
 )
 def login(body: LoginRequest, request: Request, response: Response, sessions: Sessions) -> UserView:
     with sessions() as db:
-        user = service.authenticate(
-            db, body.email, body.password, client_ip=_client_ip(request), limiter=login_limiter
-        )
+        try:
+            user = service.authenticate(
+                db, body.email, body.password, client_ip=_client_ip(request), limiter=login_limiter
+            )
+        except HTTPException as exc:
+            detail = exc.detail
+            code = detail.get("code", "error") if isinstance(detail, dict) else "error"
+            _audit_failed_login(sessions, request, str(code))
+            raise
         old = session_token(request)
         if old:
             revoke_token(db, old)
@@ -165,6 +214,15 @@ def login(body: LoginRequest, request: Request, response: Response, sessions: Se
             user,
             days=get_settings().auth_session_days,
             user_agent=request.headers.get("user-agent"),
+        )
+        record_event(
+            db,
+            action="auth.login",
+            outcome="success",
+            actor_user_id=user.id,
+            organization_id=None,
+            resource_type="session",
+            request=request,
         )
         db.commit()
         view = to_view(user)
@@ -182,8 +240,19 @@ def logout(request: Request, sessions: Sessions) -> Response:
     """Revoke the session server-side and clear the cookie. Safe to repeat."""
     token = session_token(request)
     if token:
+        actor = lookup_user(sessions, token)
         with sessions() as db:
             revoke_token(db, token)
+            if actor is not None:
+                record_event(
+                    db,
+                    action="auth.logout",
+                    outcome="success",
+                    actor_user_id=actor.id,
+                    organization_id=None,
+                    resource_type="session",
+                    request=request,
+                )
             db.commit()
     response = Response(status_code=204)
     _clear_cookie(response)
@@ -202,10 +271,31 @@ def me(request: Request) -> MeResponse:
             raise
         # Auth is off and there is no database: report that, rather than an error.
         return MeResponse(auth_required=False, registration_open=False, user=None)
+    token = session_token(request)
+    user = lookup_user(sessions, token)
+    organizations: list[OrgView] = []
+    active: OrgView | None = None
+    if user is not None and token:
+        with sessions() as db:
+            pairs = list_user_memberships(db, user.id)
+            organizations = [org_view(o, m) for o, m in pairs]
+            row = db.execute(
+                select(SessionRow).where(SessionRow.token_hash == hash_token(token))
+            ).scalar_one_or_none()
+            if row is not None:
+                active_id = row.active_organization_id
+                if active_id is None and len(pairs) == 1:
+                    # Same rule as authz.get_access_context: one membership is the default.
+                    active_id = pairs[0][0].id
+                    set_active_org(db, hash_token(token), active_id)
+                    db.commit()
+                active = next((v for v in organizations if v.id == active_id), None)
     return MeResponse(
         auth_required=settings.auth_required,
         registration_open=settings.auth_allow_registration,
-        user=lookup_user(sessions, session_token(request)),
+        user=user,
+        organizations=organizations,
+        active_organization=active,
     )
 
 
@@ -224,6 +314,16 @@ def change_password(body: ChangePasswordRequest, request: Request, sessions: Ses
         assert user is not None
         service.change_password(
             db, user, body.current_password, body.new_password, keep_token=token
+        )
+        record_event(
+            db,
+            action="auth.password_change",
+            outcome="success",
+            actor_user_id=user.id,
+            organization_id=None,
+            resource_type="user",
+            resource_id=user.id,
+            request=request,
         )
         db.commit()
     return Response(status_code=204)

@@ -265,6 +265,8 @@ def run_analysis(
             "scenes in every pre-period) could not be applied to donor candidates."
         )
     try:
+        has_candidate_geoms = any(u.geometry is not None for u in candidates)
+        donor_geoms = {u.unit_id: u.geometry for u in candidates} if has_candidate_geoms else None
         pool = match_donors(
             request.case_id,
             project_covariates,
@@ -277,6 +279,14 @@ def run_analysis(
                 caliper_sd=request.donors.caliper_sd,
                 excluded_unit_ids=frozenset(request.donors.excluded_unit_ids),
                 min_pre_observations=request.donors.min_pre_observations,
+                donor_geometries=donor_geoms,
+                project_geometry=request.project.geometry,
+                spatial_buffer_km=(
+                    request.donors.leakage_belt_km
+                    if request.project.geometry is not None and has_candidate_geoms
+                    else None
+                ),
+                require_spatial_provenance=has_candidate_geoms,
             ),
             candidate_pre_observations=pre_coverage,
         )
@@ -507,6 +517,8 @@ def describe_engine() -> dict[str, Any]:
             "in_time_placebo": True,
             "leave_one_out": True,
             "specification_curve": True,
+            # The conversion code exists but no calibrated parameter set is shipped, so
+            # no carbon estimate can be produced without user-supplied calibration.
             "biomass_carbon_conversion": False,
             "cross_sensor_calibration": False,
         },

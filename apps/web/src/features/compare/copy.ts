@@ -26,7 +26,7 @@ export const COMPARE_COPY = {
   rows: {
     effect: 'Effect',
     uncertainty: 'Uncertainty',
-    donors: 'Donor pool size',
+    donors: 'Configured candidate pool (not admitted donors)',
     fit: 'Pre-period fit',
     placebo: 'Placebo p-value',
     verdict: 'Verdict',

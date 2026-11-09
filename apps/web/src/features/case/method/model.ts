@@ -58,7 +58,7 @@ export function designRows(d: CaseDetail): { label: string; value: string }[] {
     { label: 'Project period', value: d.post_period },
     { label: 'Project area', value: formatHectares(d.area_ha) },
     { label: 'Donor search region', value: d.donor_search_region },
-    { label: 'Donor pool size', value: String(d.donor_pool_size) },
+    { label: 'Configured candidate pool (not admitted donors)', value: String(d.donor_pool_size) },
   ];
   if (d.covariates.length > 0) rows.push({ label: 'Matching covariates', value: d.covariates.join(', ') });
   return rows;

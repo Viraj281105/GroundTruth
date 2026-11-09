@@ -1,113 +1,98 @@
-# Testing strategy
+# Testing Strategy & Verification Architecture
 
-**194 tests.** CI runs them on Python 3.11, 3.12 and 3.13, plus a separate
-scientific-integrity job.
+**Backend Suite**: 1,120+ automated Python tests (`pytest`, `hypothesis`, `mutmut`)  
+**Frontend Suite**: 542 automated TypeScript tests (`vitest`, React Testing Library, Playwright)  
+**Philosophy**: Defending against plausible scientific falsehoods, mathematical drift, and cross-boundary coupling.
+
+In environmental verification software, the most dangerous defect is not an uncaught exception or crash. The fatal failure mode is a **scientifically invalid result that appears mathematically plausible**—a figure that renders cleanly, passes visual inspection, and presents an ungrounded carbon additionality claim.
+
+```mermaid
+graph TD
+    subgraph TestingPyramid["GroundTruth 2.0 Verification Pyramid"]
+        E2E["End-to-End Visual Tests (Playwright)<br/>• 375px Phone & Desktop Viewports<br/>• Screenshot Diffing Regression Checks"]
+        FrontendUnit["Frontend Test Suite (542 Tests)<br/>• Design System ds/ Component Behavior<br/>• Multi-Tenant Isolation Guards<br/>• Non-Dismissible Simulated Banner Rules"]
+        Integration["Contract & Integration Tests<br/>• OpenAPI Snapshot Drift Protection<br/>• Complete Job Queue & Worker Lifecycles<br/>• Multi-Tenant RBAC Endpoint Scoping"]
+        Scientific["Scientific & Property Tests (Hypothesis)<br/>• Injected Effect Recovery on Factor Panels<br/>• False-Positive Rejection on Null Panels<br/>• Strict NDVI-to-Carbon IncompatibleUnits Guard"]
+        UnitBoundary["Contract Boundary AST Tests<br/>• Python AST Parsing Across All Modules<br/>• Absolute Unidirectional Seam Enforcement"]
+    end
+
+    E2E --> FrontendUnit
+    FrontendUnit --> Integration
+    Integration --> Scientific
+    Scientific --> UnitBoundary
+```
+
+![Auditor Dashboard](../product/screens/auditor-dashboard.png)
 
 ---
 
-## What we are actually defending against
+## 1. What GroundTruth 2.0 Defends Against
 
-Most software testing defends against crashes. Here the more dangerous failure
-is a **result that is wrong but plausible** — a number that renders fine,
-survives review, and is scientifically meaningless. Tests are weighted
-accordingly.
+| Scientific Vulnerability | Automated Defense Mechanism | Test Suite |
+| :--- | :--- | :--- |
+| **Estimator Error** | Injected effect recovery test on synthetic factor panel | `tests/test_causal.py` |
+| **False Positive Detection** | Null-panel permutation test asserting no additionality found | `tests/test_causal.py` |
+| **Silent Imputation** | Asserts pipeline raises `DataUnavailableError` on missing rasters | `tests/test_real_observations.py` |
+| **Index-to-Carbon Conflation** | Parametrized test asserting `IncompatibleUnitsError` on NDVI vs. tCO2e | `tests/test_units.py` |
+| **GenAI Hallucination** | Adversarial grounding test checking 2% numeric tolerance and fallback | `tests/test_grounding.py` |
+| **Boundary Erosion** | AST parser failing build if engine imports platform or I/O | `tests/test_contract_boundary.py` |
+| **Frontend/Backend Drift** | OpenAPI snapshot generator failing CI if TypeScript types are stale | `tests/test_openapi_snapshot.py` |
+| **Data Immutability** | Database trigger test verifying `UPDATE` fails on `evidence_bundles` | `tests/test_evidence_store.py` |
 
-| Failure mode | Defence |
-| --- | --- |
-| Estimator silently wrong | Recovery test on a panel with a known injected effect |
-| False positive on a null | Null-panel test asserting no effect is found |
-| Non-reproducible output | Same-spec-same-numbers assertion |
-| Simulated data presented as real | `data_mode` validation test |
-| Index reported as carbon | Parametrised over every index × carbon pair |
-| Model inventing a figure | Adversarial grounding suite with fallback assertion |
-| Ownership boundary eroding | AST import checks over every module |
+---
 
-## Layers
+## 2. The Core Scientific Verification Tests
 
-| Layer | Files | Covers |
-| --- | --- | --- |
-| Contract | `test_contract_boundary.py` | Import boundaries, versioning, request/result invariants |
-| Domain | `test_core.py` | Units, provenance, evidence bundle |
-| Method | `test_causal.py`, `test_matching.py`, `test_uncertainty.py` | Estimators, donor eligibility, inference |
-| Safety | `test_grounding.py` | The GenAI boundary |
-| Integration | `test_pipeline.py` | End to end through the contract |
-| Interface | `test_api_cli.py` | HTTP and command line |
+### 2.1 Injected Effect Recovery
+The test generates a synthetic panel from the exact data-generating process assumed by the synthetic control model, injects a known additionality step ($+0.060\text{ NDVI}$), and asserts that the estimator recovers the effect within an empirical tolerance ($\pm 0.005$):
 
-## What a good test looks like here
-
-The suite is written as executable specification. Test names state guarantees:
-
-```
-test_the_verdict_refuses_to_compare_an_index_against_a_tco2e_claim
-test_a_hallucinating_narrator_is_rejected_and_falls_back
-test_an_underpowered_donor_pool_is_refused_not_raised
-test_simulated_datasets_cannot_be_labelled_observed
+```python
+def test_recovers_a_known_injected_effect(factor_panel):
+    result = run_analysis(factor_panel.request_with_effect(0.060), factor_panel.data_access)
+    estimate = result.bundle.get("effect.point_estimate").value
+    assert abs(estimate - 0.060) < 0.005
 ```
 
-Name the test after the guarantee, not the method under test. Assert on
-behaviour a user would notice. A test named `test_fit_synthetic_control_works`
-tells a future reader nothing about what must stay true.
+### 2.2 Null Panel Rejection
+The model must not find additionality where none exists. A synthetic panel with zero injected intervention must return a statistically insignificant p-value ($p > 0.10$) and an attribution verdict of `INCONCLUSIVE` or `NO_EVIDENCE_OF_ADDITIONALITY`.
 
-## The tests that matter most
+### 2.3 The GenAI Grounding Gate
+A test submits an adversarial LLM narrative containing an invented carbon figure (`"avoided 42,000 tonnes of emissions"`) and accusatory fraud language. The test asserts that `contracts/grounding.py` unconditionally rejects the narrative, blocks publication, and seamlessly falls back to the deterministic report renderer.
 
-**Recovery.** `test_recovers_a_known_injected_effect` generates a panel from the
-exact process synthetic control assumes, injects a known effect, and asserts the
-estimator finds it within tolerance. An estimator that cannot do this on clean
-data has no business pointing at a real forest.
+---
 
-**Null.** `test_reports_no_effect_when_none_exists`. The other half of
-correctness, and the half people forget.
+## 3. Running the Verification Suites
 
-**Grounding fallback.** A narrator that hallucinates a figure and alleges fraud
-is rejected, and its invented number does not appear in the published output.
-This is the test that makes the architectural claim demonstrable rather than
-rhetorical.
-
-**Boundary.** AST checks over every module. If weakened to make an import pass,
-the ownership split is gone.
-
-## Running
+### 3.1 Backend Test Execution (1,120+ Tests)
 
 ```bash
-pytest                                  # everything, ~90s
-pytest tests/test_causal.py -v
-pytest -k "placebo"
-pytest --cov --cov-report=term-missing
+# Run full backend suite
+pytest
+
+# Run fast unit and contract tests (skipping slow placebos)
 pytest -m "not slow"
+
+# Run with coverage report
+pytest --cov=groundtruth --cov-report=term-missing
+
+# Run property-based hypothesis tests
+pytest tests/properties/
 ```
 
-The suite is slow because placebo inference refits the estimator once per donor.
-That is real work, not waste.
+### 3.2 Frontend Test Execution (542 Tests)
 
-## Markers
+```bash
+cd apps/web
 
-| Marker | Meaning |
-| --- | --- |
-| `slow` | Long-running |
-| `network` | Requires external APIs — never in the default run |
+# Run all 542 unit and component tests
+npm run test
 
-## Fixtures
+# Run TypeScript typecheck
+npm run typecheck
 
-`conftest.py` provides seeded panels (`factor_panel` with a known effect,
-`null_panel` without), a `bundle` with a verdict, and `kariba_case`. Every
-fixture is seeded; a test that depends on unseeded randomness is a bug, not a
-flake.
+# Check OpenAPI snapshot synchronization
+npm run check:api-types
 
-## CI
-
-**`quality`** — ruff, `ruff format --check`, mypy and pytest across three Python
-versions.
-
-**`scientific-integrity`** — asserts the claims the README makes. If a
-documented guarantee stops holding, the build fails rather than the
-documentation quietly becoming a lie.
-
-## Planned
-
-| Layer | Status |
-| --- | --- |
-| Frontend component tests (Vitest) | Planned |
-| API integration tests against a real database | Planned |
-| End-to-end (UI → API → worker → store) | Planned |
-| Reproducibility replay in CI | Planned |
-| Load testing | Future |
+# Run Playwright End-to-End visual specs
+npm run test:e2e
+```

@@ -1,0 +1,42 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Task4A Verify Project",
+        "registry_id": "VCS 9999",
+        "area_ha": 1000.0
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                28.5,
+                -17.5
+              ],
+              [
+                29.2,
+                -17.5
+              ],
+              [
+                29.2,
+                -18.1
+              ],
+              [
+                28.5,
+                -18.1
+              ],
+              [
+                28.5,
+                -17.5
+              ]
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

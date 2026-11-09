@@ -10,13 +10,13 @@ import { SignedBars } from '../../../components/charts/SignedBars';
 import { SpecDots } from '../../../components/charts/SpecDots';
 import { SpecificationCurve } from '../../../components/scientific/SpecificationCurve';
 import { DidCrossCheck } from '../../../components/scientific/DidCrossCheck';
-import { ProvenanceDrawer } from '../../../components/ui/ProvenanceDrawer';
+import { ProvenanceDrawer } from '../../../components/ds/ProvenanceDrawer';
 import { CaseDataGate } from '../evidence/CaseDataGate';
 import { useCaseEvidence } from '../evidence/useCaseEvidence';
 import { Section, Term } from '../evidence/Term';
 import { Card, LensCaption } from '../evidence/VizBits';
 import { didVsScm, leaveOneOutBars, specDots, specValues } from '../evidence/viz-model';
-import { COPY } from '../evidence/copy';
+import { EvidenceScope, KindBadge, SourceBanner } from '../evidence/EvidenceProvenance';
 import evidenceStyles from '../evidence/evidence.module.css';
 import vz from '../evidence/viz.module.css';
 import { Multiverse } from './Multiverse';
@@ -30,14 +30,16 @@ export function RobustnessView() {
   return (
     <div className={evidenceStyles.page}>
       <CaseDataGate state={state} caseId={caseId}>
-        {({ items, isDemo }) => {
+        {({ items, origin, runId }) => {
           const curve = deriveSpecCurve(items);
           const pair = didVsScm(items);
           const loo = leaveOneOutBars(items);
           return (
             <>
               <LensCaption />
-              {isDemo && <p className={evidenceStyles.empty}>{COPY.demoNote}</p>}
+              <SourceBanner origin={origin} runId={runId} />
+              <KindBadge kind="derived-analysis" />
+              <EvidenceScope caseId={caseId} />
               <Section
                 id="multiverse"
                 title="Does the answer depend on how the analysis was set up?"

@@ -8,3 +8,5 @@
 .lead { font-size: var(--text-lg); color: var(--text-secondary); max-width: var(--reading-width); }
 .bigNums { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: var(--space-4); text-align: center; }
 .bigNum { font-family: var(--font-display); font-size: var(--text-2xl); overflow-wrap: anywhere; }
+.downloads { display: flex; flex-direction: column; gap: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-raised); padding: var(--space-4); }
+.downloadError { margin: 0; color: var(--danger, #b3261e); font-size: var(--text-sm); font-weight: 500; }
