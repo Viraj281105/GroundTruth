@@ -61,9 +61,7 @@ class TestAdversarialDefamatorySynonyms:
             "stole",
         ],
     )
-    def test_criminal_misconduct_synonyms_blocked(
-        self, bundle: EvidenceBundle, word: str
-    ) -> None:
+    def test_criminal_misconduct_synonyms_blocked(self, bundle: EvidenceBundle, word: str) -> None:
         text = f"With 32 donors and an effect of 0.0421, the discrepancy suggests {word}."
         report = verify_grounding(text, bundle)
         assert not report.grounded
@@ -85,9 +83,7 @@ class TestAdversarialCausalAttribution:
             "the intervention created",
         ],
     )
-    def test_direct_causal_attribution_blocked(
-        self, bundle: EvidenceBundle, phrase: str
-    ) -> None:
+    def test_direct_causal_attribution_blocked(self, bundle: EvidenceBundle, phrase: str) -> None:
         text = f"Across 32 donors, {phrase} a 0.0421 gain in vegetation index."
         report = verify_grounding(text, bundle)
         assert not report.grounded

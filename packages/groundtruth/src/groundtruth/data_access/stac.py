@@ -10,10 +10,13 @@ import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from groundtruth.contracts.errors import ConfigurationError, DataUnavailableError
+
+if TYPE_CHECKING:
+    import numpy as np
 
 DEFAULT_STAC_URL = "https://planetarycomputer.microsoft.com/api/stac/v1"
 EARTH_SEARCH_URL = "https://earth-search.aws.element84.com/v1"
@@ -83,7 +86,7 @@ def _require(module: str, package: str) -> Any:
         raise ImportError(f"'{package}' is required: pip install {package}") from exc
 
 
-def _extract_linear_rings(geojson: Mapping[str, Any]) -> list[Sequence[ Any]]:
+def _extract_linear_rings(geojson: Mapping[str, Any]) -> list[Sequence[Any]]:
     """Extract all linear rings from a Polygon, MultiPolygon, Feature, or FeatureCollection."""
     if not isinstance(geojson, Mapping):
         raise ValueError("GeoJSON must be a mapping")
@@ -407,7 +410,7 @@ def _extract_geojson_geometry(geojson: Mapping[str, Any]) -> dict[str, Any]:
         features = geojson.get("features") or []
         if len(features) == 1 and isinstance(features[0], Mapping):
             return _extract_geojson_geometry(features[0])
-        polys: list[ Any] = []
+        polys: list[Any] = []
         for feat in features:
             if isinstance(feat, Mapping):
                 sub = _extract_geojson_geometry(feat)
@@ -419,18 +422,73 @@ def _extract_geojson_geometry(geojson: Mapping[str, Any]) -> dict[str, Any]:
     raise ValueError(f"Unsupported GeoJSON type: {gtype!r}")
 
 
+def calculate_spatial_coverage(
+    zone_mask: np.ndarray,
+    valid_mask: np.ndarray,
+    resolution_m: float = 100.0,
+) -> dict[str, Any]:
+    """Calculate exact spatial coverage, valid pixel counts, and completeness metrics.
+
+    Args:
+        zone_mask: 2D boolean array of AOI boundary pixels.
+        valid_mask: 2D boolean array of unmasked valid observations.
+        resolution_m: Grid resolution in meters.
+
+    Returns:
+        Dictionary with:
+        - total_pixels: int
+        - valid_pixels: int
+        - masked_pixels: int
+        - coverage_fraction: float in [0.0, 1.0]
+        - coverage_pct: float in [0.0, 100.0]
+        - total_area_ha: float
+        - observed_area_ha: float
+        - is_spatially_complete: bool (coverage_pct >= 95.0)
+    """
+    import numpy as np
+
+    zm = np.asarray(zone_mask, dtype=bool)
+    vm = np.asarray(valid_mask, dtype=bool)
+    total_px = int(np.sum(zm))
+    if total_px == 0:
+        return {
+            "total_pixels": 0,
+            "valid_pixels": 0,
+            "masked_pixels": 0,
+            "coverage_fraction": 0.0,
+            "coverage_pct": 0.0,
+            "total_area_ha": 0.0,
+            "observed_area_ha": 0.0,
+            "is_spatially_complete": False,
+        }
+    valid_px = int(np.sum(zm & vm))
+    masked_px = total_px - valid_px
+    cov_frac = float(valid_px / total_px)
+    pixel_area_ha = (resolution_m * resolution_m) / 10000.0
+    return {
+        "total_pixels": total_px,
+        "valid_pixels": valid_px,
+        "masked_pixels": masked_px,
+        "coverage_fraction": round(cov_frac, 6),
+        "coverage_pct": round(cov_frac * 100.0, 3),
+        "total_area_ha": round(total_px * pixel_area_ha, 2),
+        "observed_area_ha": round(valid_px * pixel_area_ha, 2),
+        "is_spatially_complete": bool(cov_frac >= 0.95),
+    }
+
+
 def build_aoi_raster_grid(
     aoi_geojson: Mapping[str, Any],
     scenes: Sequence[SceneDescriptor],
     *,
     resolution_m: float = 100.0,
     quality_band: str = "SCL",
+    full_aoi_bounds: bool = True,
 ) -> tuple[RasterGridSpec, Any]:
     """Construct a canonical UTM :class:`RasterGridSpec` and boolean ``zone_mask`` for an AOI.
 
-    Computes the spatial intersection between the AOI geometry and the scene footprints
-    so that multi-tile boundaries are evaluated over the exact covered zone without
-    fabricating out-of-footprint pixels.
+    When ``full_aoi_bounds=True`` (the default), the grid bounds span the complete AOI geometry
+    so multi-tile acquisitions cover the whole project boundary without artificial clipping.
     """
     if resolution_m <= 0:
         raise ValueError(f"resolution_m must be positive, got {resolution_m}")
@@ -442,6 +500,7 @@ def build_aoi_raster_grid(
     from rasterio.features import geometry_mask
     from rasterio.transform import from_bounds as transform_from_bounds
     from rasterio.warp import transform_bounds, transform_geom
+
     shapely_geom = _require("shapely.geometry", "shapely")
     shapely_ops = _require("shapely.ops", "shapely")
 
@@ -450,27 +509,41 @@ def build_aoi_raster_grid(
     aoi_shape = shapely_geom.shape(geom_dict)
 
     scene_shapes = [
-        shapely_geom.shape(s.geometry)
-        for s in scenes
-        if isinstance(s.geometry, Mapping)
+        shapely_geom.shape(s.geometry) for s in scenes if isinstance(s.geometry, Mapping)
     ]
     if scene_shapes:
-        footprint_union = shapely_ops.unary_union(scene_shapes)
-        inter_shape = aoi_shape.intersection(footprint_union)
+        try:
+            from shapely.validation import make_valid
+
+            valid_aoi = make_valid(aoi_shape)
+            valid_scenes = [make_valid(s) for s in scene_shapes]
+            footprint_union = make_valid(shapely_ops.unary_union(valid_scenes))
+            inter_shape = valid_aoi.intersection(footprint_union)
+        except Exception:
+            footprint_union = shapely_ops.unary_union(scene_shapes)
+            inter_shape = aoi_shape.intersection(footprint_union)
+
         if inter_shape.is_empty:
             raise DataUnavailableError(
                 "Retrieved STAC scenes do not geometrically intersect the target AOI"
             )
-        b = inter_shape.bounds
-        wgs84_bounds = (float(b[0]), float(b[1]), float(b[2]), float(b[3]))
+        if full_aoi_bounds:
+            wgs84_bounds = aoi_bbox
+        else:
+            b = inter_shape.bounds
+            wgs84_bounds = (float(b[0]), float(b[1]), float(b[2]), float(b[3]))
     else:
         wgs84_bounds = aoi_bbox
 
     target_crs: str | None = None
+    epsg_counts: dict[int, int] = {}
     for s in scenes:
         if s.epsg is not None:
-            target_crs = f"EPSG:{s.epsg}"
-            break
+            epsg_counts[s.epsg] = epsg_counts.get(s.epsg, 0) + 1
+    if epsg_counts:
+        dominant_epsg = max(sorted(epsg_counts), key=lambda e: epsg_counts[e])
+        target_crs = f"EPSG:{dominant_epsg}"
+
     if target_crs is None:
         first_href = scenes[0].asset_hrefs.get(quality_band)
         if not first_href:
@@ -548,20 +621,26 @@ def fetch_scene_raster_data(
     if radsat_band is not None:
         required_assets.append(radsat_band)
 
+    resolved_hrefs: dict[str, str] = {}
     for asset_name in required_assets:
         href = scene.asset_hrefs.get(asset_name)
+        if not href or not isinstance(href, str) or not href.strip():
+            for alt in (asset_name.lower(), asset_name.upper()):
+                alt_href = scene.asset_hrefs.get(alt)
+                if alt_href and isinstance(alt_href, str) and alt_href.strip():
+                    href = alt_href
+                    break
         if not href or not isinstance(href, str) or not href.strip():
             raise DataUnavailableError(
                 f"Scene {scene.id!r} is missing required raster asset {asset_name!r} "
                 f"(available assets with hrefs: {sorted(scene.asset_hrefs)})"
             )
+        resolved_hrefs[asset_name] = href
 
-    grid_transform = transform_from_bounds(
-        *grid.bounds, grid.width, grid.height
-    )
+    grid_transform = transform_from_bounds(*grid.bounds, grid.width, grid.height)
 
     def _read_asset(asset_key: str, resampling: Any, dtype: Any) -> Any:
-        href = scene.asset_hrefs[asset_key]
+        href = resolved_hrefs[asset_key]
         try:
             with rasterio.open(href) as src:
                 if str(src.crs) == grid.crs:
@@ -592,9 +671,7 @@ def fetch_scene_raster_data(
 
     quality_arr = _read_asset(quality_band, Resampling.nearest, np.int64)
     radsat_arr = (
-        _read_asset(radsat_band, Resampling.nearest, np.int64)
-        if radsat_band is not None
-        else None
+        _read_asset(radsat_band, Resampling.nearest, np.int64) if radsat_band is not None else None
     )
 
     s2_offset_applied = False

@@ -99,22 +99,34 @@ class TestClimateUnitConversions:
     def test_precipitation_unit_conversions(self) -> None:
         assert pytest.approx(meters_to_mm(0.694277), abs=1e-6) == 694.277
         assert pytest.approx(mm_per_day_to_mm_per_month(4.5, 31), abs=1e-6) == 139.5
-        assert pytest.approx(
-            convert_climate_unit(0.5, "m", "mm"),
-            abs=1e-6,
-        ) == 500.0
-        assert pytest.approx(
-            convert_climate_unit(500.0, "mm", "m"),
-            abs=1e-6,
-        ) == 0.5
-        assert pytest.approx(
-            convert_climate_unit(3.0, "mm/day", "mm/month", days_in_month=30),
-            abs=1e-6,
-        ) == 90.0
-        assert pytest.approx(
-            convert_climate_unit(90.0, "mm/month", "mm/day", days_in_month=30),
-            abs=1e-6,
-        ) == 3.0
+        assert (
+            pytest.approx(
+                convert_climate_unit(0.5, "m", "mm"),
+                abs=1e-6,
+            )
+            == 500.0
+        )
+        assert (
+            pytest.approx(
+                convert_climate_unit(500.0, "mm", "m"),
+                abs=1e-6,
+            )
+            == 0.5
+        )
+        assert (
+            pytest.approx(
+                convert_climate_unit(3.0, "mm/day", "mm/month", days_in_month=30),
+                abs=1e-6,
+            )
+            == 90.0
+        )
+        assert (
+            pytest.approx(
+                convert_climate_unit(90.0, "mm/month", "mm/day", days_in_month=30),
+                abs=1e-6,
+            )
+            == 3.0
+        )
 
     def test_mm_per_day_requires_days_in_month(self) -> None:
         with pytest.raises(ValueError, match="requires days_in_month"):
@@ -338,7 +350,7 @@ class TestKaribaClimateBundleAndSPI:
 
         donor_summaries = bundle.eligible_donor_summaries()
         assert len(donor_summaries) == 37
-        for did, u in donor_summaries.items():
+        for _did, u in donor_summaries.items():
             assert u.chirps_pixel_count > 0
             assert 400.0 <= u.baseline_mean_rainfall_mm <= 1500.0
             assert 15.0 <= (u.baseline_mean_temp_c or 0.0) <= 30.0
@@ -387,9 +399,7 @@ class TestDonorClimateComparabilityAndConfounding:
 
         assert diag.donor_count == 37
         assert diag.comparable_donor_count == 30
-        flagged_ids = [
-            c.donor_id for c in diag.donor_comparability if not c.is_climate_comparable
-        ]
+        flagged_ids = [c.donor_id for c in diag.donor_comparability if not c.is_climate_comparable]
         assert len(flagged_ids) == 7
         # High-rainfall northern Central Province Zambia districts (>1000 mm/yr vs 733 mm/yr at Kariba)
         assert "zm-chitambo" in flagged_ids
@@ -422,7 +432,9 @@ class TestDonorClimateComparabilityAndConfounding:
         assert warn_msg is not None
         assert "exogeneity" in warn_msg.lower()
 
-    def test_climate_residualization_recovers_true_effect_under_synthetic_weather_shock(self) -> None:
+    def test_climate_residualization_recovers_true_effect_under_synthetic_weather_shock(
+        self,
+    ) -> None:
         """When an exogenous post-treatment drought depresses only the treated unit's
         vegetation while the true treatment effect is zero, unadjusted SCM/DiD mistakes
         the drought for a negative treatment effect, whereas climate-adjusted SCM/DiD
@@ -436,7 +448,7 @@ class TestDonorClimateComparabilityAndConfounding:
 
         # Create synthetic climate summaries for treated + 6 donors
         unit_climates = {}
-        for uid in ["treated"] + donor_ids:
+        for uid in ["treated", *donor_ids]:
             monthly_rain: dict[str, float] = {}
             monthly_temp: dict[str, float] = {}
             for y in range(1981, 2021):
@@ -482,7 +494,9 @@ class TestDonorClimateComparabilityAndConfounding:
             [t_rec_map[y].wet_season_rainfall_mm for y in all_years],
             dtype=np.float64,
         )
-        treated_Y = 0.50 + true_beta * (treated_wet - 600.0) + rng.normal(0.0, 0.001, len(all_years))
+        treated_Y = (
+            0.50 + true_beta * (treated_wet - 600.0) + rng.normal(0.0, 0.001, len(all_years))
+        )
 
         report = run_climate_confounding_analysis(
             case_id="synthetic-weather-shock-test",
@@ -563,7 +577,9 @@ class TestCausalGatePreservation:
             for uid in ["kariba-redd", *donor_ids]
         }
 
-        t_ts = dict(zip(series_map["kariba-redd"].periods, series_map["kariba-redd"].values, strict=True))
+        t_ts = dict(
+            zip(series_map["kariba-redd"].periods, series_map["kariba-redd"].values, strict=True)
+        )
         t_pre = np.array([t_ts[y] for y in pre_years], dtype=np.float64)
         t_post = np.array([t_ts[y] for y in post_years], dtype=np.float64)
 
@@ -643,7 +659,9 @@ class TestCausalGatePreservation:
         assert s2_comovement.ndmi_values == (-0.069341, -0.089639, -0.109568)
         assert s2_comovement.temp_2023_vs_2021_2022_delta_c is not None
         assert s2_comovement.temp_2023_vs_2021_2022_delta_c > 1.0  # +1.124 degC warmer in 2023
-        assert any("does not establish causality" in n.lower() for n in s2_comovement.interpretation_notes)
+        assert any(
+            "does not establish causality" in n.lower() for n in s2_comovement.interpretation_notes
+        )
 
 
 # ============================================================================

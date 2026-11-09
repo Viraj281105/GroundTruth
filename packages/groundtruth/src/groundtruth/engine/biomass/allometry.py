@@ -171,6 +171,7 @@ class CarbonEstimate(BaseModel):
             kind="analytic",
         )
 
+
 class ClaimComparison(BaseModel):
     """Comparison between a developer's claimed credits and an independent carbon estimate."""
 
@@ -385,6 +386,7 @@ def convert_agb_to_carbon(
         delta_indicator=None,
     )
 
+
 def benchmark_against_claim(
     claimed_tco2e: float,
     estimated_tco2e: float,
@@ -443,4 +445,3 @@ def benchmark_against_claim(
         is_over_issued=over_issuance_share > 0.0,
         verdict_label=verdict_label,
     )
-

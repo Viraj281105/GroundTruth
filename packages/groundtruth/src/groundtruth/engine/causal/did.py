@@ -141,7 +141,7 @@ def check_parallel_trends(
     *,
     weights: np.ndarray | None = None,
     max_slope_per_period: float = 0.01,
-    max_slope_Per_period: float | None = None,  # noqa: N803
+    max_slope_Per_period: float | None = None,
 ) -> ParallelTrendsDiagnostic:
     """Test whether treated and control paths were already diverging pre-treatment.
 

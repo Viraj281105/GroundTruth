@@ -11,6 +11,7 @@ Cloud-starved or empty years are never interpolated or fabricated: they yield
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
@@ -23,7 +24,8 @@ from typing import Any
 
 import numpy as np
 
-from groundtruth.contracts.errors import DataUnavailableError
+from groundtruth.contracts.errors import DataUnavailableError, ProvenanceError
+from groundtruth.contracts.evidence import EvidenceState
 from groundtruth.contracts.provenance import Provenance
 from groundtruth.contracts.types import INDICATOR_UNITS, Indicator, TimeSeries
 from groundtruth.data_access.stac import (
@@ -125,9 +127,39 @@ class SceneRasterChip:
     radsat: np.ndarray | None = None
 
 
+#: Evidence states a record may carry. ``OBSERVED`` is deliberately absent: an index is derived
+#: from observed reflectance, so the scene ids (not the index) carry the observed lineage.
+RECORD_EVIDENCE_STATES: frozenset[str] = frozenset(
+    {
+        EvidenceState.DERIVED.value,
+        EvidenceState.MODEL_ESTIMATED.value,
+        EvidenceState.UNAVAILABLE.value,
+    }
+)
+
+
+def derive_record_evidence_state(
+    value: float, processing_metadata: Mapping[str, Any] | None
+) -> str:
+    """Evidence state of an annual record: NaN is UNAVAILABLE, harmonized is MODEL_ESTIMATED.
+
+    Anything else is DERIVED. Used both when a record is built and when an older cache that
+    predates the ``evidence_state`` field is loaded, so the two paths cannot disagree.
+    """
+    if math.isnan(value):
+        return EvidenceState.UNAVAILABLE.value
+    harmonization = (processing_metadata or {}).get("harmonization")
+    if isinstance(harmonization, Mapping) and harmonization.get("applied"):
+        return EvidenceState.MODEL_ESTIMATED.value
+    return EvidenceState.DERIVED.value
+
+
 @dataclass(frozen=True)
 class AnnualObservationRecord:
-    """Auditable annual observation summary for one AOI and one calendar year."""
+    """Auditable annual observation summary for one AOI and one calendar year.
+
+    ``evidence_state`` is derived when left empty (see :func:`derive_record_evidence_state`).
+    """
 
     year: int
     indicator: str
@@ -146,14 +178,43 @@ class AnnualObservationRecord:
     n_masked_pixels: int | None = None
     indices: Mapping[str, float] | None = None
     processing_metadata: Mapping[str, Any] | None = None
+    aoi_coverage_pct: float | None = None
+    is_spatially_complete: bool | None = None
+    contributing_tiles: tuple[str, ...] = ()
+    tile_scene_counts: Mapping[str, int] | None = None
+    harmonized_indices: Mapping[str, float] | None = None
+    unharmonized_value: float | None = None
+    evidence_state: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.evidence_state:
+            object.__setattr__(
+                self,
+                "evidence_state",
+                derive_record_evidence_state(self.value, self.processing_metadata),
+            )
+        elif self.evidence_state not in RECORD_EVIDENCE_STATES:
+            raise ValueError(
+                f"Invalid evidence_state {self.evidence_state!r} for year {self.year}; "
+                f"expected one of {sorted(RECORD_EVIDENCE_STATES)}"
+            )
+        if (self.evidence_state == EvidenceState.UNAVAILABLE.value) != math.isnan(self.value):
+            raise ValueError(
+                f"evidence_state {self.evidence_state!r} contradicts value {self.value!r} "
+                f"for year {self.year}: only an empty (NaN) year is UNAVAILABLE"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-compatible dictionary."""
         serialized_indices: dict[str, float | None] | None = None
         if self.indices is not None:
             serialized_indices = {
-                k: (None if math.isnan(v) else float(v))
-                for k, v in self.indices.items()
+                k: (None if math.isnan(v) else float(v)) for k, v in self.indices.items()
+            }
+        serialized_harm: dict[str, float | None] | None = None
+        if self.harmonized_indices is not None:
+            serialized_harm = {
+                k: (None if math.isnan(v) else float(v)) for k, v in self.harmonized_indices.items()
             }
         return {
             "year": self.year,
@@ -173,10 +234,21 @@ class AnnualObservationRecord:
             "n_masked_pixels": self.n_masked_pixels,
             "indices": serialized_indices,
             "processing_metadata": (
-                dict(self.processing_metadata)
-                if self.processing_metadata is not None
-                else None
+                dict(self.processing_metadata) if self.processing_metadata is not None else None
             ),
+            "aoi_coverage_pct": self.aoi_coverage_pct,
+            "is_spatially_complete": self.is_spatially_complete,
+            "contributing_tiles": list(self.contributing_tiles),
+            "tile_scene_counts": (
+                dict(self.tile_scene_counts) if self.tile_scene_counts is not None else None
+            ),
+            "harmonized_indices": serialized_harm,
+            "unharmonized_value": (
+                None
+                if self.unharmonized_value is None or math.isnan(self.unharmonized_value)
+                else float(self.unharmonized_value)
+            ),
+            "evidence_state": self.evidence_state,
         }
 
     @classmethod
@@ -188,14 +260,47 @@ class AnnualObservationRecord:
         parsed_indices: dict[str, float] | None = None
         if isinstance(raw_indices, Mapping):
             parsed_indices = {
-                str(k): (float("nan") if v is None else float(v))
-                for k, v in raw_indices.items()
+                str(k): (float("nan") if v is None else float(v)) for k, v in raw_indices.items()
+            }
+        raw_harm = data.get("harmonized_indices")
+        parsed_harm: dict[str, float] | None = None
+        if isinstance(raw_harm, Mapping):
+            parsed_harm = {
+                str(k): (float("nan") if v is None else float(v)) for k, v in raw_harm.items()
             }
         raw_cc = data.get("scene_cloud_cover")
         scene_cc: tuple[float | None, ...] = ()
         if isinstance(raw_cc, Sequence) and not isinstance(raw_cc, (str, bytes)):
             scene_cc = tuple(None if c is None else float(c) for c in raw_cc)
         raw_meta = data.get("processing_metadata")
+        raw_tiles = data.get("contributing_tiles") or ()
+        contributing_tiles = (
+            tuple(str(t) for t in raw_tiles)
+            if isinstance(raw_tiles, Sequence) and not isinstance(raw_tiles, (str, bytes))
+            else ()
+        )
+        raw_tile_counts = data.get("tile_scene_counts")
+        tile_counts = (
+            {str(k): int(v) for k, v in raw_tile_counts.items()}
+            if isinstance(raw_tile_counts, Mapping)
+            else None
+        )
+        raw_unharm = data.get("unharmonized_value")
+        unharm = float(raw_unharm) if raw_unharm is not None else None
+        cov_pct = (
+            float(data["aoi_coverage_pct"])
+            if data.get("aoi_coverage_pct") is not None
+            else (
+                round(float(data["clear_pixel_fraction"]) * 100.0, 3)
+                if data.get("clear_pixel_fraction") is not None
+                else None
+            )
+        )
+        is_complete = (
+            bool(data["is_spatially_complete"])
+            if data.get("is_spatially_complete") is not None
+            else (cov_pct is not None and cov_pct >= 95.0)
+        )
         return cls(
             year=int(data["year"]),
             indicator=str(data["indicator"]),
@@ -222,6 +327,13 @@ class AnnualObservationRecord:
             ),
             indices=parsed_indices,
             processing_metadata=dict(raw_meta) if isinstance(raw_meta, Mapping) else None,
+            aoi_coverage_pct=cov_pct,
+            is_spatially_complete=is_complete,
+            contributing_tiles=contributing_tiles,
+            tile_scene_counts=tile_counts,
+            harmonized_indices=parsed_harm,
+            unharmonized_value=unharm,
+            evidence_state=str(data.get("evidence_state") or ""),
         )
 
 
@@ -310,11 +422,138 @@ class AOIObservationBundle:
         )
 
 
+_REAL_ORIGINS = frozenset({DataOrigin.REAL_STAC, DataOrigin.CACHED_REAL_STAC})
+_SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
+# USGS Landsat Collection 2 product ids as served by STAC, e.g. LC08_L2SP_170072_20200710_02_T1
+_LANDSAT_C2_ID_RE = re.compile(r"^L[CETO]0[4-9]_L2S[PR]_\d{6}_(\d{8})_\d{2}_(?:T1|T2|RT)$")
+_COVERAGE_TOLERANCE = 1e-3
+
+
+def _scene_ids_sha256(scene_ids: Sequence[str]) -> str:
+    """Same digest as :func:`groundtruth.data_access.stac.scenes_hash`, from ids alone."""
+    digest = hashlib.sha256()
+    for sid in sorted(scene_ids):
+        digest.update(sid.encode())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def validate_real_provenance(bundle: AOIObservationBundle) -> None:
+    """Refuse a bundle that claims real-STAC lineage but is internally inconsistent.
+
+    This is an integrity check, not proof of authenticity: it rejects bundles whose
+    scene list, scene hash, acquisition dates, and pixel accounting do not agree with
+    one another (the signature of hand-written "observations"). Synthetic bundles are
+    not checked.
+
+    Raises:
+        ProvenanceError: listing every violated rule.
+    """
+    if bundle.data_origin not in _REAL_ORIGINS:
+        return
+
+    problems: list[str] = []
+    if not bundle.catalog_url:
+        problems.append("real-STAC bundle has no catalog_url")
+
+    for rec in bundle.records:
+        if math.isnan(rec.value):
+            continue  # an honestly empty year carries no scenes
+        tag = f"year {rec.year}"
+        ids = tuple(rec.scene_ids)
+        if not ids:
+            problems.append(f"{tag}: observed value with no scene_ids")
+            continue
+        if len(set(ids)) != len(ids):
+            problems.append(f"{tag}: duplicate scene_ids")
+        if rec.n_scenes != len(ids):
+            problems.append(f"{tag}: n_scenes={rec.n_scenes} but {len(ids)} scene_ids listed")
+        if len(rec.acquisition_dates) != len(ids):
+            problems.append(
+                f"{tag}: {len(rec.acquisition_dates)} acquisition_dates for {len(ids)} scenes"
+            )
+        if not _SHA256_HEX_RE.match(rec.scenes_sha256 or ""):
+            problems.append(f"{tag}: scenes_sha256 is not a sha256 hex digest")
+        elif rec.scenes_sha256 != _scene_ids_sha256(ids):
+            problems.append(f"{tag}: scenes_sha256 does not match the listed scene_ids")
+
+        if rec.sensor.startswith("landsat"):
+            for i, sid in enumerate(ids):
+                m = _LANDSAT_C2_ID_RE.match(sid)
+                if m is None:
+                    problems.append(f"{tag}: {sid!r} is not a Landsat Collection 2 product id")
+                    continue
+                if i < len(rec.acquisition_dates):
+                    date_compact = str(rec.acquisition_dates[i])[:10].replace("-", "")
+                    if m.group(1) != date_compact:
+                        problems.append(
+                            f"{tag}: {sid!r} acquisition date disagrees with "
+                            f"{rec.acquisition_dates[i]!r}"
+                        )
+
+        n_valid, n_total = rec.n_valid_pixels, rec.n_total_pixels
+        if n_valid is not None and n_total is not None:
+            if n_total <= 0 or n_valid < 0 or n_valid > n_total:
+                problems.append(f"{tag}: invalid pixel counts {n_valid}/{n_total}")
+            else:
+                frac = n_valid / n_total
+                if abs(rec.clear_pixel_fraction - frac) > _COVERAGE_TOLERANCE:
+                    problems.append(
+                        f"{tag}: clear_pixel_fraction {rec.clear_pixel_fraction} "
+                        f"!= n_valid/n_total {frac:.6f}"
+                    )
+                if (
+                    rec.aoi_coverage_pct is not None
+                    and abs(rec.aoi_coverage_pct / 100.0 - frac) > _COVERAGE_TOLERANCE
+                ):
+                    problems.append(
+                        f"{tag}: aoi_coverage_pct {rec.aoi_coverage_pct} "
+                        f"!= 100*n_valid/n_total {100 * frac:.3f}"
+                    )
+
+    if problems:
+        raise ProvenanceError(
+            f"Bundle {bundle.unit_id!r}/{bundle.indicator!r} claims "
+            f"{bundle.data_origin.value} lineage but fails provenance integrity checks: "
+            + "; ".join(problems)
+        )
+
+
 def _resolve_sensor(sensor: str) -> SensorSpec:
     key = _SENSOR_ALIASES.get(sensor.lower(), sensor.lower())
     if key not in SENSORS:
         raise ValueError(f"Unknown sensor {sensor!r}; supported sensors: {sorted(SENSORS)}")
     return SENSORS[key]
+
+
+def _chip_sensor_spec(chip: SceneRasterChip, default: SensorSpec) -> SensorSpec:
+    """Sensor spec for one scene: its own declared sensor, else the call's default."""
+    declared = chip.descriptor.sensor
+    if not declared:
+        return default
+    try:
+        return _resolve_sensor(declared)
+    except ValueError:
+        return default
+
+
+def _zone_mean_index(
+    indicator: str,
+    reflectance: Mapping[str, np.ndarray],
+    usable: np.ndarray,
+    zone: np.ndarray,
+) -> float:
+    """Per-scene index -> per-pixel annual median -> mean over clear zone pixels."""
+    if not all(r in reflectance for r in _SUPPORTED_INDICATORS[indicator]):
+        return float("nan")
+    scene_idx = _compute_index(indicator, reflectance)
+    scene_idx[~usable] = np.nan
+    clear = np.sum(~np.isnan(scene_idx), axis=0)
+    with warnings.catch_warnings(), np.errstate(all="ignore"):
+        warnings.simplefilter("ignore", RuntimeWarning)
+        medians = np.nanmedian(scene_idx, axis=0)
+    zone_clear = zone & (clear > 0)
+    return float(np.mean(medians[zone_clear])) if zone_clear.any() else float("nan")
 
 
 def _resolve_indicator(indicator: str | Indicator) -> str:
@@ -379,6 +618,11 @@ def reduce_aoi_scenes_to_series(
     zone_mask: np.ndarray | None = None,
     data_origin: DataOrigin = DataOrigin.REAL_STAC,
     catalog_url: str | None = DEFAULT_STAC_URL,
+    harmonize_sensor: bool = False,
+    harmonization_method: Any = None,
+    target_sensor: str = "landsat8",
+    min_coverage_threshold: float = 0.95,
+    strict_coverage: bool = False,
 ) -> AOIObservationBundle:
     """Reduce multi-year STAC raster chips over an AOI into an :class:`AOIObservationBundle`.
 
@@ -386,7 +630,15 @@ def reduce_aoi_scenes_to_series(
     masking (Sentinel-2 SCL or Landsat QA_PIXEL), per-scene spectral index computation,
     per-pixel annual median compositing, and zonal mean reduction over clear pixels.
     Automatically calculates NDVI, EVI, NDMI, and NBR wherever the required bands
-    are present on the scene chips.
+    are present on the scene chips. Supports multi-tile mosaics.
+
+    Each scene is scaled with its own sensor's specification, so a year mixing
+    Landsat 7 and Landsat 8 scenes is handled scene by scene. Cross-sensor harmonization
+    is opt-in (``harmonize_sensor=True``, Landsat only): each ETM+/TM scene's bands are
+    transformed to the OLI frame *before* index computation and compositing. The record's
+    ``value`` is then the harmonized index, and ``unharmonized_value`` / ``indices`` keep
+    the raw composite. Harmonized values are model estimates. See
+    :mod:`groundtruth.engine.observation.harmonization` for why this is not the default.
     """
     if not unit_id or not unit_id.strip():
         raise ValueError("unit_id must be a non-empty string")
@@ -394,6 +646,17 @@ def reduce_aoi_scenes_to_series(
     ind_name = _resolve_indicator(indicator)
     sensor_spec = _resolve_sensor(sensor)
     required_roles = _SUPPORTED_INDICATORS[ind_name]
+
+    from groundtruth.engine.observation.harmonization import (
+        ROY_2016_CITATION,
+        TM_ASSUMPTION_NOTE,
+        HarmonizationMethod,
+        harmonize_reflectance,
+    )
+
+    harm_meth = HarmonizationMethod(harmonization_method or HarmonizationMethod.ROY_2016_OLS)
+    if not harmonize_sensor:
+        harm_meth = HarmonizationMethod.NONE
 
     explicit_zone: np.ndarray | None = None
     if zone_mask is not None:
@@ -432,9 +695,17 @@ def reduce_aoi_scenes_to_series(
                         "n_total_zone_pixels": n_tot,
                         "n_valid_zone_pixels": 0,
                         "n_masked_zone_pixels": n_tot,
+                        "aoi_coverage_pct": 0.0,
+                        "is_spatially_complete": False,
                         "mask_type": sensor_spec.mask,
                         "scene_masking": [],
                     },
+                    aoi_coverage_pct=0.0,
+                    is_spatially_complete=False,
+                    contributing_tiles=(),
+                    tile_scene_counts={},
+                    harmonized_indices={ind_name: float("nan")},
+                    unharmonized_value=float("nan"),
                 )
             )
             continue
@@ -444,11 +715,22 @@ def reduce_aoi_scenes_to_series(
             raise ValueError(f"Scene quality array must be 2D (h, w), got {first_q.shape}")
         chip_shape = first_q.shape
 
-        year_zone = (
-            explicit_zone
-            if explicit_zone is not None
-            else np.ones(chip_shape, dtype=bool)
+        chip_specs = [_chip_sensor_spec(c, sensor_spec) for c in chips]
+        mask_types = {s.mask for s in chip_specs}
+        if len(mask_types) > 1:
+            raise ValueError(
+                f"Year {year} mixes quality-mask types {sorted(mask_types)}; "
+                "Sentinel-2 and Landsat scenes cannot share one annual composite"
+            )
+        sensor_counts: dict[str, int] = {}
+        for s in chip_specs:
+            sensor_counts[s.sensor] = sensor_counts.get(s.sensor, 0) + 1
+        # Dominant sensor labels the record; per-scene sensors are kept in metadata.
+        year_sensor_spec = next(
+            s for s in chip_specs if s.sensor == max(sensor_counts, key=sensor_counts.__getitem__)
         )
+
+        year_zone = explicit_zone if explicit_zone is not None else np.ones(chip_shape, dtype=bool)
         if year_zone.shape != chip_shape:
             raise ValueError(
                 f"zone_mask shape {year_zone.shape} does not match chip shape {chip_shape}"
@@ -461,16 +743,18 @@ def reduce_aoi_scenes_to_series(
             r
             for r in all_candidate_roles
             if r not in required_roles
-            and all(_has_role_band(c, r, sensor_spec.sensor) for c in chips)
+            and all(_has_role_band(c, r, s.sensor) for c, s in zip(chips, chip_specs, strict=True))
         )
         roles_to_extract = tuple(dict.fromkeys((*required_roles, *available_optional_roles)))
 
         quality_list: list[np.ndarray] = []
         radsat_list: list[np.ndarray] = []
         has_radsat = any(c.radsat is not None for c in chips)
-        role_stacks: dict[str, list[np.ndarray]] = {r: [] for r in roles_to_extract}
+        raw_refl_stacks: dict[str, list[np.ndarray]] = {r: [] for r in roles_to_extract}
+        harm_refl_stacks: dict[str, list[np.ndarray]] = {r: [] for r in roles_to_extract}
+        harmonized_scene_ids: list[str] = []
 
-        for chip in chips:
+        for chip, chip_spec in zip(chips, chip_specs, strict=True):
             q_arr = np.asarray(chip.quality)
             if q_arr.shape != chip_shape:
                 raise ValueError(
@@ -488,26 +772,46 @@ def reduce_aoi_scenes_to_series(
                             f"{r_arr.shape} != {chip_shape}"
                         )
                     radsat_list.append(r_arr)
+            transform_scene = (
+                harm_meth != HarmonizationMethod.NONE and chip_spec.sensor != target_sensor
+            )
             for role in roles_to_extract:
-                b_arr = _extract_role_band(chip, role, sensor_spec.sensor)
+                b_arr = _extract_role_band(chip, role, chip_spec.sensor)
                 if b_arr.shape != chip_shape:
                     raise ValueError(
                         f"Scene {chip.descriptor.id!r} band {role!r} shape "
                         f"{b_arr.shape} != {chip_shape}"
                     )
-                role_stacks[role].append(b_arr)
+                rho = to_reflectance(b_arr, chip_spec)
+                raw_refl_stacks[role].append(rho)
+                harm_refl_stacks[role].append(
+                    np.asarray(
+                        harmonize_reflectance(
+                            rho,
+                            role,
+                            source_sensor=chip_spec.sensor,
+                            target_sensor=target_sensor,
+                            method=harm_meth,
+                        ),
+                        dtype=float,
+                    )
+                    if transform_scene
+                    else rho
+                )
+            if transform_scene:
+                harmonized_scene_ids.append(chip.descriptor.id)
 
         quality_stack = np.stack(quality_list, axis=0)
         radsat_stack = np.stack(radsat_list, axis=0) if has_radsat else None
 
-        if sensor_spec.mask == "scl":
+        if year_sensor_spec.mask == "scl":
             usable = scl_cloud_mask(quality_stack)
         else:
             usable = qa_pixel_mask(quality_stack, radsat_stack)
 
-        reflectance = {
-            role: to_reflectance(np.stack(role_stacks[role], axis=0), sensor_spec)
-            for role in roles_to_extract
+        reflectance = {role: np.stack(raw_refl_stacks[role], axis=0) for role in roles_to_extract}
+        harm_reflectance = {
+            role: np.stack(harm_refl_stacks[role], axis=0) for role in roles_to_extract
         }
         scene_idx = _compute_index(ind_name, reflectance)
         scene_idx[~usable] = np.nan
@@ -521,12 +825,30 @@ def reduce_aoi_scenes_to_series(
         zone_clear = year_zone & (clear_counts > 0)
         n_valid_px = int(zone_clear.sum())
         n_masked_px = int(in_zone - n_valid_px)
-        value = float(np.mean(pixel_medians[zone_clear])) if zone_clear.any() else float("nan")
-        n_valid_obs = int(np.median(clear_counts[year_zone]))
-        clear_frac = float(n_valid_px / in_zone)
+        raw_zone_value = (
+            float(np.mean(pixel_medians[zone_clear])) if zone_clear.any() else float("nan")
+        )
+        n_valid_obs = int(np.median(clear_counts[year_zone])) if in_zone else 0
+        clear_frac = float(n_valid_px / in_zone) if in_zone else 0.0
+
+        cov_pct = round(clear_frac * 100.0, 3)
+        is_complete = bool(cov_pct >= (min_coverage_threshold * 100.0))
+
+        # Enforce spatial completeness rule: if strict and coverage < 95%, refuse whole-AOI estimate
+        effective_value = raw_zone_value
+        if strict_coverage and not is_complete:
+            effective_value = float("nan")
+
+        # Multi-tile provenance tracking
+        contributing_tiles = tuple(
+            sorted({c.descriptor.tile_id for c in chips if c.descriptor.tile_id})
+        )
+        tile_scene_counts = {
+            t: sum(1 for c in chips if c.descriptor.tile_id == t) for t in contributing_tiles
+        }
 
         # Calculate NDVI, EVI, NDMI, NBR wherever required bands are present
-        calculated_indices: dict[str, float] = {ind_name: value}
+        calculated_indices: dict[str, float] = {ind_name: effective_value}
         for candidate_ind in _CORE_VEGETATION_INDICES:
             if candidate_ind == ind_name:
                 continue
@@ -539,11 +861,28 @@ def reduce_aoi_scenes_to_series(
                     warnings.simplefilter("ignore", RuntimeWarning)
                     cand_medians = np.nanmedian(cand_scene_idx, axis=0)
                 cand_zone_clear = year_zone & (cand_clear_counts > 0)
-                calculated_indices[candidate_ind] = (
+                cand_raw = (
                     float(np.mean(cand_medians[cand_zone_clear]))
                     if cand_zone_clear.any()
                     else float("nan")
                 )
+                if strict_coverage and not is_complete:
+                    cand_raw = float("nan")
+                calculated_indices[candidate_ind] = cand_raw
+
+        # Opt-in band-level harmonization: indices recomputed from transformed bands.
+        harm_indices: dict[str, float] | None = None
+        if harm_meth != HarmonizationMethod.NONE:
+            harm_indices = {
+                k: (
+                    float("nan")
+                    if strict_coverage and not is_complete
+                    else _zone_mean_index(k, harm_reflectance, usable, year_zone)
+                )
+                for k in calculated_indices
+            }
+
+        final_value = harm_indices[ind_name] if harm_indices is not None else effective_value
 
         # Per-scene cloud & shadow masking diagnostics within the AOI zone
         scene_masking_details: list[dict[str, Any]] = []
@@ -565,7 +904,7 @@ def reduce_aoi_scenes_to_series(
                 "zone_valid_fraction": float(valid_px_scene / in_zone) if in_zone else 0.0,
                 "quality_usable_pixels": int(u_scene.sum()),
             }
-            if sensor_spec.mask == "scl":
+            if year_sensor_spec.mask == "scl":
                 uniq_vals, uniq_counts = np.unique(q_scene, return_counts=True)
                 scl_counts = {
                     str(int(k)): int(v) for k, v in zip(uniq_vals, uniq_counts, strict=True)
@@ -597,28 +936,48 @@ def reduce_aoi_scenes_to_series(
 
         proc_meta: dict[str, Any] = {
             "chip_shape": [int(chip_shape[0]), int(chip_shape[1])],
-            "mask_type": sensor_spec.mask,
+            "mask_type": year_sensor_spec.mask,
             "invalid_classes_or_bits": (
-                list(SCL_INVALID_CLASSES) if sensor_spec.mask == "scl" else "landsat_qa_pixel"
+                list(SCL_INVALID_CLASSES) if year_sensor_spec.mask == "scl" else "landsat_qa_pixel"
             ),
             "n_total_zone_pixels": in_zone,
             "n_valid_zone_pixels": n_valid_px,
             "n_masked_zone_pixels": n_masked_px,
+            "aoi_coverage_pct": cov_pct,
+            "is_spatially_complete": is_complete,
+            "contributing_tiles": list(contributing_tiles),
+            "tile_scene_counts": tile_scene_counts,
             "zonal_stats": zonal_summary,
             "scene_masking": scene_masking_details,
+            "scene_sensors": sensor_counts,
+            "harmonization": {
+                "method": harm_meth.value,
+                "target_sensor": target_sensor,
+                "applied": bool(harmonized_scene_ids),
+                "harmonized_scene_ids": harmonized_scene_ids,
+                "level": "band_reflectance_per_scene",
+                "evidence_state": "MODEL_ESTIMATED" if harmonized_scene_ids else "DERIVED",
+                "locally_validated": False,
+                "citation": ROY_2016_CITATION if harmonized_scene_ids else None,
+                "notes": (
+                    [TM_ASSUMPTION_NOTE]
+                    if harmonized_scene_ids and "landsat5" in sensor_counts
+                    else []
+                ),
+            },
         }
 
         records.append(
             AnnualObservationRecord(
                 year=int(year),
                 indicator=ind_name,
-                value=value,
+                value=final_value,
                 n_valid_observations=n_valid_obs,
                 clear_pixel_fraction=clear_frac,
                 n_scenes=len(chips),
                 scene_ids=tuple(d.id for d in descriptors),
                 acquisition_dates=tuple(d.datetime for d in descriptors),
-                sensor=sensor_spec.sensor,
+                sensor=year_sensor_spec.sensor,
                 scenes_sha256=scenes_hash(descriptors),
                 cloud_cover_mean=cc_mean,
                 scene_cloud_cover=scene_cc_tuple,
@@ -627,6 +986,12 @@ def reduce_aoi_scenes_to_series(
                 n_masked_pixels=n_masked_px,
                 indices=calculated_indices,
                 processing_metadata=proc_meta,
+                aoi_coverage_pct=cov_pct,
+                is_spatially_complete=is_complete,
+                contributing_tiles=contributing_tiles,
+                tile_scene_counts=tile_scene_counts,
+                harmonized_indices=harm_indices,
+                unharmonized_value=raw_zone_value,
             )
         )
 
@@ -649,10 +1014,7 @@ def reduce_aoi_scenes_to_series(
             "scenes_sha256": overall_sha256,
             "year_hashes": {str(r.year): r.scenes_sha256 for r in records},
             "year_indices": {
-                str(r.year): {
-                    k: _safe_float_or_none(v)
-                    for k, v in (r.indices or {}).items()
-                }
+                str(r.year): {k: _safe_float_or_none(v) for k, v in (r.indices or {}).items()}
                 for r in records
             },
             "year_valid_pixels": {str(r.year): r.n_valid_pixels for r in records},
@@ -692,8 +1054,13 @@ def fetch_aoi_chips_from_stac(
     catalog_url: str = DEFAULT_STAC_URL,
     client: Any | None = None,
     bands: Sequence[str] | None = None,
+    multi_tile: bool = True,
+    max_scenes_per_tile: int = 2,
 ) -> tuple[dict[int, list[SceneRasterChip]], np.ndarray, RasterGridSpec, list[dict[str, Any]]]:
     """Search a live STAC catalog and retrieve windowed raster chips for an AOI across years.
+
+    When ``multi_tile=True`` (default), scenes across all intersecting WRS-2 / MGRS tiles
+    are acquired and composited so the entire AOI footprint is covered.
 
     Never falls back to synthetic fixtures. Raises :class:`DataUnavailableError` or
     :class:`ConfigurationError` on network failures, missing assets, or empty STAC results.
@@ -715,9 +1082,7 @@ def fetch_aoi_chips_from_stac(
         radsat_band: str | None = None
     elif platform == "landsat":
         target_bands = (
-            tuple(bands)
-            if bands is not None
-            else ("SR_B2", "SR_B4", "SR_B5", "SR_B6", "SR_B7")
+            tuple(bands) if bands is not None else ("SR_B2", "SR_B4", "SR_B5", "SR_B6", "SR_B7")
         )
         quality_band = "QA_PIXEL"
         radsat_band = "QA_RADSAT"
@@ -747,7 +1112,7 @@ def fetch_aoi_chips_from_stac(
             if s.tile_id:
                 tile_counts[s.tile_id] = tile_counts.get(s.tile_id, 0) + 1
 
-    # Select dominant MGRS/WRS tile if not explicitly locked, so all chips share native UTM CRS
+    # Select dominant MGRS/WRS tile if single-tile mode is explicitly requested
     chosen_tile = tile_id
     if chosen_tile is None and tile_counts:
         chosen_tile = max(sorted(tile_counts), key=lambda t: tile_counts[t])
@@ -773,21 +1138,52 @@ def fetch_aoi_chips_from_stac(
     selected_by_year: dict[int, list[SceneDescriptor]] = {}
     all_selected: list[SceneDescriptor] = []
     for yr, scenes in raw_scenes_by_year.items():
-        filtered = (
-            [s for s in scenes if s.tile_id == chosen_tile]
-            if chosen_tile is not None
-            else list(scenes)
-        )
-        overlaps = {s.id: _scene_overlap_area(s) for s in filtered}
-        max_overlap = max(overlaps.values(), default=1.0) or 1.0
-        filtered.sort(
-            key=lambda s: (
-                0 if (overlaps.get(s.id, 1.0) / max_overlap) >= 0.5 else 1,
-                s.cloud_cover if s.cloud_cover is not None else 100.0,
-                s.id,
+        if tile_id is not None:
+            filtered = [s for s in scenes if s.tile_id == tile_id]
+            overlaps = {s.id: _scene_overlap_area(s) for s in filtered}
+            max_overlap = max(overlaps.values(), default=1.0) or 1.0
+            filtered.sort(
+                key=lambda s: (
+                    0 if (overlaps.get(s.id, 1.0) / max_overlap) >= 0.5 else 1,
+                    s.cloud_cover if s.cloud_cover is not None else 100.0,
+                    s.id,
+                )
             )
-        )
-        chosen = filtered[:max_scenes_per_year]
+            chosen = filtered[:max_scenes_per_year]
+        elif not multi_tile and chosen_tile is not None:
+            filtered = [s for s in scenes if s.tile_id == chosen_tile]
+            overlaps = {s.id: _scene_overlap_area(s) for s in filtered}
+            max_overlap = max(overlaps.values(), default=1.0) or 1.0
+            filtered.sort(
+                key=lambda s: (
+                    0 if (overlaps.get(s.id, 1.0) / max_overlap) >= 0.5 else 1,
+                    s.cloud_cover if s.cloud_cover is not None else 100.0,
+                    s.id,
+                )
+            )
+            chosen = filtered[:max_scenes_per_year]
+        else:
+            # Multi-tile: group by tile_id and pick clearest scenes per tile
+            scenes_by_tile: dict[str, list[SceneDescriptor]] = {}
+            for s in scenes:
+                tid = s.tile_id or "unknown"
+                scenes_by_tile.setdefault(tid, []).append(s)
+
+            chosen_scenes: list[SceneDescriptor] = []
+            for tid in sorted(scenes_by_tile):
+                tile_scenes = scenes_by_tile[tid]
+                t_overlaps = {s.id: _scene_overlap_area(s) for s in tile_scenes}
+                t_max_overlap = max(t_overlaps.values(), default=1.0) or 1.0
+                tile_scenes.sort(
+                    key=lambda s: (
+                        0 if (t_overlaps.get(s.id, 1.0) / t_max_overlap) >= 0.5 else 1,
+                        s.cloud_cover if s.cloud_cover is not None else 100.0,
+                        s.id,
+                    )
+                )
+                chosen_scenes.extend(tile_scenes[:max_scenes_per_tile])
+            chosen = chosen_scenes
+
         selected_by_year[yr] = chosen
         all_selected.extend(chosen)
 
@@ -797,11 +1193,34 @@ def fetch_aoi_chips_from_stac(
             f"across years {sorted(raw_scenes_by_year)}. Refusing to substitute synthetic data."
         )
 
+    if platform == "landsat" and all_selected:
+        sample_assets = all_selected[0].asset_hrefs
+        if "qa_pixel" in sample_assets:
+            quality_band = "qa_pixel"
+        elif "QA_PIXEL" in sample_assets:
+            quality_band = "QA_PIXEL"
+
+        if "qa_radsat" in sample_assets:
+            radsat_band = "qa_radsat"
+        elif "QA_RADSAT" in sample_assets:
+            radsat_band = "QA_RADSAT"
+        else:
+            radsat_band = None
+
+        if bands is None:
+            if "red" in sample_assets and "nir08" in sample_assets:
+                target_bands = ("blue", "red", "nir08", "swir16", "swir22")
+            else:
+                target_bands = ("SR_B2", "SR_B4", "SR_B5", "SR_B6", "SR_B7")
+
+    effective_multi_tile = multi_tile and (tile_id is None)
+
     grid, zone_mask = build_aoi_raster_grid(
         aoi_geojson,
         all_selected,
         resolution_m=resolution_m,
         quality_band=quality_band,
+        full_aoi_bounds=effective_multi_tile,
     )
 
     chips_by_year: dict[int, list[SceneRasterChip]] = {}
@@ -847,6 +1266,9 @@ def ingest_live_aoi_observations(
     catalog_url: str = DEFAULT_STAC_URL,
     cache: AOIObservationCache | Path | str | None = None,
     client: Any | None = None,
+    multi_tile: bool = True,
+    harmonize_sensor: bool = False,
+    min_coverage_threshold: float = 0.95,
 ) -> dict[str, AOIObservationBundle]:
     """End-to-end live satellite ingestion: STAC search, COG retrieval, masking, indices, cache.
 
@@ -871,6 +1293,7 @@ def ingest_live_aoi_observations(
         resolution_m=resolution_m,
         catalog_url=catalog_url,
         client=client,
+        multi_tile=multi_tile,
     )
 
     cache_obj: AOIObservationCache | None = None
@@ -878,6 +1301,9 @@ def ingest_live_aoi_observations(
         cache_obj = cache
     elif isinstance(cache, (Path, str)):
         cache_obj = AOIObservationCache(cache)
+
+    effective_multi_tile = multi_tile and (tile_id is None)
+    effective_min_cov = min_coverage_threshold if effective_multi_tile else 0.0
 
     bundles: dict[str, AOIObservationBundle] = {}
     for ind_name in resolved_inds:
@@ -890,6 +1316,8 @@ def ingest_live_aoi_observations(
             zone_mask=zone_mask,
             data_origin=DataOrigin.REAL_STAC,
             catalog_url=catalog_url,
+            harmonize_sensor=harmonize_sensor,
+            min_coverage_threshold=effective_min_cov,
         )
         enriched_params = dict(bundle.provenance.parameters)
         enriched_params["raster_grid"] = {
@@ -950,6 +1378,7 @@ class AOIObservationCache:
 
     def put(self, bundle: AOIObservationBundle) -> Path:
         """Persist an :class:`AOIObservationBundle` to disk as JSON."""
+        validate_real_provenance(bundle)
         path = self.cache_path(bundle.unit_id, bundle.indicator)
         payload = json.dumps(bundle.to_dict(), indent=2, sort_keys=True)
         path.write_text(payload, encoding="utf-8")
@@ -983,22 +1412,25 @@ class AOIObservationCache:
                 f"(indicator={indicator!r}) when require_real=True"
             )
         effective_origin = (
-            DataOrigin.CACHED_REAL_STAC
-            if stored_origin == DataOrigin.REAL_STAC
-            else stored_origin
+            DataOrigin.CACHED_REAL_STAC if stored_origin == DataOrigin.REAL_STAC else stored_origin
         )
-        return AOIObservationBundle.from_dict(raw, override_origin=effective_origin)
+        loaded = AOIObservationBundle.from_dict(raw, override_origin=effective_origin)
+        validate_real_provenance(loaded)
+        return loaded
 
     load = get
 
 
 __all__ = [
+    "RECORD_EVIDENCE_STATES",
     "AOIObservationBundle",
     "AOIObservationCache",
     "AnnualObservationRecord",
     "DataOrigin",
     "SceneRasterChip",
+    "derive_record_evidence_state",
     "fetch_aoi_chips_from_stac",
     "ingest_live_aoi_observations",
     "reduce_aoi_scenes_to_series",
+    "validate_real_provenance",
 ]

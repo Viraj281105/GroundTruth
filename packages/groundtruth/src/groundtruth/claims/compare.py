@@ -136,8 +136,10 @@ def _is_robustness_inconclusive(bundle: Any) -> bool:
 
 def _extract_area_evidence(bundle: Any) -> tuple[str, float, str] | None:
     area_item = _get_bundle_item(bundle, "claim.project_area_ha")
-    if area_item is not None and isinstance(area_item.value, (int, float)) and not isinstance(
-        area_item.value, bool
+    if (
+        area_item is not None
+        and isinstance(area_item.value, (int, float))
+        and not isinstance(area_item.value, bool)
     ):
         return (
             "claim.project_area_ha",
@@ -161,9 +163,7 @@ def _extract_area_evidence(bundle: Any) -> tuple[str, float, str] | None:
     return None
 
 
-def verify_claims_against_bundle(
-    claims: list[Claim], bundle: Any
-) -> list[ClaimVerificationRecord]:
+def verify_claims_against_bundle(claims: list[Claim], bundle: Any) -> list[ClaimVerificationRecord]:
     """Verify extracted quantitative claims against an :class:`EvidenceBundle`."""
     records: list[ClaimVerificationRecord] = []
     for claim in claims:

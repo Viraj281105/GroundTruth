@@ -266,9 +266,7 @@ def run_analysis(
         )
     try:
         has_candidate_geoms = any(u.geometry is not None for u in candidates)
-        donor_geoms = (
-            {u.unit_id: u.geometry for u in candidates} if has_candidate_geoms else None
-        )
+        donor_geoms = {u.unit_id: u.geometry for u in candidates} if has_candidate_geoms else None
         pool = match_donors(
             request.case_id,
             project_covariates,

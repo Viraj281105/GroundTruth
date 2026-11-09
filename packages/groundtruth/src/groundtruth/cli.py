@@ -15,6 +15,7 @@ never a silent default, and every output from them is labelled SYNTHETIC.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import logging
 import sys
@@ -48,8 +49,7 @@ SYNTHETIC_BANNER = (
 SYNTHETIC_FIXTURE_BANNER = (
     "=" * 78 + "\nSYNTHETIC FIXTURE RUN - NOT SATELLITE OBSERVATIONS\n"
     "This run replays a precomputed SYNTHETIC series from disk. No imagery was\n"
-    "retrieved or processed. Results describe a test fixture, not any real project.\n"
-    + "=" * 78
+    "retrieved or processed. Results describe a test fixture, not any real project.\n" + "=" * 78
 )
 
 
@@ -244,6 +244,43 @@ def _cmd_submit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_seed(args: argparse.Namespace) -> int:
+    from groundtruth.platform.projects.seed import seed
+
+    sessions = _job_sessions()
+    if sessions is None:
+        return 2
+    settings = get_settings()
+    with sessions() as db:
+        report = seed(db, cases_dir=settings.cases_dir, demo=args.demo)
+        db.commit()
+    print(f"seed: created={report.created} existing={report.existing}")
+    print(f"seed: backfilled runs={report.backfilled_runs} jobs={report.backfilled_jobs}")
+    for email in report.existing_demo_users:
+        print(f"demo user exists (password unchanged): {email}")
+    if report.demo_users:
+        if args.passwords_file:
+            _write_credentials(Path(args.passwords_file), report.demo_users)
+            print(f"demo credentials written to {args.passwords_file}")
+        else:
+            print("Demo credentials (shown once; DEVELOPMENT ONLY, never reuse):")
+            for email, password in report.demo_users:
+                print("  " + email + "\t" + password)
+    return 0
+
+
+def _write_credentials(path: Path, users: list[tuple[str, str]]) -> None:
+    """Write ``email<TAB>password`` lines, owner-readable only where the OS supports it."""
+    import os
+
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        for email, password in users:
+            handle.write(email + "\t" + password + "\n")
+    with contextlib.suppress(OSError):  # not supported on every filesystem
+        os.chmod(path, 0o600)
+
+
 def _cmd_job(args: argparse.Namespace) -> int:
     from groundtruth.platform.jobs.queue import JobQueue
 
@@ -295,9 +332,7 @@ def _cmd_ingest_stac(args: argparse.Namespace) -> int:
 
     aoi_geojson = json.loads(boundary_file.read_text(encoding="utf-8"))
     cache_dir = (
-        Path(args.cache_dir)
-        if args.cache_dir
-        else (settings.data_dir / "processed" / "stac_cache")
+        Path(args.cache_dir) if args.cache_dir else (settings.data_dir / "processed" / "stac_cache")
     )
     cache = AOIObservationCache(cache_dir)
 
@@ -319,13 +354,9 @@ def _cmd_ingest_stac(args: argparse.Namespace) -> int:
         cache=cache,
     )
 
-    saved_paths = {
-        ind: str(cache.cache_path(case.case_id, ind))
-        for ind in bundles
-    }
+    saved_paths = {ind: str(cache.cache_path(case.case_id, ind)) for ind in bundles}
     reloaded_origins = {
-        ind: cache.get(case.case_id, ind, require_real=True).data_origin.value
-        for ind in bundles
+        ind: cache.get(case.case_id, ind, require_real=True).data_origin.value for ind in bundles
     }
 
     primary_bundle = bundles[indicators[0]]
@@ -477,6 +508,22 @@ def build_parser() -> argparse.ArgumentParser:
     job.add_argument("run_id")
     job.add_argument("--json", action="store_true")
     job.set_defaults(func=_cmd_job)
+
+    seed_cmd = subparsers.add_parser(
+        "seed",
+        help="Idempotently import cases as Reference projects (needs DATABASE_URL).",
+    )
+    seed_cmd.add_argument(
+        "--demo",
+        action="store_true",
+        help="Also create four demo organizations and users (development only).",
+    )
+    seed_cmd.add_argument(
+        "--passwords-file",
+        default=None,
+        help="With --demo: write email<TAB>password lines here (mode 600) instead of printing.",
+    )
+    seed_cmd.set_defaults(func=_cmd_seed)
 
     doctor = subparsers.add_parser("doctor", help="Report what is configured and implemented.")
     doctor.set_defaults(func=_cmd_doctor)

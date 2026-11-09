@@ -118,7 +118,10 @@ def test_validate_donor_eligibility_catches_sutva_and_provenance_violations() ->
         "zw-hwange",
     )
     geometries = {
-        "zw-gokwe-north": {"type": "Polygon", "coordinates": [[[28.0, -17.0], [28.5, -17.0], [28.5, -17.5], [28.0, -17.0]]]},
+        "zw-gokwe-north": {
+            "type": "Polygon",
+            "coordinates": [[[28.0, -17.0], [28.5, -17.0], [28.5, -17.5], [28.0, -17.0]]],
+        },
         "zw-hwange": None,
     }
 
@@ -131,7 +134,9 @@ def test_validate_donor_eligibility_catches_sutva_and_provenance_violations() ->
         require_spatial_provenance=True,
     )
 
-    assert exclusions["verra-902"] == "candidate is the treated project unit itself (SUTVA violation)"
+    assert (
+        exclusions["verra-902"] == "candidate is the treated project unit itself (SUTVA violation)"
+    )
     for host_id in ("zw-hurungwe", "zw-binga", "zw-mbire"):
         assert (
             exclusions[host_id]
@@ -330,21 +335,39 @@ def test_host_district_and_configurable_spatial_buffer_exclusions() -> None:
         "sliver-overlap-district": {
             "type": "Polygon",
             "coordinates": [
-                [[28.98, -16.95], [29.30, -16.95], [29.30, -16.85], [28.98, -16.85], [28.98, -16.95]]
+                [
+                    [28.98, -16.95],
+                    [29.30, -16.95],
+                    [29.30, -16.85],
+                    [28.98, -16.85],
+                    [28.98, -16.95],
+                ]
             ],
         },
         # ~5.5 km east of project boundary (inside 10 km buffer, outside 2 km buffer)
         "near-5km-district": {
             "type": "Polygon",
             "coordinates": [
-                [[29.05, -16.65], [29.35, -16.65], [29.35, -16.45], [29.05, -16.45], [29.05, -16.65]]
+                [
+                    [29.05, -16.65],
+                    [29.35, -16.65],
+                    [29.35, -16.45],
+                    [29.05, -16.45],
+                    [29.05, -16.65],
+                ]
             ],
         },
         # ~16 km east of project boundary (outside 10 km buffer, inside 25 km buffer)
         "mid-16km-district": {
             "type": "Polygon",
             "coordinates": [
-                [[29.15, -16.30], [29.45, -16.30], [29.45, -16.10], [29.15, -16.10], [29.15, -16.30]]
+                [
+                    [29.15, -16.30],
+                    [29.45, -16.30],
+                    [29.45, -16.10],
+                    [29.15, -16.10],
+                    [29.15, -16.30],
+                ]
             ],
         },
         # >100 km away
@@ -460,7 +483,9 @@ def test_kariba_authoritative_donor_boundaries_and_causal_reassessment() -> None
     assert len(fmap) == 51
     assert fmap["zw-uree"] is None
 
-    all_candidate_ids = tuple(c["unit_id"] for c in donor_collection.provenance_manifest["candidates"])
+    all_candidate_ids = tuple(
+        c["unit_id"] for c in donor_collection.provenance_manifest["candidates"]
+    )
     assert len(all_candidate_ids) == 51
 
     assessment = assess_donor_spatial_eligibility(
@@ -533,7 +558,9 @@ def test_kariba_authoritative_donor_boundaries_and_causal_reassessment() -> None
         )
         for u in cands
     }
-    cand_covs = {u.unit_id: access.covariates.covariates(u, request.donors.covariates) for u in cands}
+    cand_covs = {
+        u.unit_id: access.covariates.covariates(u, request.donors.covariates) for u in cands
+    }
     proj_covs = access.covariates.covariates(request.project, request.donors.covariates)
 
     pool = match_donors(
@@ -556,7 +583,9 @@ def test_kariba_authoritative_donor_boundaries_and_causal_reassessment() -> None
     )
 
     assert len(pool.admitted) == 37
-    assert len(pool.excluded) == 13  # 13 of the 50 in fixture (zw-nyaminyami is the 14th, not in fixture)
+    assert (
+        len(pool.excluded) == 13
+    )  # 13 of the 50 in fixture (zw-nyaminyami is the 14th, not in fixture)
     assert set(pool.unit_ids) == set(assessment.eligible_unit_ids)
 
     panel = align_panel(request.window, proj_ts, donor_series, pool.unit_ids)
@@ -600,4 +629,3 @@ def test_kariba_authoritative_donor_boundaries_and_causal_reassessment() -> None
     verdict = decide_verdict(inputs, divergence_ratio=0.40)
     assert verdict.label is VerdictLabel.INCONCLUSIVE
     assert "uniform 1/J weighting" in verdict.rationale
-

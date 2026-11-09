@@ -149,9 +149,7 @@ def test_validate_aoi_geojson_rejects_invalid_inputs() -> None:
     # Degenerate zero-area bbox (horizontal line)
     zero_area = {
         "type": "Polygon",
-        "coordinates": [
-            [[28.5, -16.8], [28.9, -16.8], [28.7, -16.8], [28.5, -16.8]]
-        ],
+        "coordinates": [[[28.5, -16.8], [28.9, -16.8], [28.7, -16.8], [28.5, -16.8]]],
     }
     with pytest.raises(ValueError, match="area"):
         validate_aoi_geojson(zero_area)

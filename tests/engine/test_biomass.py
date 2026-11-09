@@ -358,4 +358,3 @@ class TestDirectAgbToCarbonConversion:
             convert_agb_to_carbon(
                 10.0, 100.0, root_to_shoot_ratio=0.2, cf=1.2, calibration_source="TEST-ONLY"
             )
-

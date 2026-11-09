@@ -119,15 +119,14 @@ def test_live_planetary_computer_kariba_sentinel2_ingestion_and_cache(tmp_path: 
         cached_bundle = cache.get("kariba-redd", ind_name, require_real=True)
         assert cached_bundle.data_origin == DataOrigin.CACHED_REAL_STAC
         assert not cached_bundle.is_synthetic
-        assert cached_bundle.provenance.parameters["scenes_sha256"] == (
-            bundle.provenance.parameters["scenes_sha256"]
+        assert (
+            cached_bundle.provenance.parameters["scenes_sha256"]
+            == (bundle.provenance.parameters["scenes_sha256"])
         )
         assert cached_bundle.provenance.parameters["effective_data_origin"] == (
             DataOrigin.CACHED_REAL_STAC.value
         )
-        assert [r.scene_ids for r in cached_bundle.records] == [
-            r.scene_ids for r in bundle.records
-        ]
+        assert [r.scene_ids for r in cached_bundle.records] == [r.scene_ids for r in bundle.records]
         assert [r.value for r in cached_bundle.records] == pytest.approx(
             [r.value for r in bundle.records]
         )
@@ -145,4 +144,3 @@ def test_live_planetary_computer_kariba_sentinel2_ingestion_and_cache(tmp_path: 
     ts = obs_port.series(spec)
     assert ts.periods == (2022, 2023)
     assert all(0.20 < v < 0.65 for v in ts.values)
-

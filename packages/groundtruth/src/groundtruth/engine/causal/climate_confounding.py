@@ -93,6 +93,7 @@ class UnitClimateSummary(Protocol):
 
     def record_by_year(self) -> Mapping[int, Any]: ...
 
+
 ClimateCovariateName = Literal[
     "annual_rainfall_mm",
     "wet_season_rainfall_mm",
@@ -165,7 +166,12 @@ class ClimateSpecDiagnostic:
     """Diagnostic result for a single climate-adjustment specification."""
 
     spec_name: str
-    adjustment_mode: Literal["unadjusted", "donor_panel_residualized", "pre_treatment_residualized", "pre_treatment_climate_augmented_scm"]
+    adjustment_mode: Literal[
+        "unadjusted",
+        "donor_panel_residualized",
+        "pre_treatment_residualized",
+        "pre_treatment_climate_augmented_scm",
+    ]
     covariates_used: tuple[str, ...]
     uses_post_treatment_covariates: bool
     post_treatment_control_warning: str | None
@@ -426,7 +432,11 @@ def evaluate_donor_climate_comparability(
 
         d_t_pre = float(np.nanmean(d_pre_temp)) if not np.all(np.isnan(d_pre_temp)) else None
         d_t_post = float(np.nanmean(d_post_temp)) if not np.all(np.isnan(d_post_temp)) else None
-        t_diff = (d_t_pre - t_pre_temp_mean) if (d_t_pre is not None and t_pre_temp_mean is not None) else None
+        t_diff = (
+            (d_t_pre - t_pre_temp_mean)
+            if (d_t_pre is not None and t_pre_temp_mean is not None)
+            else None
+        )
         diff_t_shock = (
             (d_t_post - d_t_pre) - t_temp_shift
             if (d_t_pre is not None and d_t_post is not None and t_temp_shift is not None)
@@ -484,7 +494,9 @@ def evaluate_donor_climate_comparability(
                 differential_post_rainfall_shock_mm=round(diff_shock, 2),
                 pre_temp_mean_c=round(d_t_pre, 2) if d_t_pre is not None else None,
                 pre_temp_diff_c=round(t_diff, 2) if t_diff is not None else None,
-                differential_post_temp_shock_c=round(diff_t_shock, 3) if diff_t_shock is not None else None,
+                differential_post_temp_shock_c=round(diff_t_shock, 3)
+                if diff_t_shock is not None
+                else None,
                 pre_drought_years_count=len(d.pre_treatment_drought_years),
                 post_drought_years_count=len(d.post_treatment_drought_years),
                 is_climate_comparable=is_comp,
@@ -614,7 +626,9 @@ def check_post_treatment_covariate_divergence(
     warnings: list[str] = []
     for k_idx, cname in enumerate(covariate_names):
         t_diff = float(np.mean(treated_X_post[:, k_idx]) - np.mean(treated_X_pre[:, k_idx]))
-        d_diffs = np.mean(donor_X_post[:, :, k_idx], axis=0) - np.mean(donor_X_pre[:, :, k_idx], axis=0)
+        d_diffs = np.mean(donor_X_post[:, :, k_idx], axis=0) - np.mean(
+            donor_X_pre[:, :, k_idx], axis=0
+        )
         d_mean = float(np.mean(d_diffs))
         d_std = float(np.std(d_diffs, ddof=1)) if d_diffs.size >= 2 else 0.0
         if d_std > 1e-9:
@@ -715,9 +729,7 @@ def run_climate_confounding_analysis(
     treated_Y_all = np.concatenate([treated_pre, treated_post])
 
     # 1. Baseline Unadjusted Specification
-    unadj_scm = fit_synthetic_control(
-        treated_Y_all, donor_Y_all, donor_ids_tuple, n_pre
-    )
+    unadj_scm = fit_synthetic_control(treated_Y_all, donor_Y_all, donor_ids_tuple, n_pre)
     unadj_did = estimate_did(treated_Y_all, donor_Y_all, n_pre, n_bootstrap=199)
     unadj_verdict, unadj_reasons = evaluate_causal_gates_for_spec(
         unadj_scm,
@@ -766,9 +778,7 @@ def run_climate_confounding_analysis(
             treated_climate, donor_climates, all_y, cov_names
         )
         fit_slice = slice(0, n_pre) if pre_only_beta else None
-        beta, r2 = estimate_untreated_climate_sensitivity(
-            donor_Y_all, d_X_all, fit_rows=fit_slice
-        )
+        beta, r2 = estimate_untreated_climate_sensitivity(donor_Y_all, d_X_all, fit_rows=fit_slice)
 
         # Anchor demeaning of climate covariates at each unit's PRE-TREATMENT mean
         # so that post-treatment weather anomalies relative to the pre-treatment baseline
@@ -779,9 +789,7 @@ def run_climate_confounding_analysis(
         t_adj_all = treated_Y_all - ((t_X_all - t_X_pre_mean) @ beta)
         d_adj_all = donor_Y_all - np.einsum("tjk,k->tj", d_X_all - d_X_pre_mean, beta)
 
-        scm_adj = fit_synthetic_control(
-            t_adj_all, d_adj_all, donor_ids_tuple, n_pre
-        )
+        scm_adj = fit_synthetic_control(t_adj_all, d_adj_all, donor_ids_tuple, n_pre)
         did_adj = estimate_did(t_adj_all, d_adj_all, n_pre, n_bootstrap=199)
         warn_msg = check_post_treatment_covariate_divergence(
             t_X_all[:n_pre, :],
@@ -799,7 +807,9 @@ def run_climate_confounding_analysis(
 
         return ClimateSpecDiagnostic(
             spec_name=spec_name,
-            adjustment_mode="pre_treatment_residualized" if pre_only_beta else "donor_panel_residualized",
+            adjustment_mode="pre_treatment_residualized"
+            if pre_only_beta
+            else "donor_panel_residualized",
             covariates_used=cov_names,
             uses_post_treatment_covariates=True,
             post_treatment_control_warning=warn_msg,
@@ -809,13 +819,17 @@ def run_climate_confounding_analysis(
             donor_panel_climate_r2=round(float(r2), 4),
             scm_fit=scm_adj,
             did_result=did_adj,
-            scm_ate_delta_vs_unadjusted=round(float(scm_adj.average_effect - unadj_scm.average_effect), 6),
+            scm_ate_delta_vs_unadjusted=round(
+                float(scm_adj.average_effect - unadj_scm.average_effect), 6
+            ),
             did_ate_delta_vs_unadjusted=round(float(did_adj.estimate - unadj_did.estimate), 6),
             pre_rmspe_delta_vs_unadjusted=round(float(scm_adj.pre_rmspe - unadj_scm.pre_rmspe), 6),
             relative_pre_fit_delta_vs_unadjusted=round(
                 float(scm_adj.relative_pre_fit - unadj_scm.relative_pre_fit), 6
             ),
-            rmspe_ratio_delta_vs_unadjusted=round(float(scm_adj.rmspe_ratio - unadj_scm.rmspe_ratio), 6),
+            rmspe_ratio_delta_vs_unadjusted=round(
+                float(scm_adj.rmspe_ratio - unadj_scm.rmspe_ratio), 6
+            ),
             identifiability_preserved=(verdict_adj == VerdictLabel.INCONCLUSIVE),
             verdict_after_gates=verdict_adj,
             gate_failure_reasons=reasons_adj,
@@ -884,13 +898,19 @@ def run_climate_confounding_analysis(
         donor_panel_climate_r2=0.0,
         scm_fit=scm_pre_matched,
         did_result=unadj_did,
-        scm_ate_delta_vs_unadjusted=round(float(scm_pre_matched.average_effect - unadj_scm.average_effect), 6),
+        scm_ate_delta_vs_unadjusted=round(
+            float(scm_pre_matched.average_effect - unadj_scm.average_effect), 6
+        ),
         did_ate_delta_vs_unadjusted=0.0,
-        pre_rmspe_delta_vs_unadjusted=round(float(scm_pre_matched.pre_rmspe - unadj_scm.pre_rmspe), 6),
+        pre_rmspe_delta_vs_unadjusted=round(
+            float(scm_pre_matched.pre_rmspe - unadj_scm.pre_rmspe), 6
+        ),
         relative_pre_fit_delta_vs_unadjusted=round(
             float(scm_pre_matched.relative_pre_fit - unadj_scm.relative_pre_fit), 6
         ),
-        rmspe_ratio_delta_vs_unadjusted=round(float(scm_pre_matched.rmspe_ratio - unadj_scm.rmspe_ratio), 6),
+        rmspe_ratio_delta_vs_unadjusted=round(
+            float(scm_pre_matched.rmspe_ratio - unadj_scm.rmspe_ratio), 6
+        ),
         identifiability_preserved=(verdict_pm == VerdictLabel.INCONCLUSIVE),
         verdict_after_gates=verdict_pm,
         gate_failure_reasons=reasons_pm,
@@ -898,7 +918,9 @@ def run_climate_confounding_analysis(
 
     # 5. Full Sensitivity Analysis Sweep
     spec_annual_rain = _run_residualized_spec("chirps_annual_rainfall", ("annual_rainfall_mm",))
-    spec_wet_rain = _run_residualized_spec("chirps_wet_season_rainfall", ("wet_season_rainfall_mm",))
+    spec_wet_rain = _run_residualized_spec(
+        "chirps_wet_season_rainfall", ("wet_season_rainfall_mm",)
+    )
     spec_spi12 = _run_residualized_spec("chirps_spi_12_drought", ("spi_12",))
     spec_spi6 = _run_residualized_spec("chirps_spi_6_wet_drought", ("spi_6_wet",))
     spec_temp = _run_residualized_spec("nasa_power_mean_temp", ("mean_temp_c",))
@@ -933,11 +955,7 @@ def run_climate_confounding_analysis(
     pre_rmspes = [s.scm_fit.pre_rmspe for s in all_specs]
 
     gates_ok = all(s.verdict_after_gates == VerdictLabel.INCONCLUSIVE for s in all_specs)
-    final_verdict = (
-        VerdictLabel.INCONCLUSIVE
-        if gates_ok
-        else unadj_spec.verdict_after_gates
-    )
+    final_verdict = VerdictLabel.INCONCLUSIVE if gates_ok else unadj_spec.verdict_after_gates
 
     limitations = (
         f"Under-identified donor pool persists across all climate specifications: J={n_j} eligible donors vs T_0={n_pre} pre-treatment annual observations (2001-2010).",
@@ -1043,13 +1061,20 @@ def analyze_sentinel2_climate_comovement(
     )
 
     notes: list[str] = []
-    if ndvi_delta is not None and ndvi_tuple[0] is not None and ndvi_tuple[1] is not None and ndvi_tuple[2] is not None:
+    if (
+        ndvi_delta is not None
+        and ndvi_tuple[0] is not None
+        and ndvi_tuple[1] is not None
+        and ndvi_tuple[2] is not None
+    ):
         notes.append(
             f"Real Sentinel-2 L2A NDVI drops by {ndvi_delta:+.4f} in {yrs[2]} ({ndvi_tuple[2]:.4f}) "
-            f"relative to the {yrs[0]}-{yrs[1]} mean ({0.5*(ndvi_tuple[0]+ndvi_tuple[1]):.4f})."
+            f"relative to the {yrs[0]}-{yrs[1]} mean ({0.5 * (ndvi_tuple[0] + ndvi_tuple[1]):.4f})."
         )
     else:
-        notes.append(f"Sentinel-2 NDVI observations for years {yrs} are partially or entirely unavailable.")
+        notes.append(
+            f"Sentinel-2 NDVI observations for years {yrs} are partially or entirely unavailable."
+        )
 
     if ndmi_tuple[0] is not None and ndmi_tuple[1] is not None and ndmi_tuple[2] is not None:
         ndmi_shift_str = (

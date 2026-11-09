@@ -356,7 +356,7 @@ def build_unit_climate_summary(
     tmax_map = monthly_t2m_max_c or {}
     tmin_map = monthly_t2m_min_c or {}
 
-    years_sorted = sorted(set(int(y) for y in years))
+    years_sorted = sorted({int(y) for y in years})
     b_start, b_end = baseline_period
 
     raw_annual: list[float | None] = []
@@ -375,7 +375,20 @@ def build_unit_climate_summary(
     missing_years: list[int] = []
     incomplete_years: list[int] = []
 
-    days_per_month = {1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31}
+    days_per_month = {
+        1: 31,
+        2: 28,
+        3: 31,
+        4: 30,
+        5: 31,
+        6: 30,
+        7: 31,
+        8: 31,
+        9: 30,
+        10: 31,
+        11: 30,
+        12: 31,
+    }
 
     def _get_precip_mm(y: int, m: int) -> float | None:
         ym = f"{y}.{m:02d}"
@@ -452,7 +465,9 @@ def build_unit_climate_summary(
         # Calendar wet months: Jan..Apr + Nov..Dec of year y
         cal_wet_list = [m_vals.get(m) for m in (1, 2, 3, 4, 11, 12)]
         if all(v is not None for v in cal_wet_list):
-            raw_wet_cal.append(round(float(sum(float(v) for v in cal_wet_list if v is not None)), 3))
+            raw_wet_cal.append(
+                round(float(sum(float(v) for v in cal_wet_list if v is not None)), 3)
+            )
         else:
             raw_wet_cal.append(None)
 
@@ -528,8 +543,7 @@ def build_unit_climate_summary(
     )
     # For SPI-6 wet season, use Austral wet season where available (or calendar wet months if 1981)
     wet_for_spi = [
-        v if v is not None else cw
-        for v, cw in zip(raw_wet_austral, raw_wet_cal, strict=True)
+        v if v is not None else cw for v, cw in zip(raw_wet_austral, raw_wet_cal, strict=True)
     ]
     spi_6_list = compute_gamma_spi(
         wet_for_spi, baseline_mask, min_baseline_years=min_spi_baseline_years
@@ -561,7 +575,12 @@ def build_unit_climate_summary(
         )
         t_anom_z = (
             round((t_val - base_temp_mean) / base_temp_std, 4)
-            if (t_val is not None and base_temp_mean is not None and base_temp_std and base_temp_std > 1e-6)
+            if (
+                t_val is not None
+                and base_temp_mean is not None
+                and base_temp_std
+                and base_temp_std > 1e-6
+            )
             else None
         )
 
@@ -603,20 +622,34 @@ def build_unit_climate_summary(
 
     pre_s, pre_e = pre_treatment_period
     post_s, post_e = post_treatment_period
-    pre_rain = [r.annual_rainfall_mm for r in records if pre_s <= r.year <= pre_e and r.annual_rainfall_mm is not None]
-    post_rain = [r.annual_rainfall_mm for r in records if post_s <= r.year <= post_e and r.annual_rainfall_mm is not None]
+    pre_rain = [
+        r.annual_rainfall_mm
+        for r in records
+        if pre_s <= r.year <= pre_e and r.annual_rainfall_mm is not None
+    ]
+    post_rain = [
+        r.annual_rainfall_mm
+        for r in records
+        if post_s <= r.year <= post_e and r.annual_rainfall_mm is not None
+    ]
 
     pre_drought = tuple(
         r.year
         for r in records
         if pre_s <= r.year <= pre_e
-        and ((r.spi_12 is not None and r.spi_12 <= -1.0) or (r.spi_12 is None and r.spi_6_wet is not None and r.spi_6_wet <= -1.0))
+        and (
+            (r.spi_12 is not None and r.spi_12 <= -1.0)
+            or (r.spi_12 is None and r.spi_6_wet is not None and r.spi_6_wet <= -1.0)
+        )
     )
     post_drought = tuple(
         r.year
         for r in records
         if r.year >= post_s
-        and ((r.spi_12 is not None and r.spi_12 <= -1.0) or (r.spi_12 is None and r.spi_6_wet is not None and r.spi_6_wet <= -1.0))
+        and (
+            (r.spi_12 is not None and r.spi_12 <= -1.0)
+            or (r.spi_12 is None and r.spi_6_wet is not None and r.spi_6_wet <= -1.0)
+        )
     )
 
     return UnitClimateSummary(
@@ -635,8 +668,12 @@ def build_unit_climate_summary(
         baseline_std_temp_c=round(base_temp_std, 3) if base_temp_std is not None else None,
         pre_treatment_mean_rainfall_mm=round(float(np.mean(pre_rain)), 3) if pre_rain else None,
         post_treatment_mean_rainfall_mm=round(float(np.mean(post_rain)), 3) if post_rain else None,
-        pre_treatment_std_rainfall_mm=round(float(np.std(pre_rain, ddof=1)), 3) if len(pre_rain) >= 2 else None,
-        post_treatment_std_rainfall_mm=round(float(np.std(post_rain, ddof=1)), 3) if len(post_rain) >= 2 else None,
+        pre_treatment_std_rainfall_mm=round(float(np.std(pre_rain, ddof=1)), 3)
+        if len(pre_rain) >= 2
+        else None,
+        post_treatment_std_rainfall_mm=round(float(np.std(post_rain, ddof=1)), 3)
+        if len(post_rain) >= 2
+        else None,
         pre_treatment_drought_years=pre_drought,
         post_treatment_drought_years=post_drought,
         records=tuple(records),
@@ -720,7 +757,9 @@ def align_climate_to_satellite_years(
         )
 
     clim_only = tuple(
-        sorted(set(r.year for r in climate_summary.records if r.valid_months > 0) - set(sat_years_sorted))
+        sorted(
+            {r.year for r in climate_summary.records if r.valid_months > 0} - set(sat_years_sorted)
+        )
     )
 
     if not aligned_years:
@@ -897,3 +936,28 @@ def load_kariba_climate_bundle(
         eligible_donor_ids=tuple(raw["eligible_donor_ids"]),
         unit_summaries=unit_summaries,
     )
+
+
+def load_project_climate(case_id: str, cache_dir: Path) -> KaribaClimateBundle | None:
+    """Load the climate bundle ingested for ``case_id``, or ``None`` when there is none.
+
+    Only the Kariba CHIRPS/POWER ingest exists today, so this wraps
+    :func:`load_kariba_climate_bundle` and refuses to hand Kariba's series to any other case.
+
+    Args:
+        case_id: The case whose series is wanted.
+        cache_dir: Directory holding ``kariba_chirps_climate.json``.
+
+    Returns:
+        The bundle, or ``None`` when the cache file is absent or was ingested for a different
+        ``case_id``.
+
+    Raises:
+        DataUnavailableError, InsufficientDataError, ValueError, KeyError: the cache exists but
+            is corrupt or incomplete; callers decide how to degrade.
+    """
+    path = Path(cache_dir) / DEFAULT_CLIMATE_CACHE_PATH.name
+    if not path.is_file():
+        return None
+    bundle = load_kariba_climate_bundle(path)
+    return bundle if bundle.case_id == case_id else None

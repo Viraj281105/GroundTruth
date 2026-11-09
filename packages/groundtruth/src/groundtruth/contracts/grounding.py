@@ -355,9 +355,7 @@ def verify_grounding(
 
     # Verdict contradiction guard: narrative contradicts the bundle's screening verdict.
     verdict_label = (
-        getattr(bundle.verdict, "label", bundle.verdict)
-        if bundle.verdict is not None
-        else None
+        getattr(bundle.verdict, "label", bundle.verdict) if bundle.verdict is not None else None
     )
     if verdict_label in (VerdictLabel.INCONCLUSIVE, VerdictLabel.DIVERGENT_FROM_CLAIM):
         verdict_scannable = _NEGATED_VERDICT_PATTERN.sub(" ", scannable)

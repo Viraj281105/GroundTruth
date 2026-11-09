@@ -485,10 +485,7 @@ def assess_donor_spatial_eligibility(
             is_explicit_dup = bool(
                 props_b.get("duplicate_of_unit_id") == uid_a
                 or props_a.get("duplicate_of_unit_id") == uid_b
-                or (
-                    props_a.get("shape_id")
-                    and props_a.get("shape_id") == props_b.get("shape_id")
-                )
+                or (props_a.get("shape_id") and props_a.get("shape_id") == props_b.get("shape_id"))
             )
             if is_explicit_dup:
                 shared_km2 = float(area_b or area_a or 100.0)
@@ -553,11 +550,7 @@ def assess_donor_spatial_eligibility(
         is_host = bool(
             uid in host_unit_ids
             or props.get("is_host_district") is True
-            or (
-                proj_m is not None
-                and sh_m is not None
-                and ov_km2 >= host_overlap_threshold_km2
-            )
+            or (proj_m is not None and sh_m is not None and ov_km2 >= host_overlap_threshold_km2)
         )
         overlaps_proj = bool(not is_host and ov_km2 > project_overlap_tolerance_km2)
         within_buffer = bool(
@@ -622,8 +615,7 @@ def assess_donor_spatial_eligibility(
         elif exclude_host_adjacent and touches_host:
             buffer_excluded_ids.append(uid)
             reason = (
-                "adjacent to a project host district "
-                "(excluded under strict host-adjacency setting)"
+                "adjacent to a project host district (excluded under strict host-adjacency setting)"
             )
 
         admitted = reason is None
