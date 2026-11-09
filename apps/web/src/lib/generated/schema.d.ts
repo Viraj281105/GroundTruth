@@ -849,6 +849,10 @@ export interface paths {
         /**
          * Create Case
          * @description Create, calibrate and register a new project case.
+         *
+         *     Everything is validated before anything is written. A rejected case answers a structured
+         *     422 (`invalid_case`, with the field named, or `case_status_requires_review`) and leaves
+         *     no file behind. Cases are always created as `scaffolded`.
          */
         post: operations["create_case_cases_post"];
         delete?: never;
@@ -1362,6 +1366,11 @@ export interface components {
             } | null;
             /** Case Id */
             case_id?: string | null;
+            /**
+             * Status
+             * @description Not settable. Cases created here are always 'scaffolded'; omit this field. Sending 'analysed' is refused with `case_status_requires_review`, because that status needs a run reviewed by both owners (C7, #4), and any other value is refused with `invalid_case`.
+             */
+            status?: string | null;
         };
         /** CreateOrgRequest */
         CreateOrgRequest: {
@@ -2776,9 +2785,9 @@ export interface components {
             synthetic?: boolean;
             /**
              * Min Donors
-             * @default 10
+             * @description Omit to use the case's own floor. A larger value makes the run stricter; a value below the case's floor is refused with `min_donors_below_case_floor`.
              */
-            min_donors?: number;
+            min_donors?: number | null;
         };
         /** SwitchOrgRequest */
         SwitchOrgRequest: {
@@ -2890,9 +2899,9 @@ export interface components {
             true_effect?: number;
             /**
              * Min Donors
-             * @default 10
+             * @description Omit to use the case's own floor. A larger value makes the run stricter; a value below the case's floor is refused with `min_donors_below_case_floor`.
              */
-            min_donors?: number;
+            min_donors?: number | null;
             /**
              * Include Report
              * @default true
@@ -3310,13 +3319,13 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorBody"];
                 };
             };
-            /** @description Validation Error */
+            /** @description The body is invalid (a validation error), or `min_donors` is below the case's floor (`min_donors_below_case_floor`). */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["HTTPValidationError"] | components["schemas"]["ApiErrorBody"];
                 };
             };
             /** @description Observed data is not implemented. */
@@ -5853,13 +5862,13 @@ export interface operations {
                     "application/json": components["schemas"]["CaseDetail"];
                 };
             };
-            /** @description Validation Error */
+            /** @description The body is invalid (a validation error), or the case is refused with a structured code and the offending field: `invalid_case` or `case_status_requires_review`. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["HTTPValidationError"] | components["schemas"]["ApiErrorBody"];
                 };
             };
         };
@@ -5952,7 +5961,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"] | components["schemas"]["EngineFailureBody"];
+                    "application/json": components["schemas"]["HTTPValidationError"] | components["schemas"]["EngineFailureBody"] | components["schemas"]["ApiErrorBody"];
                 };
             };
             /** @description The engine failed to estimate. */

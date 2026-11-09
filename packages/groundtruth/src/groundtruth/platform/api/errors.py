@@ -17,6 +17,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 
 from groundtruth.contracts.result import ErrorCode
+from groundtruth.platform.cases.registry import CaseValidationError
 
 
 class ApiErrorCode(StrEnum):
@@ -37,6 +38,12 @@ class ApiErrorCode(StrEnum):
     CASE_NOT_FOUND = "case_not_found"
     JOB_ALREADY_FINISHED = "job_already_finished"
     """The job succeeded or failed, so there is nothing left to cancel."""
+    INVALID_CASE = "invalid_case"
+    """A case, or part of one, is invalid in a way the caller can fix; the field is named."""
+    CASE_STATUS_REQUIRES_REVIEW = "case_status_requires_review"
+    """``status: analysed`` needs a run reviewed by both owners (C7, #4)."""
+    MIN_DONORS_BELOW_CASE_FLOOR = "min_donors_below_case_floor"
+    """A request tried to lower the case's pre-registered ``min_donors``."""
 
 
 API_ERROR_STATUS: dict[ApiErrorCode, int] = {
@@ -50,6 +57,9 @@ API_ERROR_STATUS: dict[ApiErrorCode, int] = {
     ApiErrorCode.NOT_IMPLEMENTED: 501,
     ApiErrorCode.CASE_NOT_FOUND: 404,
     ApiErrorCode.JOB_ALREADY_FINISHED: 409,
+    ApiErrorCode.INVALID_CASE: 422,
+    ApiErrorCode.CASE_STATUS_REQUIRES_REVIEW: 422,
+    ApiErrorCode.MIN_DONORS_BELOW_CASE_FLOOR: 422,
 }
 """Every member must appear here; a test enforces it."""
 
@@ -64,6 +74,15 @@ class ApiErrorBody(BaseModel):
     """The JSON body of an error response, for the OpenAPI schema."""
 
     detail: ApiErrorDetail
+
+
+def case_validation_error(exc: CaseValidationError) -> HTTPException:
+    """The structured 422 for a :class:`CaseValidationError`: its code, the field, the fix."""
+    try:
+        code = ApiErrorCode(exc.code)
+    except ValueError:
+        code = ApiErrorCode.INVALID_CASE
+    return api_error(code, exc.describe(), exc.hint)
 
 
 def api_error(code: ApiErrorCode, message: str, hint: str | None = None) -> HTTPException:

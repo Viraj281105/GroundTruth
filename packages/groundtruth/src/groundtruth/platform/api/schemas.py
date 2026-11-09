@@ -100,6 +100,15 @@ class CreateCaseRequest(BaseModel):
     post_end: int = Field(default=2022)
     boundary_geojson: dict[str, Any] | None = None
     case_id: str | None = None
+    status: str | None = Field(
+        default=None,
+        description=(
+            "Not settable. Cases created here are always 'scaffolded'; omit this field. "
+            "Sending 'analysed' is refused with `case_status_requires_review`, because that "
+            "status needs a run reviewed by both owners (C7, #4), and any other value is "
+            "refused with `invalid_case`."
+        ),
+    )
 
 
 class DataSourceMode(StrEnum):
@@ -129,7 +138,14 @@ class VerificationRequest(BaseModel):
     true_effect: float = Field(
         default=0.06, description="Effect injected into the simulated treated unit."
     )
-    min_donors: int = Field(default=10, ge=2)
+    min_donors: int | None = Field(
+        default=None,
+        ge=2,
+        description=(
+            "Omit to use the case's own floor. A larger value makes the run stricter; a "
+            "value below the case's floor is refused with `min_donors_below_case_floor`."
+        ),
+    )
     include_report: bool = True
 
 
@@ -657,7 +673,14 @@ class SubmitJobRequest(BaseModel):
         description="Must be true until real Earth-observation providers are implemented. "
         "false is refused with 501, never silently simulated.",
     )
-    min_donors: int = Field(default=10, ge=2)
+    min_donors: int | None = Field(
+        default=None,
+        ge=2,
+        description=(
+            "Omit to use the case's own floor. A larger value makes the run stricter; a "
+            "value below the case's floor is refused with `min_donors_below_case_floor`."
+        ),
+    )
 
 
 class JobSubmission(BaseModel):

@@ -481,6 +481,23 @@
               }
             }
           },
+          "422": {
+            "description": "The body is invalid (a validation error), or `min_donors` is below the case's floor (`min_donors_below_case_floor`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          },
           "501": {
             "description": "Observed data is not implemented.",
             "content": {
@@ -517,16 +534,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiErrorBody"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -3697,7 +3704,7 @@
           "cases"
         ],
         "summary": "Create Case",
-        "description": "Create, calibrate and register a new project case.",
+        "description": "Create, calibrate and register a new project case.\n\nEverything is validated before anything is written. A rejected case answers a structured\n422 (`invalid_case`, with the field named, or `case_status_requires_review`) and leaves\nno file behind. Cases are always created as `scaffolded`.",
         "operationId": "create_case_cases_post",
         "requestBody": {
           "content": {
@@ -3721,11 +3728,18 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "The body is invalid (a validation error), or the case is refused with a structured code and the offending field: `invalid_case` or `case_status_requires_review`.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorBody"
+                    }
+                  ]
                 }
               }
             }
@@ -3857,6 +3871,9 @@
                     },
                     {
                       "$ref": "#/components/schemas/EngineFailureBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorBody"
                     }
                   ]
                 }
@@ -5087,6 +5104,18 @@
               }
             ],
             "title": "Case Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "Not settable. Cases created here are always 'scaffolded'; omit this field. Sending 'analysed' is refused with `case_status_requires_review`, because that status needs a run reviewed by both owners (C7, #4), and any other value is refused with `invalid_case`."
           }
         },
         "type": "object",
@@ -8422,10 +8451,17 @@
             "default": true
           },
           "min_donors": {
-            "type": "integer",
-            "minimum": 2.0,
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 2.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Min Donors",
-            "default": 10
+            "description": "Omit to use the case's own floor. A larger value makes the run stricter; a value below the case's floor is refused with `min_donors_below_case_floor`."
           }
         },
         "additionalProperties": false,
@@ -8709,10 +8745,17 @@
             "default": 0.06
           },
           "min_donors": {
-            "type": "integer",
-            "minimum": 2.0,
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 2.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Min Donors",
-            "default": 10
+            "description": "Omit to use the case's own floor. A larger value makes the run stricter; a value below the case's floor is refused with `min_donors_below_case_floor`."
           },
           "include_report": {
             "type": "boolean",

@@ -69,8 +69,7 @@ class FakeClock:
             return self.now
 
 
-def _request(*, seed: int = 20260101, min_donors: int = 10) -> AnalysisRequest:
-    # 10 is what POST /jobs sends by default, so a job submitted through the API has this hash.
+def _request(*, seed: int = 20260101, min_donors: int | None = None) -> AnalysisRequest:
     return get_case("kariba-redd").to_request(seed=seed, min_donors=min_donors)
 
 
@@ -268,8 +267,8 @@ class TestSubmit:
         assert job["notice"].startswith("SIMULATED DATA")
 
     def test_the_request_is_the_cases_with_the_configured_seed(self, client, sessions):
-        run_id = self._submit(client, min_donors=7).json()["run_id"]
-        expected = _request(min_donors=7)
+        run_id = self._submit(client, min_donors=35).json()["run_id"]
+        expected = _request(min_donors=35)
         with sessions() as session:
             run = session.get(AnalysisRunRow, run_id)
             assert (run.spec_hash, run.seed, run.data_mode) == (
@@ -317,6 +316,39 @@ class TestSubmit:
         with sessions() as session:
             assert session.scalar(sa.select(sa.func.count()).select_from(JobRow)) == 1
 
+    # --- min_donors: the case's own floor, which a request may raise but not lower -------------
+
+    def test_a_request_that_says_nothing_uses_the_cases_own_floor(self, client, sessions):
+        """Kariba sets min_donors 30 / max 50. POST /jobs used to override that with 10."""
+        run_id = self._submit(client).json()["run_id"]
+        expected = _request()
+        assert (expected.donors.min_donors, expected.donors.max_donors) == (30, 50)
+        with sessions() as session:
+            assert session.get(AnalysisRunRow, run_id).spec_hash == expected.spec_hash
+
+    def test_asking_for_exactly_the_floor_is_the_same_job(self, client):
+        a = self._submit(client).json()
+        b = self._submit(client, min_donors=30).json()
+        assert a["run_id"] == b["run_id"]
+
+    def test_a_request_may_raise_the_floor(self, client, sessions):
+        response = self._submit(client, min_donors=40)
+        assert response.status_code == 202
+        with sessions() as session:
+            run = session.get(AnalysisRunRow, response.json()["run_id"])
+            assert run.spec_hash == _request(min_donors=40).spec_hash
+
+    @pytest.mark.parametrize("below", [29, 10, 2])
+    def test_a_request_may_not_lower_the_floor(self, client, sessions, below):
+        response = self._submit(client, min_donors=below)
+        assert response.status_code == 422
+        error = _error(response)
+        assert error["code"] == "min_donors_below_case_floor"
+        assert "30" in error["message"] and "pre-registered" in error["message"]
+        assert error["hint"] and "Omit min_donors" in error["hint"]
+        with sessions() as session:  # refused before anything was queued
+            assert session.scalar(sa.select(sa.func.count()).select_from(AnalysisRunRow)) == 0
+
     def test_a_cancelled_job_does_not_block_a_new_one(self, client):
         first = self._submit(client).json()["run_id"]
         client.post(f"/jobs/{first}/cancel")
@@ -324,7 +356,7 @@ class TestSubmit:
         assert second.status_code == 202 and second.json()["run_id"] != first
 
     def test_a_different_donor_floor_is_a_different_job(self, client):
-        a, b = self._submit(client).json(), self._submit(client, min_donors=11).json()
+        a, b = self._submit(client).json(), self._submit(client, min_donors=31).json()
         assert a["run_id"] != b["run_id"]
 
     def test_observed_data_is_refused_not_simulated(self, client, sessions):

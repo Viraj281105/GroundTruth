@@ -66,6 +66,26 @@ graph TD
 | `reports/`| `platform/reports/`| Deterministic markdown renderer, GenAI narrator, grounding check | Implemented |
 | `config.py`| `platform/config.py`| Environment-driven Pydantic `Settings`, secret masking | Implemented |
 
+### 1.1 Case management rules (#36)
+
+Cases are YAML under `cases/`; `POST /cases` writes one. Three rules hold on every path:
+
+- **A created case makes a valid request.** Everything is checked *before* a file is written: the
+  boundary, the analysis window (including the estimator's 5 pre-period minimum), the indicator,
+  standard and dates. A rejected case answers a structured `422` (`invalid_case`, with the field
+  named and a hint) and leaves nothing on disk. Case ids must be lowercase kebab-case, because the
+  id becomes a file name.
+- **`status: analysed` cannot be set.** The guard is in `CaseDefinition.__post_init__`, so the YAML
+  loader, `create_and_register_case`, the database upsert and project seeding all go through it.
+  It refuses `analysed` with `case_status_requires_review`: that status needs a run reviewed by both
+  owners (coordination point C7, issue #4), and there is no review mechanism or real run yet. An
+  unknown status (a typo such as `analyzed`) is refused too. `POST /cases` accepts a `status` field
+  only to refuse it explicitly.
+- **A case's `min_donors` is its pre-registered refusal floor.** A request that omits it uses the
+  case's own value (Kariba: 30). It may ask for a *higher* value; a *lower* one is refused with
+  `min_donors_below_case_floor`, because lowering the floor is how a refusal gets forced into a number.
+  This applies to `POST /jobs`, `POST /cases/{id}/verify` and the CLI.
+
 ---
 
 ## 2. Multi-Tenant RBAC Enforcement & Data Isolation

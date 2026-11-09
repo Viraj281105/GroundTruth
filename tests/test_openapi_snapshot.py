@@ -184,6 +184,8 @@ class TestDocumentedErrorsMatchWhatIsSent:
             "anyOf": [
                 {"$ref": "#/components/schemas/HTTPValidationError"},
                 {"$ref": "#/components/schemas/EngineFailureBody"},
+                # A min_donors below the case's floor is refused with the structured body.
+                {"$ref": "#/components/schemas/ApiErrorBody"},
             ]
         }
 

@@ -26,6 +26,7 @@ from groundtruth.engine import ENGINE_VERSION, describe_engine, run_analysis
 from groundtruth.observability import setup_telemetry
 from groundtruth.platform.api.auth import router as auth_router
 from groundtruth.platform.api.claims import router as claims_router
+from groundtruth.platform.api.errors import case_validation_error
 from groundtruth.platform.api.events import router as events_router
 from groundtruth.platform.api.exports import router as exports_router
 from groundtruth.platform.api.jobs import router as jobs_router
@@ -50,7 +51,11 @@ from groundtruth.platform.auth.authz import Action, Capability, Context, Project
 from groundtruth.platform.auth.csrf import CsrfOriginMiddleware
 from groundtruth.platform.auth.deps import require_role
 from groundtruth.platform.cases.creator import create_and_register_case
-from groundtruth.platform.cases.registry import get_case, load_all_cases
+from groundtruth.platform.cases.registry import (
+    CaseValidationError,
+    get_case,
+    load_all_cases,
+)
 from groundtruth.platform.config import get_settings
 from groundtruth.platform.datasets.access import earth_engine_access, synthetic_access
 from groundtruth.platform.reports.narrative import generate_report
@@ -211,28 +216,45 @@ def _case_detail(case_id: str) -> CaseDetail:
     response_model=CaseDetail,
     tags=["cases"],
     dependencies=[Depends(require_role("user"))],
+    responses={
+        422: {
+            "description": "The body is invalid (a validation error), or the case is refused "
+            "with a structured code and the offending field: `invalid_case` or "
+            "`case_status_requires_review`.",
+            "content": _either("HTTPValidationError", "ApiErrorBody"),
+        },
+    },
 )
 def create_case(body: CreateCaseRequest) -> CaseDetail:
-    """Create, calibrate and register a new project case."""
-    case = create_and_register_case(
-        name=body.name,
-        country=body.country,
-        ecosystem=body.ecosystem,
-        standard=body.standard,
-        registry_id=body.registry_id,
-        area_ha=body.area_ha,
-        crediting_period_start=body.crediting_period_start,
-        crediting_period_end=body.crediting_period_end,
-        claimed_credits_tco2e=body.claimed_credits_tco2e,
-        indicator=body.indicator,
-        donor_pool_size=body.donor_pool_size,
-        pre_start=body.pre_start,
-        pre_end=body.pre_end,
-        post_start=body.post_start,
-        post_end=body.post_end,
-        boundary_geojson=body.boundary_geojson,
-        custom_case_id=body.case_id,
-    )
+    """Create, calibrate and register a new project case.
+
+    Everything is validated before anything is written. A rejected case answers a structured
+    422 (`invalid_case`, with the field named, or `case_status_requires_review`) and leaves
+    no file behind. Cases are always created as `scaffolded`.
+    """
+    try:
+        case = create_and_register_case(
+            name=body.name,
+            country=body.country,
+            ecosystem=body.ecosystem,
+            standard=body.standard,
+            registry_id=body.registry_id,
+            area_ha=body.area_ha,
+            crediting_period_start=body.crediting_period_start,
+            crediting_period_end=body.crediting_period_end,
+            claimed_credits_tco2e=body.claimed_credits_tco2e,
+            indicator=body.indicator,
+            donor_pool_size=body.donor_pool_size,
+            pre_start=body.pre_start,
+            pre_end=body.pre_end,
+            post_start=body.post_start,
+            post_end=body.post_end,
+            boundary_geojson=body.boundary_geojson,
+            custom_case_id=body.case_id,
+            status=body.status,
+        )
+    except CaseValidationError as exc:
+        raise case_validation_error(exc) from exc
     return _case_detail(case.case_id)
 
 
@@ -249,7 +271,7 @@ def create_case(body: CreateCaseRequest) -> CaseDetail:
             "description": "Either the request body is invalid (a validation error), or the "
             "engine refused or rejected the request (an engine failure, where `is_refusal` "
             "says which). A refusal is a legitimate outcome, not a malfunction.",
-            "content": _either("HTTPValidationError", "EngineFailureBody"),
+            "content": _either("HTTPValidationError", "EngineFailureBody", "ApiErrorBody"),
         },
         500: {**_ENGINE_FAILURE, "description": "The engine failed to estimate."},
         501: {
@@ -291,10 +313,14 @@ def verify(
     else:
         is_synthetic = request.synthetic
 
+    try:
+        min_donors = case.resolve_min_donors(request.min_donors)
+    except CaseValidationError as exc:
+        raise case_validation_error(exc) from exc
     analysis_request = case.to_request(
         data_mode="simulated" if is_synthetic else "observed",
         seed=settings.random_seed,
-        min_donors=request.min_donors,
+        min_donors=min_donors,
     )
 
     try:

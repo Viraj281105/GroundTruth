@@ -41,6 +41,17 @@ flowchart LR
   - Organization boundaries, project grants, Scrypt password hashing ($N=32768, r=8, p=1$), timing attack mitigation, and session cookies with HttpOnly, SameSite, and Secure flags.
   - Row-level tenant isolation returning `HTTP 403 Forbidden` on unauthorized cross-tenant queries.
 
+### Fixed on `bhumi-dev`
+- **`POST /jobs`, `/verify` and the CLI ignored the case's `min_donors`/`max_donors` (#36).** They
+  defaulted to `min_donors=10`, so Kariba ran with a best placebo p-value of 0.091 instead of 0.032.
+  They now use the case's own values. A request may raise the floor but not lower it
+  (`min_donors_below_case_floor`).
+- **Case management (#36).** `status: analysed` is refused on every path (`CaseDefinition` itself;
+  it needs a run reviewed by both owners, C7 and #4), unknown statuses are refused, and `POST /cases`
+  validates before writing and answers structured 422s instead of a bare 500. A rejected case no longer
+  leaves an unloadable YAML behind that broke the whole case list. Case ids must be kebab-case.
+  API types regenerated (`min_donors` is optional; `CreateCaseRequest.status`).
+
 ### Added on `bhumi-dev` before the 2.0 merge
 - **Earth Engine observation service (#22):** `platform/datasets/observation.py`, with
   sign-in, retries, rate limiting and caching shared through `platform/datasets/session.py`.
