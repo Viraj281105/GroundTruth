@@ -92,3 +92,35 @@ def test_no_fraud_language_in_any_reason() -> None:
 def test_empty_and_whitespace_input() -> None:
     a = analyze_text("   \n  ")
     assert a.statements == [] and a.unrecognised == []
+
+
+def test_permanent_sample_plots_is_a_monitoring_method_not_an_overclaim() -> None:
+    # "Permanent sample plot" is the standard forestry term for a re-measured field plot. A
+    # sentence that only describes monitoring must not be read as absolute wording.
+    t = "Monitoring uses annual field surveys of permanent sample plots."
+    a = analyze_text(t)
+    assert a.statements == []
+    assert [u.text for u in a.unrecognised] == [t.rstrip(".")]
+
+
+def test_permanent_as_a_guarantee_is_still_an_overclaim() -> None:
+    a = analyze_text("The restored forest is permanent and carries zero risk.")
+    assert [s.kind for s in a.statements] == [K.UNSUPPORTED_CONCLUSION]
+    assert a.statements[0].status is S.OVERCLAIM
+
+
+def test_quantified_biodiversity_change_is_recognised_and_unsupported() -> None:
+    # "increased by 20 percent" names no recovery verb, but it is still a biodiversity claim
+    # that only a field survey can test. It must be listed, not silently dropped.
+    t = "Bird species richness in the project area has increased by 20 percent since 2021."
+    a = analyze_text(t)
+    assert [s.kind for s in a.statements] == [K.BIODIVERSITY_RECOVERY]
+    bio = a.statements[0]
+    assert bio.status is S.UNSUPPORTED and bio.value is None and bio.period == "since 2021"
+    assert "field surveys" in bio.reason
+    assert a.unrecognised == []
+
+
+def test_a_sentence_that_only_mentions_wildlife_makes_no_claim() -> None:
+    a = analyze_text("Rangers record wildlife sightings every month.")
+    assert a.statements == []

@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "name": "Demonstration restoration boundary, Sahyadri foothills south-west of Pune",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Sahyadri Foothills Restoration (demonstration boundary)",
+        "note": "Drawn by hand for the product demonstration. It is not the boundary of a registered project."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [73.7215, 18.3655], [73.7420, 18.3590], [73.7655, 18.3640], [73.7710, 18.3835],
+          [73.7600, 18.4010], [73.7390, 18.4045], [73.7240, 18.3930], [73.7215, 18.3655]
+        ]]
+      }
+    }
+  ]
+}

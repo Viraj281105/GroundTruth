@@ -7,13 +7,21 @@ WORKDIR /app
 # Dependencies first so code edits don't bust the layer cache.
 COPY packages/groundtruth/pyproject.toml packages/groundtruth/README.md packages/groundtruth/
 COPY packages/groundtruth/src packages/groundtruth/src
-RUN pip install "./packages/groundtruth[api,db,genai]" psycopg[binary]
+# "ingest" carries the satellite ingestion libraries; without it the worker cannot run an
+# observation request (it fails on the first import). rasterio's wheel bundles GDAL but links the
+# system libexpat, which the slim base image does not ship. The import check fails the build,
+# not a user's request, if either goes missing again.
+RUN apt-get update && apt-get install -y --no-install-recommends libexpat1     && rm -rf /var/lib/apt/lists/*
+RUN pip install "./packages/groundtruth[api,db,genai,ingest]" psycopg[binary]     && python -c "import rasterio, pystac_client, planetary_computer"
 
 COPY apps ./apps
 COPY cases ./cases
 COPY configs ./configs
 COPY data ./data
 
+# Directories written at runtime. The API and the worker are separate containers, so compose
+# mounts shared volumes here; creating them now makes those volumes inherit the app user's ownership.
+RUN mkdir -p cases/boundaries/projects data/project_documents data/processed
 RUN useradd --create-home --uid 1000 app && chown -R app /app
 USER app
 EXPOSE 8000

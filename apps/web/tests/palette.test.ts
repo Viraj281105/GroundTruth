@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveCommands, parseCompareIntent, type PaletteContext } from '../src/lib/palette-core';
-import { addRecent, parseRecent, MAX_RECENT } from '../src/lib/recent-core';
+import { addRecent, caseIdFromPath, parseRecent, MAX_RECENT } from '../src/lib/recent-core';
 
 const ctx: PaletteContext = {
   cases: [
@@ -75,5 +75,52 @@ describe('recently viewed', () => {
     expect(parseRecent('not json')).toEqual([]);
     expect(parseRecent('{"a":1}')).toEqual([]);
     expect(parseRecent(null)).toEqual([]);
+  });
+});
+
+describe('inside an organization (user audit: the palette search was dead and case links ended in 404)', () => {
+  const orgCtx: PaletteContext = { ...ctx, org: 'demo-government' };
+
+  it('opens a project under the organization that is being viewed, never under a fixed one', () => {
+    const items = resolveCommands('kariba', orgCtx);
+    expect(items[0]).toMatchObject({ group: 'Projects', hint: 'Open project', href: '/app/demo-government/projects/kariba-redd/overview' });
+    expect(items.every((i) => !i.href?.startsWith('/cases'))).toBe(true);
+    expect(items.every((i) => !i.href?.includes('/app/reference/'))).toBe(true);
+  });
+
+  it('offers only destinations that exist inside the organization', () => {
+    const hrefs = resolveCommands('', orgCtx).map((i) => i.href).filter(Boolean);
+    expect(hrefs).toContain('/app/demo-government/dashboard');
+    expect(hrefs).toContain('/app/demo-government/evidence-library');
+    expect(hrefs).toContain('/app/demo-government/reports');
+    for (const legacy of ['/cases', '/compare', '/claims', '/status']) expect(hrefs).not.toContain(legacy);
+  });
+
+  it('lists the organization projects before anything is typed', () => {
+    const items = resolveCommands('', orgCtx);
+    expect(items.filter((i) => i.group === 'Projects').map((i) => i.label)).toEqual(ctx.cases.map((c) => c.name));
+  });
+
+  it('does not suggest the unscoped compare page', () => {
+    expect(resolveCommands('compare kariba and mikoko', orgCtx).some((i) => i.href?.startsWith('/compare'))).toBe(false);
+  });
+
+  it('recent projects open inside the organization', () => {
+    const items = resolveCommands('', { ...orgCtx, recent: ['mikoko-pamoja'] });
+    expect(items.find((i) => i.group === 'Recent')?.href).toBe('/app/demo-government/projects/mikoko-pamoja/overview');
+  });
+});
+
+describe('caseIdFromPath', () => {
+  it('reads the project from legacy and organization paths', () => {
+    expect(caseIdFromPath('/cases/kariba-redd/evidence')).toBe('kariba-redd');
+    expect(caseIdFromPath('/app/demo-ngo/projects/kariba-redd/reports')).toBe('kariba-redd');
+    expect(caseIdFromPath('/app/demo-ngo/projects/kariba-redd')).toBe('kariba-redd');
+  });
+
+  it('ignores the creation form and non-project pages', () => {
+    expect(caseIdFromPath('/app/demo-ngo/projects/new')).toBeNull();
+    expect(caseIdFromPath('/app/demo-ngo/projects')).toBeNull();
+    expect(caseIdFromPath('/app/demo-ngo/reports')).toBeNull();
   });
 });

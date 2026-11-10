@@ -27,6 +27,7 @@ import {
   type ClaimSource,
 } from '../../features/projects/claims.model';
 import { humanize, isSimulated, type ClaimStatus, type ClaimView, type PortfolioView } from './claimWorkbenchModel';
+import { splitGuardrail } from './format';
 import styles from './ClaimVerificationWorkbench.module.css';
 
 interface WorkbenchProps {
@@ -174,9 +175,14 @@ export function ClaimVerificationWorkbench({ projectName, orgSlug, projectSlug, 
         </p>
         {portfolio.guardrails.length > 0 && (
           <ul className={styles.guardrails}>
-            {portfolio.guardrails.map((g, i) => (
-              <li key={i}>{g}</li>
-            ))}
+            {portfolio.guardrails.map((g, i) => {
+              const rule = splitGuardrail(g);
+              return (
+                <li key={i} title={rule.id ?? undefined}>
+                  {rule.text}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

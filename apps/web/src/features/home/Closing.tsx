@@ -18,8 +18,9 @@ export function HonestStatus() {
         </Reveal>
       </div>
       <p className={styles.simNote}>
-        Simulated data: no real project has been analysed. Every result in the product comes from a deterministic simulated
-        fixture and is labelled as such.
+        Simulated data: the benchmark cases on this site come from a deterministic simulated fixture and are labelled as such.
+        Satellite observations requested for your own project are real measurements, not field-validated, and are never
+        presented as proof of carbon, survival or project impact.
       </p>
     </section>
   );

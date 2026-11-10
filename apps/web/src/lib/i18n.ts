@@ -26,7 +26,9 @@ const en: Catalog = {
   'theme.dark': 'Dark',
   'theme.system': 'System',
   'sim.chip': 'Simulated data',
-  'sim.explain': 'Every number here comes from a simulated test fixture. No real project has been analysed.',
+  // Scoped to the page it is shown on. It used to add "No real project has been analysed", which
+  // stopped being true once workspace projects could ingest real Sentinel-2 observations.
+  'sim.explain': 'Every number on this page comes from a simulated test fixture, not from a real project.',
   'home.cta': 'Explore a case',
   'cases.count': '{n} cases',
   'common.back': 'Back',

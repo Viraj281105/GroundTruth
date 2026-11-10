@@ -78,3 +78,12 @@ export function recordKindLabel(kind: string): string {
       return kind;
   }
 }
+
+/**
+ * The sealing record the "check a downloaded report" form acts on: the one the user picked while
+ * it still exists, otherwise the newest. `records` is oldest first.
+ */
+export function selectedSealingRecord(chosen: string | null, records: readonly string[]): string {
+  if (chosen && records.includes(chosen)) return chosen;
+  return records[records.length - 1] ?? '';
+}

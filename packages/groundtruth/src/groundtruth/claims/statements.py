@@ -108,9 +108,15 @@ _PERIOD = re.compile(
     re.I,
 )
 _OVERCLAIM_VERB = re.compile(r"\b(proves?|proven|demonstrates?|confirms?|guarantee[sd]?)\b", re.I)
+# "Permanent" is absolute wording about an outcome, except in the forestry term for a re-measured
+# field plot ("permanent sample plots", "permanent transects"), which describes a monitoring method.
+_PERMANENT = (
+    r"permanent(?:ly)?(?!\s+(?:(?:sample|sampling|monitoring|inventory|vegetation|survey)\s+)?"
+    r"(?:plots?|transects?|quadrats?)\b)"
+)
 _OVERCLAIM_WORD = re.compile(
     r"\b(fully\s+(?:recovered|restored|regenerated)|full\s+recovery|completely\s+(?:recovered|"
-    r"restored)|guarantee[sd]?|permanent(?:ly)?|zero\s+(?:risk|leakage)|no\s+risk|"
+    r"restored)|guarantee[sd]?|" + _PERMANENT + r"|zero\s+(?:risk|leakage)|no\s+risk|"
     r"100\s*%\s+(?:recovered|restored|success)|irreversibl\w+)\b",
     re.I,
 )
@@ -122,6 +128,13 @@ _CAUSAL = re.compile(
     re.I,
 )
 _RECOVERY = re.compile(r"\b(recover\w*|restor\w*|improv\w*|regenerat\w*)\b", re.I)
+# A stated change in a biodiversity measure ("species richness increased by 20 percent") is a
+# claim about biodiversity even when no recovery verb is used.
+_BIODIVERSITY_CHANGE = re.compile(
+    r"\b(increas\w*|rose|risen|rising|grew|grown|doubl\w*|tripl\w*|gain\w*|return\w*|"
+    r"declin\w*|decreas\w*|higher|lower)\b",
+    re.I,
+)
 _CARBON_WORD = re.compile(r"\b(carbon|tCO2e?|CO2|sequester\w*|credits?)\b", re.I)
 
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+|\n+")
@@ -360,7 +373,9 @@ def analyze_text(text: str, doc_id: str = "doc") -> TextAnalysis:
                     "measured; they cannot prove or guarantee an outcome.",
                     _NO_EVIDENCE,
                 )
-        elif _BIODIVERSITY.search(sent) and _RECOVERY.search(sent):
+        elif _BIODIVERSITY.search(sent) and (
+            _RECOVERY.search(sent) or _BIODIVERSITY_CHANGE.search(sent)
+        ):
             add(
                 StatementKind.BIODIVERSITY_RECOVERY,
                 StatementStatus.UNSUPPORTED,

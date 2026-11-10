@@ -27,5 +27,5 @@ export const homeCopy = {
   allCases: 'All cases',
   featuredError: 'Cases could not be loaded, so none are featured.',
   status:
-    'Honest status: no real project has been analysed. Every result in this product comes from a simulated fixture and is labelled as such. Sign-in, organisation workspaces, boundary upload, dossier export and claim-text screening exist today; live satellite ingestion for new projects does not yet.',
+    'Honest status: the benchmark cases on this site run on a simulated fixture and are labelled as such; no real project has been analysed causally. Sign-in, organisation workspaces, boundary upload, dossier export and claim-text screening exist today. A project you create can request real Sentinel-2 observations for its boundary: those values are measured but not field-validated, and no attribution to the project is available for them yet.',
 } as const;

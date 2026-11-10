@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { components } from '../src/lib/generated/schema';
 import {
   apiErrorMessage,
@@ -18,6 +18,9 @@ import {
 } from '../src/features/projects/model';
 import { ReportsView } from '../src/features/projects/ReportsView';
 import { ProjectBadges } from '../src/features/projects/ProjectBadges';
+
+// ReportsView refreshes the page after a dossier download (see tests/dossier-download.test.ts).
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 type Project = components['schemas']['ProjectView'];
 type Level = Project['access_level'];

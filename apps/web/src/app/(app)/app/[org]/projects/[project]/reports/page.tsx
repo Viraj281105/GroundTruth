@@ -15,7 +15,7 @@ export default async function ReportsPage({ params }: { params: { project: strin
   if (!v.data && v.status !== 403) return <ProblemPanel title="Reports" status={v.status} />;
   return (
     <>
-      <ReportsView projectId={project.id} level={project.access_level} caseId={v.data?.case_id ?? null} />
+      <ReportsView projectId={project.id} projectSlug={project.slug} level={project.access_level} caseId={v.data?.case_id ?? null} />
       <LedgerPanel projectId={project.id} />
     </>
   );

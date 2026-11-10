@@ -82,7 +82,7 @@ export function OrgShell({ orgs, active, children }: { orgs: Schemas['OrgView'][
         </div>
       </div>
       <MobileTabBar orgs={orgs} active={active} />
-      <ShellOverlays />
+      <ShellOverlays org={active.slug} />
     </DataModeProvider>
   );
 }

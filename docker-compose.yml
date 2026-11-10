@@ -25,6 +25,12 @@ services:
       AUTH_COOKIE_SECURE: "false"
       AUTH_ALLOW_REGISTRATION: "true"
     ports: ["8000:8000"]
+    # Files both the API and the worker must see: uploaded boundaries and documents (written by the
+    # API, read by the worker) and ingested observations (written by the worker, read by the API).
+    volumes: &shared_files
+      - project_boundaries:/app/cases/boundaries/projects
+      - project_documents:/app/data/project_documents
+      - processed_data:/app/data/processed
     # The API must not answer before the schema exists: wait for the one-shot migrate service.
     depends_on:
       postgres: { condition: service_healthy }
@@ -48,6 +54,7 @@ services:
   worker:
     build: { context: ., dockerfile: infrastructure/docker/backend.Dockerfile }
     command: ["python", "-m", "apps.worker.main"]
+    volumes: *shared_files
     # The image's HTTP health check is for the API; the worker serves no HTTP.
     healthcheck:
       disable: true
@@ -77,3 +84,6 @@ services:
 
 volumes:
   pgdata:
+  project_boundaries:
+  project_documents:
+  processed_data:

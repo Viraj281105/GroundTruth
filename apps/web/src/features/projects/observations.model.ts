@@ -177,13 +177,15 @@ export interface SeasonPreset {
 }
 
 export const SEASON_PRESETS: readonly SeasonPreset[] = [
-  { id: 'june', label: 'June (dry season in southern Africa)', start: '06-01', end: '06-30' },
-  { id: 'janmar', label: 'January to March (rainy season in southern Africa)', start: '01-01', end: '03-31' },
+  // Labels name the dates only. Which months are dry or cloudy depends on where the project is,
+  // so a preset must not describe one region's seasons to a project somewhere else.
+  { id: 'june', label: 'June (1 to 30 June)', start: '06-01', end: '06-30' },
+  { id: 'janmar', label: 'January to March (1 January to 31 March)', start: '01-01', end: '03-31' },
   { id: 'custom', label: 'Choose my own dates', start: '06-01', end: '06-30' },
 ];
 
 export const SEASON_HINT =
-  'Satellites cannot see through cloud. Cloudy seasons, such as the rainy season, leave fewer usable scenes, and some years may come back empty.';
+  'Satellites cannot see through cloud. Choose the months when your project area is usually clear: that differs by region (June is dry in southern Africa, January to March is dry in most of India). Cloudy seasons, such as the rainy season, leave fewer usable scenes, and some years may come back empty.';
 
 export interface ObservationForm {
   startYear: string;

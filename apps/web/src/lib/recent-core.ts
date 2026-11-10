@@ -17,8 +17,14 @@ export function parseRecent(raw: string | null): string[] {
   }
 }
 
-/** `/cases/kariba-redd/evidence` -> `kariba-redd`; anything else -> null. */
+/**
+ * `/cases/kariba-redd/evidence` -> `kariba-redd`, and inside an organization
+ * `/app/demo-ngo/projects/kariba-redd/reports` -> `kariba-redd`. Anything else -> null
+ * (`/app/<org>/projects/new` is the creation form, not a project).
+ */
 export function caseIdFromPath(pathname: string): string | null {
-  const match = /^\/cases\/([^/]+)/.exec(pathname);
-  return match ? decodeURIComponent(match[1]) : null;
+  const match = /^\/cases\/([^/]+)/.exec(pathname) ?? /^\/app\/[^/]+\/projects\/([^/]+)/.exec(pathname);
+  if (!match) return null;
+  const id = decodeURIComponent(match[1]);
+  return id === 'new' ? null : id;
 }

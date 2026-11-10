@@ -11,18 +11,20 @@ interface Props {
   onClose: () => void;
   cases: PaletteCase[];
   recent: string[];
+  /** Organization slug when the palette is opened inside one (see `PaletteContext.org`). */
+  org?: string;
   onAction: (action: string) => void;
 }
 
 /** Ctrl/⌘+K palette: jump anywhere, run actions, or type "compare kariba and mikoko". */
-export function CommandPalette({ open, onClose, cases, recent, onAction }: Props) {
+export function CommandPalette({ open, onClose, cases, recent, org, onAction }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [index, setIndex] = useState(0);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const items = useMemo(() => resolveCommands(query, { cases, recent }), [query, cases, recent]);
+  const items = useMemo(() => resolveCommands(query, { cases, recent, org }), [query, cases, recent, org]);
 
   useEffect(() => {
     const el = dialogRef.current;
@@ -68,7 +70,7 @@ export function CommandPalette({ open, onClose, cases, recent, onAction }: Props
             className={styles.input}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search cases, pages and actions, or try “compare kariba and mikoko”"
+            placeholder={org ? 'Search projects, pages and actions' : 'Search cases, pages and actions, or try “compare kariba and mikoko”'}
             aria-label="Command"
             role="combobox"
             aria-expanded="true"

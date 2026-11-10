@@ -9,8 +9,11 @@ export interface TourStep {
 }
 
 export const TOUR_STEPS: readonly TourStep[] = [
-  { title: 'Welcome to GroundTruth', body: 'We estimate what a restoration or carbon project actually achieved by comparing it with a blended “twin” built from similar land that was left alone.' },
-  { title: 'Simulated data, always labelled', body: 'Demo cases run on a simulated test fixture. A violet “Simulated data” label stays on screen wherever that is so, and no real project has been analysed.' },
+  // The first two steps describe what a signed-in user can actually do today. They used to promise a
+  // counterfactual estimate (not available for a user's own project) and said no real project had been
+  // analysed (untrue once a project has ingested Sentinel-2 observations).
+  { title: 'Welcome to GroundTruth', body: 'GroundTruth checks what a restoration project claims against what can actually be observed: satellite measurements inside the project boundary, the documents you upload, and a record of where every number came from.' },
+  { title: 'Measured, simulated or unavailable: always labelled', body: 'Your own projects use real Sentinel-2 observations. Benchmark cases that run on a simulated fixture carry a violet “Simulated data” label. Anything that could not be measured is shown as unavailable, never filled in.' },
   { title: 'Choose how much detail you want', body: 'Story keeps it plain. Explorer adds interactive evidence. Auditor shows every diagnostic and the full provenance. Switch any time from the top bar.' },
   { title: 'Move fast', body: 'Press Ctrl/⌘ K to jump anywhere, or press ? for every shortcut. You can replay this tour from the account menu or the footer.' },
 ];

@@ -3,14 +3,17 @@
 import React, { useState } from 'react';
 import { Button } from '../../components/ds';
 import { getApiBaseUrl } from '../../lib/api';
-import { shortHash } from './ledger.model';
+import { selectedSealingRecord, shortHash } from './ledger.model';
 import styles from './projects.module.css';
 
 type Result = { kind: 'idle' } | { kind: 'busy' } | { kind: 'ok'; text: string } | { kind: 'bad'; text: string };
 
 /** Lets an auditor check a file they hold against the ledger record that sealed it. The server does the comparison. */
 export function VerifyReportForm({ projectId, records }: { projectId: string; records: string[] }) {
-  const [recordId, setRecordId] = useState(records[records.length - 1] ?? '');
+  // The list grows while the page is open (a dossier download seals a new record and the page
+  // reloads its data), so the selection is derived from the current list, not fixed at first render.
+  const [chosen, setRecordId] = useState<string | null>(null);
+  const recordId = selectedSealingRecord(chosen, records);
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<Result>({ kind: 'idle' });
 

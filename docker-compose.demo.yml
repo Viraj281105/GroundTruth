@@ -1,0 +1,30 @@
+# Isolated demo stack. It never touches the default stack's database, containers or ports.
+#
+#   docker compose -p gtdemo -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+#
+# Web -> http://localhost:3100     API -> http://localhost:8100/docs
+# The project name (-p gtdemo) gives this stack its own network and its own volumes
+# (gtdemo_pgdata, ...). Demo credentials are written once to ./.demo-secrets/demo-passwords.tsv
+# (git-ignored), never to the log.
+services:
+  api:
+    environment:
+      FRONTEND_URL: http://localhost:3100
+      CORS_ALLOWED_ORIGINS: http://localhost:3100
+    ports: !override ["8100:8000"]
+
+  migrate:
+    environment:
+      SEED_DEMO: "true"
+      SEED_DEMO_PASSWORDS_FILE: /seedout/demo-passwords.tsv
+    volumes:
+      - ./.demo-secrets:/seedout
+
+  web:
+    build:
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8100
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8100
+      SITE_URL: http://localhost:3100
+    ports: !override ["3100:3000"]

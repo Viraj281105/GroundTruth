@@ -6,16 +6,23 @@ export interface PaletteCase {
 }
 
 export interface PaletteContext {
+  /** Cases (legacy shell) or, inside an organization, that organization's projects (id = project slug). */
   cases: PaletteCase[];
   /** Recently viewed case ids, newest first. */
   recent: string[];
+  /**
+   * Slug of the organization the palette is opened in. When set, every entry stays inside
+   * `/app/<org>/...`: a project opens under the organization that can see it, and the pre-2.0
+   * pages (cases, compare, claims workbench), which have no organization scope, are not offered.
+   */
+  org?: string;
 }
 
 export interface PaletteItem {
   id: string;
   label: string;
   hint?: string;
-  group: 'Suggested' | 'Go to' | 'Recent' | 'Cases' | 'Actions';
+  group: 'Suggested' | 'Go to' | 'Recent' | 'Cases' | 'Projects' | 'Actions';
   href?: string;
   /** `theme:dark`, `lens:auditor`, `tour`, `shortcuts` ... handled by the palette component. */
   action?: string;
@@ -30,6 +37,24 @@ const PAGES: PaletteItem[] = [
   { id: 'go-method', label: 'How it works', group: 'Go to', href: '/method', keywords: 'method glossary help' },
   { id: 'go-status', label: 'System status', group: 'Go to', href: '/status', keywords: 'health engine' },
 ];
+
+/** Destinations inside an organization. Every one of these exists for every role. */
+function orgPages(org: string): PaletteItem[] {
+  const at = (path: string) => `/app/${org}/${path}`;
+  return [
+    { id: 'go-overview', label: 'Overview', group: 'Go to', href: at('dashboard'), keywords: 'dashboard home start' },
+    { id: 'go-projects', label: 'Projects', group: 'Go to', href: at('projects'), keywords: 'cases list' },
+    { id: 'go-assessments', label: 'Assessments', group: 'Go to', href: at('assessments'), keywords: 'claims verification' },
+    { id: 'go-evidence-library', label: 'Evidence Library', group: 'Go to', href: at('evidence-library'), keywords: 'datasets sources registry documents' },
+    { id: 'go-reports', label: 'Reports', group: 'Go to', href: at('reports'), keywords: 'dossier download ledger' },
+    { id: 'go-method', label: 'How it works', group: 'Go to', href: '/method', keywords: 'method glossary help' },
+  ];
+}
+
+/** Where a project opens: inside the organization when there is one, else the pre-2.0 case page. */
+function projectHref(id: string, org: string | undefined): string {
+  return org ? `/app/${org}/projects/${id}/overview` : `/cases/${id}`;
+}
 
 const ACTIONS: PaletteItem[] = [
   { id: 'theme-light', label: 'Switch to light theme', group: 'Actions', action: 'theme:light', keywords: 'appearance bright' },
@@ -78,12 +103,14 @@ function matches(item: PaletteItem, q: string): boolean {
 
 export function resolveCommands(query: string, ctx: PaletteContext): PaletteItem[] {
   const q = norm(query);
+  const { org } = ctx;
+  const pages = org ? orgPages(org) : PAGES;
   const caseItems: PaletteItem[] = ctx.cases.map((c) => ({
     id: `case-${c.id}`,
     label: c.name,
-    hint: 'Open case',
-    group: 'Cases',
-    href: `/cases/${c.id}`,
+    hint: org ? 'Open project' : 'Open case',
+    group: org ? 'Projects' : 'Cases',
+    href: projectHref(c.id, org),
     keywords: c.id,
   }));
 
@@ -91,15 +118,17 @@ export function resolveCommands(query: string, ctx: PaletteContext): PaletteItem
     const recent: PaletteItem[] = ctx.recent
       .map((id) => ctx.cases.find((c) => c.id === id))
       .filter((c): c is PaletteCase => Boolean(c))
-      .map((c) => ({ id: `recent-${c.id}`, label: c.name, hint: 'Recently viewed', group: 'Recent' as const, href: `/cases/${c.id}` }));
-    return [...PAGES, ...recent, ...ACTIONS];
+      .map((c) => ({ id: `recent-${c.id}`, label: c.name, hint: 'Recently viewed', group: 'Recent' as const, href: projectHref(c.id, org) }));
+    // With nothing typed, an organization's own projects are listed too: there are usually few.
+    return [...pages, ...recent, ...(org ? caseItems : []), ...ACTIONS];
   }
 
   const out: PaletteItem[] = [];
-  const compare = parseCompareIntent(query, ctx.cases);
+  // The compare page is a pre-2.0 page with no organization scope, so it is not suggested inside one.
+  const compare = org ? null : parseCompareIntent(query, ctx.cases);
   if (compare) out.push({ id: 'nl-compare', label: `Compare ${query.replace(/^compare\s+/i, '')}`, hint: 'Natural-language command', group: 'Suggested', href: compare });
   out.push(...caseItems.filter((i) => matches(i, q)));
-  out.push(...PAGES.filter((i) => matches(i, q)));
+  out.push(...pages.filter((i) => matches(i, q)));
   out.push(...ACTIONS.filter((i) => matches(i, q)));
   return out;
 }

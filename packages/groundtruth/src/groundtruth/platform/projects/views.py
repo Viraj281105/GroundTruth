@@ -218,8 +218,24 @@ def build_climate(project: ProjectRow, access_level: str, data_dir: Path) -> Cli
 # --- evidence inventory ----------------------------------------------------------------------
 
 
-def _ingestion_status(project: ProjectRow) -> ObservationIngestionStatus:
-    """The real state of observation ingestion for this project, nothing more hopeful."""
+OBSERVATIONS_STORED = (
+    "Satellite observations are stored for this project. You can request more years or "
+    "indicators from the Earth observation tab."
+)
+OWNER_REQUESTS_INGESTION = (
+    "Satellite observations are requested by the organization that owns this project."
+)
+
+
+def _ingestion_status(
+    project: ProjectRow, access_level: str, has_observations: bool
+) -> ObservationIngestionStatus:
+    """The real state of observation ingestion for this project and this viewer.
+
+    ``available`` means the viewer can start a request. Only the owning organization can (the
+    request endpoint answers 403 to a grantee), and the message never says that nothing is
+    ingested once observations are stored.
+    """
     if project.case_id:
         return ObservationIngestionStatus(
             available=False,
@@ -233,6 +249,17 @@ def _ingestion_status(project: ProjectRow) -> ObservationIngestionStatus:
             available=False,
             message="Observation ingestion is switched off on this server. Ask your administrator.",
         )
+    if access_level != "owner":
+        state = (
+            "Stored observations are shown on the Earth observation tab."
+            if has_observations
+            else "No satellite observations are stored yet."
+        )
+        return ObservationIngestionStatus(
+            available=False, message=f"{OWNER_REQUESTS_INGESTION} {state}"
+        )
+    if has_observations:
+        return ObservationIngestionStatus(available=True, message=OBSERVATIONS_STORED)
     return ObservationIngestionStatus(available=True, message=NO_INGESTION_PATH)
 
 
@@ -309,7 +336,7 @@ def build_inventory(
     if not docs:
         missing.append("No project documents (design documents, baseline records) are uploaded.")
         steps.append("Upload project design documents or baseline records (.pdf, .txt, .md, .csv).")
-    ingestion = _ingestion_status(project)
+    ingestion = _ingestion_status(project, access_level, bool(available))
     if not available:
         steps.append(ingestion.message)
     return EvidenceInventoryView(

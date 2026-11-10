@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFacts, notYet, works } from '../src/features/home/data';
+import { buildFacts, faqs, notYet, works } from '../src/features/home/data';
 import { homeCopy } from '../src/features/home/copy';
 import { glossary } from '../src/lib/glossary';
 import nextConfig from '../next.config.mjs';
@@ -12,9 +12,25 @@ describe('landing copy tells the truth about what exists', () => {
 
   it('no longer says export and sign-in are planned, and names what is genuinely missing', () => {
     expect(notYet.join(' ')).not.toMatch(/sign-in|export/i);
-    expect(notYet.join(' ')).toMatch(/live satellite ingestion for newly created projects/i);
     expect(notYet.join(' ')).toMatch(/stakeholder summary reports/i);
-    expect(homeCopy.status).toContain('no real project has been analysed');
+    // No causal analysis of a real project exists; that part of the old statement is still true.
+    expect(homeCopy.status).toContain('no real project has been analysed causally');
+  });
+
+  it('describes satellite ingestion as it is: available for your own project, measured, not validated', () => {
+    // The observation-ingestion workflow exists (and runs in the Docker stack), so the site must not
+    // list it as missing or say that no real satellite data is used. It must not overstate it either.
+    expect(notYet.join(' ')).not.toMatch(/live satellite ingestion/i);
+    expect(notYet.join(' ')).toMatch(/no attribution to the project yet/i);
+    expect(notYet.join(' ')).toMatch(/field validation/i);
+    expect(works.join(' ')).toMatch(/Sentinel-2 observation requests.*not field-validated/i);
+    expect(homeCopy.status).toMatch(/real Sentinel-2 observations/);
+    expect(homeCopy.status).toMatch(/not field-validated/);
+    const faq = faqs.find((f) => f.q.startsWith('Does it use real satellite data'))!.a;
+    expect(faq).toMatch(/^For a project you create, yes/);
+    expect(faq).toMatch(/not validated against field data/);
+    expect(faq).toMatch(/not carbon, survival or a project effect/);
+    expect(faq).toMatch(/Simulated data/);
   });
 
   it('never reports benchmark cases as real projects', () => {

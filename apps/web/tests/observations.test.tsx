@@ -186,7 +186,9 @@ describe('ObservationIngestionPanel rendering', () => {
     const m = render(list());
     expect(m).toContain('You can ask GroundTruth to read Sentinel-2 images');
     expect(m).toContain('data-testid="ingestion-empty"');
-    expect(m).toContain('June (dry season in southern Africa)');
+    expect(m).toContain('June (1 to 30 June)');
+    // A preset names its dates only; it must not describe one region's seasons (found in the user audit).
+    expect(m).not.toContain('southern Africa)');
     expect(m).toContain('fewer usable scenes');
     expect(m).toContain('NDMI (moisture)');
     expect(m).toContain('Advanced options');

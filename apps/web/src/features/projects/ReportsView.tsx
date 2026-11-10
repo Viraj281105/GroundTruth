@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '../../components/ds';
 import { getApiBaseUrl } from '../../lib/api';
 import { fetchReportFile, saveBlob, type ReportFormat } from '../case/report/downloads';
+import { downloadDossier } from './dossier-download';
 import { dossierVisible, legacyReportsAvailable, type AccessLevel } from './model';
 import styles from './projects.module.css';
 
@@ -13,7 +15,8 @@ type Status = { kind: 'idle' } | { kind: 'busy'; what: string } | { kind: 'done'
  * Downloads for a project. Monitoring reports use the legacy case export routes, so they exist only when
  * the project has a case_id. The dossier is owner/audit only. The API audits every download.
  */
-export function ReportsView({ projectId, level, caseId }: { projectId: string; level: AccessLevel; caseId: string | null }) {
+export function ReportsView({ projectId, projectSlug, level, caseId }: { projectId: string; projectSlug?: string; level: AccessLevel; caseId: string | null }) {
+  const router = useRouter();
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const legacy = legacyReportsAvailable(caseId);
   const dossier = dossierVisible(level);
@@ -30,14 +33,16 @@ export function ReportsView({ projectId, level, caseId }: { projectId: string; l
   async function dossierDownload() {
     if (status.kind === 'busy') return;
     setStatus({ kind: 'busy', what: 'dossier' });
-    try {
-      const res = await fetch(`${getApiBaseUrl()}/projects/${encodeURIComponent(projectId)}/export/dossier`, { credentials: 'include' });
-      if (!res.ok) return setStatus({ kind: 'error', text: res.status === 403 ? 'Your access level does not allow the dossier.' : `The dossier could not be created (HTTP ${res.status}).` });
-      saveBlob(await res.blob(), `${projectId}-dossier.zip`);
-      setStatus({ kind: 'done', text: 'Saved the technical dossier.' });
-    } catch {
-      setStatus({ kind: 'error', text: 'The GroundTruth API could not be reached.' });
-    }
+    const outcome = await downloadDossier({
+      apiBaseUrl: getApiBaseUrl(),
+      projectId,
+      projectSlug,
+      fetch: (...args) => globalThis.fetch(...args),
+      save: saveBlob,
+      // The download sealed a report in the ledger; re-read the server-rendered ledger below.
+      onSealed: () => router.refresh(),
+    });
+    setStatus(outcome.ok ? { kind: 'done', text: `Saved ${outcome.filename}. The report is now sealed in the audit ledger below.` } : { kind: 'error', text: outcome.message });
   }
 
   const busy = status.kind === 'busy' ? status.what : null;

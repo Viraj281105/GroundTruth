@@ -546,3 +546,56 @@ def test_the_dossier_for_an_ingested_project_contains_the_observations(tenant_wo
     with zipfile.ZipFile(io.BytesIO(r.content)) as z:
         obs = z.read("observations.csv").decode()
     assert "2021" in obs and "2023" in obs and len(obs.splitlines()) > 3
+
+
+# --- the evidence page says what is true for this project and this viewer -----------------------
+
+
+def _inventory(world: World, who: str, pid: str) -> dict[str, Any]:
+    r = world.client(who).get(f"/projects/{pid}/evidence-inventory")
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_guidance_stops_saying_nothing_is_ingested_once_observations_are_stored(
+    tenant_world: World,
+) -> None:
+    """Found in the user audit: the Evidence tab kept saying "No satellite observations have
+    been ingested for this project yet" after a successful ingestion."""
+    pid = _create_project(tenant_world)["id"]
+    before = _inventory(tenant_world, "outsider", pid)["observation_ingestion"]
+    assert before["available"] is True
+    assert "No satellite observations have been ingested" in before["message"]
+
+    _post(tenant_world, pid)
+    _run(tenant_world, pid, fake_provider({2021: 6000, 2022: 6100, 2023: 6200}))
+
+    after = _inventory(tenant_world, "outsider", pid)["observation_ingestion"]
+    assert after["available"] is True
+    assert "No satellite observations have been ingested" not in after["message"]
+    assert "are stored for this project" in after["message"]
+
+
+def test_a_shared_viewer_is_not_told_to_request_satellite_data(tenant_world: World) -> None:
+    """A view-level grantee cannot request ingestion (the server answers 403), so the page must
+    not offer it. It says who can, and whether observations already exist."""
+    pid = _create_project(tenant_world)["id"]
+    grant = tenant_world.client("outsider").post(
+        f"/projects/{pid}/grants", json={"org_slug": "demo-funder", "level": "view"}
+    )
+    assert grant.status_code in (200, 201), grant.text
+
+    empty = _inventory(tenant_world, "funder", pid)["observation_ingestion"]
+    assert empty["available"] is False
+    assert "organization that owns this project" in empty["message"]
+    assert "No satellite observations are stored yet" in empty["message"]
+
+    _post(tenant_world, pid)
+    _run(tenant_world, pid, fake_provider({2021: 6000, 2022: 6100, 2023: 6200}))
+
+    stored = _inventory(tenant_world, "funder", pid)["observation_ingestion"]
+    assert stored["available"] is False
+    assert "organization that owns this project" in stored["message"]
+    assert "No satellite observations" not in stored["message"]
+    # and the server still refuses the request itself
+    assert _post(tenant_world, pid, who="funder").status_code == 403

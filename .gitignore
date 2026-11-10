@@ -53,3 +53,6 @@ cases/boundaries/e2e-*.geojson
 
 # User-uploaded project boundaries are runtime data, never source.
 cases/boundaries/projects/
+
+# Isolated demo stack credentials (docker-compose.demo.yml)
+.demo-secrets/

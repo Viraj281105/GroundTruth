@@ -38,10 +38,12 @@ export const works = [
   'Sign-in and organisation workspaces with roles (NGO, funder, auditor, government)',
   'Project boundary upload and a technical dossier ZIP export, sealed in a tamper-evident ledger',
   'Claim-text screening that flags statements the evidence does not support',
+  'Sentinel-2 observation requests for a project you create (annual vegetation indices inside your boundary, with scene ids; not field-validated)',
   'A web app and API serving simulated benchmark cases',
 ];
 export const notYet = [
-  'Live satellite ingestion for newly created projects',
+  'Climate and comparison-area data for newly created projects, so no attribution to the project yet',
+  'Field validation of the satellite values',
   'Plain-language stakeholder summary reports',
   'Registry ingestion and batch screening (future)',
   'Event-study, causal-forest and spillover methods (future)',
@@ -49,7 +51,7 @@ export const notYet = [
 
 export const faqs = [
   { q: 'Is this fraud detection?', a: 'No. GroundTruth estimates a counterfactual and reports how far a project diverges from it, with uncertainty. A large divergence warrants accredited review. It is never a finding of wrongdoing.' },
-  { q: 'Does it use real satellite data today?', a: 'No. Every result shown comes from a deterministic simulated fixture and is labelled “Simulated data”. No real project has been analysed. Also, vegetation greenness (NDVI) is not carbon.' },
+  { q: 'Does it use real satellite data today?', a: 'For a project you create, yes: Sentinel-2 surface reflectance from Microsoft Planetary Computer, reduced to annual vegetation indices inside your boundary. Those values are not validated against field data, and they describe greenness, not carbon, survival or a project effect. The benchmark cases shown on this site use a deterministic simulated fixture and are labelled “Simulated data”.' },
   { q: 'What does the AI do?', a: 'A language model explains finished results in plain words. It never computes a number. Every figure it writes is checked against the evidence, and if any fails, a plain deterministic report is published instead.' },
   { q: 'What does INCONCLUSIVE mean?', a: 'The data could not support a trustworthy estimate, for example too few comparable donor areas. GroundTruth prefers an honest refusal to a fragile number.' },
   { q: 'Can I reproduce a result?', a: 'Yes. Each run records its inputs and seed in a reproducibility key, so the same request gives the same result.' },

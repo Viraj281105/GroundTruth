@@ -13,13 +13,18 @@ import type { ThemePreference } from '../../lib/theme-core';
 import { matchShortcut, SHORTCUT_HELP } from '../../lib/shortcuts-core';
 import { RECENT_STORAGE_KEY, addRecent, caseIdFromPath, parseRecent } from '../../lib/recent-core';
 import { getCases } from '../../lib/api';
+import { createApiClient } from '../../lib/api-client';
 import type { PaletteCase } from '../../lib/palette-core';
 import styles from './CommandPalette.module.css';
 
 export const OPEN_PALETTE_EVENT = 'gt:open-palette';
 
-/** Palette, shortcuts, help, first-run tour and recently-viewed tracking, mounted once for the whole app. */
-export function ShellOverlays() {
+/**
+ * Palette, shortcuts, help, first-run tour and recently-viewed tracking, mounted once for the whole app.
+ * Inside an organization pass its slug as `org`: the palette then searches that organization's projects
+ * (with the visitor's session) and every entry opens under `/app/<org>/...`.
+ */
+export function ShellOverlays({ org }: { org?: string } = {}) {
   const router = useRouter();
   const pathname = usePathname() ?? '/';
   const toast = useToast();
@@ -68,12 +73,22 @@ export function ShellOverlays() {
   useEffect(() => {
     if (!palette || loaded.current) return;
     loaded.current = true;
+    const retry = () => {
+      loaded.current = false; // try again next time; pages still work without it
+    };
+    if (org) {
+      // The organization's own and shared projects, read with the session cookie. The unscoped
+      // /cases list is not used here: it is refused without a session and names no organization.
+      createApiClient()
+        .GET('/orgs/{slug}/projects', { params: { path: { slug: org } } })
+        .then((res) => (res.data ? setCases(res.data.map((p) => ({ id: p.slug, name: p.name }))) : retry()))
+        .catch(retry);
+      return;
+    }
     getCases()
       .then((res) => setCases(res.data.map((c) => ({ id: c.case_id, name: c.name }))))
-      .catch(() => {
-        loaded.current = false; // try again next time; pages still work without it
-      });
-  }, [palette]);
+      .catch(retry);
+  }, [palette, org]);
 
   const cycleTheme = useCallback(() => {
     const order: ThemePreference[] = ['light', 'dark', 'system'];
@@ -132,7 +147,7 @@ export function ShellOverlays() {
 
   return (
     <>
-      <CommandPalette open={palette} onClose={() => setPalette(false)} cases={cases} recent={recent} onAction={onAction} />
+      <CommandPalette open={palette} onClose={() => setPalette(false)} cases={cases} recent={recent} org={org} onAction={onAction} />
       <Tour open={tour} onClose={closeTour} />
       <Dialog open={help} onClose={() => setHelp(false)} title="Keyboard shortcuts">
         <ul className={styles.list} style={{ maxHeight: 'none' }}>

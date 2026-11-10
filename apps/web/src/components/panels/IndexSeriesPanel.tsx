@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Card, EvidenceStateBadge, UnavailablePanel } from '../ds';
 import { extent, linearScale, niceTicks, compact } from '../charts';
+import { formatIndexValue } from './format';
 import { PanelEmpty, PanelLoading } from './PanelStates';
 import { seriesPoints, type SeriesPoint } from './series.model';
 import { isUnavailable, type ObservationsView } from './types';
@@ -68,11 +69,11 @@ function SeriesChart({ points, gaps, label }: { points: SeriesPoint[]; gaps: num
       {points.map((p) =>
         p.evidenceState === 'MODEL_ESTIMATED' ? (
           <rect key={p.year} x={x(p.year) - 4.5} y={y(p.value) - 4.5} width={9} height={9} transform={`rotate(45 ${x(p.year)} ${y(p.value)})`} className={styles.dotModel}>
-            <title>{`${p.year}: ${p.value} (model estimated)`}</title>
+            <title>{`${p.year}: ${formatIndexValue(p.value)} (model estimated)`}</title>
           </rect>
         ) : (
           <circle key={p.year} cx={x(p.year)} cy={y(p.value)} r={4.5} className={styles.dot}>
-            <title>{`${p.year}: ${p.value} (${p.evidenceState.toLowerCase()})`}</title>
+            <title>{`${p.year}: ${formatIndexValue(p.value)} (${p.evidenceState.toLowerCase()})`}</title>
           </circle>
         ),
       )}
@@ -100,7 +101,7 @@ function SeriesTable({ points }: { points: SeriesPoint[] }) {
           {points.map((p) => (
             <tr key={p.year}>
               <td className={styles.num}>{p.year}</td>
-              <td className={styles.numcell}>{p.value}</td>
+              <td className={styles.numcell} title={String(p.value)}>{formatIndexValue(p.value)}</td>
               <td>
                 <EvidenceStateBadge state={p.evidenceState} />
               </td>
