@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Annotated, Literal
 
 from fastapi import Depends, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session, sessionmaker
 
 from groundtruth.platform.api.dependencies import get_store
@@ -26,12 +26,21 @@ Role = Literal["user", "dev", "admin"]
 
 
 class UserView(BaseModel):
+    """A user account."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     id: str
+    """User id."""
     email: str
+    """Email address; also the sign-in name."""
     role: Role
+    """Platform role: `user`, `dev` or `admin`. Organization roles are separate."""
     is_active: bool
+    """False for a deactivated account, which cannot sign in."""
     created_at: datetime
+    """When the account was created (UTC)."""
     last_login_at: datetime | None = None
+    """When the user last signed in (UTC)."""
 
 
 def to_view(user: UserRow) -> UserView:

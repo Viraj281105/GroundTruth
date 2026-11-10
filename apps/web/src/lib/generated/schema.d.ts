@@ -321,7 +321,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Sign in */
+        /**
+         * Sign in
+         * @description Checks the credentials and sets the `gt_session` cookie (HttpOnly, SameSite=Lax; Secure behind HTTPS). Send that cookie on every later request. A wrong email or password are indistinguishable (`invalid_credentials`, 401); 5 failures for one email from one address in 15 minutes are refused with `too_many_attempts` (429, `Retry-After`).
+         */
         post: operations["login_auth_login_post"];
         delete?: never;
         options?: never;
@@ -356,7 +359,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The current session */
+        /**
+         * The current session
+         * @description Your session: the account, your organizations and the active one. Never an error for a signed-out caller; `user` is then null.
+         */
         get: operations["me_auth_me_get"];
         put?: never;
         post?: never;
@@ -393,7 +399,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List accounts (admin) */
+        /**
+         * List accounts (admin)
+         * @description Every account. Platform administrators only (403).
+         */
         get: operations["list_users_auth_users_get"];
         put?: never;
         post?: never;
@@ -416,7 +425,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Change an account's role or active flag (admin) */
+        /**
+         * Change an account's role or active flag (admin)
+         * @description Change an account's platform role or deactivate it. Platform administrators only (403); an unknown user is 404 `user_not_found`.
+         */
         patch: operations["update_user_auth_users__user_id__patch"];
         trace?: never;
     };
@@ -427,10 +439,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Organizations you belong to */
+        /**
+         * Organizations you belong to
+         * @description Every organization your account belongs to, with your role in each. Needs sign-in but no
+         *     active organization.
+         */
         get: operations["list_orgs_orgs_get"];
         put?: never;
-        /** Create an organization (you become its owner) */
+        /**
+         * Create an organization (you become its owner)
+         * @description Creates an organization of the given type, with you as its owner. Audited (`org.create`).
+         */
         post: operations["create_org_orgs_post"];
         delete?: never;
         options?: never;
@@ -465,10 +484,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List members of the active organization */
+        /**
+         * List members of the active organization
+         * @description Members of the organization named by `slug`, which must be your active organization (404
+         *     otherwise). Needs a role that may manage members (403 otherwise).
+         */
         get: operations["list_members_orgs__slug__members_get"];
         put?: never;
-        /** Add an existing account to the active organization */
+        /**
+         * Add an existing account to the active organization
+         * @description Adds an existing account, found by email, with a role. No such account is 404
+         *     `user_not_found`; a change your role may not make is 403 `forbidden`; a change that breaks a
+         *     membership rule (e.g. an existing member) is 409 `conflict` with the reason. `slug` must be
+         *     your active organization. Audited (`org.member_add`).
+         */
         post: operations["add_member_orgs__slug__members_post"];
         delete?: never;
         options?: never;
@@ -486,11 +515,21 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Remove a member */
+        /**
+         * Remove a member
+         * @description Removes a member. Not a member is 404 `user_not_found`; a removal your role may not make is
+         *     403 `forbidden`; one that breaks a membership rule is 409 `conflict` with the reason. Answers
+         *     204 with no body. Audited (`org.member_remove`).
+         */
         delete: operations["remove_member_orgs__slug__members__user_id__delete"];
         options?: never;
         head?: never;
-        /** Change a member's role */
+        /**
+         * Change a member's role
+         * @description Changes a member's role. Not a member is 404 `user_not_found`; a change your role may not
+         *     make is 403 `forbidden`; a change that breaks a membership rule is 409 `conflict` with the
+         *     reason. Audited (`org.member_role`).
+         */
         patch: operations["set_role_orgs__slug__members__user_id__patch"];
         trace?: never;
     };
@@ -523,7 +562,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The organization's audit log, newest first (owners and admins) */
+        /**
+         * The organization's audit log, newest first (owners and admins)
+         * @description Security-relevant events of your active organization (`slug` must be it), newest first. Page
+         *     with `cursor` and `limit` (1 to 200). Needs a role that may read the audit log (403 otherwise).
+         *     A cursor that is not valid is 422 `invalid_cursor`; note that `GET /runs` answers the same code
+         *     with 400.
+         */
         get: operations["get_audit_orgs__slug__audit_get"];
         put?: never;
         post?: never;
@@ -562,10 +607,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Projects the organization owns or has been granted */
+        /**
+         * Projects the organization owns or has been granted
+         * @description Projects your active organization owns, and projects other organizations have granted it,
+         *     each with your access level.
+         */
         get: operations["list_projects_orgs__slug__projects_get"];
         put?: never;
-        /** Create a project from a boundary file (GeoJSON or KML, max 5 MB) */
+        /**
+         * Create a project from a boundary file (GeoJSON or KML, max 5 MB)
+         * @description Creates a project from multipart form fields and a boundary file (GeoJSON or KML, at most 5
+         *     MB). The boundary is validated before anything is stored; a bad one is 422 `invalid_boundary`
+         *     with the reason. Your organization becomes the owner.
+         */
         post: operations["create_project_orgs__slug__projects_post"];
         delete?: never;
         options?: never;
@@ -580,7 +634,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** One project by id or slug */
+        /**
+         * One project by id or slug
+         * @description One project, by id or slug, if your active organization owns it or has been granted it.
+         *     Otherwise 404: a project you may not see is answered like one that does not exist.
+         */
         get: operations["get_project_projects__project_id__get"];
         put?: never;
         post?: never;
@@ -597,7 +655,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Computed readiness: can causal attribution be attempted? */
+        /**
+         * Computed readiness: can causal attribution be attempted?
+         * @description Whether causal attribution can be attempted, criterion by criterion, computed from the
+         *     evidence on file. Like every project data response it carries `data_mode` and `access_level`.
+         */
         get: operations["get_readiness_projects__project_id__readiness_get"];
         put?: never;
         post?: never;
@@ -634,7 +696,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Annual climate series for the project */
+        /**
+         * Annual climate series for the project
+         * @description The project's annual climate record: rainfall, its anomaly, SPI-12 and temperature. When no
+         *     record exists the status is `unavailable` with the reason, and no value is invented. The bundle
+         *     checksum appears from the `contribute` level.
+         */
         get: operations["get_climate_projects__project_id__climate_get"];
         put?: never;
         post?: never;
@@ -758,7 +825,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Organizations the project is currently granted to */
+        /**
+         * Organizations the project is currently granted to
+         * @description Organizations the project is currently granted to, and at what level. Needs the right to
+         *     manage the project's sharing (403 otherwise).
+         */
         get: operations["list_grants_projects__project_id__grants_get"];
         put?: never;
         /**
@@ -821,7 +892,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Health
+         * Service status and what the engine can do
          * @description Liveness and honest capability reporting.
          */
         get: operations["health_health_get"];
@@ -841,13 +912,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Case Summaries
+         * List the cases this deployment knows
          * @description List the case definitions whose projects the active organization owns or was granted.
          */
         get: operations["list_case_summaries_cases_get"];
         put?: never;
         /**
-         * Create Case
+         * Create a case (sign-in always required)
          * @description Create, calibrate and register a new project case.
          *
          *     Everything is validated before anything is written. A rejected case answers a structured
@@ -870,7 +941,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Case Detail
+         * One case in full
          * @description Return one case definition in full.
          */
         get: operations["get_case_detail_cases__case_id__get"];
@@ -892,7 +963,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Verify
+         * Run a verification now and wait for the result
          * @description Run the verification pipeline for a case.
          *
          *     Needs what starting a job needs: a role that may start runs in the organization that owns
@@ -909,6 +980,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cases/{case_id}/export/csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a case's evidence bundle as CSV
+         * @description Export the case's evidence bundle as a UTF-8 CSV attachment.
+         *
+         *     Every evidence item with its value, unit, uncertainty and provenance fingerprint. The
+         *     `X-GroundTruth-Data-Mode` header and the `# is_simulated` line say whether the data is
+         *     simulated. Audited (`export.download`).
+         */
+        get: operations["export_case_csv_cases__case_id__export_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cases/{case_id}/export/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a case's verified screening report as PDF
+         * @description Export the case's screening verification report as a self-contained PDF attachment.
+         *
+         *     The report is verified against its own evidence bundle before it is exported, and the PDF
+         *     says which generator wrote it. Without ``narrate`` it is the deterministic report.
+         */
+        get: operations["export_case_pdf_cases__case_id__export_pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -918,22 +1036,41 @@ export interface components {
          * @description One feed entry: no actor, address, user agent or details.
          */
         ActivityItem: {
-            /** Id */
+            /**
+             * Id
+             * @description Event id.
+             */
             id: string;
             /**
              * Occurred At
              * Format: date-time
+             * @description When it happened (UTC).
              */
             occurred_at: string;
-            /** Action */
+            /**
+             * Action
+             * @description What was done.
+             */
             action: string;
-            /** Outcome */
+            /**
+             * Outcome
+             * @description `success` or `denied`.
+             */
             outcome: string;
-            /** Project Id */
+            /**
+             * Project Id
+             * @description The project concerned.
+             */
             project_id: string | null;
-            /** Project Slug */
+            /**
+             * Project Slug
+             * @description Its slug.
+             */
             project_slug: string | null;
-            /** Project Name */
+            /**
+             * Project Name
+             * @description Its name.
+             */
             project_name: string | null;
             /**
              * Own
@@ -941,12 +1078,19 @@ export interface components {
              */
             own: boolean;
         };
-        /** AddMemberRequest */
+        /**
+         * AddMemberRequest
+         * @description Add an existing user to the organization.
+         */
         AddMemberRequest: {
-            /** Email */
+            /**
+             * Email
+             * @description The user's email address.
+             */
             email: string;
             /**
              * Role
+             * @description Their role: admin, member or viewer.
              * @enum {string}
              */
             role: "owner" | "admin" | "member" | "viewer";
@@ -968,30 +1112,53 @@ export interface components {
          *     :class:`~groundtruth.platform.api.error_envelope.ErrorEnvelopeMiddleware`.
          */
         ApiErrorBody: {
+            /** @description What went wrong. */
             detail: components["schemas"]["ApiErrorDetail"];
             /**
              * Is Refusal
+             * @description True only for a scientific refusal. Here always false.
              * @default false
              */
             is_refusal: boolean;
-            /** Request Id */
+            /**
+             * Request Id
+             * @description Identifier of this request, also in the `X-Request-ID` header. Quote it when reporting a
+             *     problem.
+             */
             request_id: string | null;
         };
-        /** ApiErrorDetail */
+        /**
+         * ApiErrorDetail
+         * @description What went wrong, in the shape every structured error uses.
+         */
         ApiErrorDetail: {
-            /** Code */
+            /**
+             * Code
+             * @description Machine-readable code. Act on this, not on the prose; every code is listed in
+             *     docs/api/README.md.
+             */
             code: string;
-            /** Message */
+            /**
+             * Message
+             * @description Plain-language explanation, safe to show a user.
+             */
             message: string;
-            /** Hint */
+            /**
+             * Hint
+             * @description What to do about it, when known.
+             */
             hint: string | null;
             /**
              * Is Refusal
+             * @description True only for a scientific refusal; every other error says false.
              * @default false
              */
             is_refusal: boolean;
         };
-        /** AssessmentView */
+        /**
+         * AssessmentView
+         * @description The project's layered assessment: what is known, at what level of evidence.
+         */
         AssessmentView: {
             /**
              * Data Mode
@@ -1005,74 +1172,162 @@ export interface components {
              * @enum {string}
              */
             access_level: "owner" | "audit" | "contribute" | "view";
-            /** Level */
+            /**
+             * Level
+             * @description Assessment level reached, 0 to 5.
+             */
             level: number;
-            /** Level Name */
+            /**
+             * Level Name
+             * @description Not assessable, Basic monitoring, Contextual intelligence, Comparative intelligence,
+             *     Attribution assessment or Verified impact; `(simulated)` is appended for simulated data.
+             */
             level_name: string;
-            /** Evidence Confidence */
+            /**
+             * Evidence Confidence
+             * @description Overall confidence in the evidence: High, Moderate or Low.
+             */
             evidence_confidence: string;
-            /** Simulated Banner */
+            /**
+             * Simulated Banner
+             * @description The notice to show when the assessment rests on simulated data.
+             */
             simulated_banner: string | null;
+            /** @description What was observed. */
             observed_outcome: components["schemas"]["ConclusionView"];
+            /** @description What it means ecologically. */
             ecological_assessment: components["schemas"]["ConclusionView"];
+            /** @description The observation read against the climate record. */
             climate_adjusted_interpretation: components["schemas"]["ConclusionView"];
+            /** @description The project against comparable areas. */
             comparative_assessment: components["schemas"]["ConclusionView"];
+            /** @description Whether the change can be attributed to the project. */
             attribution: components["schemas"]["AttributionView"];
-            /** Dimensions */
+            /**
+             * Dimensions
+             * @description The eight dimensions.
+             */
             dimensions: components["schemas"]["DimensionView"][];
-            /** Recommendations */
+            /**
+             * Recommendations
+             * @description Suggested next steps, most urgent first.
+             */
             recommendations: components["schemas"]["RecommendationView"][];
         };
-        /** AttributionView */
+        /**
+         * AttributionView
+         * @description Whether the observed change can be attributed to the project.
+         */
         AttributionView: {
-            /** Verdict */
+            /**
+             * Verdict
+             * @description Supported, Not supported or Inconclusive.
+             */
             verdict: string;
-            /** Methodology */
+            /**
+             * Methodology
+             * @description How attribution was assessed.
+             */
             methodology: string;
-            /** Limitation */
+            /**
+             * Limitation
+             * @description The main limitation on the verdict.
+             */
             limitation: string;
-            /** Finding */
+            /**
+             * Finding
+             * @description The finding, in one sentence.
+             */
             finding: string;
-            /** Evidence Needed */
+            /**
+             * Evidence Needed
+             * @description What evidence would strengthen it.
+             */
             evidence_needed: string;
-            /** Evidence Refs */
+            /**
+             * Evidence Refs
+             * @description Evidence ids it rests on.
+             */
             evidence_refs: string[];
-            /** Diagnostic Refs */
+            /**
+             * Diagnostic Refs
+             * @description Diagnostics behind it. Absent below the `audit` level.
+             */
             diagnostic_refs: string[] | null;
         };
-        /** AuditEventView */
+        /**
+         * AuditEventView
+         * @description One security-relevant event.
+         */
         AuditEventView: {
-            /** Id */
+            /**
+             * Id
+             * @description Event id.
+             */
             id: string;
             /**
              * Occurred At
              * Format: date-time
+             * @description When it happened (UTC).
              */
             occurred_at: string;
-            /** Actor User Id */
+            /**
+             * Actor User Id
+             * @description Who did it, when signed in.
+             */
             actor_user_id: string | null;
-            /** Action */
+            /**
+             * Action
+             * @description What was done, e.g. `run.start`, `case.create`, `auth.login`.
+             */
             action: string;
-            /** Resource Type */
+            /**
+             * Resource Type
+             * @description Kind of resource acted on.
+             */
             resource_type: string;
-            /** Resource Id */
+            /**
+             * Resource Id
+             * @description The resource acted on.
+             */
             resource_id: string | null;
-            /** Outcome */
+            /**
+             * Outcome
+             * @description `success` or `denied`.
+             */
             outcome: string;
-            /** Ip */
+            /**
+             * Ip
+             * @description Client address.
+             */
             ip: string | null;
-            /** User Agent */
+            /**
+             * User Agent
+             * @description Client user agent.
+             */
             user_agent: string | null;
-            /** Details */
+            /**
+             * Details
+             * @description Structured context of the event.
+             */
             details: {
                 [key: string]: unknown;
             };
         };
-        /** AuditPage */
+        /**
+         * AuditPage
+         * @description A page of audit events, newest first.
+         */
         AuditPage: {
-            /** Events */
+            /**
+             * Events
+             * @description Events on this page.
+             */
             events: components["schemas"]["AuditEventView"][];
-            /** Next Cursor */
+            /**
+             * Next Cursor
+             * @description Pass as `cursor` for the next page; null on the last.
+             */
             next_cursor: string | null;
         };
         /**
@@ -1080,10 +1335,16 @@ export interface components {
          * @description The difference between a baseline bundle and a candidate bundle.
          */
         BundleDiff: {
+            /** @description Counts by status. */
             summary: components["schemas"]["DiffSummary"];
-            /** Items */
+            /**
+             * Items
+             * @description Every id in either bundle, sorted by id.
+             */
             items: components["schemas"]["ItemDiff"][];
+            /** @description The verdicts side by side. */
             verdict: components["schemas"]["VerdictDiff"];
+            /** @description Warnings in only one bundle. */
             warnings: components["schemas"]["WarningsDiff"];
         };
         /**
@@ -1091,35 +1352,82 @@ export interface components {
          * @description Full case definition, including validation references.
          */
         CaseDetail: {
-            /** Case Id */
+            /**
+             * Case Id
+             * @description Stable identifier of the case, used in every case and run URL.
+             */
             case_id: string;
-            /** Name */
+            /**
+             * Name
+             * @description Human-readable project name.
+             */
             name: string;
-            /** Country */
+            /**
+             * Country
+             * @description Country the project lies in.
+             */
             country: string;
-            /** Standard */
+            /**
+             * Standard
+             * @description Certification standard the project reports under, e.g. `VCS`.
+             */
             standard: string;
-            /** Registry Id */
+            /**
+             * Registry Id
+             * @description The project's identifier in its registry, when known.
+             */
             registry_id: string | null;
-            /** Ecosystem */
+            /**
+             * Ecosystem
+             * @description Ecosystem type, e.g. `forest / woodland`.
+             */
             ecosystem: string;
-            /** Indicator */
+            /**
+             * Indicator
+             * @description Vegetation index the analysis measures, e.g. `ndvi`. An index, never carbon.
+             */
             indicator: string;
-            /** Pre Period */
+            /**
+             * Pre Period
+             * @description Pre-treatment years used to fit the comparison, as `start-end`.
+             */
             pre_period: string;
-            /** Post Period */
+            /**
+             * Post Period
+             * @description Post-treatment years in which the effect is measured, as `start-end`.
+             */
             post_period: string;
-            /** Status */
+            /**
+             * Status
+             * @description Case lifecycle status. New cases are `scaffolded`; only a case with a run reviewed by both
+             *     owners may be `analysed`.
+             */
             status: string;
-            /** Has Known Reference */
+            /**
+             * Has Known Reference
+             * @description True if published third-party findings exist to compare against. They are never an input to
+             *     the estimate.
+             */
             has_known_reference: boolean;
-            /** Area Ha */
+            /**
+             * Area Ha
+             * @description Project area in hectares, as declared by the case.
+             */
             area_ha: number | null;
-            /** Donor Search Region */
+            /**
+             * Donor Search Region
+             * @description Where comparison (donor) areas are searched for.
+             */
             donor_search_region: string;
-            /** Donor Pool Size */
+            /**
+             * Donor Pool Size
+             * @description How many candidate donor areas the search draws before screening.
+             */
             donor_pool_size: number;
-            /** Covariates */
+            /**
+             * Covariates
+             * @description Variables used to match donors to the project area.
+             */
             covariates: string[];
             /**
              * Known Reference
@@ -1130,6 +1438,7 @@ export interface components {
             };
             /**
              * Notes
+             * @description Free-text notes from the case definition.
              * @default
              */
             notes: string;
@@ -1139,90 +1448,210 @@ export interface components {
          * @description A case as listed by the API.
          */
         CaseSummary: {
-            /** Case Id */
+            /**
+             * Case Id
+             * @description Stable identifier of the case, used in every case and run URL.
+             */
             case_id: string;
-            /** Name */
+            /**
+             * Name
+             * @description Human-readable project name.
+             */
             name: string;
-            /** Country */
+            /**
+             * Country
+             * @description Country the project lies in.
+             */
             country: string;
-            /** Standard */
+            /**
+             * Standard
+             * @description Certification standard the project reports under, e.g. `VCS`.
+             */
             standard: string;
-            /** Registry Id */
+            /**
+             * Registry Id
+             * @description The project's identifier in its registry, when known.
+             */
             registry_id: string | null;
-            /** Ecosystem */
+            /**
+             * Ecosystem
+             * @description Ecosystem type, e.g. `forest / woodland`.
+             */
             ecosystem: string;
-            /** Indicator */
+            /**
+             * Indicator
+             * @description Vegetation index the analysis measures, e.g. `ndvi`. An index, never carbon.
+             */
             indicator: string;
-            /** Pre Period */
+            /**
+             * Pre Period
+             * @description Pre-treatment years used to fit the comparison, as `start-end`.
+             */
             pre_period: string;
-            /** Post Period */
+            /**
+             * Post Period
+             * @description Post-treatment years in which the effect is measured, as `start-end`.
+             */
             post_period: string;
-            /** Status */
+            /**
+             * Status
+             * @description Case lifecycle status. New cases are `scaffolded`; only a case with a run reviewed by both
+             *     owners may be `analysed`.
+             */
             status: string;
-            /** Has Known Reference */
+            /**
+             * Has Known Reference
+             * @description True if published third-party findings exist to compare against. They are never an input to
+             *     the estimate.
+             */
             has_known_reference: boolean;
         };
-        /** ChangePasswordRequest */
+        /**
+         * ChangePasswordRequest
+         * @description Change your password. Every other session of yours is signed out.
+         */
         ChangePasswordRequest: {
-            /** Current Password */
+            /**
+             * Current Password
+             * @description Your current password.
+             */
             current_password: string;
-            /** New Password */
+            /**
+             * New Password
+             * @description The new password, checked against the password policy.
+             */
             new_password: string;
         };
-        /** ClaimComparison */
+        /**
+         * ClaimComparison
+         * @description An extracted figure beside the case's own value. A difference warrants review; it is not a
+         *     finding.
+         */
         ClaimComparison: {
-            /** Claim Kind */
+            /**
+             * Claim Kind
+             * @description Kind of figure compared.
+             */
             claim_kind: string;
-            /** Claimed */
+            /**
+             * Claimed
+             * @description The figure in the text.
+             */
             claimed: number;
-            /** Estimated */
+            /**
+             * Estimated
+             * @description The case's own value, when it has one.
+             */
             estimated: number | null;
-            /** Note */
+            /**
+             * Note
+             * @description How to read the comparison.
+             */
             note: string;
         };
-        /** ClaimSpan */
+        /**
+         * ClaimSpan
+         * @description Where a claim was found in the text.
+         */
         ClaimSpan: {
-            /** Start */
+            /**
+             * Start
+             * @description Start offset, in characters.
+             */
             start: number;
-            /** End */
+            /**
+             * End
+             * @description End offset, in characters.
+             */
             end: number;
-            /** Text */
+            /**
+             * Text
+             * @description The matched text.
+             */
             text: string;
         };
-        /** ClaimsRequest */
+        /**
+         * ClaimsRequest
+         * @description Text to read claims from.
+         */
         ClaimsRequest: {
-            /** Text */
+            /**
+             * Text
+             * @description The text, e.g. pasted from a project document.
+             */
             text: string;
-            /** Case Id */
+            /**
+             * Case Id
+             * @description A case to set the extracted figures beside, if any.
+             */
             case_id?: string | null;
         };
-        /** ClaimsResponse */
+        /**
+         * ClaimsResponse
+         * @description What was read from the text.
+         */
         ClaimsResponse: {
-            /** Claims */
+            /**
+             * Claims
+             * @description Every figure found.
+             */
             claims: components["schemas"]["ExtractedClaim"][];
-            /** Comparisons */
+            /**
+             * Comparisons
+             * @description Figures set beside the case's values.
+             */
             comparisons: components["schemas"]["ClaimComparison"][];
-            /** Disclaimer */
+            /**
+             * Disclaimer
+             * @description Screening-aid notice to show with the result.
+             */
             disclaimer: string;
         };
-        /** ClimateSourceView */
+        /**
+         * ClimateSourceView
+         * @description A climate dataset the record draws on.
+         */
         ClimateSourceView: {
-            /** Name */
+            /**
+             * Name
+             * @description Dataset name.
+             */
             name: string;
-            /** Dataset Id */
+            /**
+             * Dataset Id
+             * @description Dataset identifier.
+             */
             dataset_id: string;
-            /** Provider */
+            /**
+             * Provider
+             * @description Who publishes it.
+             */
             provider: string;
-            /** Citation */
+            /**
+             * Citation
+             * @description How to cite it.
+             */
             citation: string;
-            /** Temporal Coverage Start */
+            /**
+             * Temporal Coverage Start
+             * @description First date it covers.
+             */
             temporal_coverage_start: string;
-            /** Temporal Coverage End */
+            /**
+             * Temporal Coverage End
+             * @description Last date it covers.
+             */
             temporal_coverage_end: string;
-            /** Known Coverage Gaps */
+            /**
+             * Known Coverage Gaps
+             * @description Known gaps in its coverage.
+             */
             known_coverage_gaps: string[];
         };
-        /** ClimateView */
+        /**
+         * ClimateView
+         * @description The project's climate record, or why it is unavailable.
+         */
         ClimateView: {
             /**
              * Data Mode
@@ -1238,52 +1667,116 @@ export interface components {
             access_level: "owner" | "audit" | "contribute" | "view";
             /**
              * Status
+             * @description `available`, or `unavailable` with `reason` and no values.
              * @enum {string}
              */
             status: "available" | "unavailable";
-            /** Reason */
+            /**
+             * Reason
+             * @description Why the record is unavailable.
+             */
             reason: string | null;
-            /** Case Id */
+            /**
+             * Case Id
+             * @description The case the record belongs to.
+             */
             case_id: string | null;
-            /** Sources */
+            /**
+             * Sources
+             * @description Datasets the record draws on.
+             */
             sources: components["schemas"]["ClimateSourceView"][];
-            /** Missing Months */
+            /**
+             * Missing Months
+             * @description Months with no valid data, as `YYYY-MM`.
+             */
             missing_months: string[];
-            /** Years */
+            /**
+             * Years
+             * @description One entry per year.
+             */
             years: components["schemas"]["ClimateYearView"][];
-            /** Bundle Sha256 */
+            /**
+             * Bundle Sha256
+             * @description SHA-256 of the stored climate bundle. Absent below the `contribute` level.
+             */
             bundle_sha256: string | null;
         };
-        /** ClimateYearView */
+        /**
+         * ClimateYearView
+         * @description One calendar year of the project's climate record.
+         */
         ClimateYearView: {
-            /** Year */
+            /**
+             * Year
+             * @description Calendar year.
+             */
             year: number;
-            /** Valid Months */
+            /**
+             * Valid Months
+             * @description Months with valid data, out of 12.
+             */
             valid_months: number;
-            /** Is Complete Year */
+            /**
+             * Is Complete Year
+             * @description True when all 12 months are valid.
+             */
             is_complete_year: boolean;
-            /** Annual Rainfall Mm */
+            /**
+             * Annual Rainfall Mm
+             * @description Total rainfall, in millimetres.
+             */
             annual_rainfall_mm: number | null;
-            /** Rainfall Anomaly Mm */
+            /**
+             * Rainfall Anomaly Mm
+             * @description Rainfall minus the long-term mean, in millimetres.
+             */
             rainfall_anomaly_mm: number | null;
-            /** Rainfall Anomaly Z */
+            /**
+             * Rainfall Anomaly Z
+             * @description The anomaly in standard deviations.
+             */
             rainfall_anomaly_z: number | null;
-            /** Spi 12 */
+            /**
+             * Spi 12
+             * @description 12-month Standardized Precipitation Index.
+             */
             spi_12: number | null;
-            /** Drought Classification */
+            /**
+             * Drought Classification
+             * @description Drought class derived from the SPI.
+             */
             drought_classification: string;
-            /** Mean Temp C */
+            /**
+             * Mean Temp C
+             * @description Mean temperature, in degrees Celsius.
+             */
             mean_temp_c: number | null;
         };
-        /** ConclusionView */
+        /**
+         * ConclusionView
+         * @description One layered conclusion, or why it cannot be drawn.
+         */
         ConclusionView: {
-            /** Summary */
+            /**
+             * Summary
+             * @description The conclusion, in plain language.
+             */
             summary: string;
-            /** Dimension Ids */
+            /**
+             * Dimension Ids
+             * @description Dimensions it rests on.
+             */
             dimension_ids: string[];
-            /** Estimable */
+            /**
+             * Estimable
+             * @description False when the evidence cannot support this conclusion; see `reason`.
+             */
             estimable: boolean;
-            /** Reason */
+            /**
+             * Reason
+             * @description Why it cannot be drawn.
+             */
             reason: string | null;
         };
         /**
@@ -1295,12 +1788,19 @@ export interface components {
          *     they were interchangeable would be misleading.
          */
         Confidence: {
-            /** Lower */
+            /**
+             * Lower
+             * @description Lower bound of the interval.
+             */
             lower: number;
-            /** Upper */
+            /**
+             * Upper
+             * @description Upper bound of the interval.
+             */
             upper: number;
             /**
              * Level
+             * @description Coverage of the interval, e.g. 0.9 for 90%.
              * @default 0.95
              */
             level: number;
@@ -1316,71 +1816,103 @@ export interface components {
          * @description Request to define and register a new project case.
          */
         CreateCaseRequest: {
-            /** Name */
+            /**
+             * Name
+             * @description Project name, 2 to 120 characters. The case id is derived from it unless `case_id` is given.
+             */
             name: string;
-            /** Country */
+            /**
+             * Country
+             * @description Country the project lies in, 2 to 80 characters.
+             */
             country: string;
             /**
              * Ecosystem
+             * @description Ecosystem type.
              * @default forest / woodland
              */
             ecosystem?: string;
             /**
              * Standard
+             * @description Certification standard, e.g. `VCS`.
              * @default VCS
              */
             standard?: string;
-            /** Registry Id */
+            /**
+             * Registry Id
+             * @description The project's registry identifier, 2 to 60 characters.
+             */
             registry_id: string;
-            /** Area Ha */
+            /**
+             * Area Ha
+             * @description Declared project area in hectares; must be positive.
+             */
             area_ha: number;
             /**
              * Crediting Period Start
+             * @description First day of the crediting period, `YYYY-MM-DD`.
              * @default 2015-01-01
              */
             crediting_period_start?: string;
             /**
              * Crediting Period End
+             * @description Last day of the crediting period, `YYYY-MM-DD`.
              * @default 2045-12-31
              */
             crediting_period_end?: string;
-            /** Claimed Credits Tco2E */
+            /**
+             * Claimed Credits Tco2E
+             * @description Credits the developer claims, in tCO2e, if known. Shown beside the evidence, never used to
+             *     compute it.
+             */
             claimed_credits_tco2e?: number | null;
             /**
              * Indicator
+             * @description Vegetation index to measure: `ndvi`, `evi`, `ndmi` or `nbr`.
              * @default ndvi
              */
             indicator?: string;
             /**
              * Donor Pool Size
+             * @description Candidate donor areas to draw, 10 to 100.
              * @default 50
              */
             donor_pool_size?: number;
             /**
              * Pre Start
+             * @description First pre-treatment year.
              * @default 2005
              */
             pre_start?: number;
             /**
              * Pre End
+             * @description Last pre-treatment year; must come before `post_start`.
              * @default 2014
              */
             pre_end?: number;
             /**
              * Post Start
+             * @description First post-treatment year (the intervention year).
              * @default 2015
              */
             post_start?: number;
             /**
              * Post End
+             * @description Last post-treatment year.
              * @default 2022
              */
             post_end?: number;
-            /** Boundary Geojson */
+            /**
+             * Boundary Geojson
+             * @description Project boundary as GeoJSON. Optional; validated before anything is written.
+             */
             boundary_geojson?: {
                 [key: string]: unknown;
             } | null;
-            /** Case Id */
+            /**
+             * Case Id
+             * @description Choose the case id instead of deriving it from `name`. Must be unique.
+             */
             case_id?: string | null;
             /**
              * Status
@@ -1388,12 +1920,19 @@ export interface components {
              */
             status?: string | null;
         };
-        /** CreateOrgRequest */
+        /**
+         * CreateOrgRequest
+         * @description A new organization; you become its owner.
+         */
         CreateOrgRequest: {
-            /** Name */
+            /**
+             * Name
+             * @description Organization name.
+             */
             name: string;
             /**
              * Type
+             * @description ngo, funder, auditor or government.
              * @enum {string}
              */
             type: "ngo" | "funder" | "auditor" | "government";
@@ -1434,7 +1973,10 @@ export interface components {
              * @description Provider asset path.
              */
             asset: string | null;
-            /** Source Uri */
+            /**
+             * Source Uri
+             * @description Where the dataset was read from, when recorded.
+             */
             source_uri: string | null;
             /**
              * Retrieved At
@@ -1447,16 +1989,31 @@ export interface components {
          * @description How many ids fall in each status.
          */
         DiffSummary: {
-            /** Added */
+            /**
+             * Added
+             * @description Ids only in the candidate.
+             */
             added: number;
-            /** Removed */
+            /**
+             * Removed
+             * @description Ids only in the baseline.
+             */
             removed: number;
-            /** Changed */
+            /**
+             * Changed
+             * @description Ids in both whose content differs.
+             */
             changed: number;
-            /** Unchanged */
+            /**
+             * Unchanged
+             * @description Ids in both with identical content.
+             */
             unchanged: number;
         };
-        /** DimensionStatuses */
+        /**
+         * DimensionStatuses
+         * @description The status of each assessment dimension, for a portfolio row.
+         */
         DimensionStatuses: {
             /**
              * Trajectory
@@ -1474,13 +2031,28 @@ export interface components {
              */
             evidence_quality: string;
         };
-        /** DimensionView */
+        /**
+         * DimensionView
+         * @description One of the eight assessment dimensions.
+         */
         DimensionView: {
-            /** Id */
+            /**
+             * Id
+             * @description Dimension id.
+             */
             id: string;
-            /** Title */
+            /**
+             * Title
+             * @description Dimension title.
+             */
             title: string;
-            /** Status */
+            /**
+             * Status
+             * @description A change status (Improving, Deteriorating, Stable, Mixed spatial performance, Elevated
+             *     ecological risk, No clear change, Insufficient evidence) for dimensions 1-6; a High/Moderate/Low
+             *     rating for dimension 7; an attribution verdict (Supported, Not supported, Inconclusive) for
+             *     dimension 8.
+             */
             status: string;
             /**
              * Status Kind
@@ -1488,19 +2060,41 @@ export interface components {
              * @enum {string}
              */
             status_kind: "trend_status" | "quality_rating" | "attribution_verdict";
-            /** Finding */
+            /**
+             * Finding
+             * @description The finding, in one sentence.
+             */
             finding: string;
-            /** Known */
+            /**
+             * Known
+             * @description What the evidence establishes.
+             */
             known: string[];
-            /** Suggested */
+            /**
+             * Suggested
+             * @description What the evidence suggests but does not establish.
+             */
             suggested: string[];
-            /** Cannot Establish */
+            /**
+             * Cannot Establish
+             * @description What the evidence cannot establish.
+             */
             cannot_establish: string[];
-            /** Limitation */
+            /**
+             * Limitation
+             * @description The main limitation: missing_data, weak_statistical_power, poor_reference_comparability,
+             *     climate_confounding, failed_model_assumptions or none.
+             */
             limitation: string;
-            /** Evidence Needed */
+            /**
+             * Evidence Needed
+             * @description What evidence would strengthen the finding.
+             */
             evidence_needed: string;
-            /** Confidence */
+            /**
+             * Confidence
+             * @description High, Moderate or Low.
+             */
             confidence: string;
             /**
              * Evidence Refs
@@ -1512,7 +2106,10 @@ export interface components {
              * @description References into causal-run diagnostics.
              */
             diagnostic_refs: string[] | null;
-            /** Facts */
+            /**
+             * Facts
+             * @description Machine-readable values behind the finding.
+             */
             facts: {
                 [key: string]: unknown;
             };
@@ -1522,6 +2119,7 @@ export interface components {
          * @description The body ``/verify`` returns when the engine refused or could not run.
          */
         EngineFailureBody: {
+            /** @description Why no result was returned. */
             detail: components["schemas"]["EngineFailureDetail"];
             /**
              * Is Refusal
@@ -1529,7 +2127,10 @@ export interface components {
              * @default false
              */
             is_refusal: boolean;
-            /** Request Id */
+            /**
+             * Request Id
+             * @description Identifier of this request, also in the `X-Request-ID` header.
+             */
             request_id: string | null;
         };
         /**
@@ -1540,16 +2141,36 @@ export interface components {
          *     to produce a fragile number, and is shown as a legitimate outcome, not as an error.
          */
         EngineFailureDetail: {
+            /**
+             * @description The engine's error code. `insufficient_data` and `donor_pool_inadequate` are refusals; the
+             *     rest are errors.
+             */
             code: components["schemas"]["ErrorCode"];
-            /** Message */
+            /**
+             * Message
+             * @description Plain-language explanation, safe to show a user.
+             */
             message: string;
-            /** Stage */
+            /**
+             * Stage
+             * @description The engine stage that refused or failed.
+             */
             stage: string;
-            /** Is Refusal */
+            /**
+             * Is Refusal
+             * @description True when the engine declined to estimate because the data cannot support a reliable number.
+             *     A legitimate outcome, not a malfunction.
+             */
             is_refusal: boolean;
-            /** Remediation */
+            /**
+             * Remediation
+             * @description What could be done about it, when the engine knows.
+             */
             remediation: string | null;
-            /** Run Id */
+            /**
+             * Run Id
+             * @description Identifier of the engine run that refused or failed.
+             */
             run_id: string;
         };
         /**
@@ -1557,15 +2178,22 @@ export interface components {
          * @description The engine's own timings, taken from ``RunMetrics``. Present only after it returns.
          */
         EngineMetricsView: {
-            /** Available */
+            /**
+             * Available
+             * @description False until the engine has returned for this job.
+             */
             available: boolean;
             /**
              * Source
+             * @description Where the timings come from: always the engine's own `RunMetrics`.
              * @default run_metrics
              * @constant
              */
             source: "run_metrics";
-            /** Total Ms */
+            /**
+             * Total Ms
+             * @description Total engine time, in milliseconds.
+             */
             total_ms: number | null;
             /**
              * Stages
@@ -1577,20 +2205,41 @@ export interface components {
              * @description The stage a refusal or error came from, as the engine names it.
              */
             stopped_at: string | null;
-            /** N Units Observed */
+            /**
+             * N Units Observed
+             * @description How many areas (project and candidates) the engine observed.
+             */
             n_units_observed: number | null;
-            /** N Donors Admitted */
+            /**
+             * N Donors Admitted
+             * @description How many comparison areas passed screening.
+             */
             n_donors_admitted: number | null;
-            /** N Estimator Fits */
+            /**
+             * N Estimator Fits
+             * @description How many times the estimator was fitted, placebos included.
+             */
             n_estimator_fits: number | null;
-            /** Note */
+            /**
+             * Note
+             * @description How to read these numbers.
+             */
             note: string;
         };
-        /** EngineStageTiming */
+        /**
+         * EngineStageTiming
+         * @description One of the engine's internal stages and how long it took.
+         */
         EngineStageTiming: {
-            /** Name */
+            /**
+             * Name
+             * @description The engine's name for the stage.
+             */
             name: string;
-            /** Duration Ms */
+            /**
+             * Duration Ms
+             * @description How long it took, in milliseconds.
+             */
             duration_ms: number;
         };
         /**
@@ -1618,7 +2267,10 @@ export interface components {
              * @description Short human-readable description of the quantity.
              */
             label: string;
-            /** Value */
+            /**
+             * Value
+             * @description The measured value, in `unit`. An index (e.g. NDVI) is never a carbon quantity.
+             */
             value: number | string | boolean;
             /**
              * Unit
@@ -1626,7 +2278,9 @@ export interface components {
              * @default
              */
             unit: string;
+            /** @description The uncertainty interval of the value, when it has one. */
             confidence: components["schemas"]["Confidence"] | null;
+            /** @description How the value was produced: method, inputs, parameters and fingerprint. */
             provenance: components["schemas"]["Provenance"];
             /**
              * @description Explicit epistemological status: OBSERVED, DERIVED, MODEL_ESTIMATED, INFERRED, UNAVAILABLE, INSUFFICIENT_EVIDENCE.
@@ -1650,21 +2304,28 @@ export interface components {
          *     its provenance records.
          */
         EvidenceBundle: {
-            /** Case Id */
+            /**
+             * Case Id
+             * @description The case the evidence is about.
+             */
             case_id: string;
             /**
              * Schema Version
+             * @description Version of the bundle format.
              * @default 1.0
              */
             schema_version: string;
             /**
              * Items
+             * @description Every evidence item, each with its unit, uncertainty and provenance.
              * @default []
              */
             items: components["schemas"]["Evidence"][];
+            /** @description The screening verdict, when the engine reached one. */
             verdict: components["schemas"]["VerificationVerdict"] | null;
             /**
              * Warnings
+             * @description Analyst-facing warnings, e.g. that the data is simulated.
              * @default []
              */
             warnings: string[];
@@ -1689,29 +2350,52 @@ export interface components {
             access_level: "owner" | "audit" | "contribute" | "view";
             /**
              * Status
+             * @description `available`, or `unavailable` with `reason`.
              * @enum {string}
              */
             status: "available" | "unavailable";
-            /** Reason */
+            /**
+             * Reason
+             * @description Why nothing is available.
+             */
             reason: string | null;
-            /** Kinds */
+            /**
+             * Kinds
+             * @description Kinds of evidence present.
+             */
             kinds: string[];
-            /** Indicators */
+            /**
+             * Indicators
+             * @description One entry per indicator.
+             */
             indicators: components["schemas"]["IndicatorInventory"][];
-            /** States */
+            /**
+             * States
+             * @description Record counts by evidence state, across indicators.
+             */
             states: {
                 [key: string]: number;
             };
             /**
              * Climate Status
+             * @description Whether a climate record is available.
              * @enum {string}
              */
             climate_status: "available" | "unavailable";
-            /** Climate Reason */
+            /**
+             * Climate Reason
+             * @description Why the climate record is unavailable.
+             */
             climate_reason: string | null;
-            /** Boundary Sha256 */
+            /**
+             * Boundary Sha256
+             * @description SHA-256 of the stored boundary. Absent below the `contribute` level.
+             */
             boundary_sha256: string | null;
-            /** Items */
+            /**
+             * Items
+             * @description Every stored annual record. Absent below the `contribute` level.
+             */
             items: components["schemas"]["InventoryItem"][] | null;
         };
         /**
@@ -1719,18 +2403,34 @@ export interface components {
          * @description An evidence item as one side of the diff saw it.
          */
         EvidenceSnapshot: {
-            /** Value */
+            /**
+             * Value
+             * @description The measured value.
+             */
             value: number | string | boolean;
-            /** Unit */
+            /**
+             * Unit
+             * @description Its unit.
+             */
             unit: string;
+            /** @description Its uncertainty interval, when it has one. */
             confidence: components["schemas"]["Confidence"] | null;
-            /** Qualifiers */
+            /**
+             * Qualifiers
+             * @description Qualifiers attached to the value.
+             */
             qualifiers: {
                 [key: string]: unknown;
             };
-            /** Provenance Method */
+            /**
+             * Provenance Method
+             * @description How it was produced.
+             */
             provenance_method: string;
-            /** Provenance Fingerprint */
+            /**
+             * Provenance Fingerprint
+             * @description Fingerprint of its provenance record.
+             */
             provenance_fingerprint: string;
         };
         /**
@@ -1739,14 +2439,27 @@ export interface components {
          * @enum {string}
          */
         EvidenceState: "OBSERVED" | "DERIVED" | "MODEL_ESTIMATED" | "INFERRED" | "UNAVAILABLE" | "INSUFFICIENT_EVIDENCE";
-        /** ExtractedClaim */
+        /**
+         * ExtractedClaim
+         * @description One figure read from the text.
+         */
         ExtractedClaim: {
-            /** Kind */
+            /**
+             * Kind
+             * @description baseline, credits_issued, area_hectares or reduction_percent.
+             */
             kind: string;
-            /** Value */
+            /**
+             * Value
+             * @description The figure.
+             */
             value: number;
-            /** Unit */
+            /**
+             * Unit
+             * @description Its unit.
+             */
             unit: string;
+            /** @description Where it was found. */
             span: components["schemas"]["ClaimSpan"];
         };
         /**
@@ -1754,19 +2467,35 @@ export interface components {
          * @description One field of one evidence item that differs.
          */
         FieldChange: {
-            /** Field */
+            /**
+             * Field
+             * @description ``value``, ``unit``, ``confidence``, ``qualifiers`` or ``provenance``.
+             */
             field: string;
-            /** Before */
+            /**
+             * Before
+             * @description The baseline's value.
+             */
             before: unknown;
-            /** After */
+            /**
+             * After
+             * @description The candidate's value.
+             */
             after: unknown;
         };
-        /** GrantRequest */
+        /**
+         * GrantRequest
+         * @description Share a project with another organization.
+         */
         GrantRequest: {
-            /** Org Slug */
+            /**
+             * Org Slug
+             * @description Slug of the organization to share with.
+             */
             org_slug: string;
             /**
              * Level
+             * @description What they may do: `view`, `audit` or `contribute`.
              * @enum {string}
              */
             level: "view" | "audit" | "contribute";
@@ -1776,20 +2505,31 @@ export interface components {
          * @description An active grant of a project to another organization.
          */
         GrantView: {
-            /** Org Slug */
+            /**
+             * Org Slug
+             * @description Slug of the organization granted access.
+             */
             org_slug: string;
-            /** Org Name */
+            /**
+             * Org Name
+             * @description Its name.
+             */
             org_name: string;
-            /** Org Type */
+            /**
+             * Org Type
+             * @description Its type.
+             */
             org_type: string;
             /**
              * Level
+             * @description Its level: `view`, `audit` or `contribute`.
              * @enum {string}
              */
             level: "view" | "audit" | "contribute";
             /**
              * Granted At
              * Format: date-time
+             * @description When access was granted (UTC).
              */
             granted_at: string;
         };
@@ -1817,7 +2557,10 @@ export interface components {
              * @description Always false.
              */
             is_refusal?: boolean;
-            /** Request Id */
+            /**
+             * Request Id
+             * @description Identifier of this request, also in the `X-Request-ID` header.
+             */
             request_id?: string;
         };
         /**
@@ -1827,18 +2570,24 @@ export interface components {
         HealthResponse: {
             /**
              * Status
+             * @description Always `ok` when the API answers; a failing service answers an error instead.
              * @default ok
              */
             status: string;
-            /** Version */
+            /**
+             * Version
+             * @description The GroundTruth package version serving this API.
+             */
             version: string;
             /**
              * Engine Version
+             * @description Version of the analysis engine every new run uses.
              * @default
              */
             engine_version: string;
             /**
              * Contract Version
+             * @description Version of the engine contract; results record the one they used.
              * @default
              */
             contract_version: string;
@@ -1863,40 +2612,65 @@ export interface components {
             genai_narration_implemented: boolean;
             /**
              * Cases Available
+             * @description How many case definitions this deployment has loaded.
              * @default 0
              */
             cases_available: number;
         };
-        /** IndicatorInventory */
+        /**
+         * IndicatorInventory
+         * @description What is stored for one indicator.
+         */
         IndicatorInventory: {
             /**
              * Indicator
+             * @description The vegetation index.
              * @enum {string}
              */
             indicator: "ndvi" | "evi" | "ndmi" | "nbr";
             /**
              * Status
+             * @description `available`, or `unavailable` with `reason`.
              * @enum {string}
              */
             status: "available" | "unavailable";
-            /** Reason */
+            /**
+             * Reason
+             * @description Why nothing is available.
+             */
             reason: string | null;
             /**
              * N Records
+             * @description How many annual records exist.
              * @default 0
              */
             n_records: number;
-            /** Years */
+            /**
+             * Years
+             * @description The years with a record.
+             */
             years: number[];
-            /** States */
+            /**
+             * States
+             * @description Record counts by evidence state.
+             */
             states: {
                 [key: string]: number;
             };
-            /** Sensors */
+            /**
+             * Sensors
+             * @description Sensors the records came from.
+             */
             sensors: string[];
-            /** Source */
+            /**
+             * Source
+             * @description Where the records come from.
+             */
             source: string | null;
-            /** Data Origin */
+            /**
+             * Data Origin
+             * @description Whether the records are real observations or simulated.
+             */
             data_origin: string | null;
         };
         /**
@@ -1906,16 +2680,29 @@ export interface components {
         InventoryItem: {
             /**
              * Indicator
+             * @description The vegetation index.
              * @enum {string}
              */
             indicator: "ndvi" | "evi" | "ndmi" | "nbr";
-            /** Year */
+            /**
+             * Year
+             * @description Calendar year.
+             */
             year: number;
-            /** N Scenes */
+            /**
+             * N Scenes
+             * @description How many scenes contributed.
+             */
             n_scenes: number;
-            /** Scene Ids */
+            /**
+             * Scene Ids
+             * @description Identifiers of those scenes.
+             */
             scene_ids: string[];
-            /** Scenes Sha256 */
+            /**
+             * Scenes Sha256
+             * @description SHA-256 over the scene list.
+             */
             scenes_sha256: string;
         };
         /**
@@ -1923,25 +2710,41 @@ export interface components {
          * @description One evidence id across the two bundles.
          */
         ItemDiff: {
-            /** Id */
+            /**
+             * Id
+             * @description Evidence id.
+             */
             id: string;
-            /** Label */
+            /**
+             * Label
+             * @description Evidence label.
+             */
             label: string;
             /**
              * Status
+             * @description `added`, `removed`, `changed` or `unchanged`.
              * @enum {string}
              */
             status: "added" | "removed" | "changed" | "unchanged";
+            /** @description The item in the baseline, if present. */
             baseline: components["schemas"]["EvidenceSnapshot"] | null;
+            /** @description The item in the candidate, if present. */
             candidate: components["schemas"]["EvidenceSnapshot"] | null;
             /**
              * Changes
+             * @description Each field that differs.
              * @default []
              */
             changes: components["schemas"]["FieldChange"][];
-            /** Delta */
+            /**
+             * Delta
+             * @description ``candidate - baseline`` when both values are numbers.
+             */
             delta: number | null;
-            /** Relative Delta */
+            /**
+             * Relative Delta
+             * @description ``delta / |baseline|``; ``None`` when the baseline is zero or not a number.
+             */
             relative_delta: number | null;
         };
         /**
@@ -1949,7 +2752,10 @@ export interface components {
          * @description What submitting did: queued a new job, or pointed at an existing run.
          */
         JobSubmission: {
-            /** Run Id */
+            /**
+             * Run Id
+             * @description Identifier of the run that answers the request: new, cached or in flight.
+             */
             run_id: string;
             /**
              * From Cache
@@ -1961,8 +2767,12 @@ export interface components {
              * @description An identical job is already queued or running; this is that job.
              */
             deduplicated: boolean;
-            /** Status Url */
+            /**
+             * Status Url
+             * @description URL to poll for the job's progress.
+             */
             status_url: string;
+            /** @description The job's current status. */
             job: components["schemas"]["JobView"];
         };
         /**
@@ -1975,9 +2785,15 @@ export interface components {
          *     carries a ``notice``.
          */
         JobView: {
-            /** Run Id */
+            /**
+             * Run Id
+             * @description Identifier of the job's run.
+             */
             run_id: string;
-            /** Case Id */
+            /**
+             * Case Id
+             * @description The case being analysed.
+             */
             case_id: string;
             /**
              * Status
@@ -1986,6 +2802,8 @@ export interface components {
             status: string;
             /**
              * Result State
+             * @description What the run produced: queued, running, measured, refused, failed or cancelled. `refused` is
+             *     a scientific outcome; `failed` is a fault.
              * @enum {string}
              */
             result_state: "queued" | "running" | "measured" | "refused" | "failed" | "cancelled";
@@ -1994,20 +2812,35 @@ export interface components {
              * @description True once nothing more will happen; stop polling.
              */
             terminal: boolean;
-            /** Engine Status */
+            /**
+             * Engine Status
+             * @description What the engine returned, once it ran: completed, refused or error.
+             */
             engine_status: string | null;
-            /** Data Mode */
+            /**
+             * Data Mode
+             * @description `simulated` or `observed`.
+             */
             data_mode: string;
-            /** Is Simulated */
+            /**
+             * Is Simulated
+             * @description True for simulated data. Show the simulated-data notice.
+             */
             is_simulated: boolean;
-            /** Notice */
+            /**
+             * Notice
+             * @description Plain-language simulated-data notice, when simulated.
+             */
             notice: string | null;
             /**
              * Attempt
              * @description How many times a worker has taken the job.
              */
             attempt: number | null;
-            /** Max Attempts */
+            /**
+             * Max Attempts
+             * @description How many times the job may be tried before it fails for good.
+             */
             max_attempts: number | null;
             /**
              * Cancel Requested
@@ -2019,24 +2852,38 @@ export interface components {
              * @description The live stage in progress, if one is recorded.
              */
             stage: string | null;
-            /** Stages */
+            /**
+             * Stages
+             * @description Each live stage of the job and its state.
+             */
             stages: components["schemas"]["StageView"][];
+            /** @description The engine's own timings, once it has returned. */
             engine_metrics: components["schemas"]["EngineMetricsView"];
-            /** Timeline */
+            /**
+             * Timeline
+             * @description Lifecycle events, oldest first.
+             */
             timeline: components["schemas"]["TimelineEvent"][];
             /**
              * Created At
              * Format: date-time
+             * @description When the job was queued (UTC).
              */
             created_at: string;
-            /** Updated At */
+            /**
+             * Updated At
+             * @description When the job last changed (UTC).
+             */
             updated_at: string | null;
             /**
              * Last Heartbeat At
              * @description When the worker last renewed its lease. Coarse: about a third of the lease.
              */
             last_heartbeat_at: string | null;
-            /** Lease Expires At */
+            /**
+             * Lease Expires At
+             * @description When the current worker's claim lapses unless renewed; the job is then retried.
+             */
             lease_expires_at: string | null;
             /**
              * Retry At
@@ -2045,9 +2892,15 @@ export interface components {
             retry_at: string | null;
             /** @description A refusal (is_refusal true) or an engine error, once recorded. */
             error: components["schemas"]["RunError"] | null;
-            /** Failure Reason */
+            /**
+             * Failure Reason
+             * @description Why the job failed, when it failed before the engine produced an error.
+             */
             failure_reason: string | null;
-            /** Status Url */
+            /**
+             * Status Url
+             * @description URL to poll for this view.
+             */
             status_url: string;
             /**
              * Result Url
@@ -2056,42 +2909,77 @@ export interface components {
             result_url: string | null;
             /**
              * Note
+             * @description How to read the progress fields.
              * @default There is no percentage because none can be known: the analysis engine runs as one step and reports its internal timings only when it finishes. `stages` are observed as they happen; `engine_metrics` fills in afterwards.
              */
             note: string;
         };
-        /** LoginRequest */
+        /**
+         * LoginRequest
+         * @description Credentials to sign in with.
+         */
         LoginRequest: {
-            /** Email */
+            /**
+             * Email
+             * @description Email address.
+             */
             email: string;
-            /** Password */
+            /**
+             * Password
+             * @description Password.
+             */
             password: string;
         };
-        /** MeResponse */
+        /**
+         * MeResponse
+         * @description Who you are signed in as, and the organizations you can act for.
+         */
         MeResponse: {
-            /** Auth Required */
+            /**
+             * Auth Required
+             * @description Whether this deployment requires sign-in.
+             */
             auth_required: boolean;
-            /** Registration Open */
+            /**
+             * Registration Open
+             * @description Whether `POST /auth/register` accepts new accounts.
+             */
             registration_open: boolean;
+            /** @description Your account, or null when not signed in. */
             user: components["schemas"]["UserView"] | null;
-            /** Organizations */
+            /**
+             * Organizations
+             * @description Organizations you belong to, with your role in each.
+             */
             organizations: components["schemas"]["OrgView"][];
+            /** @description The organization you are acting for; null until you choose one (automatic when you belong to exactly one). */
             active_organization: components["schemas"]["OrgView"] | null;
         };
-        /** MemberView */
+        /**
+         * MemberView
+         * @description A member of an organization.
+         */
         MemberView: {
-            /** User Id */
+            /**
+             * User Id
+             * @description The member's user id.
+             */
             user_id: string;
-            /** Email */
+            /**
+             * Email
+             * @description The member's email address.
+             */
             email: string;
             /**
              * Role
+             * @description Their role: owner, admin, member or viewer.
              * @enum {string}
              */
             role: "owner" | "admin" | "member" | "viewer";
             /**
              * Created At
              * Format: date-time
+             * @description When they joined (UTC).
              */
             created_at: string;
         };
@@ -2103,18 +2991,33 @@ export interface components {
          *     error envelope, so a client can read the same fields from every error.
          */
         MessageErrorBody: {
-            /** Detail */
+            /**
+             * Detail
+             * @description What went wrong, as a sentence.
+             */
             detail: string;
-            /** Code */
+            /**
+             * Code
+             * @description Machine-readable code, `http_<status>` for this shape (e.g. `http_404`). Act on this, not on
+             *     the prose.
+             */
             code: string;
-            /** Message */
+            /**
+             * Message
+             * @description The same sentence as `detail`.
+             */
             message: string;
             /**
              * Is Refusal
+             * @description Always false for this shape: it is never a scientific refusal.
              * @default false
              */
             is_refusal: boolean;
-            /** Request Id */
+            /**
+             * Request Id
+             * @description Identifier of this request, also in the `X-Request-ID` header. Quote it when reporting a
+             *     problem.
+             */
             request_id: string | null;
         };
         /**
@@ -2124,15 +3027,21 @@ export interface components {
         NotComparable: {
             /**
              * Code
+             * @description different_case, different_data_mode, different_engine_version, different_contract_major,
+             *     contract_unreadable or no_bundle.
              * @enum {string}
              */
             code: "different_case" | "different_data_mode" | "different_engine_version" | "different_contract_major" | "contract_unreadable" | "no_bundle";
             /**
              * Side
+             * @description Which run the reason concerns: `baseline`, `candidate` or `both`.
              * @enum {string}
              */
             side: "baseline" | "candidate" | "both";
-            /** Message */
+            /**
+             * Message
+             * @description The reason, in plain language.
+             */
             message: string;
         };
         /**
@@ -2140,7 +3049,10 @@ export interface components {
          * @description One calendar year of one indicator for the project AOI.
          */
         ObservationPoint: {
-            /** Year */
+            /**
+             * Year
+             * @description Calendar year.
+             */
             year: number;
             /**
              * Value
@@ -2149,29 +3061,45 @@ export interface components {
             value: number | null;
             /**
              * Evidence State
+             * @description How the value was obtained: `DERIVED`, `MODEL_ESTIMATED` or `UNAVAILABLE`.
              * @enum {string}
              */
             evidence_state: "DERIVED" | "MODEL_ESTIMATED" | "UNAVAILABLE";
-            /** Sensor */
+            /**
+             * Sensor
+             * @description Satellite sensor the scenes came from.
+             */
             sensor: string;
             /**
              * Clear Pixel Fraction
              * @description Share of scene pixels that were clear.
              */
             clear_pixel_fraction: number;
-            /** N Scenes */
+            /**
+             * N Scenes
+             * @description How many scenes contributed to the year.
+             */
             n_scenes: number;
             /**
              * Aoi Coverage Pct
              * @description Share of the project AOI actually observed, computed from valid pixels and the project boundary; null when it cannot be computed.
              */
             aoi_coverage_pct: number | null;
-            /** Scene Ids */
+            /**
+             * Scene Ids
+             * @description Identifiers of those scenes. Absent below the `contribute` level.
+             */
             scene_ids: string[] | null;
-            /** Scenes Sha256 */
+            /**
+             * Scenes Sha256
+             * @description SHA-256 over the scene list. Absent below the `contribute` level.
+             */
             scenes_sha256: string | null;
         };
-        /** ObservationsView */
+        /**
+         * ObservationsView
+         * @description The project's annual observations of one indicator.
+         */
         ObservationsView: {
             /**
              * Data Mode
@@ -2187,21 +3115,35 @@ export interface components {
             access_level: "owner" | "audit" | "contribute" | "view";
             /**
              * Indicator
+             * @description The vegetation index observed.
              * @enum {string}
              */
             indicator: "ndvi" | "evi" | "ndmi" | "nbr";
             /**
              * Status
+             * @description `available`, or `unavailable` with `reason` and no values.
              * @enum {string}
              */
             status: "available" | "unavailable";
-            /** Reason */
+            /**
+             * Reason
+             * @description Why the series is unavailable.
+             */
             reason: string | null;
-            /** Unit Id */
+            /**
+             * Unit Id
+             * @description The observation unit the series belongs to.
+             */
             unit_id: string | null;
-            /** Source */
+            /**
+             * Source
+             * @description Where the observations come from.
+             */
             source: string | null;
-            /** Points */
+            /**
+             * Points
+             * @description One entry per year.
+             */
             points: components["schemas"]["ObservationPoint"][];
         };
         /**
@@ -2209,47 +3151,82 @@ export interface components {
          * @description An organization as seen by one of its members (``role`` is the caller's role).
          */
         OrgView: {
-            /** Id */
+            /**
+             * Id
+             * @description Organization identifier.
+             */
             id: string;
-            /** Slug */
+            /**
+             * Slug
+             * @description Organization slug, used in URLs.
+             */
             slug: string;
-            /** Name */
+            /**
+             * Name
+             * @description Organization name.
+             */
             name: string;
             /**
              * Type
+             * @description Organization type: ngo, funder, auditor, government or reference.
              * @enum {string}
              */
             type: "ngo" | "funder" | "auditor" | "government" | "reference";
             /**
              * Role
+             * @description Your role in this organization: owner, admin, member or viewer.
              * @enum {string}
              */
             role: "owner" | "admin" | "member" | "viewer";
         };
-        /** PdfExtractRequest */
+        /**
+         * PdfExtractRequest
+         * @description A PDF to read the text out of.
+         */
         PdfExtractRequest: {
-            /** File Base64 */
+            /**
+             * File Base64
+             * @description The PDF, base64-encoded.
+             */
             file_base64: string;
             /**
              * Filename
+             * @description Its file name.
              * @default uploaded.pdf
              */
             filename?: string;
         };
-        /** PdfExtractResponse */
+        /**
+         * PdfExtractResponse
+         * @description The text read from a PDF.
+         */
         PdfExtractResponse: {
-            /** Text */
+            /**
+             * Text
+             * @description The extracted text.
+             */
             text: string;
-            /** Num Pages */
+            /**
+             * Num Pages
+             * @description Pages in the PDF.
+             */
             num_pages: number;
-            /** Filename */
+            /**
+             * Filename
+             * @description Its file name.
+             */
             filename: string;
         };
-        /** PortfolioRow */
+        /**
+         * PortfolioRow
+         * @description One project in a portfolio.
+         */
         PortfolioRow: {
+            /** @description The project. */
             project: components["schemas"]["ProjectView"];
             /**
              * Access Level
+             * @description Your organization's level on it.
              * @enum {string}
              */
             access_level: "owner" | "audit" | "contribute" | "view";
@@ -2258,8 +3235,12 @@ export interface components {
              * @description 0-5; a level, never a score.
              */
             assessment_level: number;
-            /** Level Name */
+            /**
+             * Level Name
+             * @description Assessment level reached.
+             */
             level_name: string;
+            /** @description Status of each dimension. */
             dimension_statuses: components["schemas"]["DimensionStatuses"];
             /** @description Highest-priority recommendation for the org's persona. */
             top_recommendation: components["schemas"]["RecommendationView"] | null;
@@ -2275,9 +3256,11 @@ export interface components {
             evidence_confidence: string | null;
             /**
              * Data Mode
+             * @description `observed` or `simulated`.
              * @enum {string}
              */
             data_mode: "observed" | "simulated";
+            /** @description Funding as the owner reported it, when it did. */
             reported_funding: components["schemas"]["ReportedFunding"] | null;
             /**
              * Degraded
@@ -2285,10 +3268,16 @@ export interface components {
              * @default false
              */
             degraded: boolean;
-            /** Degraded Reason */
+            /**
+             * Degraded Reason
+             * @description Why the row is incomplete, when its assessment could not be built.
+             */
             degraded_reason: string | null;
         };
-        /** PortfolioView */
+        /**
+         * PortfolioView
+         * @description Every project your organization can see, with its assessment summary.
+         */
         PortfolioView: {
             /**
              * Projects
@@ -2311,15 +3300,30 @@ export interface components {
              * @description Project boundary (.geojson, .json, .kml).
              */
             boundary: string;
-            /** Name */
+            /**
+             * Name
+             * @description Project name.
+             */
             name: string;
-            /** Country */
+            /**
+             * Country
+             * @description Country the project lies in.
+             */
             country: string;
-            /** Ecosystem */
+            /**
+             * Ecosystem
+             * @description Ecosystem type.
+             */
             ecosystem: string;
-            /** Intervention */
+            /**
+             * Intervention
+             * @description Type of intervention, e.g. REDD+.
+             */
             intervention: string;
-            /** Treatment Start Year */
+            /**
+             * Treatment Start Year
+             * @description Year the intervention began.
+             */
             treatment_start_year: number;
         };
         /**
@@ -2327,43 +3331,82 @@ export interface components {
          * @description A project as seen by the active organization (``access_level`` is that org's level).
          */
         ProjectView: {
-            /** Id */
+            /**
+             * Id
+             * @description Project identifier.
+             */
             id: string;
-            /** Slug */
+            /**
+             * Slug
+             * @description Project slug: the case id of its analysis.
+             */
             slug: string;
-            /** Name */
+            /**
+             * Name
+             * @description Project name.
+             */
             name: string;
-            /** Country */
+            /**
+             * Country
+             * @description Country the project lies in.
+             */
             country: string;
-            /** Ecosystem */
+            /**
+             * Ecosystem
+             * @description Ecosystem type.
+             */
             ecosystem: string;
-            /** Intervention */
+            /**
+             * Intervention
+             * @description Type of intervention, e.g. REDD+ or restoration.
+             */
             intervention: string;
-            /** Treatment Start Year */
+            /**
+             * Treatment Start Year
+             * @description Year the intervention began.
+             */
             treatment_start_year: number;
             /**
              * Data Mode
+             * @description `observed` or `simulated`. Simulated data is never presented as real.
              * @enum {string}
              */
             data_mode: "observed" | "simulated";
-            /** Owner Slug */
+            /**
+             * Owner Slug
+             * @description Slug of the organization that owns the project.
+             */
             owner_slug: string;
-            /** Owner Name */
+            /**
+             * Owner Name
+             * @description Name of the organization that owns the project.
+             */
             owner_name: string;
             /**
              * Access Level
+             * @description Your organization's level on this project: owner, audit, contribute or view.
              * @enum {string}
              */
             access_level: "owner" | "audit" | "contribute" | "view";
-            /** Boundary Sha256 */
+            /**
+             * Boundary Sha256
+             * @description SHA-256 of the stored boundary file, when there is one.
+             */
             boundary_sha256: string | null;
-            /** Reported Funding Amount */
+            /**
+             * Reported Funding Amount
+             * @description Funding as the owner reported it. Never computed by GroundTruth.
+             */
             reported_funding_amount: number | null;
-            /** Reported Funding Currency */
+            /**
+             * Reported Funding Currency
+             * @description Reported by the owner, shown as such; never computed.
+             */
             reported_funding_currency: string | null;
             /**
              * Created At
              * Format: date-time
+             * @description When the project was created (UTC).
              */
             created_at: string;
         };
@@ -2431,27 +3474,52 @@ export interface components {
          * @description Whether causal attribution can be attempted, criterion by criterion.
          */
         ReadinessBody: {
-            /** Attribution Ready */
+            /**
+             * Attribution Ready
+             * @description True when every criterion is met and attribution can be attempted.
+             */
             attribution_ready: boolean;
-            /** Criteria */
+            /**
+             * Criteria
+             * @description Each criterion and its status.
+             */
             criteria: components["schemas"]["ReadinessCriterion"][];
         };
-        /** ReadinessCriterion */
+        /**
+         * ReadinessCriterion
+         * @description One condition for attempting causal attribution, and whether it holds.
+         */
         ReadinessCriterion: {
-            /** Id */
+            /**
+             * Id
+             * @description Stable criterion id.
+             */
             id: string;
-            /** Name */
+            /**
+             * Name
+             * @description Criterion name for display.
+             */
             name: string;
             /**
              * Status
+             * @description `met`, `not_met`, or `unavailable` when the evidence to judge it is missing.
              * @enum {string}
              */
             status: "met" | "not_met" | "unavailable";
-            /** Observed Value */
+            /**
+             * Observed Value
+             * @description What the project's evidence shows for this criterion.
+             */
             observed_value: unknown;
-            /** Required */
+            /**
+             * Required
+             * @description What the criterion requires.
+             */
             required: unknown;
-            /** Evidence Needed */
+            /**
+             * Evidence Needed
+             * @description What would let this criterion be met or judged.
+             */
             evidence_needed: string;
         };
         /**
@@ -2459,9 +3527,15 @@ export interface components {
          * @description ``ReadinessBody`` as its own response (with ``data_mode`` and ``access_level``).
          */
         ReadinessView: {
-            /** Attribution Ready */
+            /**
+             * Attribution Ready
+             * @description True when every criterion is met and attribution can be attempted.
+             */
             attribution_ready: boolean;
-            /** Criteria */
+            /**
+             * Criteria
+             * @description Each criterion and its status.
+             */
             criteria: components["schemas"]["ReadinessCriterion"][];
             /**
              * Data Mode
@@ -2476,28 +3550,61 @@ export interface components {
              */
             access_level: "owner" | "audit" | "contribute" | "view";
         };
-        /** RecommendationView */
+        /**
+         * RecommendationView
+         * @description A suggested next step.
+         */
         RecommendationView: {
-            /** Id */
+            /**
+             * Id
+             * @description Recommendation id.
+             */
             id: string;
-            /** Text */
+            /**
+             * Text
+             * @description What to do.
+             */
             text: string;
-            /** Rationale */
+            /**
+             * Rationale
+             * @description Why.
+             */
             rationale: string;
-            /** Priority */
+            /**
+             * Priority
+             * @description 1 is the most urgent.
+             */
             priority: number;
-            /** Personas */
+            /**
+             * Personas
+             * @description Who it is for: ngo, funder, auditor, government or reference.
+             */
             personas: string[];
-            /** Evidence Refs */
+            /**
+             * Evidence Refs
+             * @description Evidence ids it rests on.
+             */
             evidence_refs: string[];
-            /** Diagnostic Refs */
+            /**
+             * Diagnostic Refs
+             * @description Diagnostics behind it. Absent below the `audit` level.
+             */
             diagnostic_refs: string[] | null;
         };
-        /** RegisterRequest */
+        /**
+         * RegisterRequest
+         * @description A new account.
+         */
         RegisterRequest: {
-            /** Email */
+            /**
+             * Email
+             * @description Email address; also the sign-in name.
+             */
             email: string;
-            /** Password */
+            /**
+             * Password
+             * @description Password, checked against the password policy (`weak_password` if not met).
+             */
             password: string;
         };
         /**
@@ -2505,9 +3612,15 @@ export interface components {
          * @description Funding exactly as the owning organization reported it. Never computed by GroundTruth.
          */
         ReportedFunding: {
-            /** Amount */
+            /**
+             * Amount
+             * @description The amount reported.
+             */
             amount: number;
-            /** Currency */
+            /**
+             * Currency
+             * @description Its currency, as reported.
+             */
             currency: string | null;
             /**
              * Reported By
@@ -2524,9 +3637,14 @@ export interface components {
          *     number may be an artefact of the instrument and not a change in the project.
          */
         RunComparison: {
+            /** @description The run compared against. */
             baseline: components["schemas"]["RunItem"];
+            /** @description The run compared with the baseline. */
             candidate: components["schemas"]["RunItem"];
-            /** Comparable */
+            /**
+             * Comparable
+             * @description True if the two runs can be compared item by item; see `not_comparable` otherwise.
+             */
             comparable: boolean;
             /**
              * Not Comparable
@@ -2538,8 +3656,12 @@ export interface components {
              * @description False when the two runs were requested with different specifications (inputs, window, seed, or pinned datasets). Still comparable; read the diff knowing it.
              */
             same_specification: boolean;
-            /** Contains Simulated */
+            /**
+             * Contains Simulated
+             * @description True if either run is simulated.
+             */
             contains_simulated: boolean;
+            /** @description The item-by-item difference, when comparable. */
             diff: components["schemas"]["BundleDiff"] | null;
         };
         /**
@@ -2547,11 +3669,21 @@ export interface components {
          * @description One stored run in full: its lifecycle, its outcome, and its evidence bundle.
          */
         RunDetail: {
-            /** Run Id */
+            /**
+             * Run Id
+             * @description Identifier of the run.
+             */
             run_id: string;
-            /** Case Id */
+            /**
+             * Case Id
+             * @description The case the run analysed.
+             */
             case_id: string;
-            /** Spec Hash */
+            /**
+             * Spec Hash
+             * @description Hash of the analysis specification. Two runs with the same hash and engine version give the
+             *     same numbers.
+             */
             spec_hash: string;
             /**
              * Status
@@ -2569,7 +3701,10 @@ export interface components {
              * @description completed | refused | error, once the engine ran.
              */
             engine_status: string | null;
-            /** Verdict Label */
+            /**
+             * Verdict Label
+             * @description The screening verdict, once measured.
+             */
             verdict_label: string | null;
             /**
              * Data Mode
@@ -2586,9 +3721,15 @@ export interface components {
              * @description Plain-language simulated-data notice, when simulated.
              */
             notice: string | null;
-            /** Engine Version */
+            /**
+             * Engine Version
+             * @description Engine version that produced the result, once there is one.
+             */
             engine_version: string | null;
-            /** Contract Version */
+            /**
+             * Contract Version
+             * @description Engine contract version of the run.
+             */
             contract_version: string;
             /**
              * Created At
@@ -2596,7 +3737,10 @@ export interface components {
              * @description When the run was recorded (UTC); the sort key.
              */
             created_at: string;
-            /** Error Code */
+            /**
+             * Error Code
+             * @description The stored error's code, for a refused or errored run.
+             */
             error_code: string | null;
             /**
              * Is Refusal
@@ -2613,23 +3757,46 @@ export interface components {
              * @description False for a refused, failed, queued or cancelled run.
              */
             has_bundle: boolean;
+            /** @description The engine build that produced the run, once it ran. */
             engine: components["schemas"]["RunEngine"] | null;
-            /** Seed */
+            /**
+             * Seed
+             * @description Random seed of the run. The same seed and specification reproduce the same numbers.
+             */
             seed: number | null;
-            /** Datasets */
+            /**
+             * Datasets
+             * @description Every dataset the run read, with its version.
+             */
             datasets: components["schemas"]["DatasetRef"][];
-            /** Started At */
+            /**
+             * Started At
+             * @description When the engine started (UTC, ISO 8601).
+             */
             started_at: string | null;
-            /** Finished At */
+            /**
+             * Finished At
+             * @description When the engine finished (UTC, ISO 8601).
+             */
             finished_at: string | null;
+            /** @description The engine's own timings and counters. */
             metrics: components["schemas"]["RunMetrics"] | null;
             /** @description Present for a refused run or an engine error. */
             error: components["schemas"]["RunError"] | null;
-            /** Verdict Rationale */
+            /**
+             * Verdict Rationale
+             * @description Why the engine reached its verdict.
+             */
             verdict_rationale: string | null;
-            /** Caveats */
+            /**
+             * Caveats
+             * @description Statements that must accompany the verdict.
+             */
             caveats: string[];
-            /** Warnings */
+            /**
+             * Warnings
+             * @description Analyst-facing warnings.
+             */
             warnings: string[];
             /** @description Null when excluded with include_bundle=false, or absent. */
             bundle: components["schemas"]["EvidenceBundle"] | null;
@@ -2638,16 +3805,31 @@ export interface components {
              * @description Deterministic report, when asked for with include_report=true and the run has a bundle with a verdict. Rendered on read; never narrated by a model.
              */
             report_markdown: string | null;
-            /** Report Generator */
+            /**
+             * Report Generator
+             * @description Who wrote `report_markdown`: `deterministic`, or `genai:<provider>`.
+             */
             report_generator: string | null;
         };
-        /** RunEngine */
+        /**
+         * RunEngine
+         * @description The engine build that produced a run.
+         */
         RunEngine: {
-            /** Engine Version */
+            /**
+             * Engine Version
+             * @description Engine version.
+             */
             engine_version: string;
-            /** Contract Version */
+            /**
+             * Contract Version
+             * @description Engine contract version.
+             */
             contract_version: string;
-            /** Git Sha */
+            /**
+             * Git Sha
+             * @description Commit the worker ran, or null when the deployment did not record it.
+             */
             git_sha: string | null;
         };
         /**
@@ -2655,19 +3837,37 @@ export interface components {
          * @description A stored analysis error. A refusal has ``is_refusal`` true and is not a fault.
          */
         RunError: {
-            /** Code */
+            /**
+             * Code
+             * @description Error code. `insufficient_data` and `donor_pool_inadequate` are refusals.
+             */
             code: string;
-            /** Message */
+            /**
+             * Message
+             * @description Plain-language explanation, safe to show a user.
+             */
             message: string;
-            /** Stage */
+            /**
+             * Stage
+             * @description The engine stage that refused or failed.
+             */
             stage: string;
-            /** Detail */
+            /**
+             * Detail
+             * @description Structured context, e.g. donors found against donors required.
+             */
             detail: {
                 [key: string]: unknown;
             };
-            /** Remediation */
+            /**
+             * Remediation
+             * @description What could be done about it, when known.
+             */
             remediation: string | null;
-            /** Is Refusal */
+            /**
+             * Is Refusal
+             * @description True for a scientific refusal: the data could not support an estimate. Not a fault.
+             */
             is_refusal: boolean;
         };
         /**
@@ -2680,11 +3880,21 @@ export interface components {
          *     display, never an error. ``is_simulated`` and ``data_mode`` are always present.
          */
         RunItem: {
-            /** Run Id */
+            /**
+             * Run Id
+             * @description Identifier of the run.
+             */
             run_id: string;
-            /** Case Id */
+            /**
+             * Case Id
+             * @description The case the run analysed.
+             */
             case_id: string;
-            /** Spec Hash */
+            /**
+             * Spec Hash
+             * @description Hash of the analysis specification. Two runs with the same hash and engine version give the
+             *     same numbers.
+             */
             spec_hash: string;
             /**
              * Status
@@ -2702,7 +3912,10 @@ export interface components {
              * @description completed | refused | error, once the engine ran.
              */
             engine_status: string | null;
-            /** Verdict Label */
+            /**
+             * Verdict Label
+             * @description The screening verdict, once measured.
+             */
             verdict_label: string | null;
             /**
              * Data Mode
@@ -2719,9 +3932,15 @@ export interface components {
              * @description Plain-language simulated-data notice, when simulated.
              */
             notice: string | null;
-            /** Engine Version */
+            /**
+             * Engine Version
+             * @description Engine version that produced the result, once there is one.
+             */
             engine_version: string | null;
-            /** Contract Version */
+            /**
+             * Contract Version
+             * @description Engine contract version of the run.
+             */
             contract_version: string;
             /**
              * Created At
@@ -2729,7 +3948,10 @@ export interface components {
              * @description When the run was recorded (UTC); the sort key.
              */
             created_at: string;
-            /** Error Code */
+            /**
+             * Error Code
+             * @description The stored error's code, for a refused or errored run.
+             */
             error_code: string | null;
             /**
              * Is Refusal
@@ -2747,14 +3969,20 @@ export interface components {
          * @description A page of runs, newest first.
          */
         RunListPage: {
-            /** Items */
+            /**
+             * Items
+             * @description Runs on this page, newest first.
+             */
             items: components["schemas"]["RunItem"][];
             /**
              * Next Cursor
              * @description Pass as `cursor` to get the next page. Null on the last page.
              */
             next_cursor: string | null;
-            /** Limit */
+            /**
+             * Limit
+             * @description The page size that was applied.
+             */
             limit: number;
             /**
              * Contains Simulated
@@ -2769,33 +3997,44 @@ export interface components {
         RunMetrics: {
             /**
              * Duration Ms
+             * @description Total engine time, in milliseconds.
              * @default 0
              */
             duration_ms: number;
-            /** Stage Durations Ms */
+            /**
+             * Stage Durations Ms
+             * @description Time per engine stage, in milliseconds.
+             */
             stage_durations_ms: {
                 [key: string]: number;
             };
             /**
              * N Units Observed
+             * @description Areas observed: the project and its candidate comparisons.
              * @default 0
              */
             n_units_observed: number;
             /**
              * N Donors Admitted
+             * @description Comparison areas that passed screening.
              * @default 0
              */
             n_donors_admitted: number;
             /**
              * N Estimator Fits
+             * @description Times the estimator was fitted, placebos included.
              * @default 0
              */
             n_estimator_fits: number;
         };
-        /** SetRoleRequest */
+        /**
+         * SetRoleRequest
+         * @description Change a member's role.
+         */
         SetRoleRequest: {
             /**
              * Role
+             * @description The new role.
              * @enum {string}
              */
             role: "owner" | "admin" | "member" | "viewer";
@@ -2805,9 +4044,15 @@ export interface components {
          * @description One live stage of a job, as it was observed.
          */
         StageView: {
-            /** Name */
+            /**
+             * Name
+             * @description Stage id: `claim`, `data`, `engine` or `record`.
+             */
             name: string;
-            /** Label */
+            /**
+             * Label
+             * @description Stage name for display.
+             */
             label: string;
             /**
              * State
@@ -2815,9 +4060,15 @@ export interface components {
              * @enum {string}
              */
             state: "done" | "active" | "pending" | "skipped" | "failed" | "unknown";
-            /** Started At */
+            /**
+             * Started At
+             * @description When the stage began.
+             */
             started_at: string | null;
-            /** Finished At */
+            /**
+             * Finished At
+             * @description When the stage ended, for a finished stage.
+             */
             finished_at: string | null;
             /**
              * Duration Ms
@@ -2835,7 +4086,10 @@ export interface components {
          * @description Queue an analysis for a case. Simulated data only, until real providers exist.
          */
         SubmitJobRequest: {
-            /** Case Id */
+            /**
+             * Case Id
+             * @description The case to analyse. Its project must belong to your active organization.
+             */
             case_id: string;
             /**
              * Synthetic
@@ -2849,12 +4103,21 @@ export interface components {
              */
             min_donors?: number | null;
         };
-        /** SwitchOrgRequest */
+        /**
+         * SwitchOrgRequest
+         * @description Make another of your organizations the active one.
+         */
         SwitchOrgRequest: {
-            /** Slug */
+            /**
+             * Slug
+             * @description Slug of the organization.
+             */
             slug: string;
         };
-        /** TimelineEvent */
+        /**
+         * TimelineEvent
+         * @description One lifecycle event of a job.
+         */
         TimelineEvent: {
             /**
              * Event
@@ -2864,35 +4127,62 @@ export interface components {
             /**
              * At
              * Format: date-time
+             * @description When it happened (UTC).
              */
             at: string;
         };
-        /** UpdateUserRequest */
+        /**
+         * UpdateUserRequest
+         * @description What an administrator may change about an account. Omitted means unchanged.
+         */
         UpdateUserRequest: {
-            /** Role */
+            /**
+             * Role
+             * @description New platform role: `user`, `dev` or `admin`.
+             */
             role?: ("user" | "dev" | "admin") | null;
-            /** Is Active */
+            /**
+             * Is Active
+             * @description False deactivates the account; it can no longer sign in.
+             */
             is_active?: boolean | null;
         };
-        /** UserView */
+        /**
+         * UserView
+         * @description A user account.
+         */
         UserView: {
-            /** Id */
+            /**
+             * Id
+             * @description User id.
+             */
             id: string;
-            /** Email */
+            /**
+             * Email
+             * @description Email address; also the sign-in name.
+             */
             email: string;
             /**
              * Role
+             * @description Platform role: `user`, `dev` or `admin`. Organization roles are separate.
              * @enum {string}
              */
             role: "user" | "dev" | "admin";
-            /** Is Active */
+            /**
+             * Is Active
+             * @description False for a deactivated account, which cannot sign in.
+             */
             is_active: boolean;
             /**
              * Created At
              * Format: date-time
+             * @description When the account was created (UTC).
              */
             created_at: string;
-            /** Last Login At */
+            /**
+             * Last Login At
+             * @description When the user last signed in (UTC).
+             */
             last_login_at: string | null;
         };
         /** ValidationError */
@@ -2914,19 +4204,40 @@ export interface components {
          *     two labels and whether they differ, and ranks neither.
          */
         VerdictDiff: {
-            /** Baseline Label */
+            /**
+             * Baseline Label
+             * @description The baseline's verdict.
+             */
             baseline_label: string | null;
-            /** Candidate Label */
+            /**
+             * Candidate Label
+             * @description The candidate's verdict.
+             */
             candidate_label: string | null;
-            /** Label Changed */
+            /**
+             * Label Changed
+             * @description True if the verdicts differ.
+             */
             label_changed: boolean;
-            /** Baseline Divergence Ratio */
+            /**
+             * Baseline Divergence Ratio
+             * @description The baseline's divergence ratio, when it has one.
+             */
             baseline_divergence_ratio: number | null;
-            /** Candidate Divergence Ratio */
+            /**
+             * Candidate Divergence Ratio
+             * @description The candidate's divergence ratio, when it has one.
+             */
             candidate_divergence_ratio: number | null;
-            /** Divergence Ratio Changed */
+            /**
+             * Divergence Ratio Changed
+             * @description True if the ratios differ.
+             */
             divergence_ratio_changed: boolean;
-            /** Rationale Changed */
+            /**
+             * Rationale Changed
+             * @description True if the rationales differ.
+             */
             rationale_changed: boolean;
         };
         /**
@@ -2964,6 +4275,7 @@ export interface components {
             min_donors?: number | null;
             /**
              * Include Report
+             * @description Also return a plain-language report of the result (`report_markdown`).
              * @default true
              */
             include_report?: boolean;
@@ -2973,21 +4285,34 @@ export interface components {
          * @description The result of a verification run.
          */
         VerificationResponse: {
-            /** Run Id */
+            /**
+             * Run Id
+             * @description Identifier of this run.
+             */
             run_id: string;
-            /** Case Id */
+            /**
+             * Case Id
+             * @description The case that was analysed.
+             */
             case_id: string;
             /**
              * Spec Hash
              * @description Hash of the analysis specification. Identical hashes must yield identical results under the same engine version.
              */
             spec_hash: string;
-            /** Engine Version */
+            /**
+             * Engine Version
+             * @description Engine version that produced the result.
+             */
             engine_version: string;
-            /** Contract Version */
+            /**
+             * Contract Version
+             * @description Engine contract version of the result.
+             */
             contract_version: string;
             /**
              * Duration Ms
+             * @description How long the engine took, in milliseconds.
              * @default 0
              */
             duration_ms: number;
@@ -2997,17 +4322,37 @@ export interface components {
              * @enum {string}
              */
             data_mode: "simulated" | "observed";
+            /**
+             * @description The screening verdict. A divergence warrants accredited review; it is never a finding of
+             *     fraud.
+             */
             verdict_label: components["schemas"]["VerdictLabel"];
-            /** Verdict Rationale */
+            /**
+             * Verdict Rationale
+             * @description Why the engine reached this verdict, in its own words, thresholds included.
+             */
             verdict_rationale: string;
-            /** Caveats */
+            /**
+             * Caveats
+             * @description Statements that must accompany the verdict wherever it is shown.
+             */
             caveats: string[];
-            /** Warnings */
+            /**
+             * Warnings
+             * @description Analyst-facing warnings, e.g. that the data is simulated.
+             */
             warnings: string[];
+            /** @description The evidence bundle: every measured value with its unit, uncertainty and provenance. */
             bundle: components["schemas"]["EvidenceBundle"];
-            /** Report Markdown */
+            /**
+             * Report Markdown
+             * @description Plain-language report, when `include_report` was true.
+             */
             report_markdown: string | null;
-            /** Report Generator */
+            /**
+             * Report Generator
+             * @description Who wrote `report_markdown`: `deterministic`, or `genai:<provider>` when narrated.
+             */
             report_generator: string | null;
         };
         /**
@@ -3015,8 +4360,12 @@ export interface components {
          * @description The screening conclusion, phrased so it cannot be read as an accusation.
          */
         VerificationVerdict: {
+            /** @description The screening verdict. A divergence warrants accredited review; never fraud. */
             label: components["schemas"]["VerdictLabel"];
-            /** Rationale */
+            /**
+             * Rationale
+             * @description Why the engine reached the verdict, thresholds included.
+             */
             rationale: string;
             /**
              * Divergence Ratio
@@ -3025,6 +4374,7 @@ export interface components {
             divergence_ratio: number | null;
             /**
              * Caveats
+             * @description Statements that must accompany the verdict wherever it is shown.
              * @default [
              *       "A divergence between an independent estimate and a developer claim is not evidence of fraud; it indicates that the claim warrants accredited review.",
              *       "Spectral indices track vegetation condition, not carbon stocks.",
@@ -3034,6 +4384,7 @@ export interface components {
             caveats: string[];
             /**
              * Supporting Evidence Ids
+             * @description Evidence items the verdict rests on.
              * @default []
              */
             supporting_evidence_ids: string[];
@@ -3057,33 +4408,63 @@ export interface components {
             access_level: "owner" | "audit" | "contribute" | "view";
             /**
              * Status
+             * @description `completed`, or `not_estimable` when no completed run exists.
              * @enum {string}
              */
             status: "completed" | "not_estimable";
+            /** @description Whether attribution can be attempted, criterion by criterion. */
             readiness: components["schemas"]["ReadinessBody"];
             /**
              * Warnings
              * @description Includes the SIMULATED DATA notice (R7) when it applies.
              */
             warnings: string[];
-            /** Is Simulated */
+            /**
+             * Is Simulated
+             * @description True when the run used simulated data.
+             */
             is_simulated: boolean;
-            /** Run Id */
+            /**
+             * Run Id
+             * @description The latest completed run.
+             */
             run_id: string | null;
-            /** Case Id */
+            /**
+             * Case Id
+             * @description The case that run analysed.
+             */
             case_id: string | null;
-            /** Verdict Label */
+            /**
+             * Verdict Label
+             * @description The run's screening verdict.
+             */
             verdict_label: string | null;
-            /** Verdict Rationale */
+            /**
+             * Verdict Rationale
+             * @description Why the engine reached it.
+             */
             verdict_rationale: string | null;
-            /** Caveats */
+            /**
+             * Caveats
+             * @description Statements that must accompany the verdict.
+             */
             caveats: string[];
-            /** Engine Version */
+            /**
+             * Engine Version
+             * @description Engine version of the run.
+             */
             engine_version: string | null;
-            /** Created At */
+            /**
+             * Created At
+             * @description When the run was recorded.
+             */
             created_at: string | null;
-            /** Spec Hash */
+            /**
+             * Spec Hash
+             * @description Hash of the run's specification. Absent below the `audit` level.
+             */
             spec_hash: string | null;
+            /** @description The run's evidence bundle. Absent below the `audit` level. */
             bundle: components["schemas"]["EvidenceBundle"] | null;
         };
         /**
@@ -3091,9 +4472,15 @@ export interface components {
          * @description Analyst-facing warnings that appear in only one bundle.
          */
         WarningsDiff: {
-            /** Added */
+            /**
+             * Added
+             * @description Warnings only in the candidate.
+             */
             added: string[];
-            /** Removed */
+            /**
+             * Removed
+             * @description Warnings only in the baseline.
+             */
             removed: string[];
         };
     };
@@ -3114,6 +4501,7 @@ export interface operations {
                 status?: components["schemas"]["AnalysisStatus"][] | null;
                 /** @description Only this engine version. */
                 engine_version?: string | null;
+                /** @description Only runs on `simulated` or `observed` data. */
                 data_mode?: ("observed" | "simulated") | null;
                 /** @description Recorded at or after this instant (timezone required). */
                 created_after?: string | null;
@@ -3250,6 +4638,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description Run identifier, as returned when the run was submitted or listed. */
                 run_id: string;
             };
             cookie?: never;
@@ -3422,6 +4811,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Run identifier, as returned when the run was submitted or listed. */
                 run_id: string;
             };
             cookie?: never;
@@ -3489,6 +4879,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Run identifier, as returned when the run was submitted or listed. */
                 run_id: string;
             };
             cookie?: never;
@@ -3574,6 +4965,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The job's run identifier. */
                 job_id: string;
             };
             cookie?: never;
@@ -3632,6 +5024,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Case identifier, as listed by `GET /cases`. */
                 case_id: string;
             };
             cookie?: never;
@@ -3682,8 +5075,11 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Tile zoom level. */
                 z: number;
+                /** @description Tile column. */
                 x: number;
+                /** @description Tile row. */
                 y: number;
             };
             cookie?: never;
@@ -4081,6 +5477,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description User id. */
                 user_id: string;
             };
             cookie?: never;
@@ -4310,6 +5707,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Slug of your active organization. */
                 slug: string;
             };
             cookie?: never;
@@ -4377,6 +5775,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Slug of your active organization. */
                 slug: string;
             };
             cookie?: never;
@@ -4457,7 +5856,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description User id. */
                 user_id: string;
+                /** @description Slug of your active organization. */
                 slug: string;
             };
             cookie?: never;
@@ -4532,7 +5933,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description User id. */
                 user_id: string;
+                /** @description Slug of your active organization. */
                 slug: string;
             };
             cookie?: never;
@@ -4613,6 +6016,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Slug of your active organization. */
                 slug: string;
             };
             cookie?: never;
@@ -4680,10 +6084,12 @@ export interface operations {
             query?: {
                 /** @description `next_cursor` of the previous page. */
                 cursor?: string | null;
+                /** @description Most items to return on one page. */
                 limit?: number;
             };
             header?: never;
             path: {
+                /** @description Slug of your active organization. */
                 slug: string;
             };
             cookie?: never;
@@ -4749,10 +6155,12 @@ export interface operations {
     get_activity_orgs__slug__activity_get: {
         parameters: {
             query?: {
+                /** @description Most items to return on one page. */
                 limit?: number;
             };
             header?: never;
             path: {
+                /** @description Slug of your active organization. */
                 slug: string;
             };
             cookie?: never;
@@ -4820,6 +6228,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Slug of your active organization. */
                 slug: string;
             };
             cookie?: never;
@@ -4887,6 +6296,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Slug of your active organization. */
                 slug: string;
             };
             cookie?: never;
@@ -4958,6 +6368,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5025,6 +6436,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5095,6 +6507,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5162,6 +6575,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5229,6 +6643,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5296,6 +6711,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5363,6 +6779,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5430,6 +6847,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5498,6 +6916,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5566,6 +6985,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5642,6 +7062,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5722,7 +7143,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Slug of the organization the grant is for. */
                 org_slug: string;
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5797,6 +7220,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Project id or slug. */
                 project_id: string;
             };
             cookie?: never;
@@ -5947,6 +7371,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Case identifier, as listed by `GET /cases`. */
                 case_id: string;
             };
             cookie?: never;
@@ -5987,6 +7412,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Case identifier, as listed by `GET /cases`. */
                 case_id: string;
             };
             cookie?: never;
@@ -6067,6 +7493,162 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EngineFailureBody"];
+                };
+            };
+        };
+    };
+    export_case_csv_cases__case_id__export_csv_get: {
+        parameters: {
+            query?: {
+                /** @description Deterministic RNG seed */
+                seed?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Case identifier, as listed by `GET /cases`. */
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A UTF-8 CSV: provenance header lines starting with `#`, then one row per evidence item. */
+            200: {
+                headers: {
+                    /** @description `attachment`, with the file name. */
+                    "Content-Disposition"?: string;
+                    /** @description `simulated` or `observed`: what the exported data is. */
+                    "X-GroundTruth-Data-Mode"?: "simulated" | "observed";
+                    /** @description Who wrote the report: `deterministic`, or `genai:<provider>`. */
+                    "X-GroundTruth-Report-Generator"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Not signed in (`unauthenticated`). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role may not export (`forbidden`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown case, or no access to its project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_case_pdf_cases__case_id__export_pdf_get: {
+        parameters: {
+            query?: {
+                /** @description Deterministic RNG seed */
+                seed?: number;
+                /** @description Narrate the report with the configured GenAI provider. The narration is verified against the bundle first, and the export is refused (never substituted) if it fails. */
+                narrate?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description Case identifier, as listed by `GET /cases`. */
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A self-contained PDF report, verified against its own evidence bundle. */
+            200: {
+                headers: {
+                    /** @description `attachment`, with the file name. */
+                    "Content-Disposition"?: string;
+                    /** @description `simulated` or `observed`: what the exported data is. */
+                    "X-GroundTruth-Data-Mode"?: "simulated" | "observed";
+                    /** @description Who wrote the report: `deterministic`, or `genai:<provider>`. */
+                    "X-GroundTruth-Report-Generator"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            /** @description Not signed in (`unauthenticated`). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Your role may not export (`forbidden`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Unknown case, or no access to its project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description `narrate=true` but no GenAI provider is configured (`narration_not_configured`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description The report that would be exported fails verification (`report_not_grounded`): a defect, never shipped. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description The narration failed (`narration_failed`) or failed verification (`narration_not_grounded`). The export is refused, never substituted. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
                 };
             };
         };

@@ -1,0 +1,12 @@
+#!/bin/sh
+# Fast checks before each commit (#21): see scripts/hooks/pre_commit.py and DEVELOPMENT.md.
+# Enable once per clone:  git config core.hooksPath scripts/hooks
+# Uses the activated virtual environment, else the repository's .venv, else python on PATH,
+# so the ruff it runs is the one the dev extra pins (the same version CI installs).
+root=$(git rev-parse --show-toplevel) || exit 1
+for py in "${VIRTUAL_ENV:+$VIRTUAL_ENV/Scripts/python.exe}" "${VIRTUAL_ENV:+$VIRTUAL_ENV/bin/python}" \
+          "$root/.venv/Scripts/python.exe" "$root/.venv/bin/python"; do
+  if [ -n "$py" ] && [ -x "$py" ]; then exec "$py" "$root/scripts/hooks/pre_commit.py" "$@"; fi
+done
+py=$(command -v python3 || command -v python) || { echo "pre-commit: no Python found" >&2; exit 1; }
+exec "$py" "$root/scripts/hooks/pre_commit.py" "$@"

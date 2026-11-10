@@ -13,7 +13,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -65,12 +65,19 @@ router = APIRouter(tags=["projects"])
 class ProjectUploadForm(BaseModel):
     """The multipart fields of project creation (a named model keeps the OpenAPI name plain)."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     boundary: UploadFile = Field(description="Project boundary (.geojson, .json, .kml).")
     name: str = Field(min_length=1, max_length=200)
+    """Project name."""
     country: str = Field(min_length=1, max_length=100)
+    """Country the project lies in."""
     ecosystem: str = Field(min_length=1, max_length=100)
+    """Ecosystem type."""
     intervention: str = Field(min_length=1, max_length=100)
+    """Type of intervention, e.g. REDD+."""
     treatment_start_year: int = Field(ge=1970, le=max(datetime.now().year + 1, 2100))
+    """Year the intervention began."""
 
 
 _ERRORS = {
@@ -131,6 +138,8 @@ def project_views(db: Session, items: list[tuple[ProjectRow, ProjectLevel]]) -> 
     responses={401: _ERRORS[401], 403: _ERRORS[403], 404: _ERRORS[404], 503: _ERRORS[503]},
 )
 def list_projects(request: Request, ctx: Viewer) -> list[ProjectView]:
+    """Projects your active organization owns, and projects other organizations have granted it,
+    each with your access level."""
     with resolve_sessions(request)() as db:
         return project_views(db, service.list_org_projects(db, ctx))
 
@@ -153,6 +162,9 @@ def create_project(
     ctx: Creator,
     form: Annotated[ProjectUploadForm, Form()],
 ) -> ProjectView:
+    """Creates a project from multipart form fields and a boundary file (GeoJSON or KML, at most 5
+    MB). The boundary is validated before anything is stored; a bad one is 422 `invalid_boundary`
+    with the reason. Your organization becomes the owner."""
     boundary = form.boundary
     name, country, ecosystem = form.name, form.country, form.ecosystem
     intervention, treatment_start_year = form.intervention, form.treatment_start_year
@@ -184,6 +196,8 @@ def create_project(
     responses={401: _ERRORS[401], 403: _ERRORS[403], 404: _ERRORS[404], 503: _ERRORS[503]},
 )
 def get_project(request: Request, access: Reader) -> ProjectView:
+    """One project, by id or slug, if your active organization owns it or has been granted it.
+    Otherwise 404: a project you may not see is answered like one that does not exist."""
     with resolve_sessions(request)() as db:
         project = service.get_project(db, access.project.id)
         assert project is not None
@@ -228,6 +242,8 @@ def _respond(model: Any, access: ProjectAccess) -> JSONResponse:
     responses={200: {"model": ReadinessView}, **_DATA_ERRORS},
 )
 def get_readiness(request: Request, access: Reader) -> JSONResponse:
+    """Whether causal attribution can be attempted, criterion by criterion, computed from the
+    evidence on file. Like every project data response it carries `data_mode` and `access_level`."""
     project = _fresh(request, access)
     view = views.build_readiness(project, access.level.value, get_settings().data_dir)
     return _respond(view, access)
@@ -255,6 +271,9 @@ def get_observations(
     responses={200: {"model": ClimateView}, **_DATA_ERRORS},
 )
 def get_climate(request: Request, access: SeriesReader) -> JSONResponse:
+    """The project's annual climate record: rainfall, its anomaly, SPI-12 and temperature. When no
+    record exists the status is `unavailable` with the reason, and no value is invented. The bundle
+    checksum appears from the `contribute` level."""
     project = _fresh(request, access)
     view = views.build_climate(project, access.level.value, get_settings().data_dir)
     return _respond(view, access)
@@ -485,6 +504,8 @@ _GRANT_ERRORS: dict[int | str, dict[str, Any]] = {
     responses=_GRANT_ERRORS,
 )
 def list_grants(request: Request, access: GrantManager) -> list[GrantView]:
+    """Organizations the project is currently granted to, and at what level. Needs the right to
+    manage the project's sharing (403 otherwise)."""
     with resolve_sessions(request)() as db:
         return [_grant_view(g, o) for g, o in service.active_grants(db, access.project.id)]
 

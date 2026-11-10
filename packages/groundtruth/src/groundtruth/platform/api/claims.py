@@ -12,7 +12,7 @@ import base64
 import io
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from groundtruth.claims import Claim, ClaimKind, compare_claims, extract_claims
 from groundtruth.contracts.errors import CaseDefinitionError
@@ -33,45 +33,88 @@ NO_CASE_NOTE = " No case was selected, so no figure was set beside the extracted
 
 
 class ClaimsRequest(BaseModel):
+    """Text to read claims from."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     text: str = Field(min_length=1, max_length=MAX_TEXT_CHARS)
+    """The text, e.g. pasted from a project document."""
     case_id: str | None = None
+    """A case to set the extracted figures beside, if any."""
 
 
 class ClaimSpan(BaseModel):
+    """Where a claim was found in the text."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     start: int
+    """Start offset, in characters."""
     end: int
+    """End offset, in characters."""
     text: str
+    """The matched text."""
 
 
 class ExtractedClaim(BaseModel):
+    """One figure read from the text."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     kind: str
+    """baseline, credits_issued, area_hectares or reduction_percent."""
     value: float
+    """The figure."""
     unit: str
+    """Its unit."""
     span: ClaimSpan
+    """Where it was found."""
 
 
 class ClaimComparison(BaseModel):
+    """An extracted figure beside the case's own value. A difference warrants review; it is not a
+    finding."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     claim_kind: str
+    """Kind of figure compared."""
     claimed: float
+    """The figure in the text."""
     estimated: float | None
+    """The case's own value, when it has one."""
     note: str
+    """How to read the comparison."""
 
 
 class ClaimsResponse(BaseModel):
+    """What was read from the text."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     claims: list[ExtractedClaim]
+    """Every figure found."""
     comparisons: list[ClaimComparison]
+    """Figures set beside the case's values."""
     disclaimer: str
+    """Screening-aid notice to show with the result."""
 
 
 class PdfExtractRequest(BaseModel):
+    """A PDF to read the text out of."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     file_base64: str
+    """The PDF, base64-encoded."""
     filename: str = "uploaded.pdf"
+    """Its file name."""
 
 
 class PdfExtractResponse(BaseModel):
+    """The text read from a PDF."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     text: str
+    """The extracted text."""
     num_pages: int
+    """Pages in the PDF."""
     filename: str
+    """Its file name."""
 
 
 @router.post(

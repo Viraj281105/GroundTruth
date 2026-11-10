@@ -21,6 +21,7 @@ from fastapi.testclient import TestClient
 from groundtruth.contracts.types import VerdictLabel
 from groundtruth.platform.api.app import app
 from groundtruth.platform.api.openapi_schema import (
+    DOCUMENTED_SCHEMAS,
     FRAMEWORK_SCHEMAS,
     VALIDATION_ENVELOPE_PROPERTIES,
     _refs,
@@ -90,11 +91,21 @@ class TestTheOneAdjustment:
         assert checked > 30
 
     def test_request_schemas_are_exactly_as_fastapi_wrote_them(self, served):
+        """Structure untouched. The one thing allowed is a description from the documentation
+        table (#41), for models whose source cannot carry it yet; nothing else may differ."""
         raw = _raw()["components"]["schemas"]
         names = request_schema_names(served)
         assert {"VerificationRequest", "SubmitJobRequest"} <= names
         for name in names:
-            assert served["components"]["schemas"][name] == raw[name], name
+            schema = copy.deepcopy(served["components"]["schemas"][name])
+            documented = DOCUMENTED_SCHEMAS.get(name, {})
+            if documented.get("__doc__") and "description" not in raw[name]:
+                assert schema.pop("description") == documented["__doc__"], name
+            for field, prop in schema.get("properties", {}).items():
+                original = raw[name]["properties"][field]
+                if field in documented and "description" not in original:
+                    assert prop.pop("description") == documented[field], (name, field)
+            assert schema == raw[name], name
         # a default there really does mean "you may leave this out"
         assert "required" not in served["components"]["schemas"]["VerificationRequest"]
         assert served["components"]["schemas"]["SubmitJobRequest"]["required"] == ["case_id"]
@@ -245,7 +256,9 @@ class TestDocumentedErrorsMatchWhatIsSent:
 class TestNarrowedVerifyFields:
     def test_the_schema_narrows_verdict_label_and_data_mode(self, served):
         props = served["components"]["schemas"]["VerificationResponse"]["properties"]
-        assert props["verdict_label"] == {"$ref": "#/components/schemas/VerdictLabel"}
+        # Narrowed to the enum; the description (#41) sits beside the reference.
+        assert props["verdict_label"]["$ref"] == "#/components/schemas/VerdictLabel"
+        assert set(props["verdict_label"]) == {"$ref", "description"}
         assert props["data_mode"]["enum"] == ["simulated", "observed"]
 
     def test_the_json_sent_is_unchanged(self, tenant_world):

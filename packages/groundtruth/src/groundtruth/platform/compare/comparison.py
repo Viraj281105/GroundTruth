@@ -38,11 +38,15 @@ ReasonCode = Literal[
 class NotComparable(BaseModel):
     """One reason two runs cannot be compared."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     code: ReasonCode
+    """different_case, different_data_mode, different_engine_version, different_contract_major,
+    contract_unreadable or no_bundle."""
     side: Side
+    """Which run the reason concerns: `baseline`, `candidate` or `both`."""
     message: str
+    """The reason, in plain language."""
 
 
 @dataclass(frozen=True)

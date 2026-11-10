@@ -54,7 +54,10 @@ Every data point must carry its correct state: `RAW_OBSERVED`, `PREPROCESSED_OBS
 
 ## 3. Local Development & Pre-Commit Verification
 
-Before opening a pull request, run the complete local verification pipeline:
+Before opening a pull request, run the complete local verification pipeline. Set up the
+pre-commit hook once (`git config core.hooksPath scripts/hooks`, see
+[DEVELOPMENT.md, section 9](DEVELOPMENT.md#9-pre-commit-hook)) and it catches formatting and
+lint problems at commit time, in about a second.
 
 ```bash
 # 1. Format and lint Python codebase
