@@ -22,7 +22,8 @@ COPY --chown=node:node --from=build /web/package.json /web/package-lock.json ./
 COPY --chown=node:node --from=build /web/node_modules ./node_modules
 COPY --chown=node:node --from=build /web/.next ./.next
 COPY --chown=node:node --from=build /web/public ./public
-COPY --chown=node:node --from=build /web/next.config.mjs ./
+# next.config.mjs imports security-headers.mjs; both must be in the image or `next start` exits.
+COPY --chown=node:node --from=build /web/next.config.mjs /web/security-headers.mjs ./
 USER node
 EXPOSE 3000
 CMD ["npx", "next", "start", "-p", "3000"]

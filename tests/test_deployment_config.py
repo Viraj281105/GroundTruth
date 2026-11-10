@@ -83,3 +83,17 @@ def test_the_backend_image_installs_the_ingestion_libraries() -> None:
     assert "libexpat1" in DOCKERFILE
     # and the build itself fails if the libraries cannot be imported
     assert "import rasterio, pystac_client, planetary_computer" in DOCKERFILE
+
+
+def test_the_web_image_ships_every_local_module_next_config_imports() -> None:
+    """Found rebuilding the stack after merging main: next.config.mjs imports
+    ./security-headers.mjs, but the image copied only next.config.mjs, so `next start` exited
+    with ERR_MODULE_NOT_FOUND and the web container never served a page."""
+    web = ROOT / "apps" / "web"
+    config = (web / "next.config.mjs").read_text(encoding="utf-8")
+    dockerfile = (ROOT / "infrastructure" / "docker" / "web.Dockerfile").read_text(encoding="utf-8")
+    local = re.findall(r"from\s+['\"]\./([^'\"]+)['\"]", config)
+    assert local, "expected next.config.mjs to import a local module"
+    for module in local:
+        assert (web / module).is_file(), module
+        assert f"/web/{module}" in dockerfile, f"{module} is not copied into the web image"
