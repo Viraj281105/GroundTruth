@@ -1,0 +1,111 @@
+# GroundTruth alert rules (#50). Loaded by prometheus.yml (rule_files).
+# Checked in CI with `promtool check rules alerts.yml` and unit-tested with
+# `promtool test rules alerts.test.yml`. The runbook for each alert is in
+# docs/operations/README.md, section 2.
+#
+# severity: page     the system is not doing its job; someone should look now.
+# severity: warning  look during working hours.
+#
+# A refusal is a correct scientific outcome, never an incident: no refusal alert pages,
+# and refusals never count towards the failure rate. The refusal RATE is still watched,
+# because a sudden change means the data or the method changed, and a rate of zero is
+# more suspicious than a high one.
+#
+# Outcomes (gt_runs_finished_total{outcome}):
+#   completed, refused  the engine answered (a refusal is an answer)
+#   errored, failed     malfunctions: the engine could not run, or the job could not finish
+#   retried, cancelled  not finished, or stopped on request: in neither rate
+
+groups:
+  - name: groundtruth-recording
+    rules:
+      - record: gt:runs_finished:increase15m
+        expr: sum(increase(gt_runs_finished_total{outcome=~"completed|refused|errored|failed"}[15m]))
+      - record: gt:runs_malfunctioned:increase15m
+        expr: sum(increase(gt_runs_finished_total{outcome=~"errored|failed"}[15m])) or vector(0)
+      - record: gt:runs_answered:increase1h
+        expr: sum(increase(gt_runs_finished_total{outcome=~"completed|refused"}[1h]))
+      - record: gt:runs_refused:increase1h
+        expr: sum(increase(gt_runs_finished_total{outcome="refused"}[1h])) or vector(0)
+      - record: gt:runs_answered:increase24h
+        expr: sum(increase(gt_runs_finished_total{outcome=~"completed|refused"}[24h]))
+      - record: gt:runs_refused:increase24h
+        expr: sum(increase(gt_runs_finished_total{outcome="refused"}[24h])) or vector(0)
+      - record: gt:refusal_ratio:1h
+        expr: gt:runs_refused:increase1h / gt:runs_answered:increase1h
+      - record: gt:refusal_ratio:7d
+        expr: >-
+          (sum(increase(gt_runs_finished_total{outcome="refused"}[7d])) or vector(0))
+          / sum(increase(gt_runs_finished_total{outcome=~"completed|refused"}[7d]))
+
+  - name: groundtruth-alerts
+    rules:
+      - alert: GroundTruthJobFailureRateHigh
+        # More than 10% of finished runs malfunctioned over 15 minutes, on at least 5 runs.
+        expr: >-
+          (gt:runs_malfunctioned:increase15m / gt:runs_finished:increase15m) > 0.10
+          and gt:runs_finished:increase15m >= 5
+        for: 10m
+        labels:
+          severity: page
+        annotations:
+          summary: More than 10% of analysis runs are failing.
+          description: Runs are erroring or failing, not refusing. Refusals are excluded from this rate.
+          runbook: docs/operations/README.md#22-alerts-and-what-to-do
+
+      - alert: GroundTruthQueueBacklog
+        expr: max(gt_queue_jobs{state="queued"}) > 50
+        for: 15m
+        labels:
+          severity: page
+        annotations:
+          summary: More than 50 analysis runs have been queued for 15 minutes.
+          description: Workers are not keeping up, or none are running.
+          runbook: docs/operations/README.md#22-alerts-and-what-to-do
+
+      - alert: GroundTruthQueueStale
+        expr: max(gt_queue_oldest_queued_seconds) > 1800
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: An analysis run has waited in the queue for over 30 minutes.
+          description: Nothing is claiming queued work, even if the queue is short.
+          runbook: docs/operations/README.md#22-alerts-and-what-to-do
+
+      - alert: GroundTruthQueueMetricsMissing
+        # Without the queue depth the two alerts above cannot fire, so say so.
+        expr: absent(gt_queue_metrics_up) or max(gt_queue_metrics_up) == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: The queue depth cannot be read.
+          description: The backlog alerts are blind until the API's metrics can read the database again.
+          runbook: docs/operations/README.md#22-alerts-and-what-to-do
+
+      - alert: GroundTruthRefusalRateShift
+        # The last hour's refusal rate is 25 points away from the week's, on at least 20 runs.
+        expr: >-
+          abs(gt:refusal_ratio:1h - gt:refusal_ratio:7d) > 0.25
+          and gt:runs_answered:increase1h >= 20
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: The refusal rate has changed sharply against the last 7 days.
+          description: Investigate a change in input data or method. Never tune the causal gates to move this rate.
+          runbook: docs/operations/README.md#22-alerts-and-what-to-do
+
+      - alert: GroundTruthRefusalRateZero
+        # A rate of zero is more suspicious than a high one: is the refusal path still working?
+        expr: >-
+          gt:runs_refused:increase24h == 0
+          and gt:runs_answered:increase24h >= 50
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: No analysis has been refused in 24 hours despite at least 50 answered runs.
+          description: Check that the refusal gates still run. A refusal rate of zero is suspicious, not reassuring.
+          runbook: docs/operations/README.md#22-alerts-and-what-to-do

@@ -7,6 +7,13 @@ Context that belongs to a whole job (its run id, case id, worker) is set once wi
 :func:`log_context` and added to every record logged while it is active, by any
 logger, including the engine's own. The engine stays unaware of jobs: the context
 travels with the thread, not through function arguments.
+
+In JSON output every line has ``run_id``, ``case_id`` and ``stage`` (#50): their value
+outside an analysis is ``null``, so a log query can rely on the keys being there. A
+process that configures logging may pass a ``redact`` function, applied to the message,
+the exception and every text field before the line is written, so no credential reaches
+a log (the platform passes ``groundtruth.platform.redaction.redact_secrets``; this module
+imports nothing from the platform, so the engine can keep using it).
 """
 
 from __future__ import annotations
@@ -14,15 +21,20 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any
+
+ALWAYS_PRESENT: tuple[str, ...] = ("run_id", "case_id", "stage")
+"""Written on every JSON line, as ``null`` when the line is not about an analysis."""
 
 CONTEXT_FIELDS: tuple[str, ...] = (
     "run_id",
     "case_id",
     "stage",
+    "request_id",
+    "path",
     "worker_id",
     "attempt",
     "data_mode",
@@ -70,36 +82,88 @@ class ContextFilter(logging.Filter):
         return True
 
 
+Redact = Callable[[str], str]
+"""Removes credentials from a piece of text before it is logged."""
+
+
+def _unchanged(text: str) -> str:
+    return text
+
+
+REDACTION_FAILED = "[unloggable: redaction failed]"
+
+
+def _fail_closed(redact: Redact) -> Redact:
+    """``redact``, but text it cannot process is withheld rather than written unredacted."""
+
+    def safe(text: str) -> str:
+        try:
+            return redact(text)
+        except Exception:
+            return REDACTION_FAILED
+
+    return safe
+
+
 class JsonFormatter(logging.Formatter):
-    """Render log records as single-line JSON."""
+    """Render log records as single-line JSON, every line with the same core keys."""
+
+    def __init__(self, redact: Redact | None = None) -> None:
+        super().__init__()
+        self._redact = _fail_closed(redact) if redact else _unchanged
 
     def format(self, record: logging.LogRecord) -> str:
+        redact = self._redact
         payload: dict[str, Any] = {
             "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S%z"),
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": redact(record.getMessage()),
         }
         for key in CONTEXT_FIELDS:
             value = getattr(record, key, None)
             if value is not None:
-                payload[key] = value
+                payload[key] = redact(value) if isinstance(value, str) else value
+            elif key in ALWAYS_PRESENT:
+                payload[key] = None
         if record.exc_info:
-            payload["exception"] = self.formatException(record.exc_info)
+            payload["exception"] = redact(self.formatException(record.exc_info))
+        elif record.exc_text:
+            payload["exception"] = redact(record.exc_text)
         return json.dumps(payload, default=str)
 
 
-def configure_logging(level: str = "INFO", *, json_output: bool = False) -> None:
-    """Configure the root logger once, idempotently."""
+class RedactingFormatter(logging.Formatter):
+    """The plain text format, with credentials removed from the finished line."""
+
+    def __init__(self, fmt: str, redact: Redact | None = None) -> None:
+        super().__init__(fmt)
+        self._redact = _fail_closed(redact) if redact else _unchanged
+
+    def format(self, record: logging.LogRecord) -> str:
+        return self._redact(super().format(record))
+
+
+PLAIN_FORMAT = "%(levelname)-8s %(name)s: %(message)s"
+
+
+def configure_logging(
+    level: str = "INFO", *, json_output: bool = False, redact: Redact | None = None
+) -> None:
+    """Configure the root logger once, idempotently.
+
+    Args:
+        level: The root level.
+        json_output: One JSON object per line (deployments) instead of plain text.
+        redact: Applied to everything a line contains before it is written.
+    """
     root = logging.getLogger()
     root.setLevel(level.upper())
     for existing in list(root.handlers):
         root.removeHandler(existing)
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(
-        JsonFormatter()
-        if json_output
-        else logging.Formatter("%(levelname)-8s %(name)s: %(message)s")
+        JsonFormatter(redact) if json_output else RedactingFormatter(PLAIN_FORMAT, redact)
     )
     handler.addFilter(ContextFilter())
     root.addHandler(handler)

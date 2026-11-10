@@ -20,14 +20,19 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from groundtruth import __version__
 from groundtruth.contracts import CONTRACT_VERSION
-from groundtruth.contracts.errors import CaseDefinitionError, DataUnavailableError
+from groundtruth.contracts.errors import (
+    CaseDefinitionError,
+    ConfigurationError,
+    DataUnavailableError,
+)
 from groundtruth.contracts.result import AnalysisResult, EngineStatus, ErrorCode
 from groundtruth.engine import ENGINE_VERSION, describe_engine, run_analysis
+from groundtruth.logging import log_context
 from groundtruth.observability import setup_telemetry
 from groundtruth.platform.api.auth import router as auth_router
 from groundtruth.platform.api.claims import router as claims_router
 from groundtruth.platform.api.error_envelope import ErrorEnvelopeMiddleware
-from groundtruth.platform.api.errors import case_validation_error
+from groundtruth.platform.api.errors import ApiErrorBody, case_validation_error
 from groundtruth.platform.api.events import router as events_router
 from groundtruth.platform.api.exports import router as exports_router
 from groundtruth.platform.api.jobs import router as jobs_router
@@ -35,6 +40,7 @@ from groundtruth.platform.api.openapi_schema import install_openapi
 from groundtruth.platform.api.orgs import router as orgs_router
 from groundtruth.platform.api.portfolio import router as portfolio_router
 from groundtruth.platform.api.projects import router as projects_router
+from groundtruth.platform.api.rate_limits import spend_submission
 from groundtruth.platform.api.runs import router as runs_router
 from groundtruth.platform.api.schemas import (
     CaseDetail,
@@ -47,10 +53,12 @@ from groundtruth.platform.api.schemas import (
     VerificationResponse,
 )
 from groundtruth.platform.api.scope import accessible_projects, audit, case_dependency
+from groundtruth.platform.api.security_headers import SecurityHeadersMiddleware
 from groundtruth.platform.api.tiles import router as tiles_router
+from groundtruth.platform.audit.service import record_event
 from groundtruth.platform.auth.authz import Action, Capability, Context, ProjectAccess
 from groundtruth.platform.auth.csrf import CsrfOriginMiddleware
-from groundtruth.platform.auth.deps import require_role
+from groundtruth.platform.auth.deps import UserView, require_role, resolve_sessions
 from groundtruth.platform.cases.creator import create_and_register_case
 from groundtruth.platform.cases.registry import (
     CaseValidationError,
@@ -59,19 +67,35 @@ from groundtruth.platform.cases.registry import (
 )
 from groundtruth.platform.config import get_settings
 from groundtruth.platform.datasets.access import earth_engine_access, synthetic_access
+from groundtruth.platform.metrics import outcome_of_engine_status, record_outcome, stage_timer
 from groundtruth.platform.reports.narrative import generate_report
 
 _log = logging.getLogger("groundtruth.auth")
 
 
+def refuse_unsafe_production(settings: Any) -> None:
+    """Stop a production API that would serve writes without sign-in (#51).
+
+    ``AUTH_REQUIRED=false`` turns off the role-only gates, such as the claims workbench's. That
+    is a development convenience; in production it is a hole, so the API refuses to start
+    instead of logging a warning nobody reads.
+    """
+    if settings.app_env == "production" and not settings.auth_required:
+        raise ConfigurationError(
+            "Refusing to start: APP_ENV=production with AUTH_REQUIRED=false would let anyone "
+            "who can reach this API use its write endpoints. Set AUTH_REQUIRED=true."
+        )
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    refuse_unsafe_production(get_settings())
     if not get_settings().auth_required:
         _log.warning(
-            "AUTH_REQUIRED is false: the role gates on case creation, the claims workbench and "
-            "the legacy /verify path are off for anyone who can reach this API (project-scoped "
-            "reads and runs still require a session). Set AUTH_REQUIRED=true for any shared "
-            "deployment."
+            "AUTH_REQUIRED is false: the role-only gates, such as the claims workbench's, are "
+            "off for anyone who can reach this API (case creation, project-scoped reads and "
+            "runs still require a session). Set AUTH_REQUIRED=true for any shared deployment; "
+            "production refuses to start without it."
         )
     yield
 
@@ -102,6 +126,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["*"],
 )
+# Outermost, so every response carries the security headers: errors, 500s and CORS
+# preflights included (#51).
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Stored-run endpoints (issue #35). They read the evidence store lazily, so the endpoints
 # below keep working with no database configured.
@@ -219,7 +246,6 @@ def _case_detail(case_id: str) -> CaseDetail:
     "/cases",
     response_model=CaseDetail,
     tags=["cases"],
-    dependencies=[Depends(require_role("user"))],
     responses={
         422: {
             "description": "The body is invalid (a validation error), or the case is refused "
@@ -229,12 +255,18 @@ def _case_detail(case_id: str) -> CaseDetail:
         },
     },
 )
-def create_case(body: CreateCaseRequest) -> CaseDetail:
+def create_case(
+    body: CreateCaseRequest,
+    http_request: Request,
+    # Always enforced, even with AUTH_REQUIRED=false: this route writes files (#51).
+    user: Annotated[UserView | None, Depends(require_role("user", always=True))],
+) -> CaseDetail:
     """Create, calibrate and register a new project case.
 
     Everything is validated before anything is written. A rejected case answers a structured
     422 (`invalid_case`, with the field named, or `case_status_requires_review`) and leaves
-    no file behind. Cases are always created as `scaffolded`.
+    no file behind. Cases are always created as `scaffolded`. Sign-in is always required, and
+    the creation is audited (`case.create`).
     """
     try:
         case = create_and_register_case(
@@ -259,6 +291,19 @@ def create_case(body: CreateCaseRequest) -> CaseDetail:
         )
     except CaseValidationError as exc:
         raise case_validation_error(exc) from exc
+    with resolve_sessions(http_request)() as db:
+        record_event(
+            db,
+            action="case.create",
+            outcome="success",
+            actor_user_id=user.id if user is not None else None,
+            organization_id=None,
+            resource_type="case",
+            resource_id=case.case_id,
+            request=http_request,
+            details={"status": str(case.status)},
+        )
+        db.commit()
     return _case_detail(case.case_id)
 
 
@@ -276,6 +321,11 @@ def create_case(body: CreateCaseRequest) -> CaseDetail:
             "engine refused or rejected the request (an engine failure, where `is_refusal` "
             "says which). A refusal is a legitimate outcome, not a malfunction.",
             "content": _either("HTTPValidationError", "EngineFailureBody", "ApiErrorBody"),
+        },
+        429: {
+            "model": ApiErrorBody,
+            "description": "Over the per-user analysis submission limit "
+            "(`too_many_submissions`, shared with `POST /jobs`). See `Retry-After`.",
         },
         500: {**_ENGINE_FAILURE, "description": "The engine failed to estimate."},
         501: {
@@ -337,6 +387,13 @@ def verify(
         # Observed-data access is refused, never silently served from fixtures.
         raise HTTPException(status_code=501, detail=str(exc)) from exc
 
+    spend_submission(
+        http_request,
+        user_id=access.ctx.user_id,
+        organization_id=access.ctx.org_id,
+        path="verify",
+        case_id=case_id,
+    )
     audit(
         http_request,
         access.ctx,
@@ -345,7 +402,13 @@ def verify(
         resource_id=access.project.id,
         details={"case_id": case_id, "path": "verify", "data_mode": analysis_request.data_mode},
     )
-    result: AnalysisResult = run_analysis(analysis_request, data)
+    # The engine creates the run id, so lines it logs here carry case and stage; the run id
+    # joins once it returns (#50).
+    with log_context(case_id=case_id, stage="engine", path="verify"), stage_timer("engine"):
+        result: AnalysisResult = run_analysis(analysis_request, data)
+    record_outcome(outcome_of_engine_status(result.status.value), path="verify")
+    with log_context(run_id=result.run_id, case_id=case_id, stage="record", path="verify"):
+        _log.info("verify finished: engine status %s", result.status.value)
 
     if result.status is not EngineStatus.COMPLETED:
         assert result.error is not None  # guaranteed by the contract validator

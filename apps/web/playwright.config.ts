@@ -10,7 +10,8 @@ const channel = process.env.E2E_CHANNEL ? { channel: process.env.E2E_CHANNEL } :
 export default defineConfig({
   testDir: './e2e',
   // The pre-2.0 specs (app, task4a, visual) drive routes that now redirect; they are not part of this run.
-  testMatch: /(personas|a11y)\.spec\.ts/,
+  // csp: every page renders under the Content-Security-Policy (#51).
+  testMatch: /(personas|a11y|csp)\.spec\.ts/,
   globalSetup: './e2e/stack.ts',
   fullyParallel: true,
   // One API process serves every worker and the Kariba assessment is computed per request: keep the load modest.

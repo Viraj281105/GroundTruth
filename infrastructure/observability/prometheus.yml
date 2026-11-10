@@ -1,6 +1,24 @@
 global:
   scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Alert rules (#50). What each alert means and what to do: docs/operations/README.md, 2.2.
+rule_files:
+  - /etc/prometheus/alerts.yml
+
 scrape_configs:
   - job_name: otel-collector
     static_configs:
       - targets: ["otel-collector:8889"]
+  # The API and the worker serve /metrics on internal ports that are never published outside
+  # the deployment's network (#50). The API also reports the queue depth, read from the
+  # database, so it is counted once.
+  - job_name: groundtruth-api
+    static_configs:
+      - targets: ["api:9464"]
+  - job_name: groundtruth-worker
+    # One target per worker; with `docker compose up --scale worker=N` use DNS discovery.
+    dns_sd_configs:
+      - names: ["worker"]
+        type: A
+        port: 9465

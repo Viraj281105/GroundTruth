@@ -31,6 +31,7 @@ from groundtruth.platform.api.errors import (
     api_error,
     case_validation_error,
 )
+from groundtruth.platform.api.rate_limits import spend_submission
 from groundtruth.platform.api.schemas import JobSubmission, JobView, SubmitJobRequest
 from groundtruth.platform.api.scope import audit, authorize_case, authorize_filed
 from groundtruth.platform.auth.authz import Action, Capability, Context
@@ -39,6 +40,7 @@ from groundtruth.platform.cases.registry import CaseValidationError, get_case
 from groundtruth.platform.config import get_settings
 from groundtruth.platform.jobs.interface import JobControl
 from groundtruth.platform.jobs.lifecycle import IllegalTransitionError, JobNotFoundError
+from groundtruth.platform.metrics import record_cache
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -80,6 +82,11 @@ def _not_found(run_id: str):  # type: ignore[no-untyped-def]
                     }
                 }
             },
+        },
+        429: {
+            "model": ApiErrorBody,
+            "description": "Over the per-user analysis submission limit "
+            "(`too_many_submissions`, shared with `/verify`). See `Retry-After`.",
         },
         501: {"model": ApiErrorBody, "description": "Observed data is not implemented."},
         **_UNAVAILABLE,
@@ -125,12 +132,16 @@ def submit_job(
     analysis_request = case.to_request(
         data_mode="simulated", seed=get_settings().random_seed, min_donors=min_donors
     )
+    spend_submission(
+        request, user_id=ctx.user_id, organization_id=ctx.org_id, path="job", case_id=body.case_id
+    )
     with store_errors():
         submission = jobs.submit(
             case, analysis_request, requested_by=ctx.user_id, project_id=access.project.id
         )
         job = jobs.status(submission.run_id)
     assert job is not None  # it was just created, or found
+    record_cache("result", hit=submission.from_cache)
     audit(
         request,
         ctx,

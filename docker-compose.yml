@@ -26,7 +26,12 @@ services:
       AUTH_REQUIRED: "true"
       AUTH_COOKIE_SECURE: "false"
       AUTH_ALLOW_REGISTRATION: "true"
+      # Prometheus metrics (#50) on an internal port: reachable inside this network only,
+      # never published to the host (no `ports:` entry).
+      METRICS_BIND_ADDRESS: 0.0.0.0
+      API_METRICS_PORT: "9464"
     ports: ["8000:8000"]
+    expose: ["9464"]
     # The API must not answer before the schema exists: wait for the one-shot migrate service.
     depends_on:
       postgres: { condition: service_healthy }
@@ -53,12 +58,16 @@ services:
     image: groundtruth-backend:local
     pull_policy: never
     command: ["python", "-m", "apps.worker.main"]
-    # The image's HTTP health check is for the API; the worker serves no HTTP.
+    # The image's HTTP health check is for the API; the worker serves only its internal
+    # metrics port (9465).
     healthcheck:
       disable: true
     env_file: [{ path: .env, required: false }]
     environment:
       DATABASE_URL: postgresql+psycopg://groundtruth:groundtruth@postgres/groundtruth
+      METRICS_BIND_ADDRESS: 0.0.0.0
+      WORKER_METRICS_PORT: "9465"
+    expose: ["9465"]
     depends_on:
       postgres: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
@@ -82,3 +91,9 @@ services:
 
 volumes:
   pgdata:
+
+# A fixed name, so the observability stack (infrastructure/observability) can join this
+# network and scrape api:9464 and worker:9465 without either port leaving it.
+networks:
+  default:
+    name: groundtruth

@@ -140,7 +140,17 @@ flowchart LR
    * Synthetic control solver convergence times.
    * HTTP error rates categorized by contract error code.
 
+### Metrics and alerts (#50)
+
+The API (`api:9464`) and each worker (`worker:9465`) serve Prometheus metrics on internal
+ports that are never published to the host. `prometheus.yml` scrapes both and loads
+`alerts.yml`; `alerts.test.yml` unit-tests the rules (`promtool test rules`, run in CI). What
+each metric and alert means: `docs/operations/README.md`, section 2.
+
 ### Launching Observability
+
+Start the main stack first: Prometheus joins its `groundtruth` network to reach the metrics
+ports.
 ```bash
 docker compose -f infrastructure/observability/docker-compose.observability.yml up -d
 ```

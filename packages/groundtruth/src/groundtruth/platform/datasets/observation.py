@@ -59,6 +59,7 @@ from groundtruth.platform.datasets.earthengine import (
 )
 from groundtruth.platform.datasets.resilience import RateLimiter, RetryPolicy
 from groundtruth.platform.datasets.session import EarthEngineSession
+from groundtruth.platform.metrics import record_cache
 
 logger = get_logger("datasets.earthengine")
 
@@ -367,9 +368,13 @@ class EarthEngineObservationAccess:
             stored = self._cache.get(key)
             if stored is not None:
                 try:
-                    return YearRecord.from_cached(stored)
+                    record = YearRecord.from_cached(stored)
                 except (KeyError, TypeError, ValueError):
                     logger.warning("cache entry has an unexpected shape; treated as a miss")
+                else:
+                    record_cache("reduction", hit=True)
+                    return record
+            record_cache("reduction", hit=False)
 
         query = YearQuery(
             collection=str(reduction["collection"]),

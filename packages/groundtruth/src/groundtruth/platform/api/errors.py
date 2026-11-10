@@ -38,6 +38,8 @@ class ApiErrorCode(StrEnum):
     CASE_NOT_FOUND = "case_not_found"
     JOB_ALREADY_FINISHED = "job_already_finished"
     """The job succeeded or failed, so there is nothing left to cancel."""
+    TOO_MANY_SUBMISSIONS = "too_many_submissions"
+    """Over the per-user analysis submission budget (#51). Not a scientific refusal."""
     NARRATION_NOT_CONFIGURED = "narration_not_configured"
     """``narrate=true`` was asked for but no GenAI provider is configured."""
     NARRATION_FAILED = "narration_failed"
@@ -65,6 +67,7 @@ API_ERROR_STATUS: dict[ApiErrorCode, int] = {
     ApiErrorCode.NOT_IMPLEMENTED: 501,
     ApiErrorCode.CASE_NOT_FOUND: 404,
     ApiErrorCode.JOB_ALREADY_FINISHED: 409,
+    ApiErrorCode.TOO_MANY_SUBMISSIONS: 429,
     ApiErrorCode.NARRATION_NOT_CONFIGURED: 422,
     ApiErrorCode.NARRATION_FAILED: 502,
     ApiErrorCode.NARRATION_NOT_GROUNDED: 502,

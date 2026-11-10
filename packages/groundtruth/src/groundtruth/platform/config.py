@@ -133,6 +133,38 @@ class Settings(BaseSettings):
     )
     auth_session_days: int = Field(default=7, ge=1, le=90)
 
+    # --- production hardening (#51) and monitoring (#50) --------------------
+    analysis_rate_limit: int = Field(
+        default=20,
+        ge=1,
+        description="Analysis submissions (POST /jobs and /verify together) one user may make "
+        "per window (env ANALYSIS_RATE_LIMIT).",
+    )
+    analysis_rate_window_seconds: int = Field(
+        default=600,
+        ge=1,
+        description="The window for ANALYSIS_RATE_LIMIT, in seconds "
+        "(env ANALYSIS_RATE_WINDOW_SECONDS).",
+    )
+    api_metrics_port: int = Field(
+        default=9464,
+        ge=0,
+        le=65535,
+        description="Internal port for the API's Prometheus metrics; 0 turns them off.",
+    )
+    worker_metrics_port: int = Field(
+        default=9465,
+        ge=0,
+        le=65535,
+        description="Internal port for a worker's Prometheus metrics; 0 turns them off.",
+    )
+    metrics_bind_address: str = Field(
+        default="127.0.0.1",
+        description="Address the metrics servers listen on. Containers set 0.0.0.0 so "
+        "Prometheus can reach them inside the deployment's network; the port is never "
+        "published outside it.",
+    )
+
     # --- analysis defaults -------------------------------------------------
     min_pre_periods: int = Field(
         default=5, description="Minimum pre-treatment periods required for a synthetic control."
