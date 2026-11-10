@@ -57,6 +57,8 @@ NAMING_CONVENTION = {
 }
 
 DATA_MODES: tuple[str, ...] = ("observed", "simulated")
+JOB_LANES: tuple[str, ...] = ("interactive", "batch")
+"""A job's lane (revision 0008): workers take interactive work before batch work (#47)."""
 """Mirrors ``AnalysisRequest.data_mode``. Owned by the platform (R7)."""
 
 CASE_STATUSES: tuple[str, ...] = ("scaffolded", "data-wired", "analysed")
@@ -139,6 +141,11 @@ class AnalysisRunRow(Base):
             "run_id",
         ),
         sa.Index("ix_analysis_runs_created_at_run_id", "created_at", "run_id"),
+        # Every listing a signed-in user makes filters by the projects they may see (revision
+        # 0008, #47): without this, a page could scan every other organization's runs first.
+        sa.Index(
+            "ix_analysis_runs_project_id_created_at_run_id", "project_id", "created_at", "run_id"
+        ),
         sa.Index("ix_analysis_runs_spec_hash", "spec_hash"),
     )
 
@@ -242,12 +249,18 @@ class JobRow(Base):
     __table_args__ = (
         sa.CheckConstraint("attempts >= 0", name="attempts_non_negative"),
         sa.CheckConstraint("max_attempts >= 1", name="max_attempts_positive"),
+        sa.CheckConstraint(_in_list("lane", JOB_LANES), name="lane_valid"),
         sa.Index("ix_jobs_available_at", "available_at"),
+        # Every claim first reaps expired leases; without this it scans every job ever run
+        # (revision 0008, #47).
+        sa.Index("ix_jobs_lease_expires_at", "lease_expires_at"),
     )
 
     run_id: Mapped[str] = mapped_column(sa.ForeignKey("analysis_runs.run_id"), primary_key=True)
     project_id: Mapped[str | None] = mapped_column(sa.ForeignKey("projects.id"))
     """Denormalised from the run (revision 0007) so a worker can scope work by project."""
+    lane: Mapped[str] = mapped_column(sa.String(16), server_default="batch")
+    """``interactive`` (a person waiting, POST /jobs) or ``batch``. Revision 0008."""
     attempts: Mapped[int] = mapped_column(sa.Integer, server_default="0")
     max_attempts: Mapped[int] = mapped_column(sa.Integer, server_default="3")
     available_at: Mapped[datetime] = mapped_column(

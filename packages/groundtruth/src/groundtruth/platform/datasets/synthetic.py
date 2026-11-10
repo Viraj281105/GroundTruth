@@ -16,10 +16,13 @@ being built.
 from __future__ import annotations
 
 import hashlib
+import re
 
 import numpy as np
 
+from groundtruth.contracts.identifiers import DatasetRef
 from groundtruth.contracts.provenance import Provenance
+from groundtruth.contracts.request import AnalysisRequest
 from groundtruth.contracts.types import Indicator, TimeSeries
 
 SYNTHETIC_MARKER = "synthetic-simulation"
@@ -28,6 +31,36 @@ SIMULATED_DATA_NOTE = (
     "SIMULATED DATA. Generated for pipeline development and testing only; carries no "
     "information about any real project."
 )
+
+
+SIMULATION_DATASET_ID = "groundtruth-synthetic-simulation"
+"""The dataset a simulated run reads, pinned in its request (#42, #47)."""
+_EFFECT_VERSION = re.compile(r"^v1;true_effect=(?P<effect>-?[0-9.eE+-]+)$")
+
+
+def simulation_pin(true_effect: float) -> DatasetRef:
+    """The simulator, pinned as a dataset with the effect it injects.
+
+    Part of the request, so the effect is part of ``spec_hash``: two simulated runs with
+    different effects are different specifications. The cache cannot answer one with the
+    other, and a replay reads the effect from the stored request instead of guessing it.
+    """
+    return DatasetRef(
+        dataset_id=SIMULATION_DATASET_ID,
+        version=f"v1;true_effect={float(true_effect)!r}",
+        provider="synthetic",
+    )
+
+
+def pinned_true_effect(request: AnalysisRequest) -> float | None:
+    """The effect a request pins for its simulation, or ``None`` if it pins none."""
+    for dataset in request.datasets:
+        if dataset.dataset_id == SIMULATION_DATASET_ID:
+            match = _EFFECT_VERSION.match(dataset.version)
+            if match is None:
+                raise ValueError(f"unreadable simulation pin {dataset.version!r}")
+            return float(match.group("effect"))
+    return None
 
 
 def stable_seed(*parts: object) -> int:

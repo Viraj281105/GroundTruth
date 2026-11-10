@@ -35,38 +35,52 @@ ChangeStatus = Literal["added", "removed", "changed", "unchanged"]
 class FieldChange(BaseModel):
     """One field of one evidence item that differs."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     field: str
     """``value``, ``unit``, ``confidence``, ``qualifiers`` or ``provenance``."""
     before: Any
+    """The baseline's value."""
     after: Any
+    """The candidate's value."""
 
 
 class EvidenceSnapshot(BaseModel):
     """An evidence item as one side of the diff saw it."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     value: float | int | str | bool
+    """The measured value."""
     unit: str
+    """Its unit."""
     confidence: Confidence | None
+    """Its uncertainty interval, when it has one."""
     qualifiers: dict[str, Any]
+    """Qualifiers attached to the value."""
     provenance_method: str
+    """How it was produced."""
     provenance_fingerprint: str
+    """Fingerprint of its provenance record."""
 
 
 class ItemDiff(BaseModel):
     """One evidence id across the two bundles."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     id: str
+    """Evidence id."""
     label: str
+    """Evidence label."""
     status: ChangeStatus
+    """`added`, `removed`, `changed` or `unchanged`."""
     baseline: EvidenceSnapshot | None
+    """The item in the baseline, if present."""
     candidate: EvidenceSnapshot | None
+    """The item in the candidate, if present."""
     changes: tuple[FieldChange, ...] = ()
+    """Each field that differs."""
     delta: float | None = None
     """``candidate - baseline`` when both values are numbers."""
     relative_delta: float | None = None
@@ -76,48 +90,64 @@ class ItemDiff(BaseModel):
 class DiffSummary(BaseModel):
     """How many ids fall in each status."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     added: int
+    """Ids only in the candidate."""
     removed: int
+    """Ids only in the baseline."""
     changed: int
+    """Ids in both whose content differs."""
     unchanged: int
+    """Ids in both with identical content."""
 
 
 class VerdictDiff(BaseModel):
     """The screening verdicts side by side. Neutral by construction: it states the
     two labels and whether they differ, and ranks neither."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     baseline_label: str | None
+    """The baseline's verdict."""
     candidate_label: str | None
+    """The candidate's verdict."""
     label_changed: bool
+    """True if the verdicts differ."""
     baseline_divergence_ratio: float | None
+    """The baseline's divergence ratio, when it has one."""
     candidate_divergence_ratio: float | None
+    """The candidate's divergence ratio, when it has one."""
     divergence_ratio_changed: bool
+    """True if the ratios differ."""
     rationale_changed: bool
+    """True if the rationales differ."""
 
 
 class WarningsDiff(BaseModel):
     """Analyst-facing warnings that appear in only one bundle."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     added: tuple[str, ...]
+    """Warnings only in the candidate."""
     removed: tuple[str, ...]
+    """Warnings only in the baseline."""
 
 
 class BundleDiff(BaseModel):
     """The difference between a baseline bundle and a candidate bundle."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)
 
     summary: DiffSummary
+    """Counts by status."""
     items: tuple[ItemDiff, ...]
     """Every id in either bundle, sorted by id."""
     verdict: VerdictDiff
+    """The verdicts side by side."""
     warnings: WarningsDiff
+    """Warnings in only one bundle."""
 
 
 def _is_number(value: object) -> bool:

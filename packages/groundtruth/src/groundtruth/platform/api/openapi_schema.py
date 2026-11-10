@@ -97,7 +97,11 @@ VALIDATION_ENVELOPE_PROPERTIES: dict[str, dict[str, Any]] = {
         "description": "The dotted name of every offending field, e.g. `body.area_ha`.",
     },
     "is_refusal": {"type": "boolean", "title": "Is Refusal", "description": "Always false."},
-    "request_id": {"type": "string", "title": "Request Id"},
+    "request_id": {
+        "type": "string",
+        "title": "Request Id",
+        "description": "Identifier of this request, also in the `X-Request-ID` header.",
+    },
 }
 """The only members the error envelope adds to FastAPI's ``HTTPValidationError``. All optional."""
 
@@ -117,6 +121,186 @@ def document_error_envelope(spec: dict[str, Any]) -> dict[str, Any]:
     return spec
 
 
+# --- documentation (#41) ---------------------------------------------------------------------
+#
+# Descriptions belong next to the code they describe, and almost all of them are there. These
+# tables hold the rest, for code this module may not edit:
+#
+# * models in ``contracts/`` (the engine boundary, changed only by agreement with Viraj);
+# * ``platform/api/app.py`` and ``platform/api/auth.py``, which Viraj's open PR #87 changes.
+#
+# Each entry only fills a blank: once a description is written in the source, it wins, and the
+# entry here can be deleted. When #87 merges, move the ``app.py``/``auth.py`` entries into those
+# files (and drop ``include_in_schema=False`` from the exports router in ``app.py``, which makes
+# :func:`document_exports` a no-op).
+
+DOCUMENTED_SCHEMAS: dict[str, dict[str, str]] = {
+    # contracts/evidence.py
+    "Evidence": {
+        "value": "The measured value, in `unit`. An index (e.g. NDVI) is never a carbon quantity.",
+        "confidence": "The uncertainty interval of the value, when it has one.",
+        "provenance": "How the value was produced: method, inputs, parameters and fingerprint.",
+    },
+    "EvidenceBundle": {
+        "case_id": "The case the evidence is about.",
+        "schema_version": "Version of the bundle format.",
+        "items": "Every evidence item, each with its unit, uncertainty and provenance.",
+        "verdict": "The screening verdict, when the engine reached one.",
+        "warnings": "Analyst-facing warnings, e.g. that the data is simulated.",
+    },
+    # contracts/identifiers.py
+    "DatasetRef": {"source_uri": "Where the dataset was read from, when recorded."},
+    # contracts/result.py
+    "RunMetrics": {
+        "duration_ms": "Total engine time, in milliseconds.",
+        "stage_durations_ms": "Time per engine stage, in milliseconds.",
+        "n_units_observed": "Areas observed: the project and its candidate comparisons.",
+        "n_donors_admitted": "Comparison areas that passed screening.",
+        "n_estimator_fits": "Times the estimator was fitted, placebos included.",
+    },
+    # contracts/types.py
+    "Confidence": {
+        "lower": "Lower bound of the interval.",
+        "upper": "Upper bound of the interval.",
+        "level": "Coverage of the interval, e.g. 0.9 for 90%.",
+    },
+    "VerificationVerdict": {
+        "label": "The screening verdict. A divergence warrants accredited review; never fraud.",
+        "rationale": "Why the engine reached the verdict, thresholds included.",
+        "caveats": "Statements that must accompany the verdict wherever it is shown.",
+        "supporting_evidence_ids": "Evidence items the verdict rests on.",
+    },
+    # platform/api/auth.py (PR #87)
+    "RegisterRequest": {
+        "__doc__": "A new account.",
+        "email": "Email address; also the sign-in name.",
+        "password": "Password, checked against the password policy (`weak_password` if not met).",
+    },
+    "LoginRequest": {
+        "__doc__": "Credentials to sign in with.",
+        "email": "Email address.",
+        "password": "Password.",
+    },
+    "ChangePasswordRequest": {
+        "__doc__": "Change your password. Every other session of yours is signed out.",
+        "current_password": "Your current password.",
+        "new_password": "The new password, checked against the password policy.",
+    },
+    "UpdateUserRequest": {
+        "__doc__": "What an administrator may change about an account. Omitted means unchanged.",
+        "role": "New platform role: `user`, `dev` or `admin`.",
+        "is_active": "False deactivates the account; it can no longer sign in.",
+    },
+    "MeResponse": {
+        "__doc__": "Who you are signed in as, and the organizations you can act for.",
+        "auth_required": "Whether this deployment requires sign-in.",
+        "registration_open": "Whether `POST /auth/register` accepts new accounts.",
+        "user": "Your account, or null when not signed in.",
+        "organizations": "Organizations you belong to, with your role in each.",
+        "active_organization": "The organization you are acting for; null until you choose one "
+        "(automatic when you belong to exactly one).",
+    },
+}
+"""Descriptions for schemas whose source this module may not edit (see the note above)."""
+
+DOCUMENTED_OPERATIONS: dict[tuple[str, str], dict[str, str]] = {
+    # platform/api/app.py (PR #87)
+    ("get", "/health"): {"summary": "Service status and what the engine can do"},
+    ("get", "/cases"): {"summary": "List the cases this deployment knows"},
+    ("get", "/cases/{case_id}"): {"summary": "One case in full"},
+    ("post", "/cases"): {"summary": "Create a case (sign-in always required)"},
+    ("post", "/cases/{case_id}/verify"): {
+        "summary": "Run a verification now and wait for the result",
+    },
+    # platform/api/auth.py (PR #87)
+    ("post", "/auth/login"): {
+        "description": "Checks the credentials and sets the `gt_session` cookie (HttpOnly, "
+        "SameSite=Lax; Secure behind HTTPS). Send that cookie on every later request. A wrong "
+        "email or password are indistinguishable (`invalid_credentials`, 401); 5 failures for "
+        "one email from one address in 15 minutes are refused with `too_many_attempts` (429, "
+        "`Retry-After`)."
+    },
+    ("get", "/auth/me"): {
+        "description": "Your session: the account, your organizations and the active one. "
+        "Never an error for a signed-out caller; `user` is then null."
+    },
+    ("get", "/auth/users"): {"description": "Every account. Platform administrators only (403)."},
+    ("patch", "/auth/users/{user_id}"): {
+        "description": "Change an account's platform role or deactivate it. Platform "
+        "administrators only (403); an unknown user is 404 `user_not_found`."
+    },
+}
+"""Summaries and descriptions for operations whose source this module may not edit."""
+
+PARAMETER_DESCRIPTIONS: dict[str, str] = {
+    "case_id": "Case identifier, as listed by `GET /cases`.",
+    "run_id": "Run identifier, as returned when the run was submitted or listed.",
+    "job_id": "The job's run identifier.",
+    "project_id": "Project id or slug.",
+    "slug": "Slug of your active organization.",
+    "org_slug": "Slug of the organization the grant is for.",
+    "user_id": "User id.",
+    "z": "Tile zoom level.",
+    "x": "Tile column.",
+    "y": "Tile row.",
+    "limit": "Most items to return on one page.",
+    "data_mode": "Only runs on `simulated` or `observed` data.",
+}
+"""One meaning per path or query parameter name, wherever it appears. Fills blanks only."""
+
+
+def document_exports(spec: dict[str, Any]) -> dict[str, Any]:
+    """Add the CSV and PDF exports to the schema. Returns a new dict.
+
+    ``app.py`` includes their router with ``include_in_schema=False``; they are part of the API
+    a consumer uses, so their paths (generated by FastAPI from the router itself) are added
+    here. A path the schema already has is left alone, so this is a no-op once ``app.py``
+    stops hiding them.
+    """
+    from fastapi.openapi.utils import get_openapi
+
+    from groundtruth.platform.api.exports import router as exports_router
+
+    spec = copy.deepcopy(spec)
+    extra = get_openapi(title="exports", version="0", routes=exports_router.routes)
+    for path, item in extra.get("paths", {}).items():
+        spec.setdefault("paths", {}).setdefault(path, item)
+    schemas = spec.setdefault("components", {}).setdefault("schemas", {})
+    for name, schema in extra.get("components", {}).get("schemas", {}).items():
+        schemas.setdefault(name, schema)
+    return spec
+
+
+def document_the_rest(spec: dict[str, Any]) -> dict[str, Any]:
+    """Fill the blanks from the tables above. Returns a new dict; never overwrites."""
+    spec = copy.deepcopy(spec)
+    schemas = spec.get("components", {}).get("schemas", {})
+    for name, fields in DOCUMENTED_SCHEMAS.items():
+        schema = schemas.get(name)
+        if schema is None:
+            continue
+        for field, text in fields.items():
+            if field == "__doc__":
+                schema.setdefault("description", text)
+            elif field in schema.get("properties", {}):
+                schema["properties"][field].setdefault("description", text)
+    for (method, path), docs in DOCUMENTED_OPERATIONS.items():
+        operation = spec.get("paths", {}).get(path, {}).get(method)
+        if operation is None:
+            continue
+        for key, text in docs.items():
+            # FastAPI writes a summary from the function name; a written one replaces it.
+            if key == "summary" or not operation.get(key):
+                operation[key] = text
+    for item in spec.get("paths", {}).values():
+        for operation in item.values():
+            for parameter in operation.get("parameters", []):
+                meaning = PARAMETER_DESCRIPTIONS.get(parameter.get("name", ""))
+                if meaning and not parameter.get("description"):
+                    parameter["description"] = meaning
+    return spec
+
+
 def install_openapi(app: FastAPI) -> None:
     """Serve the adjusted schema at ``/openapi.json``, built once and kept."""
     generate: Callable[[], dict[str, Any]] = app.openapi
@@ -125,7 +309,9 @@ def install_openapi(app: FastAPI) -> None:
     def openapi() -> dict[str, Any]:
         nonlocal built
         if built is None:
-            built = document_error_envelope(require_response_fields(generate()))
+            built = document_the_rest(
+                document_error_envelope(require_response_fields(document_exports(generate())))
+            )
         return built
 
     app.openapi = openapi  # type: ignore[method-assign]

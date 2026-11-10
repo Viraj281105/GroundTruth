@@ -242,6 +242,69 @@ def test_real_observations_mode_raises_when_rasters_missing():
 
 This fail-closed architecture guarantees that no fabricated or synthetic values can ever be silently served to auditors or the public.
 
+## 9. Pre-Commit Hook
+
+A hook that stops a commit CI would reject for formatting or lint (#21). It checks only the
+files you staged, and only with CI's own commands:
+
+| Staged files | Check | Same as CI |
+|---|---|---|
+| Python in `packages/` and `tests/` | `ruff format --check` and `ruff check` | the `Lint` and `Check formatting` steps, with the same pinned ruff (`ruff==0.17.3` in the dev extra) |
+| `.ts`, `.tsx`, `.js`, `.mjs` in `apps/web/` | ESLint | `npm run lint` |
+| the staged diff | `gitleaks`, if installed | (not a CI step: a last chance to catch a key before it is pushed) |
+
+It never runs mypy or the tests (a slow hook gets bypassed) and never edits a file: it reports
+and prints the command that fixes the problem.
+
+**Measured on Windows 11, warm, all checks running at once:** about **0.3 s** for a Python-only
+change and **1.3 s** when web files are staged (ESLint's Node start-up is most of that).
+
+### Set it up once per clone
+
+The hook runs the Python of your activated environment, else the repository's `.venv`, so
+install the dev extra first (section 2): that is what gives it CI's exact ruff.
+
+```powershell
+# Windows (PowerShell)
+git config core.hooksPath scripts/hooks
+winget install --id Gitleaks.Gitleaks   # optional: secret scanning; skipped with a note if absent
+```
+
+```bash
+# macOS / Linux
+git config core.hooksPath scripts/hooks
+chmod +x scripts/hooks/pre-commit       # git ignores a hook that is not executable
+brew install gitleaks                   # optional (or your package manager)
+```
+
+Git for Windows runs the hook through its bundled `sh`, so nothing else is needed on Windows.
+
+### Using it
+
+```bash
+git commit                                   # runs the hook on what you staged
+python scripts/hooks/pre_commit.py FILE...   # check particular files by hand
+ruff format packages tests                   # fix what the hook reported
+ruff check --fix packages tests
+```
+
+If the hook says ruff's version differs from CI's, reinstall the dev extra:
+`pip install -e "packages/groundtruth[dev]"`. Bypass it only in an emergency
+(`git commit --no-verify`); CI will still check.
+
+It checks the working-tree copy of each staged file, so stage what you mean to commit.
+
+### Optional: the pre-commit framework
+
+`.pre-commit-config.yaml` runs the same ruff checks plus gitleaks through the `pre-commit`
+framework (`pip install pre-commit && pre-commit install`). It is kept for anyone who prefers it,
+but measured warm on Windows it takes about **3 s**, most of it the framework's own start-up, so
+the script above is the supported hook. mypy is in its manual stage only:
+
+```bash
+pre-commit run mypy --hook-stage manual --all-files
+```
+
 ---
 
 > GroundTruth 2.0 Development Guide · *PCCOE International Grand Challenge 2026*

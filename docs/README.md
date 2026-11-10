@@ -135,6 +135,7 @@ stateDiagram-v2
 * [System Architecture (`architecture/system.md`)](architecture/system.md) — System C4 architecture, container topology, package seams.
 * [Engine/Platform Contract (`architecture/contract.md`)](architecture/contract.md) — The `AnalysisRequest` and `AnalysisResult` boundary.
 * [Backend Platform (`architecture/backend.md`)](architecture/backend.md) — FastAPI surface, multi-tenancy, RBAC middleware, PostgreSQL store.
+* [API Consumer Guide (`api/README.md`)](api/README.md) — Sign-in, running and reading analyses, refusals vs errors, every error code, with real examples.
 * [Frontend Architecture (`architecture/frontend.md`)](architecture/frontend.md) — Next.js 14 App Router layout restructuring (`(app)` workspaces, `(public)` marketing), Design System (`ds/`), 542 unit/component/integration tests.
 * [Worker & Job Execution (`architecture/worker.md`)](architecture/worker.md) — Asynchronous job lifecycle, PostgreSQL leases, Celery/Redis queue, Temporal durable execution.
 * [Earth Observation (`architecture/earth-observation.md`)](architecture/earth-observation.md) — Ingestion chain, USGS Collection 2 L2 scaling, QA bit masking, Roy et al. sensor harmonization.

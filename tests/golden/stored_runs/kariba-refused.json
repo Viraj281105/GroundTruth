@@ -1,0 +1,153 @@
+{
+ "case_id": "kariba-redd",
+ "request": {
+  "case_id": "kariba-redd",
+  "claim": {
+   "claimed_credits_tco2e": null,
+   "country": "Zimbabwe",
+   "crediting_period_end": "2041-06-30",
+   "crediting_period_start": "2011-07-01",
+   "name": "Kariba REDD+ Project",
+   "project_area_ha": 784987.0,
+   "registry_id": "VCS 902",
+   "source_uri": "https://registry.verra.org/app/projectDetail/VCS/902",
+   "standard": "VCS"
+  },
+  "contract_version": "1.0.0",
+  "data_mode": "simulated",
+  "datasets": [
+   {
+    "asset": null,
+    "dataset_id": "groundtruth-synthetic-simulation",
+    "provider": "synthetic",
+    "retrieved_at": null,
+    "source_uri": null,
+    "version": "v1;true_effect=0.06"
+   }
+  ],
+  "donors": {
+   "caliper_sd": 3.0,
+   "candidates": [],
+   "covariate_weights": {},
+   "covariates": [
+    "rainfall_mm",
+    "elevation_m",
+    "slope_deg",
+    "road_distance_km",
+    "population_density"
+   ],
+   "excluded_unit_ids": [
+    "zw-hurungwe",
+    "zw-binga",
+    "zw-mbire",
+    "zw-nyaminyami",
+    "zw-gokwe-north",
+    "zw-makonde",
+    "zw-muzarabani",
+    "zw-centenary",
+    "zw-guruve",
+    "zw-uree",
+    "zm-luangwa",
+    "zm-gwembe",
+    "zm-siavonga",
+    "zm-chirundu"
+   ],
+   "leakage_belt_km": 10.0,
+   "max_donors": 500,
+   "min_donors": 500,
+   "min_pre_observations": 4,
+   "pool_size": 80,
+   "search_region": "Zimbabwe, Zambia and Mozambique miombo woodland outside any registered REDD+ or protected-area boundary"
+  },
+  "estimation": {
+   "cross_checks": [
+    {
+     "model_id": "difference-in-differences",
+     "parameters": {},
+     "variant": "default"
+    }
+   ],
+   "max_pre_rmse_ratio": 0.3,
+   "min_pre_periods": 5,
+   "primary": {
+    "model_id": "synthetic-control",
+    "parameters": {},
+    "variant": "default"
+   },
+   "ridge": 0.0
+  },
+  "indicator": "ndvi",
+  "notes": "",
+  "project": {
+   "area_ha": 784987.0,
+   "attributes": {},
+   "centroid_lat": null,
+   "centroid_lon": null,
+   "geometry": null,
+   "unit_id": "kariba-redd"
+  },
+  "requested_by": null,
+  "robustness": {
+   "confidence_level": 0.95,
+   "in_space_placebo": true,
+   "in_time_placebo": false,
+   "leave_one_out": true,
+   "max_placebo_pre_rmspe_multiple": 5.0,
+   "specification_curve": false
+  },
+  "seed": 20260101,
+  "window": {
+   "post_end": 2022,
+   "post_start": 2011,
+   "pre_end": 2010,
+   "pre_start": 2001
+  }
+ },
+ "result": {
+  "bundle": null,
+  "case_id": "kariba-redd",
+  "contract_version": "1.0.0",
+  "data_mode": "simulated",
+  "datasets": [
+   {
+    "asset": null,
+    "dataset_id": "groundtruth-synthetic-simulation",
+    "provider": "synthetic",
+    "retrieved_at": null,
+    "source_uri": null,
+    "version": "v1;true_effect=0.06"
+   }
+  ],
+  "engine": {
+   "contract_version": "1.0.0",
+   "engine_version": "0.10.0",
+   "git_sha": null
+  },
+  "error": {
+   "code": "donor_pool_inadequate",
+   "detail": {
+    "min_donors_required": 500,
+    "n_candidates": 80
+   },
+   "message": "only 79 admissible donors for 'kariba-redd'; 500 required. Widen the search region or relax the caliper, but do not estimate on an under-powered pool.",
+   "remediation": "Widen the donor search region or relax the common-support caliper. Do not lower min_donors to force a result.",
+   "stage": "matching"
+  },
+  "finished_at": "2026-11-10T15:01:12.300192+00:00",
+  "metrics": {
+   "duration_ms": 9.505900000021938,
+   "n_donors_admitted": 0,
+   "n_estimator_fits": 0,
+   "n_units_observed": 81,
+   "stage_durations_ms": {}
+  },
+  "run_id": "run_e85d66dd47354cf0",
+  "seed": 20260101,
+  "spec_hash": "65496c3c8795dab6a0be477a8b25d257",
+  "started_at": "2026-11-10T15:01:12.290674+00:00",
+  "status": "refused"
+ },
+ "run_id": "run_e85d66dd47354cf0",
+ "spec_hash": "65496c3c8795dab6a0be477a8b25d257",
+ "status": "succeeded"
+}

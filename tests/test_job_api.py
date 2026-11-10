@@ -41,10 +41,11 @@ from groundtruth.platform.api.dependencies import get_jobs, get_store, reset_sto
 from groundtruth.platform.api.errors import API_ERROR_STATUS, ApiErrorCode
 from groundtruth.platform.cases.registry import get_case
 from groundtruth.platform.datasets.access import synthetic_access
+from groundtruth.platform.datasets.synthetic import simulation_pin
 from groundtruth.platform.jobs.lifecycle import DEFAULT_LEASE, LeaseLostError
 from groundtruth.platform.jobs.queue import JobQueue
 from groundtruth.platform.jobs.service import SqlJobService
-from groundtruth.platform.jobs.worker import Worker, default_resolve_access
+from groundtruth.platform.jobs.worker import DEFAULT_TRUE_EFFECT, Worker, default_resolve_access
 from groundtruth.platform.store import database, migrate
 from groundtruth.platform.store.database import create_db_engine, create_session_factory
 from groundtruth.platform.store.models import AnalysisRunRow, CaseRow, JobRow
@@ -70,7 +71,10 @@ class FakeClock:
 
 
 def _request(*, seed: int = 20260101, min_donors: int | None = None) -> AnalysisRequest:
-    return get_case("kariba-redd").to_request(seed=seed, min_donors=min_donors)
+    """What POST /jobs submits: the simulation pinned with the default effect (#42, #47)."""
+    return get_case("kariba-redd").to_request(
+        seed=seed, min_donors=min_donors, datasets=(simulation_pin(DEFAULT_TRUE_EFFECT),)
+    )
 
 
 @pytest.fixture(scope="module")

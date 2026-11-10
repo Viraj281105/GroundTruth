@@ -136,6 +136,48 @@ and the run id joins on the next line.
 
 ---
 
+### 2.4 Reproducibility replay (#42)
+
+ADR-006 promises that the same `spec_hash`, seed and engine version give the same numbers.
+`groundtruth-replay` (or `python -m groundtruth.platform.replay`) checks that promise against
+stored runs: each run is replayed from **its own stored request** through `run_analysis`, and
+compared item by item with what was stored.
+
+| Outcome | Meaning | Exit code |
+|---|---|---|
+| reproduced | The replay matches: numbers within a relative `1e-9`, and the verdict label, status and any refusal's code and stage exactly. | 0 |
+| **mismatch** | Same engine version, different result. A bug: investigate before trusting any result of that version. | **1** |
+| expected change | A different engine version produced it. A methodology change is meant to change the answer; listed separately. | 0 |
+| skipped | Cannot be replayed honestly, with the reason: an observed-data run whose data is unavailable (never replayed on simulated data), a failed or cancelled job, or a run saved before requests were stored. | 0 |
+
+```bash
+groundtruth-replay                                 # the database at DATABASE_URL (read-only)
+groundtruth-replay --golden tests/golden/stored_runs
+groundtruth-replay --json                          # machine-readable
+```
+
+CI replays the golden stored runs (`tests/golden/stored_runs`, made by the real simulated path)
+on every push, and the `replay` workflow repeats it **daily at 04:30 UTC** on Python 3.11, 3.12
+and 3.13, plus a deployment's database when a `REPLAY_DATABASE_URL` secret is set. Regenerate the
+golden runs after an intended engine change with `GROUNDTRUTH_UPDATE_GOLDEN=1 pytest
+tests/test_replay.py`, and review the diff.
+
+A simulated run's injected effect is part of its specification (pinned as the synthetic dataset
+`groundtruth-synthetic-simulation`), so the replay reads it from the stored request. A run
+stored before that (or submitted by the CLI) carries no pin; its replay assumes the worker's
+default effect, 0.06, and says so.
+
+### 2.5 Interactive and batch work (#47)
+
+Every job has a lane. `POST /jobs` (a person waiting in the UI) is **interactive**; the CLI and a
+new case's first run are **batch**. Workers always take interactive jobs first, oldest first
+within a lane. A running job is never interrupted, so with every worker busy a person waits at
+most for one job to finish.
+
+To guarantee room for people, cap how many batch jobs may run at once across all workers:
+`WORKER_BATCH_MAX_RUNNING` (or `--batch-max-running`). Unset means no cap. With N workers, set it
+to N - 1 to keep one worker for interactive work.
+
 ## 3. Operational Runbooks
 
 ### 3.1 Scenario: Upstream STAC Provider Quota Exhaustion

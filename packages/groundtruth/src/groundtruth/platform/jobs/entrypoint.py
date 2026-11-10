@@ -123,6 +123,12 @@ def seed_demo(extra: dict[str, str]) -> None:
     logger.info("demo seed complete", extra=extra)
 
 
+def _env_int(name: str) -> int | None:
+    """An integer from the environment, or ``None`` when unset or blank."""
+    value = os.environ.get(name, "").strip()
+    return int(value) if value else None
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m apps.worker.main",
@@ -152,6 +158,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Effect injected into SIMULATED runs only (default %(default)s).",
     )
     parser.add_argument("--log-level", default=None, help="Override the configured log level.")
+    parser.add_argument(
+        "--batch-max-running",
+        type=int,
+        default=_env_int("WORKER_BATCH_MAX_RUNNING"),
+        help="Run at most this many batch jobs at once across all workers, keeping the rest "
+        "free for interactive work (env WORKER_BATCH_MAX_RUNNING; default: no limit). "
+        "Interactive jobs are always taken first.",
+    )
     return parser
 
 
@@ -197,7 +211,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     db = create_db_engine(url)
-    queue = JobQueue(create_session_factory(db))
+    queue = JobQueue(create_session_factory(db), batch_max_running=args.batch_max_running)
     worker = Worker(
         queue,
         resolve_access=default_resolve_access(args.true_effect),

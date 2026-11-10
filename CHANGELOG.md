@@ -41,6 +41,44 @@ flowchart LR
   - Organization boundaries, project grants, Scrypt password hashing ($N=32768, r=8, p=1$), timing attack mitigation, and session cookies with HttpOnly, SameSite, and Secure flags.
   - Row-level tenant isolation returning `HTTP 403 Forbidden` on unauthorized cross-tenant queries.
 
+### Added on `bhumi-dev`: replay harness, simulation pin and performance (#42, #47)
+- **Reproducibility replay (#42).** `groundtruth-replay` replays every stored run from its own
+  stored request (proven to hash to its `spec_hash`), through `run_analysis` only, and compares
+  it item by item with #35's diff (relative `1e-9`; verdict, status and refusal code exact). A
+  difference within one engine version fails (exit 1); across versions it is reported as expected
+  change; observed-data runs whose data is unavailable are skipped with the reason, never replayed
+  on simulated data. Five golden stored runs, made by the real simulated path (completed, refused,
+  Viraj's golden spec, an unpinned legacy run, a second case), are replayed on every push and
+  daily at 04:30 UTC on Python 3.11 to 3.13 (`.github/workflows/replay.yml`).
+- **The simulation is part of the specification.** A simulated run's injected `true_effect` was
+  recorded nowhere, so two runs with different effects shared a `spec_hash`: the cache could
+  answer one with the other and a replay could not know which effect to use. `POST /jobs` and
+  `/verify` now pin it as a synthetic dataset (`groundtruth-synthetic-simulation`), which the
+  contract already supports; the worker runs the pinned effect. New simulated runs therefore have
+  new `spec_hash`es. Viraj's golden snapshot and the web fixtures are unchanged.
+- **Performance (#47).** Two queries degraded with run count and are now indexed (migration
+  0008): every tenant-scoped run listing (`analysis_runs.project_id`, unindexed since 0007) and
+  the lease reaper every claim runs first (`jobs.lease_expires_at`, a full scan of every job ever
+  run). A test checks the query plan of every listing, the claim, the reaper and the cache lookup.
+  Jobs have a lane: `POST /jobs` is interactive and is always claimed before batch work (the CLI,
+  a new case's first run); `WORKER_BATCH_MAX_RUNNING` optionally caps running batch jobs.
+
+### Added on `bhumi-dev`: pre-commit hook and API documentation (#21, #41)
+- **Pre-commit hook (#21).** `scripts/hooks/pre-commit` (enable with
+  `git config core.hooksPath scripts/hooks`) checks only staged files with CI's own commands:
+  `ruff format --check` and `ruff check` on `packages/` and `tests/`, ESLint on web files, and
+  gitleaks when installed. Checks run in parallel; measured on Windows about 0.3 s for a Python
+  change and 1.3 s with web files. It never runs mypy or tests and never edits a file. ruff is
+  pinned (`ruff==0.17.3`) in the dev extra so the hook and CI cannot disagree; a test fails if the
+  optional `.pre-commit-config.yaml` drifts from that pin, and mypy moved to its manual stage.
+  Setup in `DEVELOPMENT.md`, section 9.
+- **API documentation (#41).** A consumer guide, `docs/api/README.md`: sign-in and CSRF, jobs and
+  polling, reading and comparing runs, exports, limits, simulated vs observed data, and the
+  refusal-vs-error distinction explained, with every error code in one table. Its 15 worked examples
+  (a completed run, refusals, a validation error, a 429 among them) are produced by calling the API,
+  and a test fails when they go stale. Every operation, parameter, field and schema in the OpenAPI
+  schema is now described (a test enforces it), and the CSV and PDF exports are in the schema.
+
 ### Added on `bhumi-dev`: production hardening and monitoring (#50, #51)
 - **Sign-in on every write (#51).** The API refuses to start with `APP_ENV=production` and
   `AUTH_REQUIRED=false`. `POST /cases` requires sign-in even with auth off, because it writes

@@ -281,7 +281,7 @@ def test_job_requested_by_filled(world: World) -> None:
 
 
 def test_cache_hit_on_an_unfiled_run_adopts_the_project(world: World) -> None:
-    orphan = queue_run(world.sessions, GRANTED_CASE, None, seed_value=20260101)
+    orphan = queue_run(world.sessions, GRANTED_CASE, None, seed_value=20260101, as_post_jobs=True)
     r = world.client("ref").post("/jobs", json={"case_id": GRANTED_CASE})
     assert r.status_code == 200 and r.json()["run_id"] == orphan, r.text
     with world.sessions() as db:

@@ -90,7 +90,8 @@
                 }
               ],
               "title": "Data Mode"
-            }
+            },
+            "description": "Only runs on `simulated` or `observed` data."
           },
           {
             "name": "created_after",
@@ -331,7 +332,8 @@
             "schema": {
               "type": "string",
               "title": "Run Id"
-            }
+            },
+            "description": "Run identifier, as returned when the run was submitted or listed."
           },
           {
             "name": "include_bundle",
@@ -567,7 +569,8 @@
             "schema": {
               "type": "string",
               "title": "Run Id"
-            }
+            },
+            "description": "Run identifier, as returned when the run was submitted or listed."
           }
         ],
         "responses": {
@@ -650,7 +653,8 @@
             "schema": {
               "type": "string",
               "title": "Run Id"
-            }
+            },
+            "description": "Run identifier, as returned when the run was submitted or listed."
           }
         ],
         "responses": {
@@ -753,7 +757,8 @@
             "schema": {
               "type": "string",
               "title": "Job Id"
-            }
+            },
+            "description": "The job's run identifier."
           }
         ],
         "responses": {
@@ -826,7 +831,8 @@
             "schema": {
               "type": "string",
               "title": "Case Id"
-            }
+            },
+            "description": "Case identifier, as listed by `GET /cases`."
           }
         ],
         "responses": {
@@ -894,7 +900,8 @@
               "maximum": 22,
               "minimum": 0,
               "title": "Z"
-            }
+            },
+            "description": "Tile zoom level."
           },
           {
             "name": "x",
@@ -904,7 +911,8 @@
               "type": "integer",
               "minimum": 0,
               "title": "X"
-            }
+            },
+            "description": "Tile column."
           },
           {
             "name": "y",
@@ -914,7 +922,8 @@
               "type": "integer",
               "minimum": 0,
               "title": "Y"
-            }
+            },
+            "description": "Tile row."
           }
         ],
         "responses": {
@@ -1199,7 +1208,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Checks the credentials and sets the `gt_session` cookie (HttpOnly, SameSite=Lax; Secure behind HTTPS). Send that cookie on every later request. A wrong email or password are indistinguishable (`invalid_credentials`, 401); 5 failures for one email from one address in 15 minutes are refused with `too_many_attempts` (429, `Retry-After`)."
       }
     },
     "/auth/logout": {
@@ -1255,7 +1265,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Your session: the account, your organizations and the active one. Never an error for a signed-out caller; `user` is then null."
       }
     },
     "/auth/change-password": {
@@ -1365,7 +1376,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Every account. Platform administrators only (403)."
       }
     },
     "/auth/users/{user_id}": {
@@ -1383,7 +1395,8 @@
             "schema": {
               "type": "string",
               "title": "User Id"
-            }
+            },
+            "description": "User id."
           }
         ],
         "requestBody": {
@@ -1467,7 +1480,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Change an account's platform role or deactivate it. Platform administrators only (403); an unknown user is 404 `user_not_found`."
       }
     },
     "/orgs": {
@@ -1476,6 +1490,7 @@
           "organizations"
         ],
         "summary": "Organizations you belong to",
+        "description": "Every organization your account belongs to, with your role in each. Needs sign-in but no\nactive organization.",
         "operationId": "list_orgs_orgs_get",
         "responses": {
           "200": {
@@ -1519,6 +1534,7 @@
           "organizations"
         ],
         "summary": "Create an organization (you become its owner)",
+        "description": "Creates an organization of the given type, with you as its owner. Audited (`org.create`).",
         "operationId": "create_org_orgs_post",
         "requestBody": {
           "content": {
@@ -1652,6 +1668,7 @@
           "organizations"
         ],
         "summary": "List members of the active organization",
+        "description": "Members of the organization named by `slug`, which must be your active organization (404\notherwise). Needs a role that may manage members (403 otherwise).",
         "operationId": "list_members_orgs__slug__members_get",
         "parameters": [
           {
@@ -1661,7 +1678,8 @@
             "schema": {
               "type": "string",
               "title": "Slug"
-            }
+            },
+            "description": "Slug of your active organization."
           }
         ],
         "responses": {
@@ -1736,6 +1754,7 @@
           "organizations"
         ],
         "summary": "Add an existing account to the active organization",
+        "description": "Adds an existing account, found by email, with a role. No such account is 404\n`user_not_found`; a change your role may not make is 403 `forbidden`; a change that breaks a\nmembership rule (e.g. an existing member) is 409 `conflict` with the reason. `slug` must be\nyour active organization. Audited (`org.member_add`).",
         "operationId": "add_member_orgs__slug__members_post",
         "parameters": [
           {
@@ -1745,7 +1764,8 @@
             "schema": {
               "type": "string",
               "title": "Slug"
-            }
+            },
+            "description": "Slug of your active organization."
           }
         ],
         "requestBody": {
@@ -1838,6 +1858,7 @@
           "organizations"
         ],
         "summary": "Change a member's role",
+        "description": "Changes a member's role. Not a member is 404 `user_not_found`; a change your role may not\nmake is 403 `forbidden`; a change that breaks a membership rule is 409 `conflict` with the\nreason. Audited (`org.member_role`).",
         "operationId": "set_role_orgs__slug__members__user_id__patch",
         "parameters": [
           {
@@ -1847,7 +1868,8 @@
             "schema": {
               "type": "string",
               "title": "User Id"
-            }
+            },
+            "description": "User id."
           },
           {
             "name": "slug",
@@ -1856,7 +1878,8 @@
             "schema": {
               "type": "string",
               "title": "Slug"
-            }
+            },
+            "description": "Slug of your active organization."
           }
         ],
         "requestBody": {
@@ -1947,6 +1970,7 @@
           "organizations"
         ],
         "summary": "Remove a member",
+        "description": "Removes a member. Not a member is 404 `user_not_found`; a removal your role may not make is\n403 `forbidden`; one that breaks a membership rule is 409 `conflict` with the reason. Answers\n204 with no body. Audited (`org.member_remove`).",
         "operationId": "remove_member_orgs__slug__members__user_id__delete",
         "parameters": [
           {
@@ -1956,7 +1980,8 @@
             "schema": {
               "type": "string",
               "title": "User Id"
-            }
+            },
+            "description": "User id."
           },
           {
             "name": "slug",
@@ -1965,7 +1990,8 @@
             "schema": {
               "type": "string",
               "title": "Slug"
-            }
+            },
+            "description": "Slug of your active organization."
           }
         ],
         "responses": {
@@ -2051,7 +2077,8 @@
             "schema": {
               "type": "string",
               "title": "Slug"
-            }
+            },
+            "description": "Slug of your active organization."
           }
         ],
         "responses": {
@@ -2124,6 +2151,7 @@
           "organizations"
         ],
         "summary": "The organization's audit log, newest first (owners and admins)",
+        "description": "Security-relevant events of your active organization (`slug` must be it), newest first. Page\nwith `cursor` and `limit` (1 to 200). Needs a role that may read the audit log (403 otherwise).\nA cursor that is not valid is 422 `invalid_cursor`; note that `GET /runs` answers the same code\nwith 400.",
         "operationId": "get_audit_orgs__slug__audit_get",
         "parameters": [
           {
@@ -2133,7 +2161,8 @@
             "schema": {
               "type": "string",
               "title": "Slug"
-            }
+            },
+            "description": "Slug of your active organization."
           },
           {
             "name": "cursor",
@@ -2163,7 +2192,8 @@
               "minimum": 1,
               "default": 50,
               "title": "Limit"
-            }
+            },
+            "description": "Most items to return on one page."
           }
         ],
         "responses": {
@@ -2246,7 +2276,8 @@
             "schema": {
               "type": "string",
               "title": "Slug"
-            }
+            },
+            "description": "Slug of your active organization."
           },
           {
             "name": "limit",
@@ -2258,7 +2289,8 @@
               "minimum": 1,
               "default": 20,
               "title": "Limit"
-            }
+            },
+            "description": "Most items to return on one page."
           }
         ],
         "responses": {
@@ -2335,6 +2367,7 @@
           "projects"
         ],
         "summary": "Projects the organization owns or has been granted",
+        "description": "Projects your active organization owns, and projects other organizations have granted it,\neach with your access level.",
         "operationId": "list_projects_orgs__slug__projects_get",
         "parameters": [
           {
@@ -2344,7 +2377,8 @@
             "schema": {
               "type": "string",
               "title": "Slug"
-            }
+            },
+            "description": "Slug of your active organization."
           }
         ],
         "responses": {
@@ -2419,6 +2453,7 @@
           "projects"
         ],
         "summary": "Create a project from a boundary file (GeoJSON or KML, max 5 MB)",
+        "description": "Creates a project from multipart form fields and a boundary file (GeoJSON or KML, at most 5\nMB). The boundary is validated before anything is stored; a bad one is 422 `invalid_boundary`\nwith the reason. Your organization becomes the owner.",
         "operationId": "create_project_orgs__slug__projects_post",
         "parameters": [
           {
@@ -2428,7 +2463,8 @@
             "schema": {
               "type": "string",
               "title": "Slug"
-            }
+            },
+            "description": "Slug of your active organization."
           }
         ],
         "requestBody": {
@@ -2511,6 +2547,7 @@
           "projects"
         ],
         "summary": "One project by id or slug",
+        "description": "One project, by id or slug, if your active organization owns it or has been granted it.\nOtherwise 404: a project you may not see is answered like one that does not exist.",
         "operationId": "get_project_projects__project_id__get",
         "parameters": [
           {
@@ -2520,7 +2557,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           }
         ],
         "responses": {
@@ -2593,6 +2631,7 @@
           "projects"
         ],
         "summary": "Computed readiness: can causal attribution be attempted?",
+        "description": "Whether causal attribution can be attempted, criterion by criterion, computed from the\nevidence on file. Like every project data response it carries `data_mode` and `access_level`.",
         "operationId": "get_readiness_projects__project_id__readiness_get",
         "parameters": [
           {
@@ -2602,7 +2641,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           }
         ],
         "responses": {
@@ -2685,7 +2725,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           },
           {
             "name": "indicator",
@@ -2776,6 +2817,7 @@
           "projects"
         ],
         "summary": "Annual climate series for the project",
+        "description": "The project's annual climate record: rainfall, its anomaly, SPI-12 and temperature. When no\nrecord exists the status is `unavailable` with the reason, and no value is invented. The bundle\nchecksum appears from the `contribute` level.",
         "operationId": "get_climate_projects__project_id__climate_get",
         "parameters": [
           {
@@ -2785,7 +2827,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           }
         ],
         "responses": {
@@ -2868,7 +2911,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           }
         ],
         "responses": {
@@ -2951,7 +2995,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           }
         ],
         "responses": {
@@ -3034,7 +3079,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           }
         ],
         "responses": {
@@ -3117,7 +3163,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           }
         ],
         "responses": {
@@ -3203,7 +3250,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           }
         ],
         "responses": {
@@ -3279,6 +3327,7 @@
           "projects"
         ],
         "summary": "Organizations the project is currently granted to",
+        "description": "Organizations the project is currently granted to, and at what level. Needs the right to\nmanage the project's sharing (403 otherwise).",
         "operationId": "list_grants_projects__project_id__grants_get",
         "parameters": [
           {
@@ -3288,7 +3337,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           }
         ],
         "responses": {
@@ -3383,7 +3433,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           }
         ],
         "requestBody": {
@@ -3486,7 +3537,8 @@
             "schema": {
               "type": "string",
               "title": "Org Slug"
-            }
+            },
+            "description": "Slug of the organization the grant is for."
           },
           {
             "name": "project_id",
@@ -3495,7 +3547,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           }
         ],
         "responses": {
@@ -3581,7 +3634,8 @@
             "schema": {
               "type": "string",
               "title": "Project Id"
-            }
+            },
+            "description": "Project id or slug."
           }
         ],
         "responses": {
@@ -3657,7 +3711,7 @@
         "tags": [
           "meta"
         ],
-        "summary": "Health",
+        "summary": "Service status and what the engine can do",
         "description": "Liveness and honest capability reporting.",
         "operationId": "health_health_get",
         "responses": {
@@ -3679,7 +3733,7 @@
         "tags": [
           "cases"
         ],
-        "summary": "List Case Summaries",
+        "summary": "List the cases this deployment knows",
         "description": "List the case definitions whose projects the active organization owns or was granted.",
         "operationId": "list_case_summaries_cases_get",
         "responses": {
@@ -3713,7 +3767,7 @@
         "tags": [
           "cases"
         ],
-        "summary": "Create Case",
+        "summary": "Create a case (sign-in always required)",
         "description": "Create, calibrate and register a new project case.\n\nEverything is validated before anything is written. A rejected case answers a structured\n422 (`invalid_case`, with the field named, or `case_status_requires_review`) and leaves\nno file behind. Cases are always created as `scaffolded`. Sign-in is always required, and\nthe creation is audited (`case.create`).",
         "operationId": "create_case_cases_post",
         "requestBody": {
@@ -3762,7 +3816,7 @@
         "tags": [
           "cases"
         ],
-        "summary": "Get Case Detail",
+        "summary": "One case in full",
         "description": "Return one case definition in full.",
         "operationId": "get_case_detail_cases__case_id__get",
         "parameters": [
@@ -3773,7 +3827,8 @@
             "schema": {
               "type": "string",
               "title": "Case Id"
-            }
+            },
+            "description": "Case identifier, as listed by `GET /cases`."
           }
         ],
         "responses": {
@@ -3815,7 +3870,7 @@
         "tags": [
           "verification"
         ],
-        "summary": "Verify",
+        "summary": "Run a verification now and wait for the result",
         "description": "Run the verification pipeline for a case.\n\nNeeds what starting a job needs: a role that may start runs in the organization that owns\nthe case's project. The run is audited (`run.start`).\n\nSynchronous today. The analysis job lifecycle (queue, poll, cancel) is\ntracked separately; this endpoint keeps the same response shape so the\nfrontend contract does not change when it moves behind a job.",
         "operationId": "verify_cases__case_id__verify_post",
         "parameters": [
@@ -3826,7 +3881,8 @@
             "schema": {
               "type": "string",
               "title": "Case Id"
-            }
+            },
+            "description": "Case identifier, as listed by `GET /cases`."
           }
         ],
         "requestBody": {
@@ -3939,6 +3995,259 @@
           }
         }
       }
+    },
+    "/cases/{case_id}/export/csv": {
+      "get": {
+        "tags": [
+          "exports"
+        ],
+        "summary": "Download a case's evidence bundle as CSV",
+        "description": "Export the case's evidence bundle as a UTF-8 CSV attachment.\n\nEvery evidence item with its value, unit, uncertainty and provenance fingerprint. The\n`X-GroundTruth-Data-Mode` header and the `# is_simulated` line say whether the data is\nsimulated. Audited (`export.download`).",
+        "operationId": "export_case_csv_cases__case_id__export_csv_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            },
+            "description": "Case identifier, as listed by `GET /cases`."
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Deterministic RNG seed",
+              "default": 20260101,
+              "title": "Seed"
+            },
+            "description": "Deterministic RNG seed"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A UTF-8 CSV: provenance header lines starting with `#`, then one row per evidence item.",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "description": "`attachment`, with the file name.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-GroundTruth-Data-Mode": {
+                "description": "`simulated` or `observed`: what the exported data is.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "simulated",
+                    "observed"
+                  ]
+                }
+              },
+              "X-GroundTruth-Report-Generator": {
+                "description": "Who wrote the report: `deterministic`, or `genai:<provider>`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role may not export (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown case, or no access to its project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cases/{case_id}/export/pdf": {
+      "get": {
+        "tags": [
+          "exports"
+        ],
+        "summary": "Download a case's verified screening report as PDF",
+        "description": "Export the case's screening verification report as a self-contained PDF attachment.\n\nThe report is verified against its own evidence bundle before it is exported, and the PDF\nsays which generator wrote it. Without ``narrate`` it is the deterministic report.",
+        "operationId": "export_case_pdf_cases__case_id__export_pdf_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            },
+            "description": "Case identifier, as listed by `GET /cases`."
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "description": "Deterministic RNG seed",
+              "default": 20260101,
+              "title": "Seed"
+            },
+            "description": "Deterministic RNG seed"
+          },
+          {
+            "name": "narrate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Narrate the report with the configured GenAI provider. The narration is verified against the bundle first, and the export is refused (never substituted) if it fails.",
+              "default": false,
+              "title": "Narrate"
+            },
+            "description": "Narrate the report with the configured GenAI provider. The narration is verified against the bundle first, and the export is refused (never substituted) if it fails."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A self-contained PDF report, verified against its own evidence bundle.",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Disposition": {
+                "description": "`attachment`, with the file name.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-GroundTruth-Data-Mode": {
+                "description": "`simulated` or `observed`: what the exported data is.",
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "simulated",
+                    "observed"
+                  ]
+                }
+              },
+              "X-GroundTruth-Report-Generator": {
+                "description": "Who wrote the report: `deterministic`, or `genai:<provider>`.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`unauthenticated`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your role may not export (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown case, or no access to its project.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`narrate=true` but no GenAI provider is configured (`narration_not_configured`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "The report that would be exported fails verification (`report_not_grounded`): a defect, never shipped.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The narration failed (`narration_failed`) or failed verification (`narration_not_grounded`). The export is refused, never substituted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3947,20 +4256,24 @@
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id"
+            "title": "Id",
+            "description": "Event id."
           },
           "occurred_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Occurred At"
+            "title": "Occurred At",
+            "description": "When it happened (UTC)."
           },
           "action": {
             "type": "string",
-            "title": "Action"
+            "title": "Action",
+            "description": "What was done."
           },
           "outcome": {
             "type": "string",
-            "title": "Outcome"
+            "title": "Outcome",
+            "description": "`success` or `denied`."
           },
           "project_id": {
             "anyOf": [
@@ -3971,7 +4284,8 @@
                 "type": "null"
               }
             ],
-            "title": "Project Id"
+            "title": "Project Id",
+            "description": "The project concerned."
           },
           "project_slug": {
             "anyOf": [
@@ -3982,7 +4296,8 @@
                 "type": "null"
               }
             ],
-            "title": "Project Slug"
+            "title": "Project Slug",
+            "description": "Its slug."
           },
           "project_name": {
             "anyOf": [
@@ -3993,7 +4308,8 @@
                 "type": "null"
               }
             ],
-            "title": "Project Name"
+            "title": "Project Name",
+            "description": "Its name."
           },
           "own": {
             "type": "boolean",
@@ -4020,7 +4336,8 @@
           "email": {
             "type": "string",
             "maxLength": 254,
-            "title": "Email"
+            "title": "Email",
+            "description": "The user's email address."
           },
           "role": {
             "type": "string",
@@ -4030,7 +4347,8 @@
               "member",
               "viewer"
             ],
-            "title": "Role"
+            "title": "Role",
+            "description": "Their role: admin, member or viewer."
           }
         },
         "type": "object",
@@ -4038,7 +4356,8 @@
           "email",
           "role"
         ],
-        "title": "AddMemberRequest"
+        "title": "AddMemberRequest",
+        "description": "Add an existing user to the organization."
       },
       "AnalysisStatus": {
         "type": "string",
@@ -4055,11 +4374,13 @@
       "ApiErrorBody": {
         "properties": {
           "detail": {
-            "$ref": "#/components/schemas/ApiErrorDetail"
+            "$ref": "#/components/schemas/ApiErrorDetail",
+            "description": "What went wrong."
           },
           "is_refusal": {
             "type": "boolean",
             "title": "Is Refusal",
+            "description": "True only for a scientific refusal. Here always false.",
             "default": false
           },
           "request_id": {
@@ -4071,7 +4392,8 @@
                 "type": "null"
               }
             ],
-            "title": "Request Id"
+            "title": "Request Id",
+            "description": "Identifier of this request, also in the `X-Request-ID` header. Quote it when reporting a\nproblem."
           }
         },
         "type": "object",
@@ -4087,11 +4409,13 @@
         "properties": {
           "code": {
             "type": "string",
-            "title": "Code"
+            "title": "Code",
+            "description": "Machine-readable code. Act on this, not on the prose; every code is listed in\ndocs/api/README.md."
           },
           "message": {
             "type": "string",
-            "title": "Message"
+            "title": "Message",
+            "description": "Plain-language explanation, safe to show a user."
           },
           "hint": {
             "anyOf": [
@@ -4102,11 +4426,13 @@
                 "type": "null"
               }
             ],
-            "title": "Hint"
+            "title": "Hint",
+            "description": "What to do about it, when known."
           },
           "is_refusal": {
             "type": "boolean",
             "title": "Is Refusal",
+            "description": "True only for a scientific refusal; every other error says false.",
             "default": false
           }
         },
@@ -4117,7 +4443,8 @@
           "hint",
           "is_refusal"
         ],
-        "title": "ApiErrorDetail"
+        "title": "ApiErrorDetail",
+        "description": "What went wrong, in the shape every structured error uses."
       },
       "AssessmentView": {
         "properties": {
@@ -4143,15 +4470,18 @@
           },
           "level": {
             "type": "integer",
-            "title": "Level"
+            "title": "Level",
+            "description": "Assessment level reached, 0 to 5."
           },
           "level_name": {
             "type": "string",
-            "title": "Level Name"
+            "title": "Level Name",
+            "description": "Not assessable, Basic monitoring, Contextual intelligence, Comparative intelligence,\nAttribution assessment or Verified impact; `(simulated)` is appended for simulated data."
           },
           "evidence_confidence": {
             "type": "string",
-            "title": "Evidence Confidence"
+            "title": "Evidence Confidence",
+            "description": "Overall confidence in the evidence: High, Moderate or Low."
           },
           "simulated_banner": {
             "anyOf": [
@@ -4162,36 +4492,44 @@
                 "type": "null"
               }
             ],
-            "title": "Simulated Banner"
+            "title": "Simulated Banner",
+            "description": "The notice to show when the assessment rests on simulated data."
           },
           "observed_outcome": {
-            "$ref": "#/components/schemas/ConclusionView"
+            "$ref": "#/components/schemas/ConclusionView",
+            "description": "What was observed."
           },
           "ecological_assessment": {
-            "$ref": "#/components/schemas/ConclusionView"
+            "$ref": "#/components/schemas/ConclusionView",
+            "description": "What it means ecologically."
           },
           "climate_adjusted_interpretation": {
-            "$ref": "#/components/schemas/ConclusionView"
+            "$ref": "#/components/schemas/ConclusionView",
+            "description": "The observation read against the climate record."
           },
           "comparative_assessment": {
-            "$ref": "#/components/schemas/ConclusionView"
+            "$ref": "#/components/schemas/ConclusionView",
+            "description": "The project against comparable areas."
           },
           "attribution": {
-            "$ref": "#/components/schemas/AttributionView"
+            "$ref": "#/components/schemas/AttributionView",
+            "description": "Whether the change can be attributed to the project."
           },
           "dimensions": {
             "items": {
               "$ref": "#/components/schemas/DimensionView"
             },
             "type": "array",
-            "title": "Dimensions"
+            "title": "Dimensions",
+            "description": "The eight dimensions."
           },
           "recommendations": {
             "items": {
               "$ref": "#/components/schemas/RecommendationView"
             },
             "type": "array",
-            "title": "Recommendations"
+            "title": "Recommendations",
+            "description": "Suggested next steps, most urgent first."
           }
         },
         "type": "object",
@@ -4210,36 +4548,43 @@
           "dimensions",
           "recommendations"
         ],
-        "title": "AssessmentView"
+        "title": "AssessmentView",
+        "description": "The project's layered assessment: what is known, at what level of evidence."
       },
       "AttributionView": {
         "properties": {
           "verdict": {
             "type": "string",
-            "title": "Verdict"
+            "title": "Verdict",
+            "description": "Supported, Not supported or Inconclusive."
           },
           "methodology": {
             "type": "string",
-            "title": "Methodology"
+            "title": "Methodology",
+            "description": "How attribution was assessed."
           },
           "limitation": {
             "type": "string",
-            "title": "Limitation"
+            "title": "Limitation",
+            "description": "The main limitation on the verdict."
           },
           "finding": {
             "type": "string",
-            "title": "Finding"
+            "title": "Finding",
+            "description": "The finding, in one sentence."
           },
           "evidence_needed": {
             "type": "string",
-            "title": "Evidence Needed"
+            "title": "Evidence Needed",
+            "description": "What evidence would strengthen it."
           },
           "evidence_refs": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Evidence Refs"
+            "title": "Evidence Refs",
+            "description": "Evidence ids it rests on."
           },
           "diagnostic_refs": {
             "anyOf": [
@@ -4254,6 +4599,7 @@
               }
             ],
             "title": "Diagnostic Refs",
+            "description": "Diagnostics behind it. Absent below the `audit` level.",
             "min_level": "audit"
           }
         },
@@ -4267,18 +4613,21 @@
           "evidence_refs",
           "diagnostic_refs"
         ],
-        "title": "AttributionView"
+        "title": "AttributionView",
+        "description": "Whether the observed change can be attributed to the project."
       },
       "AuditEventView": {
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id"
+            "title": "Id",
+            "description": "Event id."
           },
           "occurred_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Occurred At"
+            "title": "Occurred At",
+            "description": "When it happened (UTC)."
           },
           "actor_user_id": {
             "anyOf": [
@@ -4289,15 +4638,18 @@
                 "type": "null"
               }
             ],
-            "title": "Actor User Id"
+            "title": "Actor User Id",
+            "description": "Who did it, when signed in."
           },
           "action": {
             "type": "string",
-            "title": "Action"
+            "title": "Action",
+            "description": "What was done, e.g. `run.start`, `case.create`, `auth.login`."
           },
           "resource_type": {
             "type": "string",
-            "title": "Resource Type"
+            "title": "Resource Type",
+            "description": "Kind of resource acted on."
           },
           "resource_id": {
             "anyOf": [
@@ -4308,11 +4660,13 @@
                 "type": "null"
               }
             ],
-            "title": "Resource Id"
+            "title": "Resource Id",
+            "description": "The resource acted on."
           },
           "outcome": {
             "type": "string",
-            "title": "Outcome"
+            "title": "Outcome",
+            "description": "`success` or `denied`."
           },
           "ip": {
             "anyOf": [
@@ -4323,7 +4677,8 @@
                 "type": "null"
               }
             ],
-            "title": "Ip"
+            "title": "Ip",
+            "description": "Client address."
           },
           "user_agent": {
             "anyOf": [
@@ -4334,12 +4689,14 @@
                 "type": "null"
               }
             ],
-            "title": "User Agent"
+            "title": "User Agent",
+            "description": "Client user agent."
           },
           "details": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Details"
+            "title": "Details",
+            "description": "Structured context of the event."
           }
         },
         "type": "object",
@@ -4355,7 +4712,8 @@
           "user_agent",
           "details"
         ],
-        "title": "AuditEventView"
+        "title": "AuditEventView",
+        "description": "One security-relevant event."
       },
       "AuditPage": {
         "properties": {
@@ -4364,7 +4722,8 @@
               "$ref": "#/components/schemas/AuditEventView"
             },
             "type": "array",
-            "title": "Events"
+            "title": "Events",
+            "description": "Events on this page."
           },
           "next_cursor": {
             "anyOf": [
@@ -4375,7 +4734,8 @@
                 "type": "null"
               }
             ],
-            "title": "Next Cursor"
+            "title": "Next Cursor",
+            "description": "Pass as `cursor` for the next page; null on the last."
           }
         },
         "type": "object",
@@ -4383,25 +4743,30 @@
           "events",
           "next_cursor"
         ],
-        "title": "AuditPage"
+        "title": "AuditPage",
+        "description": "A page of audit events, newest first."
       },
       "BundleDiff": {
         "properties": {
           "summary": {
-            "$ref": "#/components/schemas/DiffSummary"
+            "$ref": "#/components/schemas/DiffSummary",
+            "description": "Counts by status."
           },
           "items": {
             "items": {
               "$ref": "#/components/schemas/ItemDiff"
             },
             "type": "array",
-            "title": "Items"
+            "title": "Items",
+            "description": "Every id in either bundle, sorted by id."
           },
           "verdict": {
-            "$ref": "#/components/schemas/VerdictDiff"
+            "$ref": "#/components/schemas/VerdictDiff",
+            "description": "The verdicts side by side."
           },
           "warnings": {
-            "$ref": "#/components/schemas/WarningsDiff"
+            "$ref": "#/components/schemas/WarningsDiff",
+            "description": "Warnings in only one bundle."
           }
         },
         "type": "object",
@@ -4418,19 +4783,23 @@
         "properties": {
           "case_id": {
             "type": "string",
-            "title": "Case Id"
+            "title": "Case Id",
+            "description": "Stable identifier of the case, used in every case and run URL."
           },
           "name": {
             "type": "string",
-            "title": "Name"
+            "title": "Name",
+            "description": "Human-readable project name."
           },
           "country": {
             "type": "string",
-            "title": "Country"
+            "title": "Country",
+            "description": "Country the project lies in."
           },
           "standard": {
             "type": "string",
-            "title": "Standard"
+            "title": "Standard",
+            "description": "Certification standard the project reports under, e.g. `VCS`."
           },
           "registry_id": {
             "anyOf": [
@@ -4441,31 +4810,38 @@
                 "type": "null"
               }
             ],
-            "title": "Registry Id"
+            "title": "Registry Id",
+            "description": "The project's identifier in its registry, when known."
           },
           "ecosystem": {
             "type": "string",
-            "title": "Ecosystem"
+            "title": "Ecosystem",
+            "description": "Ecosystem type, e.g. `forest / woodland`."
           },
           "indicator": {
             "type": "string",
-            "title": "Indicator"
+            "title": "Indicator",
+            "description": "Vegetation index the analysis measures, e.g. `ndvi`. An index, never carbon."
           },
           "pre_period": {
             "type": "string",
-            "title": "Pre Period"
+            "title": "Pre Period",
+            "description": "Pre-treatment years used to fit the comparison, as `start-end`."
           },
           "post_period": {
             "type": "string",
-            "title": "Post Period"
+            "title": "Post Period",
+            "description": "Post-treatment years in which the effect is measured, as `start-end`."
           },
           "status": {
             "type": "string",
-            "title": "Status"
+            "title": "Status",
+            "description": "Case lifecycle status. New cases are `scaffolded`; only a case with a run reviewed by both\nowners may be `analysed`."
           },
           "has_known_reference": {
             "type": "boolean",
-            "title": "Has Known Reference"
+            "title": "Has Known Reference",
+            "description": "True if published third-party findings exist to compare against. They are never an input to\nthe estimate."
           },
           "area_ha": {
             "anyOf": [
@@ -4476,22 +4852,26 @@
                 "type": "null"
               }
             ],
-            "title": "Area Ha"
+            "title": "Area Ha",
+            "description": "Project area in hectares, as declared by the case."
           },
           "donor_search_region": {
             "type": "string",
-            "title": "Donor Search Region"
+            "title": "Donor Search Region",
+            "description": "Where comparison (donor) areas are searched for."
           },
           "donor_pool_size": {
             "type": "integer",
-            "title": "Donor Pool Size"
+            "title": "Donor Pool Size",
+            "description": "How many candidate donor areas the search draws before screening."
           },
           "covariates": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Covariates"
+            "title": "Covariates",
+            "description": "Variables used to match donors to the project area."
           },
           "known_reference": {
             "additionalProperties": true,
@@ -4502,6 +4882,7 @@
           "notes": {
             "type": "string",
             "title": "Notes",
+            "description": "Free-text notes from the case definition.",
             "default": ""
           }
         },
@@ -4532,19 +4913,23 @@
         "properties": {
           "case_id": {
             "type": "string",
-            "title": "Case Id"
+            "title": "Case Id",
+            "description": "Stable identifier of the case, used in every case and run URL."
           },
           "name": {
             "type": "string",
-            "title": "Name"
+            "title": "Name",
+            "description": "Human-readable project name."
           },
           "country": {
             "type": "string",
-            "title": "Country"
+            "title": "Country",
+            "description": "Country the project lies in."
           },
           "standard": {
             "type": "string",
-            "title": "Standard"
+            "title": "Standard",
+            "description": "Certification standard the project reports under, e.g. `VCS`."
           },
           "registry_id": {
             "anyOf": [
@@ -4555,31 +4940,38 @@
                 "type": "null"
               }
             ],
-            "title": "Registry Id"
+            "title": "Registry Id",
+            "description": "The project's identifier in its registry, when known."
           },
           "ecosystem": {
             "type": "string",
-            "title": "Ecosystem"
+            "title": "Ecosystem",
+            "description": "Ecosystem type, e.g. `forest / woodland`."
           },
           "indicator": {
             "type": "string",
-            "title": "Indicator"
+            "title": "Indicator",
+            "description": "Vegetation index the analysis measures, e.g. `ndvi`. An index, never carbon."
           },
           "pre_period": {
             "type": "string",
-            "title": "Pre Period"
+            "title": "Pre Period",
+            "description": "Pre-treatment years used to fit the comparison, as `start-end`."
           },
           "post_period": {
             "type": "string",
-            "title": "Post Period"
+            "title": "Post Period",
+            "description": "Post-treatment years in which the effect is measured, as `start-end`."
           },
           "status": {
             "type": "string",
-            "title": "Status"
+            "title": "Status",
+            "description": "Case lifecycle status. New cases are `scaffolded`; only a case with a run reviewed by both\nowners may be `analysed`."
           },
           "has_known_reference": {
             "type": "boolean",
-            "title": "Has Known Reference"
+            "title": "Has Known Reference",
+            "description": "True if published third-party findings exist to compare against. They are never an input to\nthe estimate."
           }
         },
         "type": "object",
@@ -4604,12 +4996,14 @@
           "current_password": {
             "type": "string",
             "maxLength": 1024,
-            "title": "Current Password"
+            "title": "Current Password",
+            "description": "Your current password."
           },
           "new_password": {
             "type": "string",
             "maxLength": 1024,
-            "title": "New Password"
+            "title": "New Password",
+            "description": "The new password, checked against the password policy."
           }
         },
         "type": "object",
@@ -4617,17 +5011,20 @@
           "current_password",
           "new_password"
         ],
-        "title": "ChangePasswordRequest"
+        "title": "ChangePasswordRequest",
+        "description": "Change your password. Every other session of yours is signed out."
       },
       "ClaimComparison": {
         "properties": {
           "claim_kind": {
             "type": "string",
-            "title": "Claim Kind"
+            "title": "Claim Kind",
+            "description": "Kind of figure compared."
           },
           "claimed": {
             "type": "number",
-            "title": "Claimed"
+            "title": "Claimed",
+            "description": "The figure in the text."
           },
           "estimated": {
             "anyOf": [
@@ -4638,11 +5035,13 @@
                 "type": "null"
               }
             ],
-            "title": "Estimated"
+            "title": "Estimated",
+            "description": "The case's own value, when it has one."
           },
           "note": {
             "type": "string",
-            "title": "Note"
+            "title": "Note",
+            "description": "How to read the comparison."
           }
         },
         "type": "object",
@@ -4652,21 +5051,25 @@
           "estimated",
           "note"
         ],
-        "title": "ClaimComparison"
+        "title": "ClaimComparison",
+        "description": "An extracted figure beside the case's own value. A difference warrants review; it is not a\nfinding."
       },
       "ClaimSpan": {
         "properties": {
           "start": {
             "type": "integer",
-            "title": "Start"
+            "title": "Start",
+            "description": "Start offset, in characters."
           },
           "end": {
             "type": "integer",
-            "title": "End"
+            "title": "End",
+            "description": "End offset, in characters."
           },
           "text": {
             "type": "string",
-            "title": "Text"
+            "title": "Text",
+            "description": "The matched text."
           }
         },
         "type": "object",
@@ -4675,7 +5078,8 @@
           "end",
           "text"
         ],
-        "title": "ClaimSpan"
+        "title": "ClaimSpan",
+        "description": "Where a claim was found in the text."
       },
       "ClaimsRequest": {
         "properties": {
@@ -4683,7 +5087,8 @@
             "type": "string",
             "maxLength": 200000,
             "minLength": 1,
-            "title": "Text"
+            "title": "Text",
+            "description": "The text, e.g. pasted from a project document."
           },
           "case_id": {
             "anyOf": [
@@ -4694,14 +5099,16 @@
                 "type": "null"
               }
             ],
-            "title": "Case Id"
+            "title": "Case Id",
+            "description": "A case to set the extracted figures beside, if any."
           }
         },
         "type": "object",
         "required": [
           "text"
         ],
-        "title": "ClaimsRequest"
+        "title": "ClaimsRequest",
+        "description": "Text to read claims from."
       },
       "ClaimsResponse": {
         "properties": {
@@ -4710,18 +5117,21 @@
               "$ref": "#/components/schemas/ExtractedClaim"
             },
             "type": "array",
-            "title": "Claims"
+            "title": "Claims",
+            "description": "Every figure found."
           },
           "comparisons": {
             "items": {
               "$ref": "#/components/schemas/ClaimComparison"
             },
             "type": "array",
-            "title": "Comparisons"
+            "title": "Comparisons",
+            "description": "Figures set beside the case's values."
           },
           "disclaimer": {
             "type": "string",
-            "title": "Disclaimer"
+            "title": "Disclaimer",
+            "description": "Screening-aid notice to show with the result."
           }
         },
         "type": "object",
@@ -4730,40 +5140,48 @@
           "comparisons",
           "disclaimer"
         ],
-        "title": "ClaimsResponse"
+        "title": "ClaimsResponse",
+        "description": "What was read from the text."
       },
       "ClimateSourceView": {
         "properties": {
           "name": {
             "type": "string",
-            "title": "Name"
+            "title": "Name",
+            "description": "Dataset name."
           },
           "dataset_id": {
             "type": "string",
-            "title": "Dataset Id"
+            "title": "Dataset Id",
+            "description": "Dataset identifier."
           },
           "provider": {
             "type": "string",
-            "title": "Provider"
+            "title": "Provider",
+            "description": "Who publishes it."
           },
           "citation": {
             "type": "string",
-            "title": "Citation"
+            "title": "Citation",
+            "description": "How to cite it."
           },
           "temporal_coverage_start": {
             "type": "string",
-            "title": "Temporal Coverage Start"
+            "title": "Temporal Coverage Start",
+            "description": "First date it covers."
           },
           "temporal_coverage_end": {
             "type": "string",
-            "title": "Temporal Coverage End"
+            "title": "Temporal Coverage End",
+            "description": "Last date it covers."
           },
           "known_coverage_gaps": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Known Coverage Gaps"
+            "title": "Known Coverage Gaps",
+            "description": "Known gaps in its coverage."
           }
         },
         "type": "object",
@@ -4776,7 +5194,8 @@
           "temporal_coverage_end",
           "known_coverage_gaps"
         ],
-        "title": "ClimateSourceView"
+        "title": "ClimateSourceView",
+        "description": "A climate dataset the record draws on."
       },
       "ClimateView": {
         "properties": {
@@ -4806,7 +5225,8 @@
               "available",
               "unavailable"
             ],
-            "title": "Status"
+            "title": "Status",
+            "description": "`available`, or `unavailable` with `reason` and no values."
           },
           "reason": {
             "anyOf": [
@@ -4817,7 +5237,8 @@
                 "type": "null"
               }
             ],
-            "title": "Reason"
+            "title": "Reason",
+            "description": "Why the record is unavailable."
           },
           "case_id": {
             "anyOf": [
@@ -4828,28 +5249,32 @@
                 "type": "null"
               }
             ],
-            "title": "Case Id"
+            "title": "Case Id",
+            "description": "The case the record belongs to."
           },
           "sources": {
             "items": {
               "$ref": "#/components/schemas/ClimateSourceView"
             },
             "type": "array",
-            "title": "Sources"
+            "title": "Sources",
+            "description": "Datasets the record draws on."
           },
           "missing_months": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Missing Months"
+            "title": "Missing Months",
+            "description": "Months with no valid data, as `YYYY-MM`."
           },
           "years": {
             "items": {
               "$ref": "#/components/schemas/ClimateYearView"
             },
             "type": "array",
-            "title": "Years"
+            "title": "Years",
+            "description": "One entry per year."
           },
           "bundle_sha256": {
             "anyOf": [
@@ -4861,6 +5286,7 @@
               }
             ],
             "title": "Bundle Sha256",
+            "description": "SHA-256 of the stored climate bundle. Absent below the `contribute` level.",
             "min_level": "contribute"
           }
         },
@@ -4876,21 +5302,25 @@
           "years",
           "bundle_sha256"
         ],
-        "title": "ClimateView"
+        "title": "ClimateView",
+        "description": "The project's climate record, or why it is unavailable."
       },
       "ClimateYearView": {
         "properties": {
           "year": {
             "type": "integer",
-            "title": "Year"
+            "title": "Year",
+            "description": "Calendar year."
           },
           "valid_months": {
             "type": "integer",
-            "title": "Valid Months"
+            "title": "Valid Months",
+            "description": "Months with valid data, out of 12."
           },
           "is_complete_year": {
             "type": "boolean",
-            "title": "Is Complete Year"
+            "title": "Is Complete Year",
+            "description": "True when all 12 months are valid."
           },
           "annual_rainfall_mm": {
             "anyOf": [
@@ -4901,7 +5331,8 @@
                 "type": "null"
               }
             ],
-            "title": "Annual Rainfall Mm"
+            "title": "Annual Rainfall Mm",
+            "description": "Total rainfall, in millimetres."
           },
           "rainfall_anomaly_mm": {
             "anyOf": [
@@ -4912,7 +5343,8 @@
                 "type": "null"
               }
             ],
-            "title": "Rainfall Anomaly Mm"
+            "title": "Rainfall Anomaly Mm",
+            "description": "Rainfall minus the long-term mean, in millimetres."
           },
           "rainfall_anomaly_z": {
             "anyOf": [
@@ -4923,7 +5355,8 @@
                 "type": "null"
               }
             ],
-            "title": "Rainfall Anomaly Z"
+            "title": "Rainfall Anomaly Z",
+            "description": "The anomaly in standard deviations."
           },
           "spi_12": {
             "anyOf": [
@@ -4934,11 +5367,13 @@
                 "type": "null"
               }
             ],
-            "title": "Spi 12"
+            "title": "Spi 12",
+            "description": "12-month Standardized Precipitation Index."
           },
           "drought_classification": {
             "type": "string",
-            "title": "Drought Classification"
+            "title": "Drought Classification",
+            "description": "Drought class derived from the SPI."
           },
           "mean_temp_c": {
             "anyOf": [
@@ -4949,7 +5384,8 @@
                 "type": "null"
               }
             ],
-            "title": "Mean Temp C"
+            "title": "Mean Temp C",
+            "description": "Mean temperature, in degrees Celsius."
           }
         },
         "type": "object",
@@ -4964,24 +5400,28 @@
           "drought_classification",
           "mean_temp_c"
         ],
-        "title": "ClimateYearView"
+        "title": "ClimateYearView",
+        "description": "One calendar year of the project's climate record."
       },
       "ConclusionView": {
         "properties": {
           "summary": {
             "type": "string",
-            "title": "Summary"
+            "title": "Summary",
+            "description": "The conclusion, in plain language."
           },
           "dimension_ids": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Dimension Ids"
+            "title": "Dimension Ids",
+            "description": "Dimensions it rests on."
           },
           "estimable": {
             "type": "boolean",
-            "title": "Estimable"
+            "title": "Estimable",
+            "description": "False when the evidence cannot support this conclusion; see `reason`."
           },
           "reason": {
             "anyOf": [
@@ -4992,7 +5432,8 @@
                 "type": "null"
               }
             ],
-            "title": "Reason"
+            "title": "Reason",
+            "description": "Why it cannot be drawn."
           }
         },
         "type": "object",
@@ -5002,24 +5443,28 @@
           "estimable",
           "reason"
         ],
-        "title": "ConclusionView"
+        "title": "ConclusionView",
+        "description": "One layered conclusion, or why it cannot be drawn."
       },
       "Confidence": {
         "properties": {
           "lower": {
             "type": "number",
-            "title": "Lower"
+            "title": "Lower",
+            "description": "Lower bound of the interval."
           },
           "upper": {
             "type": "number",
-            "title": "Upper"
+            "title": "Upper",
+            "description": "Upper bound of the interval."
           },
           "level": {
             "type": "number",
             "exclusiveMaximum": 1.0,
             "exclusiveMinimum": 0.0,
             "title": "Level",
-            "default": 0.95
+            "default": 0.95,
+            "description": "Coverage of the interval, e.g. 0.9 for 90%."
           },
           "kind": {
             "type": "string",
@@ -5044,43 +5489,51 @@
             "type": "string",
             "maxLength": 120,
             "minLength": 2,
-            "title": "Name"
+            "title": "Name",
+            "description": "Project name, 2 to 120 characters. The case id is derived from it unless `case_id` is given."
           },
           "country": {
             "type": "string",
             "maxLength": 80,
             "minLength": 2,
-            "title": "Country"
+            "title": "Country",
+            "description": "Country the project lies in, 2 to 80 characters."
           },
           "ecosystem": {
             "type": "string",
             "title": "Ecosystem",
+            "description": "Ecosystem type.",
             "default": "forest / woodland"
           },
           "standard": {
             "type": "string",
             "title": "Standard",
+            "description": "Certification standard, e.g. `VCS`.",
             "default": "VCS"
           },
           "registry_id": {
             "type": "string",
             "maxLength": 60,
             "minLength": 2,
-            "title": "Registry Id"
+            "title": "Registry Id",
+            "description": "The project's registry identifier, 2 to 60 characters."
           },
           "area_ha": {
             "type": "number",
             "exclusiveMinimum": 0.0,
-            "title": "Area Ha"
+            "title": "Area Ha",
+            "description": "Declared project area in hectares; must be positive."
           },
           "crediting_period_start": {
             "type": "string",
             "title": "Crediting Period Start",
+            "description": "First day of the crediting period, `YYYY-MM-DD`.",
             "default": "2015-01-01"
           },
           "crediting_period_end": {
             "type": "string",
             "title": "Crediting Period End",
+            "description": "Last day of the crediting period, `YYYY-MM-DD`.",
             "default": "2045-12-31"
           },
           "claimed_credits_tco2e": {
@@ -5092,11 +5545,13 @@
                 "type": "null"
               }
             ],
-            "title": "Claimed Credits Tco2E"
+            "title": "Claimed Credits Tco2E",
+            "description": "Credits the developer claims, in tCO2e, if known. Shown beside the evidence, never used to\ncompute it."
           },
           "indicator": {
             "type": "string",
             "title": "Indicator",
+            "description": "Vegetation index to measure: `ndvi`, `evi`, `ndmi` or `nbr`.",
             "default": "ndvi"
           },
           "donor_pool_size": {
@@ -5104,26 +5559,31 @@
             "maximum": 100.0,
             "minimum": 10.0,
             "title": "Donor Pool Size",
+            "description": "Candidate donor areas to draw, 10 to 100.",
             "default": 50
           },
           "pre_start": {
             "type": "integer",
             "title": "Pre Start",
+            "description": "First pre-treatment year.",
             "default": 2005
           },
           "pre_end": {
             "type": "integer",
             "title": "Pre End",
+            "description": "Last pre-treatment year; must come before `post_start`.",
             "default": 2014
           },
           "post_start": {
             "type": "integer",
             "title": "Post Start",
+            "description": "First post-treatment year (the intervention year).",
             "default": 2015
           },
           "post_end": {
             "type": "integer",
             "title": "Post End",
+            "description": "Last post-treatment year.",
             "default": 2022
           },
           "boundary_geojson": {
@@ -5136,7 +5596,8 @@
                 "type": "null"
               }
             ],
-            "title": "Boundary Geojson"
+            "title": "Boundary Geojson",
+            "description": "Project boundary as GeoJSON. Optional; validated before anything is written."
           },
           "case_id": {
             "anyOf": [
@@ -5147,7 +5608,8 @@
                 "type": "null"
               }
             ],
-            "title": "Case Id"
+            "title": "Case Id",
+            "description": "Choose the case id instead of deriving it from `name`. Must be unique."
           },
           "status": {
             "anyOf": [
@@ -5178,7 +5640,8 @@
             "type": "string",
             "maxLength": 200,
             "minLength": 1,
-            "title": "Name"
+            "title": "Name",
+            "description": "Organization name."
           },
           "type": {
             "type": "string",
@@ -5188,7 +5651,8 @@
               "auditor",
               "government"
             ],
-            "title": "Type"
+            "title": "Type",
+            "description": "ngo, funder, auditor or government."
           }
         },
         "type": "object",
@@ -5196,7 +5660,8 @@
           "name",
           "type"
         ],
-        "title": "CreateOrgRequest"
+        "title": "CreateOrgRequest",
+        "description": "A new organization; you become its owner."
       },
       "DataSourceMode": {
         "type": "string",
@@ -5246,7 +5711,8 @@
                 "type": "null"
               }
             ],
-            "title": "Source Uri"
+            "title": "Source Uri",
+            "description": "Where the dataset was read from, when recorded."
           },
           "retrieved_at": {
             "anyOf": [
@@ -5277,19 +5743,23 @@
         "properties": {
           "added": {
             "type": "integer",
-            "title": "Added"
+            "title": "Added",
+            "description": "Ids only in the candidate."
           },
           "removed": {
             "type": "integer",
-            "title": "Removed"
+            "title": "Removed",
+            "description": "Ids only in the baseline."
           },
           "changed": {
             "type": "integer",
-            "title": "Changed"
+            "title": "Changed",
+            "description": "Ids in both whose content differs."
           },
           "unchanged": {
             "type": "integer",
-            "title": "Unchanged"
+            "title": "Unchanged",
+            "description": "Ids in both with identical content."
           }
         },
         "type": "object",
@@ -5326,21 +5796,25 @@
           "risk",
           "evidence_quality"
         ],
-        "title": "DimensionStatuses"
+        "title": "DimensionStatuses",
+        "description": "The status of each assessment dimension, for a portfolio row."
       },
       "DimensionView": {
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id"
+            "title": "Id",
+            "description": "Dimension id."
           },
           "title": {
             "type": "string",
-            "title": "Title"
+            "title": "Title",
+            "description": "Dimension title."
           },
           "status": {
             "type": "string",
-            "title": "Status"
+            "title": "Status",
+            "description": "A change status (Improving, Deteriorating, Stable, Mixed spatial performance, Elevated\necological risk, No clear change, Insufficient evidence) for dimensions 1-6; a High/Moderate/Low\nrating for dimension 7; an attribution verdict (Supported, Not supported, Inconclusive) for\ndimension 8."
           },
           "status_kind": {
             "type": "string",
@@ -5354,40 +5828,47 @@
           },
           "finding": {
             "type": "string",
-            "title": "Finding"
+            "title": "Finding",
+            "description": "The finding, in one sentence."
           },
           "known": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Known"
+            "title": "Known",
+            "description": "What the evidence establishes."
           },
           "suggested": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Suggested"
+            "title": "Suggested",
+            "description": "What the evidence suggests but does not establish."
           },
           "cannot_establish": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Cannot Establish"
+            "title": "Cannot Establish",
+            "description": "What the evidence cannot establish."
           },
           "limitation": {
             "type": "string",
-            "title": "Limitation"
+            "title": "Limitation",
+            "description": "The main limitation: missing_data, weak_statistical_power, poor_reference_comparability,\nclimate_confounding, failed_model_assumptions or none."
           },
           "evidence_needed": {
             "type": "string",
-            "title": "Evidence Needed"
+            "title": "Evidence Needed",
+            "description": "What evidence would strengthen the finding."
           },
           "confidence": {
             "type": "string",
-            "title": "Confidence"
+            "title": "Confidence",
+            "description": "High, Moderate or Low."
           },
           "evidence_refs": {
             "items": {
@@ -5416,7 +5897,8 @@
           "facts": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Facts"
+            "title": "Facts",
+            "description": "Machine-readable values behind the finding."
           }
         },
         "type": "object",
@@ -5436,12 +5918,14 @@
           "diagnostic_refs",
           "facts"
         ],
-        "title": "DimensionView"
+        "title": "DimensionView",
+        "description": "One of the eight assessment dimensions."
       },
       "EngineFailureBody": {
         "properties": {
           "detail": {
-            "$ref": "#/components/schemas/EngineFailureDetail"
+            "$ref": "#/components/schemas/EngineFailureDetail",
+            "description": "Why no result was returned."
           },
           "is_refusal": {
             "type": "boolean",
@@ -5458,7 +5942,8 @@
                 "type": "null"
               }
             ],
-            "title": "Request Id"
+            "title": "Request Id",
+            "description": "Identifier of this request, also in the `X-Request-ID` header."
           }
         },
         "type": "object",
@@ -5473,19 +5958,23 @@
       "EngineFailureDetail": {
         "properties": {
           "code": {
-            "$ref": "#/components/schemas/ErrorCode"
+            "$ref": "#/components/schemas/ErrorCode",
+            "description": "The engine's error code. `insufficient_data` and `donor_pool_inadequate` are refusals; the\nrest are errors."
           },
           "message": {
             "type": "string",
-            "title": "Message"
+            "title": "Message",
+            "description": "Plain-language explanation, safe to show a user."
           },
           "stage": {
             "type": "string",
-            "title": "Stage"
+            "title": "Stage",
+            "description": "The engine stage that refused or failed."
           },
           "is_refusal": {
             "type": "boolean",
-            "title": "Is Refusal"
+            "title": "Is Refusal",
+            "description": "True when the engine declined to estimate because the data cannot support a reliable number.\nA legitimate outcome, not a malfunction."
           },
           "remediation": {
             "anyOf": [
@@ -5496,11 +5985,13 @@
                 "type": "null"
               }
             ],
-            "title": "Remediation"
+            "title": "Remediation",
+            "description": "What could be done about it, when the engine knows."
           },
           "run_id": {
             "type": "string",
-            "title": "Run Id"
+            "title": "Run Id",
+            "description": "Identifier of the engine run that refused or failed."
           }
         },
         "type": "object",
@@ -5519,12 +6010,14 @@
         "properties": {
           "available": {
             "type": "boolean",
-            "title": "Available"
+            "title": "Available",
+            "description": "False until the engine has returned for this job."
           },
           "source": {
             "type": "string",
             "const": "run_metrics",
             "title": "Source",
+            "description": "Where the timings come from: always the engine's own `RunMetrics`.",
             "default": "run_metrics"
           },
           "total_ms": {
@@ -5536,7 +6029,8 @@
                 "type": "null"
               }
             ],
-            "title": "Total Ms"
+            "title": "Total Ms",
+            "description": "Total engine time, in milliseconds."
           },
           "stages": {
             "items": {
@@ -5567,7 +6061,8 @@
                 "type": "null"
               }
             ],
-            "title": "N Units Observed"
+            "title": "N Units Observed",
+            "description": "How many areas (project and candidates) the engine observed."
           },
           "n_donors_admitted": {
             "anyOf": [
@@ -5578,7 +6073,8 @@
                 "type": "null"
               }
             ],
-            "title": "N Donors Admitted"
+            "title": "N Donors Admitted",
+            "description": "How many comparison areas passed screening."
           },
           "n_estimator_fits": {
             "anyOf": [
@@ -5589,11 +6085,13 @@
                 "type": "null"
               }
             ],
-            "title": "N Estimator Fits"
+            "title": "N Estimator Fits",
+            "description": "How many times the estimator was fitted, placebos included."
           },
           "note": {
             "type": "string",
-            "title": "Note"
+            "title": "Note",
+            "description": "How to read these numbers."
           }
         },
         "type": "object",
@@ -5615,11 +6113,13 @@
         "properties": {
           "name": {
             "type": "string",
-            "title": "Name"
+            "title": "Name",
+            "description": "The engine's name for the stage."
           },
           "duration_ms": {
             "type": "number",
-            "title": "Duration Ms"
+            "title": "Duration Ms",
+            "description": "How long it took, in milliseconds."
           }
         },
         "type": "object",
@@ -5627,7 +6127,8 @@
           "name",
           "duration_ms"
         ],
-        "title": "EngineStageTiming"
+        "title": "EngineStageTiming",
+        "description": "One of the engine's internal stages and how long it took."
       },
       "ErrorCode": {
         "type": "string",
@@ -5672,7 +6173,8 @@
                 "type": "boolean"
               }
             ],
-            "title": "Value"
+            "title": "Value",
+            "description": "The measured value, in `unit`. An index (e.g. NDVI) is never a carbon quantity."
           },
           "unit": {
             "type": "string",
@@ -5688,10 +6190,12 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The uncertainty interval of the value, when it has one."
           },
           "provenance": {
-            "$ref": "#/components/schemas/Provenance"
+            "$ref": "#/components/schemas/Provenance",
+            "description": "How the value was produced: method, inputs, parameters and fingerprint."
           },
           "state": {
             "$ref": "#/components/schemas/EvidenceState",
@@ -5723,12 +6227,14 @@
         "properties": {
           "case_id": {
             "type": "string",
-            "title": "Case Id"
+            "title": "Case Id",
+            "description": "The case the evidence is about."
           },
           "schema_version": {
             "type": "string",
             "title": "Schema Version",
-            "default": "1.0"
+            "default": "1.0",
+            "description": "Version of the bundle format."
           },
           "items": {
             "items": {
@@ -5736,7 +6242,8 @@
             },
             "type": "array",
             "title": "Items",
-            "default": []
+            "default": [],
+            "description": "Every evidence item, each with its unit, uncertainty and provenance."
           },
           "verdict": {
             "anyOf": [
@@ -5746,7 +6253,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The screening verdict, when the engine reached one."
           },
           "warnings": {
             "items": {
@@ -5754,7 +6262,8 @@
             },
             "type": "array",
             "title": "Warnings",
-            "default": []
+            "default": [],
+            "description": "Analyst-facing warnings, e.g. that the data is simulated."
           }
         },
         "type": "object",
@@ -5796,7 +6305,8 @@
               "available",
               "unavailable"
             ],
-            "title": "Status"
+            "title": "Status",
+            "description": "`available`, or `unavailable` with `reason`."
           },
           "reason": {
             "anyOf": [
@@ -5807,28 +6317,32 @@
                 "type": "null"
               }
             ],
-            "title": "Reason"
+            "title": "Reason",
+            "description": "Why nothing is available."
           },
           "kinds": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Kinds"
+            "title": "Kinds",
+            "description": "Kinds of evidence present."
           },
           "indicators": {
             "items": {
               "$ref": "#/components/schemas/IndicatorInventory"
             },
             "type": "array",
-            "title": "Indicators"
+            "title": "Indicators",
+            "description": "One entry per indicator."
           },
           "states": {
             "additionalProperties": {
               "type": "integer"
             },
             "type": "object",
-            "title": "States"
+            "title": "States",
+            "description": "Record counts by evidence state, across indicators."
           },
           "climate_status": {
             "type": "string",
@@ -5836,7 +6350,8 @@
               "available",
               "unavailable"
             ],
-            "title": "Climate Status"
+            "title": "Climate Status",
+            "description": "Whether a climate record is available."
           },
           "climate_reason": {
             "anyOf": [
@@ -5847,7 +6362,8 @@
                 "type": "null"
               }
             ],
-            "title": "Climate Reason"
+            "title": "Climate Reason",
+            "description": "Why the climate record is unavailable."
           },
           "boundary_sha256": {
             "anyOf": [
@@ -5859,6 +6375,7 @@
               }
             ],
             "title": "Boundary Sha256",
+            "description": "SHA-256 of the stored boundary. Absent below the `contribute` level.",
             "min_level": "contribute"
           },
           "items": {
@@ -5874,6 +6391,7 @@
               }
             ],
             "title": "Items",
+            "description": "Every stored annual record. Absent below the `contribute` level.",
             "min_level": "contribute"
           }
         },
@@ -5911,11 +6429,13 @@
                 "type": "boolean"
               }
             ],
-            "title": "Value"
+            "title": "Value",
+            "description": "The measured value."
           },
           "unit": {
             "type": "string",
-            "title": "Unit"
+            "title": "Unit",
+            "description": "Its unit."
           },
           "confidence": {
             "anyOf": [
@@ -5925,20 +6445,24 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Its uncertainty interval, when it has one."
           },
           "qualifiers": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Qualifiers"
+            "title": "Qualifiers",
+            "description": "Qualifiers attached to the value."
           },
           "provenance_method": {
             "type": "string",
-            "title": "Provenance Method"
+            "title": "Provenance Method",
+            "description": "How it was produced."
           },
           "provenance_fingerprint": {
             "type": "string",
-            "title": "Provenance Fingerprint"
+            "title": "Provenance Fingerprint",
+            "description": "Fingerprint of its provenance record."
           }
         },
         "type": "object",
@@ -5970,18 +6494,22 @@
         "properties": {
           "kind": {
             "type": "string",
-            "title": "Kind"
+            "title": "Kind",
+            "description": "baseline, credits_issued, area_hectares or reduction_percent."
           },
           "value": {
             "type": "number",
-            "title": "Value"
+            "title": "Value",
+            "description": "The figure."
           },
           "unit": {
             "type": "string",
-            "title": "Unit"
+            "title": "Unit",
+            "description": "Its unit."
           },
           "span": {
-            "$ref": "#/components/schemas/ClaimSpan"
+            "$ref": "#/components/schemas/ClaimSpan",
+            "description": "Where it was found."
           }
         },
         "type": "object",
@@ -5991,19 +6519,23 @@
           "unit",
           "span"
         ],
-        "title": "ExtractedClaim"
+        "title": "ExtractedClaim",
+        "description": "One figure read from the text."
       },
       "FieldChange": {
         "properties": {
           "field": {
             "type": "string",
-            "title": "Field"
+            "title": "Field",
+            "description": "``value``, ``unit``, ``confidence``, ``qualifiers`` or ``provenance``."
           },
           "before": {
-            "title": "Before"
+            "title": "Before",
+            "description": "The baseline's value."
           },
           "after": {
-            "title": "After"
+            "title": "After",
+            "description": "The candidate's value."
           }
         },
         "type": "object",
@@ -6021,7 +6553,8 @@
             "type": "string",
             "maxLength": 100,
             "minLength": 1,
-            "title": "Org Slug"
+            "title": "Org Slug",
+            "description": "Slug of the organization to share with."
           },
           "level": {
             "type": "string",
@@ -6030,7 +6563,8 @@
               "audit",
               "contribute"
             ],
-            "title": "Level"
+            "title": "Level",
+            "description": "What they may do: `view`, `audit` or `contribute`."
           }
         },
         "type": "object",
@@ -6038,21 +6572,25 @@
           "org_slug",
           "level"
         ],
-        "title": "GrantRequest"
+        "title": "GrantRequest",
+        "description": "Share a project with another organization."
       },
       "GrantView": {
         "properties": {
           "org_slug": {
             "type": "string",
-            "title": "Org Slug"
+            "title": "Org Slug",
+            "description": "Slug of the organization granted access."
           },
           "org_name": {
             "type": "string",
-            "title": "Org Name"
+            "title": "Org Name",
+            "description": "Its name."
           },
           "org_type": {
             "type": "string",
-            "title": "Org Type"
+            "title": "Org Type",
+            "description": "Its type."
           },
           "level": {
             "type": "string",
@@ -6061,12 +6599,14 @@
               "audit",
               "contribute"
             ],
-            "title": "Level"
+            "title": "Level",
+            "description": "Its level: `view`, `audit` or `contribute`."
           },
           "granted_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Granted At"
+            "title": "Granted At",
+            "description": "When access was granted (UTC)."
           }
         },
         "type": "object",
@@ -6114,7 +6654,8 @@
           },
           "request_id": {
             "type": "string",
-            "title": "Request Id"
+            "title": "Request Id",
+            "description": "Identifier of this request, also in the `X-Request-ID` header."
           }
         },
         "type": "object",
@@ -6125,20 +6666,24 @@
           "status": {
             "type": "string",
             "title": "Status",
+            "description": "Always `ok` when the API answers; a failing service answers an error instead.",
             "default": "ok"
           },
           "version": {
             "type": "string",
-            "title": "Version"
+            "title": "Version",
+            "description": "The GroundTruth package version serving this API."
           },
           "engine_version": {
             "type": "string",
             "title": "Engine Version",
+            "description": "Version of the analysis engine every new run uses.",
             "default": ""
           },
           "contract_version": {
             "type": "string",
             "title": "Contract Version",
+            "description": "Version of the engine contract; results record the one they used.",
             "default": ""
           },
           "engine_capabilities": {
@@ -6164,6 +6709,7 @@
           "cases_available": {
             "type": "integer",
             "title": "Cases Available",
+            "description": "How many case definitions this deployment has loaded.",
             "default": 0
           }
         },
@@ -6191,7 +6737,8 @@
               "ndmi",
               "nbr"
             ],
-            "title": "Indicator"
+            "title": "Indicator",
+            "description": "The vegetation index."
           },
           "status": {
             "type": "string",
@@ -6199,7 +6746,8 @@
               "available",
               "unavailable"
             ],
-            "title": "Status"
+            "title": "Status",
+            "description": "`available`, or `unavailable` with `reason`."
           },
           "reason": {
             "anyOf": [
@@ -6210,11 +6758,13 @@
                 "type": "null"
               }
             ],
-            "title": "Reason"
+            "title": "Reason",
+            "description": "Why nothing is available."
           },
           "n_records": {
             "type": "integer",
             "title": "N Records",
+            "description": "How many annual records exist.",
             "default": 0
           },
           "years": {
@@ -6222,21 +6772,24 @@
               "type": "integer"
             },
             "type": "array",
-            "title": "Years"
+            "title": "Years",
+            "description": "The years with a record."
           },
           "states": {
             "additionalProperties": {
               "type": "integer"
             },
             "type": "object",
-            "title": "States"
+            "title": "States",
+            "description": "Record counts by evidence state."
           },
           "sensors": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Sensors"
+            "title": "Sensors",
+            "description": "Sensors the records came from."
           },
           "source": {
             "anyOf": [
@@ -6247,7 +6800,8 @@
                 "type": "null"
               }
             ],
-            "title": "Source"
+            "title": "Source",
+            "description": "Where the records come from."
           },
           "data_origin": {
             "anyOf": [
@@ -6258,7 +6812,8 @@
                 "type": "null"
               }
             ],
-            "title": "Data Origin"
+            "title": "Data Origin",
+            "description": "Whether the records are real observations or simulated."
           }
         },
         "type": "object",
@@ -6273,7 +6828,8 @@
           "source",
           "data_origin"
         ],
-        "title": "IndicatorInventory"
+        "title": "IndicatorInventory",
+        "description": "What is stored for one indicator."
       },
       "InventoryItem": {
         "properties": {
@@ -6285,15 +6841,18 @@
               "ndmi",
               "nbr"
             ],
-            "title": "Indicator"
+            "title": "Indicator",
+            "description": "The vegetation index."
           },
           "year": {
             "type": "integer",
-            "title": "Year"
+            "title": "Year",
+            "description": "Calendar year."
           },
           "n_scenes": {
             "type": "integer",
-            "title": "N Scenes"
+            "title": "N Scenes",
+            "description": "How many scenes contributed."
           },
           "scene_ids": {
             "items": {
@@ -6301,11 +6860,13 @@
             },
             "type": "array",
             "title": "Scene Ids",
+            "description": "Identifiers of those scenes.",
             "min_level": "contribute"
           },
           "scenes_sha256": {
             "type": "string",
             "title": "Scenes Sha256",
+            "description": "SHA-256 over the scene list.",
             "min_level": "contribute"
           }
         },
@@ -6324,11 +6885,13 @@
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id"
+            "title": "Id",
+            "description": "Evidence id."
           },
           "label": {
             "type": "string",
-            "title": "Label"
+            "title": "Label",
+            "description": "Evidence label."
           },
           "status": {
             "type": "string",
@@ -6338,7 +6901,8 @@
               "changed",
               "unchanged"
             ],
-            "title": "Status"
+            "title": "Status",
+            "description": "`added`, `removed`, `changed` or `unchanged`."
           },
           "baseline": {
             "anyOf": [
@@ -6348,7 +6912,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The item in the baseline, if present."
           },
           "candidate": {
             "anyOf": [
@@ -6358,7 +6923,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The item in the candidate, if present."
           },
           "changes": {
             "items": {
@@ -6366,6 +6932,7 @@
             },
             "type": "array",
             "title": "Changes",
+            "description": "Each field that differs.",
             "default": []
           },
           "delta": {
@@ -6377,7 +6944,8 @@
                 "type": "null"
               }
             ],
-            "title": "Delta"
+            "title": "Delta",
+            "description": "``candidate - baseline`` when both values are numbers."
           },
           "relative_delta": {
             "anyOf": [
@@ -6388,7 +6956,8 @@
                 "type": "null"
               }
             ],
-            "title": "Relative Delta"
+            "title": "Relative Delta",
+            "description": "``delta / |baseline|``; ``None`` when the baseline is zero or not a number."
           }
         },
         "type": "object",
@@ -6409,7 +6978,8 @@
         "properties": {
           "run_id": {
             "type": "string",
-            "title": "Run Id"
+            "title": "Run Id",
+            "description": "Identifier of the run that answers the request: new, cached or in flight."
           },
           "from_cache": {
             "type": "boolean",
@@ -6423,10 +6993,12 @@
           },
           "status_url": {
             "type": "string",
-            "title": "Status Url"
+            "title": "Status Url",
+            "description": "URL to poll for the job's progress."
           },
           "job": {
-            "$ref": "#/components/schemas/JobView"
+            "$ref": "#/components/schemas/JobView",
+            "description": "The job's current status."
           }
         },
         "type": "object",
@@ -6444,11 +7016,13 @@
         "properties": {
           "run_id": {
             "type": "string",
-            "title": "Run Id"
+            "title": "Run Id",
+            "description": "Identifier of the job's run."
           },
           "case_id": {
             "type": "string",
-            "title": "Case Id"
+            "title": "Case Id",
+            "description": "The case being analysed."
           },
           "status": {
             "type": "string",
@@ -6465,7 +7039,8 @@
               "failed",
               "cancelled"
             ],
-            "title": "Result State"
+            "title": "Result State",
+            "description": "What the run produced: queued, running, measured, refused, failed or cancelled. `refused` is\na scientific outcome; `failed` is a fault."
           },
           "terminal": {
             "type": "boolean",
@@ -6481,15 +7056,18 @@
                 "type": "null"
               }
             ],
-            "title": "Engine Status"
+            "title": "Engine Status",
+            "description": "What the engine returned, once it ran: completed, refused or error."
           },
           "data_mode": {
             "type": "string",
-            "title": "Data Mode"
+            "title": "Data Mode",
+            "description": "`simulated` or `observed`."
           },
           "is_simulated": {
             "type": "boolean",
-            "title": "Is Simulated"
+            "title": "Is Simulated",
+            "description": "True for simulated data. Show the simulated-data notice."
           },
           "notice": {
             "anyOf": [
@@ -6500,7 +7078,8 @@
                 "type": "null"
               }
             ],
-            "title": "Notice"
+            "title": "Notice",
+            "description": "Plain-language simulated-data notice, when simulated."
           },
           "attempt": {
             "anyOf": [
@@ -6523,7 +7102,8 @@
                 "type": "null"
               }
             ],
-            "title": "Max Attempts"
+            "title": "Max Attempts",
+            "description": "How many times the job may be tried before it fails for good."
           },
           "cancel_requested": {
             "type": "boolean",
@@ -6547,22 +7127,26 @@
               "$ref": "#/components/schemas/StageView"
             },
             "type": "array",
-            "title": "Stages"
+            "title": "Stages",
+            "description": "Each live stage of the job and its state."
           },
           "engine_metrics": {
-            "$ref": "#/components/schemas/EngineMetricsView"
+            "$ref": "#/components/schemas/EngineMetricsView",
+            "description": "The engine's own timings, once it has returned."
           },
           "timeline": {
             "items": {
               "$ref": "#/components/schemas/TimelineEvent"
             },
             "type": "array",
-            "title": "Timeline"
+            "title": "Timeline",
+            "description": "Lifecycle events, oldest first."
           },
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When the job was queued (UTC)."
           },
           "updated_at": {
             "anyOf": [
@@ -6574,7 +7158,8 @@
                 "type": "null"
               }
             ],
-            "title": "Updated At"
+            "title": "Updated At",
+            "description": "When the job last changed (UTC)."
           },
           "last_heartbeat_at": {
             "anyOf": [
@@ -6599,7 +7184,8 @@
                 "type": "null"
               }
             ],
-            "title": "Lease Expires At"
+            "title": "Lease Expires At",
+            "description": "When the current worker's claim lapses unless renewed; the job is then retried."
           },
           "retry_at": {
             "anyOf": [
@@ -6634,11 +7220,13 @@
                 "type": "null"
               }
             ],
-            "title": "Failure Reason"
+            "title": "Failure Reason",
+            "description": "Why the job failed, when it failed before the engine produced an error."
           },
           "status_url": {
             "type": "string",
-            "title": "Status Url"
+            "title": "Status Url",
+            "description": "URL to poll for this view."
           },
           "result_url": {
             "anyOf": [
@@ -6655,6 +7243,7 @@
           "note": {
             "type": "string",
             "title": "Note",
+            "description": "How to read the progress fields.",
             "default": "There is no percentage because none can be known: the analysis engine runs as one step and reports its internal timings only when it finishes. `stages` are observed as they happen; `engine_metrics` fills in afterwards."
           }
         },
@@ -6695,12 +7284,14 @@
           "email": {
             "type": "string",
             "maxLength": 254,
-            "title": "Email"
+            "title": "Email",
+            "description": "Email address."
           },
           "password": {
             "type": "string",
             "maxLength": 1024,
-            "title": "Password"
+            "title": "Password",
+            "description": "Password."
           }
         },
         "type": "object",
@@ -6708,17 +7299,20 @@
           "email",
           "password"
         ],
-        "title": "LoginRequest"
+        "title": "LoginRequest",
+        "description": "Credentials to sign in with."
       },
       "MeResponse": {
         "properties": {
           "auth_required": {
             "type": "boolean",
-            "title": "Auth Required"
+            "title": "Auth Required",
+            "description": "Whether this deployment requires sign-in."
           },
           "registration_open": {
             "type": "boolean",
-            "title": "Registration Open"
+            "title": "Registration Open",
+            "description": "Whether `POST /auth/register` accepts new accounts."
           },
           "user": {
             "anyOf": [
@@ -6728,14 +7322,16 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Your account, or null when not signed in."
           },
           "organizations": {
             "items": {
               "$ref": "#/components/schemas/OrgView"
             },
             "type": "array",
-            "title": "Organizations"
+            "title": "Organizations",
+            "description": "Organizations you belong to, with your role in each."
           },
           "active_organization": {
             "anyOf": [
@@ -6745,7 +7341,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The organization you are acting for; null until you choose one (automatic when you belong to exactly one)."
           }
         },
         "type": "object",
@@ -6756,17 +7353,20 @@
           "organizations",
           "active_organization"
         ],
-        "title": "MeResponse"
+        "title": "MeResponse",
+        "description": "Who you are signed in as, and the organizations you can act for."
       },
       "MemberView": {
         "properties": {
           "user_id": {
             "type": "string",
-            "title": "User Id"
+            "title": "User Id",
+            "description": "The member's user id."
           },
           "email": {
             "type": "string",
-            "title": "Email"
+            "title": "Email",
+            "description": "The member's email address."
           },
           "role": {
             "type": "string",
@@ -6776,12 +7376,14 @@
               "member",
               "viewer"
             ],
-            "title": "Role"
+            "title": "Role",
+            "description": "Their role: owner, admin, member or viewer."
           },
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When they joined (UTC)."
           }
         },
         "type": "object",
@@ -6791,25 +7393,30 @@
           "role",
           "created_at"
         ],
-        "title": "MemberView"
+        "title": "MemberView",
+        "description": "A member of an organization."
       },
       "MessageErrorBody": {
         "properties": {
           "detail": {
             "type": "string",
-            "title": "Detail"
+            "title": "Detail",
+            "description": "What went wrong, as a sentence."
           },
           "code": {
             "type": "string",
-            "title": "Code"
+            "title": "Code",
+            "description": "Machine-readable code, `http_<status>` for this shape (e.g. `http_404`). Act on this, not on\nthe prose."
           },
           "message": {
             "type": "string",
-            "title": "Message"
+            "title": "Message",
+            "description": "The same sentence as `detail`."
           },
           "is_refusal": {
             "type": "boolean",
             "title": "Is Refusal",
+            "description": "Always false for this shape: it is never a scientific refusal.",
             "default": false
           },
           "request_id": {
@@ -6821,7 +7428,8 @@
                 "type": "null"
               }
             ],
-            "title": "Request Id"
+            "title": "Request Id",
+            "description": "Identifier of this request, also in the `X-Request-ID` header. Quote it when reporting a\nproblem."
           }
         },
         "type": "object",
@@ -6847,7 +7455,8 @@
               "contract_unreadable",
               "no_bundle"
             ],
-            "title": "Code"
+            "title": "Code",
+            "description": "different_case, different_data_mode, different_engine_version, different_contract_major,\ncontract_unreadable or no_bundle."
           },
           "side": {
             "type": "string",
@@ -6856,11 +7465,13 @@
               "candidate",
               "both"
             ],
-            "title": "Side"
+            "title": "Side",
+            "description": "Which run the reason concerns: `baseline`, `candidate` or `both`."
           },
           "message": {
             "type": "string",
-            "title": "Message"
+            "title": "Message",
+            "description": "The reason, in plain language."
           }
         },
         "type": "object",
@@ -6876,7 +7487,8 @@
         "properties": {
           "year": {
             "type": "integer",
-            "title": "Year"
+            "title": "Year",
+            "description": "Calendar year."
           },
           "value": {
             "anyOf": [
@@ -6897,11 +7509,13 @@
               "MODEL_ESTIMATED",
               "UNAVAILABLE"
             ],
-            "title": "Evidence State"
+            "title": "Evidence State",
+            "description": "How the value was obtained: `DERIVED`, `MODEL_ESTIMATED` or `UNAVAILABLE`."
           },
           "sensor": {
             "type": "string",
-            "title": "Sensor"
+            "title": "Sensor",
+            "description": "Satellite sensor the scenes came from."
           },
           "clear_pixel_fraction": {
             "type": "number",
@@ -6910,7 +7524,8 @@
           },
           "n_scenes": {
             "type": "integer",
-            "title": "N Scenes"
+            "title": "N Scenes",
+            "description": "How many scenes contributed to the year."
           },
           "aoi_coverage_pct": {
             "anyOf": [
@@ -6937,6 +7552,7 @@
               }
             ],
             "title": "Scene Ids",
+            "description": "Identifiers of those scenes. Absent below the `contribute` level.",
             "min_level": "contribute"
           },
           "scenes_sha256": {
@@ -6949,6 +7565,7 @@
               }
             ],
             "title": "Scenes Sha256",
+            "description": "SHA-256 over the scene list. Absent below the `contribute` level.",
             "min_level": "contribute"
           }
         },
@@ -6997,7 +7614,8 @@
               "ndmi",
               "nbr"
             ],
-            "title": "Indicator"
+            "title": "Indicator",
+            "description": "The vegetation index observed."
           },
           "status": {
             "type": "string",
@@ -7005,7 +7623,8 @@
               "available",
               "unavailable"
             ],
-            "title": "Status"
+            "title": "Status",
+            "description": "`available`, or `unavailable` with `reason` and no values."
           },
           "reason": {
             "anyOf": [
@@ -7016,7 +7635,8 @@
                 "type": "null"
               }
             ],
-            "title": "Reason"
+            "title": "Reason",
+            "description": "Why the series is unavailable."
           },
           "unit_id": {
             "anyOf": [
@@ -7027,7 +7647,8 @@
                 "type": "null"
               }
             ],
-            "title": "Unit Id"
+            "title": "Unit Id",
+            "description": "The observation unit the series belongs to."
           },
           "source": {
             "anyOf": [
@@ -7038,14 +7659,16 @@
                 "type": "null"
               }
             ],
-            "title": "Source"
+            "title": "Source",
+            "description": "Where the observations come from."
           },
           "points": {
             "items": {
               "$ref": "#/components/schemas/ObservationPoint"
             },
             "type": "array",
-            "title": "Points"
+            "title": "Points",
+            "description": "One entry per year."
           }
         },
         "type": "object",
@@ -7059,21 +7682,25 @@
           "source",
           "points"
         ],
-        "title": "ObservationsView"
+        "title": "ObservationsView",
+        "description": "The project's annual observations of one indicator."
       },
       "OrgView": {
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id"
+            "title": "Id",
+            "description": "Organization identifier."
           },
           "slug": {
             "type": "string",
-            "title": "Slug"
+            "title": "Slug",
+            "description": "Organization slug, used in URLs."
           },
           "name": {
             "type": "string",
-            "title": "Name"
+            "title": "Name",
+            "description": "Organization name."
           },
           "type": {
             "type": "string",
@@ -7084,7 +7711,8 @@
               "government",
               "reference"
             ],
-            "title": "Type"
+            "title": "Type",
+            "description": "Organization type: ngo, funder, auditor, government or reference."
           },
           "role": {
             "type": "string",
@@ -7094,7 +7722,8 @@
               "member",
               "viewer"
             ],
-            "title": "Role"
+            "title": "Role",
+            "description": "Your role in this organization: owner, admin, member or viewer."
           }
         },
         "type": "object",
@@ -7112,11 +7741,13 @@
         "properties": {
           "file_base64": {
             "type": "string",
-            "title": "File Base64"
+            "title": "File Base64",
+            "description": "The PDF, base64-encoded."
           },
           "filename": {
             "type": "string",
             "title": "Filename",
+            "description": "Its file name.",
             "default": "uploaded.pdf"
           }
         },
@@ -7124,21 +7755,25 @@
         "required": [
           "file_base64"
         ],
-        "title": "PdfExtractRequest"
+        "title": "PdfExtractRequest",
+        "description": "A PDF to read the text out of."
       },
       "PdfExtractResponse": {
         "properties": {
           "text": {
             "type": "string",
-            "title": "Text"
+            "title": "Text",
+            "description": "The extracted text."
           },
           "num_pages": {
             "type": "integer",
-            "title": "Num Pages"
+            "title": "Num Pages",
+            "description": "Pages in the PDF."
           },
           "filename": {
             "type": "string",
-            "title": "Filename"
+            "title": "Filename",
+            "description": "Its file name."
           }
         },
         "type": "object",
@@ -7147,12 +7782,14 @@
           "num_pages",
           "filename"
         ],
-        "title": "PdfExtractResponse"
+        "title": "PdfExtractResponse",
+        "description": "The text read from a PDF."
       },
       "PortfolioRow": {
         "properties": {
           "project": {
-            "$ref": "#/components/schemas/ProjectView"
+            "$ref": "#/components/schemas/ProjectView",
+            "description": "The project."
           },
           "access_level": {
             "type": "string",
@@ -7162,7 +7799,8 @@
               "contribute",
               "view"
             ],
-            "title": "Access Level"
+            "title": "Access Level",
+            "description": "Your organization's level on it."
           },
           "assessment_level": {
             "type": "integer",
@@ -7171,10 +7809,12 @@
           },
           "level_name": {
             "type": "string",
-            "title": "Level Name"
+            "title": "Level Name",
+            "description": "Assessment level reached."
           },
           "dimension_statuses": {
-            "$ref": "#/components/schemas/DimensionStatuses"
+            "$ref": "#/components/schemas/DimensionStatuses",
+            "description": "Status of each dimension."
           },
           "top_recommendation": {
             "anyOf": [
@@ -7217,7 +7857,8 @@
               "observed",
               "simulated"
             ],
-            "title": "Data Mode"
+            "title": "Data Mode",
+            "description": "`observed` or `simulated`."
           },
           "reported_funding": {
             "anyOf": [
@@ -7227,7 +7868,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Funding as the owner reported it, when it did."
           },
           "degraded": {
             "type": "boolean",
@@ -7244,7 +7886,8 @@
                 "type": "null"
               }
             ],
-            "title": "Degraded Reason"
+            "title": "Degraded Reason",
+            "description": "Why the row is incomplete, when its assessment could not be built."
           }
         },
         "type": "object",
@@ -7262,7 +7905,8 @@
           "degraded",
           "degraded_reason"
         ],
-        "title": "PortfolioRow"
+        "title": "PortfolioRow",
+        "description": "One project in a portfolio."
       },
       "PortfolioView": {
         "properties": {
@@ -7288,7 +7932,8 @@
           "projects",
           "simulated"
         ],
-        "title": "PortfolioView"
+        "title": "PortfolioView",
+        "description": "Every project your organization can see, with its assessment summary."
       },
       "ProjectUploadForm": {
         "properties": {
@@ -7302,31 +7947,36 @@
             "type": "string",
             "maxLength": 200,
             "minLength": 1,
-            "title": "Name"
+            "title": "Name",
+            "description": "Project name."
           },
           "country": {
             "type": "string",
             "maxLength": 100,
             "minLength": 1,
-            "title": "Country"
+            "title": "Country",
+            "description": "Country the project lies in."
           },
           "ecosystem": {
             "type": "string",
             "maxLength": 100,
             "minLength": 1,
-            "title": "Ecosystem"
+            "title": "Ecosystem",
+            "description": "Ecosystem type."
           },
           "intervention": {
             "type": "string",
             "maxLength": 100,
             "minLength": 1,
-            "title": "Intervention"
+            "title": "Intervention",
+            "description": "Type of intervention, e.g. REDD+."
           },
           "treatment_start_year": {
             "type": "integer",
             "maximum": 2100.0,
             "minimum": 1970.0,
-            "title": "Treatment Start Year"
+            "title": "Treatment Start Year",
+            "description": "Year the intervention began."
           }
         },
         "type": "object",
@@ -7345,31 +7995,38 @@
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id"
+            "title": "Id",
+            "description": "Project identifier."
           },
           "slug": {
             "type": "string",
-            "title": "Slug"
+            "title": "Slug",
+            "description": "Project slug: the case id of its analysis."
           },
           "name": {
             "type": "string",
-            "title": "Name"
+            "title": "Name",
+            "description": "Project name."
           },
           "country": {
             "type": "string",
-            "title": "Country"
+            "title": "Country",
+            "description": "Country the project lies in."
           },
           "ecosystem": {
             "type": "string",
-            "title": "Ecosystem"
+            "title": "Ecosystem",
+            "description": "Ecosystem type."
           },
           "intervention": {
             "type": "string",
-            "title": "Intervention"
+            "title": "Intervention",
+            "description": "Type of intervention, e.g. REDD+ or restoration."
           },
           "treatment_start_year": {
             "type": "integer",
-            "title": "Treatment Start Year"
+            "title": "Treatment Start Year",
+            "description": "Year the intervention began."
           },
           "data_mode": {
             "type": "string",
@@ -7377,15 +8034,18 @@
               "observed",
               "simulated"
             ],
-            "title": "Data Mode"
+            "title": "Data Mode",
+            "description": "`observed` or `simulated`. Simulated data is never presented as real."
           },
           "owner_slug": {
             "type": "string",
-            "title": "Owner Slug"
+            "title": "Owner Slug",
+            "description": "Slug of the organization that owns the project."
           },
           "owner_name": {
             "type": "string",
-            "title": "Owner Name"
+            "title": "Owner Name",
+            "description": "Name of the organization that owns the project."
           },
           "access_level": {
             "type": "string",
@@ -7395,7 +8055,8 @@
               "contribute",
               "view"
             ],
-            "title": "Access Level"
+            "title": "Access Level",
+            "description": "Your organization's level on this project: owner, audit, contribute or view."
           },
           "boundary_sha256": {
             "anyOf": [
@@ -7406,7 +8067,8 @@
                 "type": "null"
               }
             ],
-            "title": "Boundary Sha256"
+            "title": "Boundary Sha256",
+            "description": "SHA-256 of the stored boundary file, when there is one."
           },
           "reported_funding_amount": {
             "anyOf": [
@@ -7417,7 +8079,8 @@
                 "type": "null"
               }
             ],
-            "title": "Reported Funding Amount"
+            "title": "Reported Funding Amount",
+            "description": "Funding as the owner reported it. Never computed by GroundTruth."
           },
           "reported_funding_currency": {
             "anyOf": [
@@ -7428,12 +8091,14 @@
                 "type": "null"
               }
             ],
-            "title": "Reported Funding Currency"
+            "title": "Reported Funding Currency",
+            "description": "Reported by the owner, shown as such; never computed."
           },
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When the project was created (UTC)."
           }
         },
         "type": "object",
@@ -7559,14 +8224,16 @@
         "properties": {
           "attribution_ready": {
             "type": "boolean",
-            "title": "Attribution Ready"
+            "title": "Attribution Ready",
+            "description": "True when every criterion is met and attribution can be attempted."
           },
           "criteria": {
             "items": {
               "$ref": "#/components/schemas/ReadinessCriterion"
             },
             "type": "array",
-            "title": "Criteria"
+            "title": "Criteria",
+            "description": "Each criterion and its status."
           }
         },
         "type": "object",
@@ -7581,11 +8248,13 @@
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id"
+            "title": "Id",
+            "description": "Stable criterion id."
           },
           "name": {
             "type": "string",
-            "title": "Name"
+            "title": "Name",
+            "description": "Criterion name for display."
           },
           "status": {
             "type": "string",
@@ -7594,17 +8263,21 @@
               "not_met",
               "unavailable"
             ],
-            "title": "Status"
+            "title": "Status",
+            "description": "`met`, `not_met`, or `unavailable` when the evidence to judge it is missing."
           },
           "observed_value": {
-            "title": "Observed Value"
+            "title": "Observed Value",
+            "description": "What the project's evidence shows for this criterion."
           },
           "required": {
-            "title": "Required"
+            "title": "Required",
+            "description": "What the criterion requires."
           },
           "evidence_needed": {
             "type": "string",
-            "title": "Evidence Needed"
+            "title": "Evidence Needed",
+            "description": "What would let this criterion be met or judged."
           }
         },
         "type": "object",
@@ -7616,20 +8289,23 @@
           "required",
           "evidence_needed"
         ],
-        "title": "ReadinessCriterion"
+        "title": "ReadinessCriterion",
+        "description": "One condition for attempting causal attribution, and whether it holds."
       },
       "ReadinessView": {
         "properties": {
           "attribution_ready": {
             "type": "boolean",
-            "title": "Attribution Ready"
+            "title": "Attribution Ready",
+            "description": "True when every criterion is met and attribution can be attempted."
           },
           "criteria": {
             "items": {
               "$ref": "#/components/schemas/ReadinessCriterion"
             },
             "type": "array",
-            "title": "Criteria"
+            "title": "Criteria",
+            "description": "Each criterion and its status."
           },
           "data_mode": {
             "type": "string",
@@ -7666,33 +8342,39 @@
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id"
+            "title": "Id",
+            "description": "Recommendation id."
           },
           "text": {
             "type": "string",
-            "title": "Text"
+            "title": "Text",
+            "description": "What to do."
           },
           "rationale": {
             "type": "string",
-            "title": "Rationale"
+            "title": "Rationale",
+            "description": "Why."
           },
           "priority": {
             "type": "integer",
-            "title": "Priority"
+            "title": "Priority",
+            "description": "1 is the most urgent."
           },
           "personas": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Personas"
+            "title": "Personas",
+            "description": "Who it is for: ngo, funder, auditor, government or reference."
           },
           "evidence_refs": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Evidence Refs"
+            "title": "Evidence Refs",
+            "description": "Evidence ids it rests on."
           },
           "diagnostic_refs": {
             "anyOf": [
@@ -7707,6 +8389,7 @@
               }
             ],
             "title": "Diagnostic Refs",
+            "description": "Diagnostics behind it. Absent below the `audit` level.",
             "min_level": "audit"
           }
         },
@@ -7720,7 +8403,8 @@
           "evidence_refs",
           "diagnostic_refs"
         ],
-        "title": "RecommendationView"
+        "title": "RecommendationView",
+        "description": "A suggested next step."
       },
       "RegisterRequest": {
         "properties": {
@@ -7728,12 +8412,14 @@
             "type": "string",
             "maxLength": 254,
             "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
-            "title": "Email"
+            "title": "Email",
+            "description": "Email address; also the sign-in name."
           },
           "password": {
             "type": "string",
             "maxLength": 1024,
-            "title": "Password"
+            "title": "Password",
+            "description": "Password, checked against the password policy (`weak_password` if not met)."
           }
         },
         "type": "object",
@@ -7741,13 +8427,15 @@
           "email",
           "password"
         ],
-        "title": "RegisterRequest"
+        "title": "RegisterRequest",
+        "description": "A new account."
       },
       "ReportedFunding": {
         "properties": {
           "amount": {
             "type": "number",
-            "title": "Amount"
+            "title": "Amount",
+            "description": "The amount reported."
           },
           "currency": {
             "anyOf": [
@@ -7758,7 +8446,8 @@
                 "type": "null"
               }
             ],
-            "title": "Currency"
+            "title": "Currency",
+            "description": "Its currency, as reported."
           },
           "reported_by": {
             "type": "string",
@@ -7778,14 +8467,17 @@
       "RunComparison": {
         "properties": {
           "baseline": {
-            "$ref": "#/components/schemas/RunItem"
+            "$ref": "#/components/schemas/RunItem",
+            "description": "The run compared against."
           },
           "candidate": {
-            "$ref": "#/components/schemas/RunItem"
+            "$ref": "#/components/schemas/RunItem",
+            "description": "The run compared with the baseline."
           },
           "comparable": {
             "type": "boolean",
-            "title": "Comparable"
+            "title": "Comparable",
+            "description": "True if the two runs can be compared item by item; see `not_comparable` otherwise."
           },
           "not_comparable": {
             "items": {
@@ -7802,7 +8494,8 @@
           },
           "contains_simulated": {
             "type": "boolean",
-            "title": "Contains Simulated"
+            "title": "Contains Simulated",
+            "description": "True if either run is simulated."
           },
           "diff": {
             "anyOf": [
@@ -7812,7 +8505,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The item-by-item difference, when comparable."
           }
         },
         "type": "object",
@@ -7832,15 +8526,18 @@
         "properties": {
           "run_id": {
             "type": "string",
-            "title": "Run Id"
+            "title": "Run Id",
+            "description": "Identifier of the run."
           },
           "case_id": {
             "type": "string",
-            "title": "Case Id"
+            "title": "Case Id",
+            "description": "The case the run analysed."
           },
           "spec_hash": {
             "type": "string",
-            "title": "Spec Hash"
+            "title": "Spec Hash",
+            "description": "Hash of the analysis specification. Two runs with the same hash and engine version give the\nsame numbers."
           },
           "status": {
             "type": "string",
@@ -7881,7 +8578,8 @@
                 "type": "null"
               }
             ],
-            "title": "Verdict Label"
+            "title": "Verdict Label",
+            "description": "The screening verdict, once measured."
           },
           "data_mode": {
             "type": "string",
@@ -7914,11 +8612,13 @@
                 "type": "null"
               }
             ],
-            "title": "Engine Version"
+            "title": "Engine Version",
+            "description": "Engine version that produced the result, once there is one."
           },
           "contract_version": {
             "type": "string",
-            "title": "Contract Version"
+            "title": "Contract Version",
+            "description": "Engine contract version of the run."
           },
           "created_at": {
             "type": "string",
@@ -7935,7 +8635,8 @@
                 "type": "null"
               }
             ],
-            "title": "Error Code"
+            "title": "Error Code",
+            "description": "The stored error's code, for a refused or errored run."
           },
           "is_refusal": {
             "anyOf": [
@@ -7974,7 +8675,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The engine build that produced the run, once it ran."
           },
           "seed": {
             "anyOf": [
@@ -7985,14 +8687,16 @@
                 "type": "null"
               }
             ],
-            "title": "Seed"
+            "title": "Seed",
+            "description": "Random seed of the run. The same seed and specification reproduce the same numbers."
           },
           "datasets": {
             "items": {
               "$ref": "#/components/schemas/DatasetRef"
             },
             "type": "array",
-            "title": "Datasets"
+            "title": "Datasets",
+            "description": "Every dataset the run read, with its version."
           },
           "started_at": {
             "anyOf": [
@@ -8003,7 +8707,8 @@
                 "type": "null"
               }
             ],
-            "title": "Started At"
+            "title": "Started At",
+            "description": "When the engine started (UTC, ISO 8601)."
           },
           "finished_at": {
             "anyOf": [
@@ -8014,7 +8719,8 @@
                 "type": "null"
               }
             ],
-            "title": "Finished At"
+            "title": "Finished At",
+            "description": "When the engine finished (UTC, ISO 8601)."
           },
           "metrics": {
             "anyOf": [
@@ -8024,7 +8730,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "The engine's own timings and counters."
           },
           "error": {
             "anyOf": [
@@ -8046,21 +8753,24 @@
                 "type": "null"
               }
             ],
-            "title": "Verdict Rationale"
+            "title": "Verdict Rationale",
+            "description": "Why the engine reached its verdict."
           },
           "caveats": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Caveats"
+            "title": "Caveats",
+            "description": "Statements that must accompany the verdict."
           },
           "warnings": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Warnings"
+            "title": "Warnings",
+            "description": "Analyst-facing warnings."
           },
           "bundle": {
             "anyOf": [
@@ -8094,7 +8804,8 @@
                 "type": "null"
               }
             ],
-            "title": "Report Generator"
+            "title": "Report Generator",
+            "description": "Who wrote `report_markdown`: `deterministic`, or `genai:<provider>`."
           }
         },
         "type": "object",
@@ -8137,11 +8848,13 @@
         "properties": {
           "engine_version": {
             "type": "string",
-            "title": "Engine Version"
+            "title": "Engine Version",
+            "description": "Engine version."
           },
           "contract_version": {
             "type": "string",
-            "title": "Contract Version"
+            "title": "Contract Version",
+            "description": "Engine contract version."
           },
           "git_sha": {
             "anyOf": [
@@ -8152,7 +8865,8 @@
                 "type": "null"
               }
             ],
-            "title": "Git Sha"
+            "title": "Git Sha",
+            "description": "Commit the worker ran, or null when the deployment did not record it."
           }
         },
         "type": "object",
@@ -8161,26 +8875,31 @@
           "contract_version",
           "git_sha"
         ],
-        "title": "RunEngine"
+        "title": "RunEngine",
+        "description": "The engine build that produced a run."
       },
       "RunError": {
         "properties": {
           "code": {
             "type": "string",
-            "title": "Code"
+            "title": "Code",
+            "description": "Error code. `insufficient_data` and `donor_pool_inadequate` are refusals."
           },
           "message": {
             "type": "string",
-            "title": "Message"
+            "title": "Message",
+            "description": "Plain-language explanation, safe to show a user."
           },
           "stage": {
             "type": "string",
-            "title": "Stage"
+            "title": "Stage",
+            "description": "The engine stage that refused or failed."
           },
           "detail": {
             "additionalProperties": true,
             "type": "object",
-            "title": "Detail"
+            "title": "Detail",
+            "description": "Structured context, e.g. donors found against donors required."
           },
           "remediation": {
             "anyOf": [
@@ -8191,11 +8910,13 @@
                 "type": "null"
               }
             ],
-            "title": "Remediation"
+            "title": "Remediation",
+            "description": "What could be done about it, when known."
           },
           "is_refusal": {
             "type": "boolean",
-            "title": "Is Refusal"
+            "title": "Is Refusal",
+            "description": "True for a scientific refusal: the data could not support an estimate. Not a fault."
           }
         },
         "type": "object",
@@ -8214,15 +8935,18 @@
         "properties": {
           "run_id": {
             "type": "string",
-            "title": "Run Id"
+            "title": "Run Id",
+            "description": "Identifier of the run."
           },
           "case_id": {
             "type": "string",
-            "title": "Case Id"
+            "title": "Case Id",
+            "description": "The case the run analysed."
           },
           "spec_hash": {
             "type": "string",
-            "title": "Spec Hash"
+            "title": "Spec Hash",
+            "description": "Hash of the analysis specification. Two runs with the same hash and engine version give the\nsame numbers."
           },
           "status": {
             "type": "string",
@@ -8263,7 +8987,8 @@
                 "type": "null"
               }
             ],
-            "title": "Verdict Label"
+            "title": "Verdict Label",
+            "description": "The screening verdict, once measured."
           },
           "data_mode": {
             "type": "string",
@@ -8296,11 +9021,13 @@
                 "type": "null"
               }
             ],
-            "title": "Engine Version"
+            "title": "Engine Version",
+            "description": "Engine version that produced the result, once there is one."
           },
           "contract_version": {
             "type": "string",
-            "title": "Contract Version"
+            "title": "Contract Version",
+            "description": "Engine contract version of the run."
           },
           "created_at": {
             "type": "string",
@@ -8317,7 +9044,8 @@
                 "type": "null"
               }
             ],
-            "title": "Error Code"
+            "title": "Error Code",
+            "description": "The stored error's code, for a refused or errored run."
           },
           "is_refusal": {
             "anyOf": [
@@ -8373,7 +9101,8 @@
               "$ref": "#/components/schemas/RunItem"
             },
             "type": "array",
-            "title": "Items"
+            "title": "Items",
+            "description": "Runs on this page, newest first."
           },
           "next_cursor": {
             "anyOf": [
@@ -8389,7 +9118,8 @@
           },
           "limit": {
             "type": "integer",
-            "title": "Limit"
+            "title": "Limit",
+            "description": "The page size that was applied."
           },
           "contains_simulated": {
             "type": "boolean",
@@ -8413,32 +9143,37 @@
             "type": "number",
             "minimum": 0.0,
             "title": "Duration Ms",
-            "default": 0.0
+            "default": 0.0,
+            "description": "Total engine time, in milliseconds."
           },
           "stage_durations_ms": {
             "additionalProperties": {
               "type": "number"
             },
             "type": "object",
-            "title": "Stage Durations Ms"
+            "title": "Stage Durations Ms",
+            "description": "Time per engine stage, in milliseconds."
           },
           "n_units_observed": {
             "type": "integer",
             "minimum": 0.0,
             "title": "N Units Observed",
-            "default": 0
+            "default": 0,
+            "description": "Areas observed: the project and its candidate comparisons."
           },
           "n_donors_admitted": {
             "type": "integer",
             "minimum": 0.0,
             "title": "N Donors Admitted",
-            "default": 0
+            "default": 0,
+            "description": "Comparison areas that passed screening."
           },
           "n_estimator_fits": {
             "type": "integer",
             "minimum": 0.0,
             "title": "N Estimator Fits",
-            "default": 0
+            "default": 0,
+            "description": "Times the estimator was fitted, placebos included."
           }
         },
         "type": "object",
@@ -8462,24 +9197,28 @@
               "member",
               "viewer"
             ],
-            "title": "Role"
+            "title": "Role",
+            "description": "The new role."
           }
         },
         "type": "object",
         "required": [
           "role"
         ],
-        "title": "SetRoleRequest"
+        "title": "SetRoleRequest",
+        "description": "Change a member's role."
       },
       "StageView": {
         "properties": {
           "name": {
             "type": "string",
-            "title": "Name"
+            "title": "Name",
+            "description": "Stage id: `claim`, `data`, `engine` or `record`."
           },
           "label": {
             "type": "string",
-            "title": "Label"
+            "title": "Label",
+            "description": "Stage name for display."
           },
           "state": {
             "type": "string",
@@ -8504,7 +9243,8 @@
                 "type": "null"
               }
             ],
-            "title": "Started At"
+            "title": "Started At",
+            "description": "When the stage began."
           },
           "finished_at": {
             "anyOf": [
@@ -8516,7 +9256,8 @@
                 "type": "null"
               }
             ],
-            "title": "Finished At"
+            "title": "Finished At",
+            "description": "When the stage ended, for a finished stage."
           },
           "duration_ms": {
             "anyOf": [
@@ -8560,7 +9301,8 @@
         "properties": {
           "case_id": {
             "type": "string",
-            "title": "Case Id"
+            "title": "Case Id",
+            "description": "The case to analyse. Its project must belong to your active organization."
           },
           "synthetic": {
             "type": "boolean",
@@ -8596,14 +9338,16 @@
             "type": "string",
             "maxLength": 100,
             "minLength": 1,
-            "title": "Slug"
+            "title": "Slug",
+            "description": "Slug of the organization."
           }
         },
         "type": "object",
         "required": [
           "slug"
         ],
-        "title": "SwitchOrgRequest"
+        "title": "SwitchOrgRequest",
+        "description": "Make another of your organizations the active one."
       },
       "TimelineEvent": {
         "properties": {
@@ -8615,7 +9359,8 @@
           "at": {
             "type": "string",
             "format": "date-time",
-            "title": "At"
+            "title": "At",
+            "description": "When it happened (UTC)."
           }
         },
         "type": "object",
@@ -8623,7 +9368,8 @@
           "event",
           "at"
         ],
-        "title": "TimelineEvent"
+        "title": "TimelineEvent",
+        "description": "One lifecycle event of a job."
       },
       "UpdateUserRequest": {
         "properties": {
@@ -8641,7 +9387,8 @@
                 "type": "null"
               }
             ],
-            "title": "Role"
+            "title": "Role",
+            "description": "New platform role: `user`, `dev` or `admin`."
           },
           "is_active": {
             "anyOf": [
@@ -8652,21 +9399,25 @@
                 "type": "null"
               }
             ],
-            "title": "Is Active"
+            "title": "Is Active",
+            "description": "False deactivates the account; it can no longer sign in."
           }
         },
         "type": "object",
-        "title": "UpdateUserRequest"
+        "title": "UpdateUserRequest",
+        "description": "What an administrator may change about an account. Omitted means unchanged."
       },
       "UserView": {
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id"
+            "title": "Id",
+            "description": "User id."
           },
           "email": {
             "type": "string",
-            "title": "Email"
+            "title": "Email",
+            "description": "Email address; also the sign-in name."
           },
           "role": {
             "type": "string",
@@ -8675,16 +9426,19 @@
               "dev",
               "admin"
             ],
-            "title": "Role"
+            "title": "Role",
+            "description": "Platform role: `user`, `dev` or `admin`. Organization roles are separate."
           },
           "is_active": {
             "type": "boolean",
-            "title": "Is Active"
+            "title": "Is Active",
+            "description": "False for a deactivated account, which cannot sign in."
           },
           "created_at": {
             "type": "string",
             "format": "date-time",
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When the account was created (UTC)."
           },
           "last_login_at": {
             "anyOf": [
@@ -8696,7 +9450,8 @@
                 "type": "null"
               }
             ],
-            "title": "Last Login At"
+            "title": "Last Login At",
+            "description": "When the user last signed in (UTC)."
           }
         },
         "type": "object",
@@ -8708,7 +9463,8 @@
           "created_at",
           "last_login_at"
         ],
-        "title": "UserView"
+        "title": "UserView",
+        "description": "A user account."
       },
       "ValidationError": {
         "properties": {
@@ -8761,7 +9517,8 @@
                 "type": "null"
               }
             ],
-            "title": "Baseline Label"
+            "title": "Baseline Label",
+            "description": "The baseline's verdict."
           },
           "candidate_label": {
             "anyOf": [
@@ -8772,11 +9529,13 @@
                 "type": "null"
               }
             ],
-            "title": "Candidate Label"
+            "title": "Candidate Label",
+            "description": "The candidate's verdict."
           },
           "label_changed": {
             "type": "boolean",
-            "title": "Label Changed"
+            "title": "Label Changed",
+            "description": "True if the verdicts differ."
           },
           "baseline_divergence_ratio": {
             "anyOf": [
@@ -8787,7 +9546,8 @@
                 "type": "null"
               }
             ],
-            "title": "Baseline Divergence Ratio"
+            "title": "Baseline Divergence Ratio",
+            "description": "The baseline's divergence ratio, when it has one."
           },
           "candidate_divergence_ratio": {
             "anyOf": [
@@ -8798,15 +9558,18 @@
                 "type": "null"
               }
             ],
-            "title": "Candidate Divergence Ratio"
+            "title": "Candidate Divergence Ratio",
+            "description": "The candidate's divergence ratio, when it has one."
           },
           "divergence_ratio_changed": {
             "type": "boolean",
-            "title": "Divergence Ratio Changed"
+            "title": "Divergence Ratio Changed",
+            "description": "True if the ratios differ."
           },
           "rationale_changed": {
             "type": "boolean",
-            "title": "Rationale Changed"
+            "title": "Rationale Changed",
+            "description": "True if the rationales differ."
           }
         },
         "type": "object",
@@ -8878,6 +9641,7 @@
           "include_report": {
             "type": "boolean",
             "title": "Include Report",
+            "description": "Also return a plain-language report of the result (`report_markdown`).",
             "default": true
           }
         },
@@ -8889,11 +9653,13 @@
         "properties": {
           "run_id": {
             "type": "string",
-            "title": "Run Id"
+            "title": "Run Id",
+            "description": "Identifier of this run."
           },
           "case_id": {
             "type": "string",
-            "title": "Case Id"
+            "title": "Case Id",
+            "description": "The case that was analysed."
           },
           "spec_hash": {
             "type": "string",
@@ -8902,15 +9668,18 @@
           },
           "engine_version": {
             "type": "string",
-            "title": "Engine Version"
+            "title": "Engine Version",
+            "description": "Engine version that produced the result."
           },
           "contract_version": {
             "type": "string",
-            "title": "Contract Version"
+            "title": "Contract Version",
+            "description": "Engine contract version of the result."
           },
           "duration_ms": {
             "type": "number",
             "title": "Duration Ms",
+            "description": "How long the engine took, in milliseconds.",
             "default": 0.0
           },
           "data_mode": {
@@ -8923,28 +9692,33 @@
             "description": "Drives the persistent simulated-data / real-observations banner."
           },
           "verdict_label": {
-            "$ref": "#/components/schemas/VerdictLabel"
+            "$ref": "#/components/schemas/VerdictLabel",
+            "description": "The screening verdict. A divergence warrants accredited review; it is never a finding of\nfraud."
           },
           "verdict_rationale": {
             "type": "string",
-            "title": "Verdict Rationale"
+            "title": "Verdict Rationale",
+            "description": "Why the engine reached this verdict, in its own words, thresholds included."
           },
           "caveats": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Caveats"
+            "title": "Caveats",
+            "description": "Statements that must accompany the verdict wherever it is shown."
           },
           "warnings": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Warnings"
+            "title": "Warnings",
+            "description": "Analyst-facing warnings, e.g. that the data is simulated."
           },
           "bundle": {
-            "$ref": "#/components/schemas/EvidenceBundle"
+            "$ref": "#/components/schemas/EvidenceBundle",
+            "description": "The evidence bundle: every measured value with its unit, uncertainty and provenance."
           },
           "report_markdown": {
             "anyOf": [
@@ -8955,7 +9729,8 @@
                 "type": "null"
               }
             ],
-            "title": "Report Markdown"
+            "title": "Report Markdown",
+            "description": "Plain-language report, when `include_report` was true."
           },
           "report_generator": {
             "anyOf": [
@@ -8966,7 +9741,8 @@
                 "type": "null"
               }
             ],
-            "title": "Report Generator"
+            "title": "Report Generator",
+            "description": "Who wrote `report_markdown`: `deterministic`, or `genai:<provider>` when narrated."
           }
         },
         "type": "object",
@@ -8992,11 +9768,13 @@
       "VerificationVerdict": {
         "properties": {
           "label": {
-            "$ref": "#/components/schemas/VerdictLabel"
+            "$ref": "#/components/schemas/VerdictLabel",
+            "description": "The screening verdict. A divergence warrants accredited review; never fraud."
           },
           "rationale": {
             "type": "string",
-            "title": "Rationale"
+            "title": "Rationale",
+            "description": "Why the engine reached the verdict, thresholds included."
           },
           "divergence_ratio": {
             "anyOf": [
@@ -9020,7 +9798,8 @@
               "A divergence between an independent estimate and a developer claim is not evidence of fraud; it indicates that the claim warrants accredited review.",
               "Spectral indices track vegetation condition, not carbon stocks.",
               "Estimates are conditional on the donor pool and the pre-treatment fit reported alongside them."
-            ]
+            ],
+            "description": "Statements that must accompany the verdict wherever it is shown."
           },
           "supporting_evidence_ids": {
             "items": {
@@ -9028,7 +9807,8 @@
             },
             "type": "array",
             "title": "Supporting Evidence Ids",
-            "default": []
+            "default": [],
+            "description": "Evidence items the verdict rests on."
           }
         },
         "type": "object",
@@ -9070,10 +9850,12 @@
               "completed",
               "not_estimable"
             ],
-            "title": "Status"
+            "title": "Status",
+            "description": "`completed`, or `not_estimable` when no completed run exists."
           },
           "readiness": {
-            "$ref": "#/components/schemas/ReadinessBody"
+            "$ref": "#/components/schemas/ReadinessBody",
+            "description": "Whether attribution can be attempted, criterion by criterion."
           },
           "warnings": {
             "items": {
@@ -9085,7 +9867,8 @@
           },
           "is_simulated": {
             "type": "boolean",
-            "title": "Is Simulated"
+            "title": "Is Simulated",
+            "description": "True when the run used simulated data."
           },
           "run_id": {
             "anyOf": [
@@ -9096,7 +9879,8 @@
                 "type": "null"
               }
             ],
-            "title": "Run Id"
+            "title": "Run Id",
+            "description": "The latest completed run."
           },
           "case_id": {
             "anyOf": [
@@ -9107,7 +9891,8 @@
                 "type": "null"
               }
             ],
-            "title": "Case Id"
+            "title": "Case Id",
+            "description": "The case that run analysed."
           },
           "verdict_label": {
             "anyOf": [
@@ -9118,7 +9903,8 @@
                 "type": "null"
               }
             ],
-            "title": "Verdict Label"
+            "title": "Verdict Label",
+            "description": "The run's screening verdict."
           },
           "verdict_rationale": {
             "anyOf": [
@@ -9129,14 +9915,16 @@
                 "type": "null"
               }
             ],
-            "title": "Verdict Rationale"
+            "title": "Verdict Rationale",
+            "description": "Why the engine reached it."
           },
           "caveats": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Caveats"
+            "title": "Caveats",
+            "description": "Statements that must accompany the verdict."
           },
           "engine_version": {
             "anyOf": [
@@ -9147,7 +9935,8 @@
                 "type": "null"
               }
             ],
-            "title": "Engine Version"
+            "title": "Engine Version",
+            "description": "Engine version of the run."
           },
           "created_at": {
             "anyOf": [
@@ -9159,7 +9948,8 @@
                 "type": "null"
               }
             ],
-            "title": "Created At"
+            "title": "Created At",
+            "description": "When the run was recorded."
           },
           "spec_hash": {
             "anyOf": [
@@ -9171,6 +9961,7 @@
               }
             ],
             "title": "Spec Hash",
+            "description": "Hash of the run's specification. Absent below the `audit` level.",
             "min_level": "audit"
           },
           "bundle": {
@@ -9182,6 +9973,7 @@
                 "type": "null"
               }
             ],
+            "description": "The run's evidence bundle. Absent below the `audit` level.",
             "min_level": "audit"
           }
         },
@@ -9213,14 +10005,16 @@
               "type": "string"
             },
             "type": "array",
-            "title": "Added"
+            "title": "Added",
+            "description": "Warnings only in the candidate."
           },
           "removed": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "Removed"
+            "title": "Removed",
+            "description": "Warnings only in the baseline."
           }
         },
         "type": "object",

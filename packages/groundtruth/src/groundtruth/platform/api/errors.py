@@ -14,7 +14,7 @@ from __future__ import annotations
 from enum import StrEnum
 
 from fastapi import HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from groundtruth.contracts.result import ErrorCode
 from groundtruth.platform.cases.registry import CaseValidationError
@@ -80,9 +80,16 @@ API_ERROR_STATUS: dict[ApiErrorCode, int] = {
 
 
 class ApiErrorDetail(BaseModel):
+    """What went wrong, in the shape every structured error uses."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     code: str
+    """Machine-readable code. Act on this, not on the prose; every code is listed in
+    docs/api/README.md."""
     message: str
+    """Plain-language explanation, safe to show a user."""
     hint: str | None = None
+    """What to do about it, when known."""
     is_refusal: bool = False
     """True only for a scientific refusal; every other error says false."""
 
@@ -94,9 +101,15 @@ class ApiErrorBody(BaseModel):
     :class:`~groundtruth.platform.api.error_envelope.ErrorEnvelopeMiddleware`.
     """
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     detail: ApiErrorDetail
+    """What went wrong."""
     is_refusal: bool = False
+    """True only for a scientific refusal. Here always false."""
     request_id: str | None = None
+    """Identifier of this request, also in the `X-Request-ID` header. Quote it when reporting a
+    problem."""
 
 
 def case_validation_error(exc: CaseValidationError) -> HTTPException:

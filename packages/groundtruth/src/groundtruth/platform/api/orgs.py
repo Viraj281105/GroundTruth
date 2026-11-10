@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -45,21 +45,39 @@ Manager = Annotated[AccessContext, Depends(require_org_action(Action.MANAGE_MEMB
 
 
 class CreateOrgRequest(BaseModel):
+    """A new organization; you become its owner."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     name: str = Field(min_length=1, max_length=200)
+    """Organization name."""
     type: Literal["ngo", "funder", "auditor", "government"]
+    """ngo, funder, auditor or government."""
 
 
 class SwitchOrgRequest(BaseModel):
+    """Make another of your organizations the active one."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     slug: str = Field(min_length=1, max_length=100)
+    """Slug of the organization."""
 
 
 class AddMemberRequest(BaseModel):
+    """Add an existing user to the organization."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     email: str = Field(max_length=254)
+    """The user's email address."""
     role: MemberRole
+    """Their role: admin, member or viewer."""
 
 
 class SetRoleRequest(BaseModel):
+    """Change a member's role."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     role: MemberRole
+    """The new role."""
 
 
 def org_view(org: OrganizationRow, member: MembershipRow) -> OrgView:
@@ -121,6 +139,8 @@ def _audit(
     responses={401: _ERRORS[401], 503: _ERRORS[503]},
 )
 def list_orgs(request: Request, user: Caller) -> list[OrgView]:
+    """Every organization your account belongs to, with your role in each. Needs sign-in but no
+    active organization."""
     me = _caller(user)
     with resolve_sessions(request)() as db:
         return [org_view(o, m) for o, m in service.list_user_memberships(db, me.id)]
@@ -134,6 +154,7 @@ def list_orgs(request: Request, user: Caller) -> list[OrgView]:
     responses={401: _ERRORS[401], 503: _ERRORS[503]},
 )
 def create_org(body: CreateOrgRequest, request: Request, user: Caller) -> OrgView:
+    """Creates an organization of the given type, with you as its owner. Audited (`org.create`)."""
     me = _caller(user)
     with resolve_sessions(request)() as db:
         org = service.create_org(db, name=body.name, type=body.type, creator_user_id=me.id)
@@ -194,6 +215,8 @@ def switch_org(body: SwitchOrgRequest, request: Request, user: Caller) -> OrgVie
     responses={401: _ERRORS[401], 403: _ERRORS[403], 404: _ERRORS[404], 503: _ERRORS[503]},
 )
 def list_members(request: Request, ctx: Manager) -> list[MemberView]:
+    """Members of the organization named by `slug`, which must be your active organization (404
+    otherwise). Needs a role that may manage members (403 otherwise)."""
     with resolve_sessions(request)() as db:
         return [member_view(m, u) for m, u in service.list_members(db, ctx.org_id)]
 
@@ -212,6 +235,10 @@ def list_members(request: Request, ctx: Manager) -> list[MemberView]:
     },
 )
 def add_member(body: AddMemberRequest, request: Request, ctx: Manager) -> MemberView:
+    """Adds an existing account, found by email, with a role. No such account is 404
+    `user_not_found`; a change your role may not make is 403 `forbidden`; a change that breaks a
+    membership rule (e.g. an existing member) is 409 `conflict` with the reason. `slug` must be
+    your active organization. Audited (`org.member_add`)."""
     with resolve_sessions(request)() as db:
         try:
             member = service.add_member(
@@ -251,6 +278,9 @@ def add_member(body: AddMemberRequest, request: Request, ctx: Manager) -> Member
     },
 )
 def set_role(user_id: str, body: SetRoleRequest, request: Request, ctx: Manager) -> MemberView:
+    """Changes a member's role. Not a member is 404 `user_not_found`; a change your role may not
+    make is 403 `forbidden`; a change that breaks a membership rule is 409 `conflict` with the
+    reason. Audited (`org.member_role`)."""
     with resolve_sessions(request)() as db:
         try:
             member = service.set_member_role(
@@ -290,6 +320,9 @@ def set_role(user_id: str, body: SetRoleRequest, request: Request, ctx: Manager)
     },
 )
 def remove_member(user_id: str, request: Request, ctx: Manager) -> Response:
+    """Removes a member. Not a member is 404 `user_not_found`; a removal your role may not make is
+    403 `forbidden`; one that breaks a membership rule is 409 `conflict` with the reason. Answers
+    204 with no body. Audited (`org.member_remove`)."""
     with resolve_sessions(request)() as db:
         member = service.get_membership(db, ctx.org_id, user_id)
         member_id = member.id if member is not None else None

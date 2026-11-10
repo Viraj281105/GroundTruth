@@ -7,14 +7,14 @@ level has, so a funder with a ``view`` grant may export. Each successful export 
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from groundtruth.contracts.errors import CaseDefinitionError, ConfigurationError
 from groundtruth.contracts.evidence import EvidenceBundle
 from groundtruth.engine.run import run_analysis
-from groundtruth.platform.api.errors import ApiErrorCode, api_error
+from groundtruth.platform.api.errors import ApiErrorBody, ApiErrorCode, api_error
 from groundtruth.platform.api.scope import audit, case_dependency
 from groundtruth.platform.auth.authz import Capability, ProjectAccess
 from groundtruth.platform.cases.registry import get_case
@@ -101,14 +101,53 @@ _REPORT_ERRORS = {
 }
 
 
-@router.get("/{case_id}/export/csv")
+_EXPORT_HEADERS = {
+    "Content-Disposition": {
+        "description": "`attachment`, with the file name.",
+        "schema": {"type": "string"},
+    },
+    "X-GroundTruth-Data-Mode": {
+        "description": "`simulated` or `observed`: what the exported data is.",
+        "schema": {"type": "string", "enum": ["simulated", "observed"]},
+    },
+    REPORT_GENERATOR_HEADER: {
+        "description": "Who wrote the report: `deterministic`, or `genai:<provider>`.",
+        "schema": {"type": "string"},
+    },
+}
+_EXPORT_ERRORS: dict[int | str, dict[str, Any]] = {
+    401: {"model": ApiErrorBody, "description": "Not signed in (`unauthenticated`)."},
+    403: {"model": ApiErrorBody, "description": "Your role may not export (`forbidden`)."},
+    404: {"model": ApiErrorBody, "description": "Unknown case, or no access to its project."},
+}
+
+
+@router.get(
+    "/{case_id}/export/csv",
+    summary="Download a case's evidence bundle as CSV",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "A UTF-8 CSV: provenance header lines starting with `#`, then one "
+            "row per evidence item.",
+            "content": {"text/csv": {"schema": {"type": "string"}}},
+            "headers": _EXPORT_HEADERS,
+        },
+        **_EXPORT_ERRORS,
+    },
+)
 def export_case_csv(
     case_id: str,
     request: Request,
     access: Exporter,
     seed: int = Query(default=20260101, description="Deterministic RNG seed"),
 ) -> Response:
-    """Export the case's evidence bundle as a UTF-8 CSV attachment."""
+    """Export the case's evidence bundle as a UTF-8 CSV attachment.
+
+    Every evidence item with its value, unit, uncertainty and provenance fingerprint. The
+    `X-GroundTruth-Data-Mode` header and the `# is_simulated` line say whether the data is
+    simulated. Audited (`export.download`).
+    """
     bundle = build_case_bundle(case_id, seed=seed)
     csv_text = export_bundle_csv(bundle)
     audit(
@@ -130,7 +169,34 @@ def export_case_csv(
     )
 
 
-@router.get("/{case_id}/export/pdf")
+@router.get(
+    "/{case_id}/export/pdf",
+    summary="Download a case's verified screening report as PDF",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "A self-contained PDF report, verified against its own evidence bundle.",
+            "content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}},
+            "headers": _EXPORT_HEADERS,
+        },
+        **_EXPORT_ERRORS,
+        422: {
+            "model": ApiErrorBody,
+            "description": "`narrate=true` but no GenAI provider is configured "
+            "(`narration_not_configured`).",
+        },
+        500: {
+            "model": ApiErrorBody,
+            "description": "The report that would be exported fails verification "
+            "(`report_not_grounded`): a defect, never shipped.",
+        },
+        502: {
+            "model": ApiErrorBody,
+            "description": "The narration failed (`narration_failed`) or failed verification "
+            "(`narration_not_grounded`). The export is refused, never substituted.",
+        },
+    },
+)
 def export_case_pdf(
     case_id: str,
     request: Request,

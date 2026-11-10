@@ -164,6 +164,10 @@ def get_audit(
     cursor: Annotated[str | None, Query(description="`next_cursor` of the previous page.")] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> AuditPage:
+    """Security-relevant events of your active organization (`slug` must be it), newest first. Page
+    with `cursor` and `limit` (1 to 200). Needs a role that may read the audit log (403 otherwise).
+    A cursor that is not valid is 422 `invalid_cursor`; note that `GET /runs` answers the same code
+    with 400."""
     with resolve_sessions(request)() as db:
         try:
             rows, next_cursor = list_events(db, ctx.org_id, cursor=cursor, limit=limit)

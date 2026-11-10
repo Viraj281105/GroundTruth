@@ -34,10 +34,16 @@ from groundtruth.platform.store.interface import ResultState, RunSummary
 class HealthResponse(BaseModel):
     """Service liveness and capability report."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     status: str = "ok"
+    """Always `ok` when the API answers; a failing service answers an error instead."""
     version: str
+    """The GroundTruth package version serving this API."""
     engine_version: str = ""
+    """Version of the analysis engine every new run uses."""
     contract_version: str = ""
+    """Version of the engine contract; results record the one they used."""
     engine_capabilities: dict[str, bool] = Field(
         default_factory=dict,
         description="What the engine can actually do, reported by the engine itself.",
@@ -49,58 +55,101 @@ class HealthResponse(BaseModel):
         default=False, description="False until a narration provider is implemented."
     )
     cases_available: int = 0
+    """How many case definitions this deployment has loaded."""
 
 
 class CaseSummary(BaseModel):
     """A case as listed by the API."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     case_id: str
+    """Stable identifier of the case, used in every case and run URL."""
     name: str
+    """Human-readable project name."""
     country: str
+    """Country the project lies in."""
     standard: str
+    """Certification standard the project reports under, e.g. `VCS`."""
     registry_id: str | None = None
+    """The project's identifier in its registry, when known."""
     ecosystem: str
+    """Ecosystem type, e.g. `forest / woodland`."""
     indicator: str
+    """Vegetation index the analysis measures, e.g. `ndvi`. An index, never carbon."""
     pre_period: str
+    """Pre-treatment years used to fit the comparison, as `start-end`."""
     post_period: str
+    """Post-treatment years in which the effect is measured, as `start-end`."""
     status: str
+    """Case lifecycle status. New cases are `scaffolded`; only a case with a run reviewed by both
+    owners may be `analysed`."""
     has_known_reference: bool
+    """True if published third-party findings exist to compare against. They are never an input to
+    the estimate."""
 
 
 class CaseDetail(CaseSummary):
     """Full case definition, including validation references."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     area_ha: float | None = None
+    """Project area in hectares, as declared by the case."""
     donor_search_region: str
+    """Where comparison (donor) areas are searched for."""
     donor_pool_size: int
+    """How many candidate donor areas the search draws before screening."""
     covariates: list[str]
+    """Variables used to match donors to the project area."""
     known_reference: dict[str, Any] = Field(
         default_factory=dict,
         description="Published third-party findings. Never an input to the estimate.",
     )
     notes: str = ""
+    """Free-text notes from the case definition."""
 
 
 class CreateCaseRequest(BaseModel):
     """Request to define and register a new project case."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     name: str = Field(min_length=2, max_length=120)
+    """Project name, 2 to 120 characters. The case id is derived from it unless `case_id` is given."""
     country: str = Field(min_length=2, max_length=80)
+    """Country the project lies in, 2 to 80 characters."""
     ecosystem: str = Field(default="forest / woodland")
+    """Ecosystem type."""
     standard: str = Field(default="VCS")
+    """Certification standard, e.g. `VCS`."""
     registry_id: str = Field(min_length=2, max_length=60)
+    """The project's registry identifier, 2 to 60 characters."""
     area_ha: float = Field(gt=0)
+    """Declared project area in hectares; must be positive."""
     crediting_period_start: str = Field(default="2015-01-01")
+    """First day of the crediting period, `YYYY-MM-DD`."""
     crediting_period_end: str = Field(default="2045-12-31")
+    """Last day of the crediting period, `YYYY-MM-DD`."""
     claimed_credits_tco2e: float | None = None
+    """Credits the developer claims, in tCO2e, if known. Shown beside the evidence, never used to
+    compute it."""
     indicator: str = Field(default="ndvi")
+    """Vegetation index to measure: `ndvi`, `evi`, `ndmi` or `nbr`."""
     donor_pool_size: int = Field(default=50, ge=10, le=100)
+    """Candidate donor areas to draw, 10 to 100."""
     pre_start: int = Field(default=2005)
+    """First pre-treatment year."""
     pre_end: int = Field(default=2014)
+    """Last pre-treatment year; must come before `post_start`."""
     post_start: int = Field(default=2015)
+    """First post-treatment year (the intervention year)."""
     post_end: int = Field(default=2022)
+    """Last post-treatment year."""
     boundary_geojson: dict[str, Any] | None = None
+    """Project boundary as GeoJSON. Optional; validated before anything is written."""
     case_id: str | None = None
+    """Choose the case id instead of deriving it from `name`. Must be unique."""
     status: str | None = Field(
         default=None,
         description=(
@@ -121,6 +170,8 @@ class DataSourceMode(StrEnum):
 
 class VerificationRequest(BaseModel):
     """Options for a verification run."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
 
     synthetic: bool = Field(
         default=True,
@@ -148,30 +199,46 @@ class VerificationRequest(BaseModel):
         ),
     )
     include_report: bool = True
+    """Also return a plain-language report of the result (`report_markdown`)."""
 
 
 class VerificationResponse(BaseModel):
     """The result of a verification run."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     run_id: str
+    """Identifier of this run."""
     case_id: str
+    """The case that was analysed."""
     spec_hash: str = Field(
         description="Hash of the analysis specification. Identical hashes must yield "
         "identical results under the same engine version."
     )
     engine_version: str
+    """Engine version that produced the result."""
     contract_version: str
+    """Engine contract version of the result."""
     duration_ms: float = 0.0
+    """How long the engine took, in milliseconds."""
     data_mode: Literal["simulated", "observed"] = Field(
         description="Drives the persistent simulated-data / real-observations banner."
     )
     verdict_label: VerdictLabel
+    """The screening verdict. A divergence warrants accredited review; it is never a finding of
+    fraud."""
     verdict_rationale: str
+    """Why the engine reached this verdict, in its own words, thresholds included."""
     caveats: list[str]
+    """Statements that must accompany the verdict wherever it is shown."""
     warnings: list[str]
+    """Analyst-facing warnings, e.g. that the data is simulated."""
     bundle: EvidenceBundle
+    """The evidence bundle: every measured value with its unit, uncertainty and provenance."""
     report_markdown: str | None = None
+    """Plain-language report, when `include_report` was true."""
     report_generator: str | None = None
+    """Who wrote `report_markdown`: `deterministic`, or `genai:<provider>` when narrated."""
 
 
 class MessageErrorBody(BaseModel):
@@ -181,11 +248,20 @@ class MessageErrorBody(BaseModel):
     error envelope, so a client can read the same fields from every error.
     """
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     detail: str
+    """What went wrong, as a sentence."""
     code: str
+    """Machine-readable code, `http_<status>` for this shape (e.g. `http_404`). Act on this, not on
+    the prose."""
     message: str
+    """The same sentence as `detail`."""
     is_refusal: bool = False
+    """Always false for this shape: it is never a scientific refusal."""
     request_id: str | None = None
+    """Identifier of this request, also in the `X-Request-ID` header. Quote it when reporting a
+    problem."""
 
 
 class EngineFailureDetail(BaseModel):
@@ -195,30 +271,49 @@ class EngineFailureDetail(BaseModel):
     to produce a fragile number, and is shown as a legitimate outcome, not as an error.
     """
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     code: ErrorCode
+    """The engine's error code. `insufficient_data` and `donor_pool_inadequate` are refusals; the
+    rest are errors."""
     message: str
+    """Plain-language explanation, safe to show a user."""
     stage: str
+    """The engine stage that refused or failed."""
     is_refusal: bool
+    """True when the engine declined to estimate because the data cannot support a reliable number.
+    A legitimate outcome, not a malfunction."""
     remediation: str | None
+    """What could be done about it, when the engine knows."""
     run_id: str
+    """Identifier of the engine run that refused or failed."""
 
 
 class EngineFailureBody(BaseModel):
     """The body ``/verify`` returns when the engine refused or could not run."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     detail: EngineFailureDetail
+    """Why no result was returned."""
     is_refusal: bool = Field(
         default=False, description="The same value as `detail.is_refusal`, at the top level."
     )
     request_id: str | None = None
+    """Identifier of this request, also in the `X-Request-ID` header."""
 
 
 class ErrorResponse(BaseModel):
     """A structured error."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     error: str
+    """Machine-readable error code."""
     detail: str
+    """What went wrong."""
     hint: str | None = None
+    """What to do about it, when known."""
 
 
 # --- stored runs: list, get, compare (issue #35) ---------------------------------------
@@ -248,9 +343,15 @@ class RunItem(BaseModel):
     display, never an error. ``is_simulated`` and ``data_mode`` are always present.
     """
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     run_id: str
+    """Identifier of the run."""
     case_id: str
+    """The case the run analysed."""
     spec_hash: str
+    """Hash of the analysis specification. Two runs with the same hash and engine version give the
+    same numbers."""
     status: str = Field(description="Job lifecycle: queued, running, succeeded, failed, cancelled.")
     result_state: ResultState = Field(
         description="queued | running | measured | refused | failed | cancelled."
@@ -259,13 +360,17 @@ class RunItem(BaseModel):
         description="completed | refused | error, once the engine ran."
     )
     verdict_label: str | None
+    """The screening verdict, once measured."""
     data_mode: str = Field(description="'simulated' or 'observed'.")
     is_simulated: bool = Field(description="True for simulated data. Drives the UI banner.")
     notice: str | None = Field(description="Plain-language simulated-data notice, when simulated.")
     engine_version: str | None
+    """Engine version that produced the result, once there is one."""
     contract_version: str
+    """Engine contract version of the run."""
     created_at: datetime = Field(description="When the run was recorded (UTC); the sort key.")
     error_code: str | None = None
+    """The stored error's code, for a refused or errored run."""
     is_refusal: bool | None = Field(
         default=None, description="Set when the run has a stored error: true for a refusal."
     )
@@ -298,23 +403,35 @@ class RunItem(BaseModel):
 class RunListPage(BaseModel):
     """A page of runs, newest first."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     items: list[RunItem]
+    """Runs on this page, newest first."""
     next_cursor: str | None = Field(
         description="Pass as `cursor` to get the next page. Null on the last page."
     )
     limit: int
+    """The page size that was applied."""
     contains_simulated: bool = Field(description="True if any run on this page is simulated.")
 
 
 class RunError(BaseModel):
     """A stored analysis error. A refusal has ``is_refusal`` true and is not a fault."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     code: str
+    """Error code. `insufficient_data` and `donor_pool_inadequate` are refusals."""
     message: str
+    """Plain-language explanation, safe to show a user."""
     stage: str
+    """The engine stage that refused or failed."""
     detail: dict[str, Any]
+    """Structured context, e.g. donors found against donors required."""
     remediation: str | None
+    """What could be done about it, when known."""
     is_refusal: bool
+    """True for a scientific refusal: the data could not support an estimate. Not a fault."""
 
     @classmethod
     def from_error(cls, error: AnalysisError) -> RunError:
@@ -329,27 +446,44 @@ class RunError(BaseModel):
 
 
 class RunEngine(BaseModel):
+    """The engine build that produced a run."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     engine_version: str
+    """Engine version."""
     contract_version: str
+    """Engine contract version."""
     git_sha: str | None
+    """Commit the worker ran, or null when the deployment did not record it."""
 
 
 class RunDetail(RunItem):
     """One stored run in full: its lifecycle, its outcome, and its evidence bundle."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     has_bundle: bool = Field(description="False for a refused, failed, queued or cancelled run.")
     engine: RunEngine | None = None
+    """The engine build that produced the run, once it ran."""
     seed: int | None = None
+    """Random seed of the run. The same seed and specification reproduce the same numbers."""
     datasets: list[DatasetRef] = Field(default_factory=list)
+    """Every dataset the run read, with its version."""
     started_at: str | None = None
+    """When the engine started (UTC, ISO 8601)."""
     finished_at: str | None = None
+    """When the engine finished (UTC, ISO 8601)."""
     metrics: RunMetrics | None = None
+    """The engine's own timings and counters."""
     error: RunError | None = Field(
         default=None, description="Present for a refused run or an engine error."
     )
     verdict_rationale: str | None = None
+    """Why the engine reached its verdict."""
     caveats: list[str] = Field(default_factory=list)
+    """Statements that must accompany the verdict."""
     warnings: list[str] = Field(default_factory=list)
+    """Analyst-facing warnings."""
     bundle: EvidenceBundle | None = Field(
         default=None, description="Null when excluded with include_bundle=false, or absent."
     )
@@ -359,6 +493,7 @@ class RunDetail(RunItem):
         "run has a bundle with a verdict. Rendered on read; never narrated by a model.",
     )
     report_generator: str | None = None
+    """Who wrote `report_markdown`: `deterministic`, or `genai:<provider>`."""
 
     @classmethod
     def build(
@@ -409,9 +544,14 @@ class RunComparison(BaseModel):
     number may be an artefact of the instrument and not a change in the project.
     """
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     baseline: RunItem
+    """The run compared against."""
     candidate: RunItem
+    """The run compared with the baseline."""
     comparable: bool
+    """True if the two runs can be compared item by item; see `not_comparable` otherwise."""
     not_comparable: list[NotComparable] = Field(
         description="Every reason the pair cannot be compared; empty when comparable."
     )
@@ -420,7 +560,9 @@ class RunComparison(BaseModel):
         "(inputs, window, seed, or pinned datasets). Still comparable; read the diff knowing it."
     )
     contains_simulated: bool
+    """True if either run is simulated."""
     diff: BundleDiff | None = None
+    """The item-by-item difference, when comparable."""
 
     @classmethod
     def build(
@@ -463,14 +605,20 @@ StageState = Literal["done", "active", "pending", "skipped", "failed", "unknown"
 class StageView(BaseModel):
     """One live stage of a job, as it was observed."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     name: str
+    """Stage id: `claim`, `data`, `engine` or `record`."""
     label: str
+    """Stage name for display."""
     state: StageState = Field(
         description="done | active | pending | skipped (never reached) | failed | unknown "
         "(no stage was recorded for this job)."
     )
     started_at: datetime | None = None
+    """When the stage began."""
     finished_at: datetime | None = None
+    """When the stage ended, for a finished stage."""
     duration_ms: float | None = Field(default=None, description="Finished stages only.")
     elapsed_ms: float | None = Field(
         default=None,
@@ -480,16 +628,26 @@ class StageView(BaseModel):
 
 
 class EngineStageTiming(BaseModel):
+    """One of the engine's internal stages and how long it took."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     name: str
+    """The engine's name for the stage."""
     duration_ms: float
+    """How long it took, in milliseconds."""
 
 
 class EngineMetricsView(BaseModel):
     """The engine's own timings, taken from ``RunMetrics``. Present only after it returns."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     available: bool
+    """False until the engine has returned for this job."""
     source: Literal["run_metrics"] = "run_metrics"
+    """Where the timings come from: always the engine's own `RunMetrics`."""
     total_ms: float | None = None
+    """Total engine time, in milliseconds."""
     stages: list[EngineStageTiming] = Field(
         default_factory=list,
         description="The engine's internal stages and how long each took, in order. The "
@@ -499,14 +657,22 @@ class EngineMetricsView(BaseModel):
         default=None, description="The stage a refusal or error came from, as the engine names it."
     )
     n_units_observed: int | None = None
+    """How many areas (project and candidates) the engine observed."""
     n_donors_admitted: int | None = None
+    """How many comparison areas passed screening."""
     n_estimator_fits: int | None = None
+    """How many times the estimator was fitted, placebos included."""
     note: str
+    """How to read these numbers."""
 
 
 class TimelineEvent(BaseModel):
+    """One lifecycle event of a job."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     event: str = Field(description="queued | running | succeeded | failed | cancelled")
     at: datetime
+    """When it happened (UTC)."""
 
 
 def _ms(delta_seconds: float) -> float:
@@ -599,31 +765,48 @@ class JobView(BaseModel):
     carries a ``notice``.
     """
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     run_id: str
+    """Identifier of the job's run."""
     case_id: str
+    """The case being analysed."""
     status: str = Field(description="queued | running | succeeded | failed | cancelled")
     result_state: ResultState
+    """What the run produced: queued, running, measured, refused, failed or cancelled. `refused` is
+    a scientific outcome; `failed` is a fault."""
     terminal: bool = Field(description="True once nothing more will happen; stop polling.")
     engine_status: str | None
+    """What the engine returned, once it ran: completed, refused or error."""
     data_mode: str
+    """`simulated` or `observed`."""
     is_simulated: bool
+    """True for simulated data. Show the simulated-data notice."""
     notice: str | None
+    """Plain-language simulated-data notice, when simulated."""
     attempt: int | None = Field(description="How many times a worker has taken the job.")
     max_attempts: int | None
+    """How many times the job may be tried before it fails for good."""
     cancel_requested: bool = Field(
         description="True once a cancel was requested. A running job honours it when its "
         "worker reaches a checkpoint or the engine returns."
     )
     stage: str | None = Field(description="The live stage in progress, if one is recorded.")
     stages: list[StageView]
+    """Each live stage of the job and its state."""
     engine_metrics: EngineMetricsView
+    """The engine's own timings, once it has returned."""
     timeline: list[TimelineEvent]
+    """Lifecycle events, oldest first."""
     created_at: datetime
+    """When the job was queued (UTC)."""
     updated_at: datetime | None
+    """When the job last changed (UTC)."""
     last_heartbeat_at: datetime | None = Field(
         description="When the worker last renewed its lease. Coarse: about a third of the lease."
     )
     lease_expires_at: datetime | None
+    """When the current worker's claim lapses unless renewed; the job is then retried."""
     retry_at: datetime | None = Field(
         description="When a job waiting to retry becomes available again."
     )
@@ -631,9 +814,12 @@ class JobView(BaseModel):
         description="A refusal (is_refusal true) or an engine error, once recorded."
     )
     failure_reason: str | None
+    """Why the job failed, when it failed before the engine produced an error."""
     status_url: str
+    """URL to poll for this view."""
     result_url: str | None = Field(description="Where the stored result is, once there is one.")
     note: str = PROGRESS_NOTE
+    """How to read the progress fields."""
 
     @classmethod
     def build(cls, job: JobStatus) -> JobView:
@@ -678,9 +864,10 @@ class JobView(BaseModel):
 class SubmitJobRequest(BaseModel):
     """Queue an analysis for a case. Simulated data only, until real providers exist."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)
 
     case_id: str
+    """The case to analyse. Its project must belong to your active organization."""
     synthetic: bool = Field(
         default=True,
         description="Must be true until real Earth-observation providers are implemented. "
@@ -699,7 +886,10 @@ class SubmitJobRequest(BaseModel):
 class JobSubmission(BaseModel):
     """What submitting did: queued a new job, or pointed at an existing run."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     run_id: str
+    """Identifier of the run that answers the request: new, cached or in flight."""
     from_cache: bool = Field(
         description="An existing result answers this request; nothing was queued or will run."
     )
@@ -707,7 +897,9 @@ class JobSubmission(BaseModel):
         description="An identical job is already queued or running; this is that job."
     )
     status_url: str
+    """URL to poll for the job's progress."""
     job: JobView
+    """The job's current status."""
 
 
 OrgTypeName = Literal["ngo", "funder", "auditor", "government", "reference"]
@@ -717,18 +909,32 @@ MemberRoleName = Literal["owner", "admin", "member", "viewer"]
 class OrgView(BaseModel):
     """An organization as seen by one of its members (``role`` is the caller's role)."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     id: str
+    """Organization identifier."""
     slug: str
+    """Organization slug, used in URLs."""
     name: str
+    """Organization name."""
     type: OrgTypeName
+    """Organization type: ngo, funder, auditor, government or reference."""
     role: MemberRoleName
+    """Your role in this organization: owner, admin, member or viewer."""
 
 
 class MemberView(BaseModel):
+    """A member of an organization."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)
     user_id: str
+    """The member's user id."""
     email: str
+    """The member's email address."""
     role: MemberRoleName
+    """Their role: owner, admin, member or viewer."""
     created_at: datetime
+    """When they joined (UTC)."""
 
 
 ProjectLevelName = Literal["owner", "audit", "contribute", "view"]
@@ -738,19 +944,35 @@ DataModeName = Literal["observed", "simulated"]
 class ProjectView(BaseModel):
     """A project as seen by the active organization (``access_level`` is that org's level)."""
 
+    model_config = ConfigDict(use_attribute_docstrings=True)
+
     id: str
+    """Project identifier."""
     slug: str
+    """Project slug: the case id of its analysis."""
     name: str
+    """Project name."""
     country: str
+    """Country the project lies in."""
     ecosystem: str
+    """Ecosystem type."""
     intervention: str
+    """Type of intervention, e.g. REDD+ or restoration."""
     treatment_start_year: int
+    """Year the intervention began."""
     data_mode: DataModeName
+    """`observed` or `simulated`. Simulated data is never presented as real."""
     owner_slug: str
+    """Slug of the organization that owns the project."""
     owner_name: str
+    """Name of the organization that owns the project."""
     access_level: ProjectLevelName
+    """Your organization's level on this project: owner, audit, contribute or view."""
     boundary_sha256: str | None = None
+    """SHA-256 of the stored boundary file, when there is one."""
     reported_funding_amount: float | None = None
+    """Funding as the owner reported it. Never computed by GroundTruth."""
     reported_funding_currency: str | None = None
     """Reported by the owner, shown as such; never computed."""
     created_at: datetime
+    """When the project was created (UTC)."""

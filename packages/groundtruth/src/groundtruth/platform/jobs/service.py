@@ -12,7 +12,7 @@ from __future__ import annotations
 from groundtruth.contracts.request import AnalysisRequest
 from groundtruth.contracts.result import AnalysisStatus
 from groundtruth.platform.cases.registry import CaseDefinition
-from groundtruth.platform.jobs.interface import JobStatus, Submission
+from groundtruth.platform.jobs.interface import JobStatus, Lane, Submission
 from groundtruth.platform.jobs.queue import JobQueue
 from groundtruth.platform.store.sql import SqlEvidenceStore
 
@@ -31,10 +31,13 @@ class SqlJobService:
         *,
         requested_by: str | None = None,
         project_id: str | None = None,
+        lane: Lane = "batch",
     ) -> Submission:
         """Store the case, then queue the request (or return its result or in-flight job)."""
         self._store.upsert_case(case)
-        return self._queue.submit(request, requested_by=requested_by, project_id=project_id)
+        return self._queue.submit(
+            request, requested_by=requested_by, project_id=project_id, lane=lane
+        )
 
     def cancel(self, run_id: str) -> AnalysisStatus:
         """Cancel a job; see :meth:`JobQueue.cancel`."""

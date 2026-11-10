@@ -113,17 +113,26 @@ flowchart TD
 
 ## Error Handling & Error Code Mapping
 
-The API enforces deterministic, typed error bodies (`EngineFailureBody`, `MessageErrorBody`) adhering to `groundtruth.contracts.result.ErrorCode`:
+**Consumers: see [the API guide](../../docs/api/README.md)**, which lists every error code with its
+HTTP status and explains the difference between a refusal and an error, with real examples.
 
-| Contract Error Code | HTTP Status | Remediation Description |
+Every error has one envelope (`ErrorEnvelopeMiddleware`): `detail` (an object with `code`,
+`message` and `hint`, a string, or a validation list), `is_refusal` and `request_id`. Engine
+outcomes on `/verify` use the engine's own lowercase codes (`groundtruth.contracts.result.ErrorCode`):
+
+| Code | HTTP | Refusal |
 | :--- | :--- | :--- |
-| `INVALID_REQUEST` | `422 Unprocessable` | Malformed coordinates, invalid date ranges, or unparseable GeoJSON. |
-| `CONTRACT_VERSION_MISMATCH` | `409 Conflict` | Client request schema is incompatible with engine contract version. |
-| `DATA_UNAVAILABLE` | `503 Service Unavailable` | Satellite provider (Copernicus/Planetary Computer) unreachable or cloud coverage > 80%. |
-| `INSUFFICIENT_DATA` | `422 Unprocessable` | Pre-treatment period contains fewer than minimum required annual observations. |
-| `DONOR_POOL_INADEQUATE` | `422 Unprocessable` | Fewer than 10 valid donors remain after applying leakage and biome exclusion filters. |
-| `ESTIMATION_FAILED` | `500 Internal Error` | Optimization solver failed to converge on synthetic control weights. |
-| `NOT_IMPLEMENTED` | `501 Not Implemented` | Requested analytical combination is not yet supported. |
+| `insufficient_data` | 422 | yes |
+| `donor_pool_inadequate` | 422 | yes |
+| `invalid_request` | 422 | no |
+| `contract_version_mismatch` | 409 | no |
+| `data_unavailable` | 503 | no |
+| `estimation_failed` | 500 | no |
+| `not_implemented` | 501 | no |
+| `internal_error` | 500 | no |
+
+API codes are in `platform/api/errors.py` (`ApiErrorCode`, `API_ERROR_STATUS`) and sign-in and
+tenancy codes in `platform/auth/service.py`. A test fails if any code is missing from the guide.
 
 ---
 

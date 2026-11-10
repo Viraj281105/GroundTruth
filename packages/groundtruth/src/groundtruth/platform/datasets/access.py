@@ -34,6 +34,7 @@ from groundtruth.platform.datasets.synthetic import (
     SyntheticCovariateProvider,
     SyntheticDonorPoolProvider,
     SyntheticObservationProvider,
+    pinned_true_effect,
 )
 
 SYNTHETIC_OBSERVATION_DATASET = DatasetRef(
@@ -123,20 +124,34 @@ class SyntheticDonorAccess:
 def synthetic_access(
     request: AnalysisRequest,
     *,
-    true_effect: float = 0.0,
+    true_effect: float | None = None,
 ) -> DataAccess:
     """Build a complete simulated DataAccess bundle for a request.
 
     Args:
         request: The analysis request the bundle will serve.
         true_effect: Effect injected into the simulated treated unit, so the
-            estimator's ability to recover a known value can be exercised.
+            estimator's ability to recover a known value can be exercised. A request that
+            pins its simulation (:func:`~groundtruth.platform.datasets.synthetic.simulation_pin`)
+            carries its own effect, which is used; passing a different one is refused,
+            because the result would no longer be what the request (and its ``spec_hash``)
+            says. With no pin and no argument the effect is 0.
+
+    Raises:
+        ValueError: ``true_effect`` disagrees with the request's pinned effect.
     """
+    pinned = pinned_true_effect(request)
+    if pinned is not None and true_effect is not None and true_effect != pinned:
+        raise ValueError(
+            f"the request pins true_effect={pinned!r} but {true_effect!r} was passed; "
+            "a run must compute what its request specifies"
+        )
+    effect = pinned if pinned is not None else (true_effect if true_effect is not None else 0.0)
     return DataAccess(
         observations=SyntheticObservationAccess(
             seed=request.seed,
             treated_unit_id=request.project.unit_id,
-            true_effect=true_effect,
+            true_effect=effect,
             treatment_period=request.window.post_start,
         ),
         covariates=SyntheticCovariateAccess(

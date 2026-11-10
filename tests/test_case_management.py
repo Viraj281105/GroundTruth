@@ -30,6 +30,7 @@ from groundtruth.platform.cases.registry import (
     load_case,
 )
 from groundtruth.platform.config import REPO_ROOT, get_settings
+from groundtruth.platform.datasets.synthetic import simulation_pin
 
 GOOD = {"name": "Probe Project", "country": "Zimbabwe", "registry_id": "VCS 9999", "area_ha": 5000}
 
@@ -289,7 +290,10 @@ class TestMinDonorsFloor:
         )
         assert response.status_code == 200, response.text
         expected = get_case("kariba-redd").to_request(
-            data_mode="simulated", seed=get_settings().random_seed
+            data_mode="simulated",
+            seed=get_settings().random_seed,
+            # /verify pins its true_effect slider (default 0.06) like POST /jobs (#42, #47)
+            datasets=(simulation_pin(0.06),),
         )
         assert response.json()["spec_hash"] == expected.spec_hash
 

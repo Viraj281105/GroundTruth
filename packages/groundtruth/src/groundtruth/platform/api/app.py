@@ -67,6 +67,7 @@ from groundtruth.platform.cases.registry import (
 )
 from groundtruth.platform.config import get_settings
 from groundtruth.platform.datasets.access import earth_engine_access, synthetic_access
+from groundtruth.platform.datasets.synthetic import simulation_pin
 from groundtruth.platform.metrics import outcome_of_engine_status, record_outcome, stage_timer
 from groundtruth.platform.reports.narrative import generate_report
 
@@ -375,6 +376,8 @@ def verify(
         data_mode="simulated" if is_synthetic else "observed",
         seed=settings.random_seed,
         min_donors=min_donors,
+        # The slider's effect is part of the specification, as on POST /jobs (#42, #47).
+        datasets=(simulation_pin(request.true_effect),) if is_synthetic else (),
     )
 
     try:
