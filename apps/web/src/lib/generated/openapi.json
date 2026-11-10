@@ -498,6 +498,16 @@
               }
             }
           },
+          "429": {
+            "description": "Over the per-user analysis submission limit (`too_many_submissions`, shared with `/verify`). See `Retry-After`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
           "501": {
             "description": "Observed data is not implemented.",
             "content": {
@@ -3704,7 +3714,7 @@
           "cases"
         ],
         "summary": "Create Case",
-        "description": "Create, calibrate and register a new project case.\n\nEverything is validated before anything is written. A rejected case answers a structured\n422 (`invalid_case`, with the field named, or `case_status_requires_review`) and leaves\nno file behind. Cases are always created as `scaffolded`.",
+        "description": "Create, calibrate and register a new project case.\n\nEverything is validated before anything is written. A rejected case answers a structured\n422 (`invalid_case`, with the field named, or `case_status_requires_review`) and leaves\nno file behind. Cases are always created as `scaffolded`. Sign-in is always required, and\nthe creation is audited (`case.create`).",
         "operationId": "create_case_cases_post",
         "requestBody": {
           "content": {
@@ -3876,6 +3886,16 @@
                       "$ref": "#/components/schemas/ApiErrorBody"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-user analysis submission limit (`too_many_submissions`, shared with `POST /jobs`). See `Retry-After`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
                 }
               }
             }

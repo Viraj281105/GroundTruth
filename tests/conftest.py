@@ -70,6 +70,17 @@ def _isolate_auth_settings(monkeypatch):
     monkeypatch.setattr(s, "auth_required", False)
 
 
+@pytest.fixture(autouse=True)
+def _fresh_submission_budget():
+    """Each test starts with an unused analysis submission budget (#51), so a test that
+    submits many runs can never be refused because of what an earlier test did."""
+    from groundtruth.platform.api.rate_limits import reset_submission_limits
+
+    reset_submission_limits()
+    yield
+    reset_submission_limits()
+
+
 @pytest.fixture
 def tenant_world(tmp_path, monkeypatch):
     """A seeded multi-tenant world with signed-in HTTP clients (see ``tests/tenancy/world.py``).

@@ -33,13 +33,11 @@ import re
 import traceback
 import uuid
 from typing import Any
-from urllib.parse import urlsplit
 
-from pydantic import SecretStr
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from groundtruth.logging import get_logger
-from groundtruth.platform.config import get_settings
+from groundtruth.logging import get_logger, log_context
+from groundtruth.platform.redaction import redact_secrets
 
 logger = get_logger("api.errors")
 
@@ -64,11 +62,7 @@ _TRACEBACK = re.compile(r"Traceback \(most recent call last\):.*", re.DOTALL)
 _FRAME = re.compile(r'File "[^"\n]*", line \d+(?:, in [^\s,]+)?')
 _SQL = re.compile(r"\[SQL:.*", re.DOTALL)
 _PARAMETERS = re.compile(r"\[parameters:.*", re.DOTALL)
-_CONNECTION_CREDENTIALS = re.compile(r"(\b[A-Za-z][A-Za-z0-9+.\-]*://)[^/\s:@]+(?::[^/\s@]*)?@")
-_BEARER = re.compile(r"(Bearer\s+)[A-Za-z0-9._~+/=\-]{16,}")
-_PEM = re.compile(r"-----BEGIN[^-]*-----.*?-----END[^-]*-----", re.DOTALL)
 _TRAILING_PUNCTUATION = ".,;:)]}"
-_MIN_SECRET_LENGTH = 6
 
 
 def _keep_file_name(match: re.Match[str]) -> str:
@@ -78,37 +72,6 @@ def _keep_file_name(match: re.Match[str]) -> str:
     tail = text[len(stripped) :]
     name = re.split(r"[\\/]", stripped)[-1]
     return f"<path>/{name}{tail}" if name else f"<path>{tail}"
-
-
-def _secret_values() -> list[str]:
-    """Every secret the settings hold, longest first, so a longer one is not cut by a shorter."""
-    settings = get_settings()
-    found: set[str] = set()
-    for name in type(settings).model_fields:
-        value = getattr(settings, name, None)
-        if isinstance(value, SecretStr):
-            found.add(value.get_secret_value())
-    url = getattr(settings, "database_url", None)
-    if url:
-        try:
-            password = urlsplit(str(url)).password
-        except ValueError:
-            password = None
-        if password:
-            found.add(password)
-    return sorted((s for s in found if len(s) >= _MIN_SECRET_LENGTH), key=len, reverse=True)
-
-
-def redact_secrets(text: str) -> str:
-    """``text`` without configured secrets, connection-string credentials or key material.
-
-    Safe for logs: file paths and tracebacks are left alone, because a developer needs them.
-    """
-    for secret in _secret_values():
-        text = text.replace(secret, "[redacted]")
-    text = _PEM.sub("[redacted]", text)
-    text = _BEARER.sub(r"\1[redacted]", text)
-    return _CONNECTION_CREDENTIALS.sub(r"\1<credentials>@", text)
 
 
 def scrub_text(text: str) -> str:
@@ -276,7 +239,9 @@ class ErrorEnvelopeMiddleware:
             await send(message)
 
         try:
-            await self.app(scope, receive, wrapped_send)
+            # Every line logged while this request runs carries its id (#50).
+            with log_context(request_id=request_id):
+                await self.app(scope, receive, wrapped_send)
         except Exception as exc:
             trace = redact_secrets("".join(traceback.format_exception(exc)))
             logger.error(
@@ -285,6 +250,7 @@ class ErrorEnvelopeMiddleware:
                 scope.get("path", "?"),
                 request_id,
                 trace,
+                extra={"request_id": request_id},
             )
             if sent_start:
                 raise  # the client already has a response; nothing safe is left to send

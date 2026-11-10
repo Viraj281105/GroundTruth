@@ -41,6 +41,8 @@ from groundtruth.platform.jobs.worker import (
     default_resolve_access,
     engine_runner,
 )
+from groundtruth.platform.metrics import start_metrics_server
+from groundtruth.platform.redaction import redact_secrets
 from groundtruth.platform.store import migrate
 from groundtruth.platform.store.database import (
     create_db_engine,
@@ -157,7 +159,7 @@ def main(argv: list[str] | None = None) -> int:
     """Run a worker. Returns the process exit code."""
     args = build_parser().parse_args(argv)
     settings = get_settings()
-    configure_logging(args.log_level or settings.log_level, json_output=True)
+    configure_logging(args.log_level or settings.log_level, json_output=True, redact=redact_secrets)
     startup = {"stage": "startup"}
 
     try:
@@ -202,6 +204,8 @@ def main(argv: list[str] | None = None) -> int:
         run=engine_runner(settings.git_sha),
         poll_interval=args.poll_seconds,
     )
+    # Stage durations, outcomes and cache hits for Prometheus, on an internal port (#50).
+    start_metrics_server(settings.worker_metrics_port, settings.metrics_bind_address)
     previous = install_signal_handlers(ShutdownHandler(worker))
     logger.info(
         "worker %s started on %s (engine %s, lease %ss)",

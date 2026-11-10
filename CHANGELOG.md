@@ -41,6 +41,29 @@ flowchart LR
   - Organization boundaries, project grants, Scrypt password hashing ($N=32768, r=8, p=1$), timing attack mitigation, and session cookies with HttpOnly, SameSite, and Secure flags.
   - Row-level tenant isolation returning `HTTP 403 Forbidden` on unauthorized cross-tenant queries.
 
+### Added on `bhumi-dev`: production hardening and monitoring (#50, #51)
+- **Sign-in on every write (#51).** The API refuses to start with `APP_ENV=production` and
+  `AUTH_REQUIRED=false`. `POST /cases` requires sign-in even with auth off, because it writes
+  files, and is audited (`case.create`). A sweep proves every non-sign-in write route answers an
+  anonymous caller 401.
+- **Analysis submission budget (#51).** 20 per user per 10 minutes, shared by `POST /jobs` and
+  `/verify` (settings `ANALYSIS_RATE_LIMIT`, `ANALYSIS_RATE_WINDOW_SECONDS`); over it is
+  `429 too_many_submissions` with `Retry-After`, audited as a denied `run.start`.
+- **Security headers (#51)** on every API response and every web page, with a Content-Security-
+  Policy for each. An e2e spec loads every page from a production build and fails on any CSP
+  violation.
+- **Dependency scans made visible (#51).** Still advisory until after the competition; results go
+  to the run summary and annotations, with each npm advisory labelled accepted or NEW.
+  `SECURITY.md` section 8 lists every gap as closed or accepted with a reason.
+- **Structured logs (#50).** The API now logs JSON like the worker; every line has `run_id`,
+  `case_id` and `stage` (null outside an analysis) plus `request_id` on API lines; credentials are
+  redacted from every part of every line, and a line that cannot be redacted is withheld.
+- **Metrics and alerts (#50).** `prometheus_client` metrics on internal ports 9464 (API) and 9465
+  (worker): stage durations, queue depth, run outcomes (for the refusal rate) and cache hits, with
+  labels from fixed lists only. Alert rules page on job failure rate and queue backlog; refusal-rate
+  shifts and a zero refusal rate are warnings, never pages. Rules are unit-tested with `promtool`
+  in CI.
+
 ### Added on `bhumi-dev`: report export and structured errors (#38, #39)
 - **Report export pipeline (#38).** PDF and CSV exports are verified against their own bundle
   (`verify_grounding`), labelled with their generator (`deterministic` or `genai:<provider>`) in the PDF,

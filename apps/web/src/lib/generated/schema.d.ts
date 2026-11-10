@@ -852,7 +852,8 @@ export interface paths {
          *
          *     Everything is validated before anything is written. A rejected case answers a structured
          *     422 (`invalid_case`, with the field named, or `case_status_requires_review`) and leaves
-         *     no file behind. Cases are always created as `scaffolded`.
+         *     no file behind. Cases are always created as `scaffolded`. Sign-in is always required, and
+         *     the creation is audited (`case.create`).
          */
         post: operations["create_case_cases_post"];
         delete?: never;
@@ -3385,6 +3386,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"] | components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Over the per-user analysis submission limit (`too_many_submissions`, shared with `/verify`). See `Retry-After`. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
                 };
             };
             /** @description Observed data is not implemented. */
@@ -6021,6 +6031,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"] | components["schemas"]["EngineFailureBody"] | components["schemas"]["ApiErrorBody"];
+                };
+            };
+            /** @description Over the per-user analysis submission limit (`too_many_submissions`, shared with `POST /jobs`). See `Retry-After`. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorBody"];
                 };
             };
             /** @description The engine failed to estimate. */

@@ -486,7 +486,12 @@ class TestShutdown:
 
 def _configure(monkeypatch, *, url: str | None, git_sha: str | None = "abc1234") -> None:
     settings = SimpleNamespace(
-        database_url=url, git_sha=git_sha, log_level="INFO", random_seed=20260101
+        database_url=url,
+        git_sha=git_sha,
+        log_level="INFO",
+        random_seed=20260101,
+        worker_metrics_port=0,  # 0: no metrics server in tests (#50)
+        metrics_bind_address="127.0.0.1",
     )
     for module in (database, entrypoint, cli):
         monkeypatch.setattr(module, "get_settings", lambda: settings)
@@ -568,7 +573,8 @@ class TestLogging:
         )
         assert (inner["run_id"], inner["stage"]) == ("run_a", "engine")
         assert outer["stage"] == "explicit"
-        assert "run_id" not in after
+        # The context does not leak past its block. The key is always present (#50), as null.
+        assert after["run_id"] is None
 
 
 # --- the CLI --------------------------------------------------------------------

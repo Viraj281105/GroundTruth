@@ -1,9 +1,18 @@
 name: security
 
+# Dependency and filesystem scans (#51).
+#
+# ADVISORY, NOT BLOCKING, until after the competition (SECURITY.md, section 8): a newly
+# published advisory must not turn CI red during demo week, and the known npm findings need a
+# Next.js major upgrade owned by Viraj. So every scan may fail without failing the run, and
+# every scan's findings are written to the run's summary page and raised as warnings, so they
+# are seen rather than buried in a log.
+
 on:
   pull_request:
   schedule:
     - cron: "17 3 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,19 +26,46 @@ jobs:
       - uses: actions/setup-python@v5.3.0
         with:
           python-version: "3.12"
+
       - name: pip-audit
+        id: pip_audit
         continue-on-error: true
         run: |
+          # An old pip in the runner image would be reported against our dependencies.
+          python -m pip install --upgrade pip
           pip install pip-audit==2.7.3
           pip install ./packages/groundtruth
-          pip-audit
+          pip-audit --format markdown --output pip-audit.md
+
+      - name: Summarise pip-audit
+        if: always()
+        run: |
+          {
+            echo "### pip-audit (Python dependencies, advisory)"
+            echo
+            if [ -s pip-audit.md ]; then cat pip-audit.md; else echo "No known vulnerabilities, or the scan did not run (see its step)."; fi
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.pip_audit.outcome }}" = "failure" ]; then
+            echo "::warning title=pip-audit::vulnerabilities reported, or the scan failed; see the run summary"
+          fi
+
       - uses: actions/setup-node@v4.1.0
         with:
           node-version: "20"
+
       - name: npm audit
         continue-on-error: true
         working-directory: apps/web
-        run: npm audit --omit=dev
+        # npm exits non-zero whenever it finds anything; the report is what matters here.
+        run: npm audit --omit=dev --json > npm-audit.json || true
+
+      - name: Summarise npm audit
+        if: always()
+        # Labels each advisory accepted (recorded in scripts/ci/accepted-npm-advisories.json)
+        # or NEW, writes the table to the run summary and raises one warning per package.
+        run: node scripts/ci/npm_audit_summary.mjs apps/web/npm-audit.json
+
       - name: Trivy fs scan
         continue-on-error: true
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -37,6 +73,22 @@ jobs:
           scan-type: fs
           scan-ref: .
           severity: HIGH,CRITICAL
+          format: table
+          output: trivy.txt
+
+      - name: Summarise Trivy
+        if: always()
+        run: |
+          {
+            echo "### Trivy filesystem scan (HIGH and CRITICAL, advisory)"
+            echo
+            if [ -s trivy.txt ]; then echo '```'; cat trivy.txt; echo '```'; else echo "No findings, or the scan did not run (see its step)."; fi
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+          if grep -Eq "Total: [1-9]" trivy.txt 2>/dev/null; then
+            echo "::warning title=Trivy::HIGH or CRITICAL findings; see the run summary"
+          fi
+
       - name: Syft SBOM
         continue-on-error: true
         uses: anchore/sbom-action@v0.17.7

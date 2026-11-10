@@ -18,7 +18,6 @@ import yaml
 from fastapi.testclient import TestClient
 
 from groundtruth.contracts.errors import CaseDefinitionError
-from groundtruth.platform.api.app import app
 from groundtruth.platform.api.errors import API_ERROR_STATUS, ApiErrorCode
 from groundtruth.platform.cases import creator
 from groundtruth.platform.cases.creator import create_and_register_case
@@ -48,8 +47,10 @@ def cases_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture
-def client(cases_dir: Path) -> TestClient:
-    return TestClient(app, raise_server_exceptions=False)
+def client(cases_dir: Path, tenant_world: Any) -> TestClient:
+    """A signed-in client: creating a case always requires sign-in, because it writes files
+    (#51). ``cases_dir`` still redirects every write to a throwaway folder."""
+    return tenant_world.client("ref")  # type: ignore[no-any-return]
 
 
 def _files(cases_dir: Path) -> set[str]:

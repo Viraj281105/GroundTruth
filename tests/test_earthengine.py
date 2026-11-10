@@ -630,6 +630,20 @@ class TestProvenance:
 
 
 class TestCache:
+    def test_hits_and_misses_are_counted_for_the_cache_hit_rate(self, tmp_path):
+        """gt_cache_requests_total{cache="reduction"} (#50): one lookup per year."""
+        from groundtruth.platform.metrics import REGISTRY
+
+        def count(result: str) -> float:
+            labels = {"cache": "reduction", "result": result}
+            return REGISTRY.get_sample_value("gt_cache_requests_total", labels) or 0.0
+
+        hits, misses = count("hit"), count("miss")
+        make_service(FakeBackend(), cache_dir=tmp_path).series(kariba_spec())
+        assert (count("hit") - hits, count("miss") - misses) == (0, 22)
+        make_service(FakeBackend(), credentials=None, cache_dir=tmp_path).series(kariba_spec())
+        assert (count("hit") - hits, count("miss") - misses) == (22, 22)
+
     def test_a_second_run_is_served_from_the_cache_without_signing_in(self, tmp_path):
         first = make_service(FakeBackend(), cache_dir=tmp_path).series(kariba_spec())
 

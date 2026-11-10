@@ -68,18 +68,33 @@ curl -f http://localhost:3000/api/health
 
 ## 2. Observability & Key Metrics
 
-GroundTruth 2.0 emits structured OpenTelemetry traces and Prometheus metrics:
+The API and every worker serve Prometheus metrics on **internal ports** (#50): the API on
+`9464`, a worker on `9465` (`API_METRICS_PORT`, `WORKER_METRICS_PORT`). They are never the
+public API port and are never published outside the deployment's network: Compose only
+`expose`s them, and no Helm Service or Ingress routes to them. `infrastructure/observability`
+scrapes both (start the main stack first: Prometheus joins its `groundtruth` network).
 
 ```mermaid
 flowchart LR
-    A["Analysis Submission"] --> B["Metric: gt_jobs_submitted_total"]
-    B --> C["Queue Duration"] --> D["Metric: gt_queue_latency_seconds"]
-    D --> E["Worker Computation"] --> F["Metric: gt_engine_duration_seconds"]
-    F --> G{"Outcome"}
-    G -->|Measured| H["Metric: gt_verdict_total{status='measured'}"]
-    G -->|Refused| I["Metric: gt_verdict_total{status='refused'}"]
-    G -->|System Error| J["Metric: gt_verdict_total{status='failed'}"]
+    S["POST /jobs or /verify"] --> C["gt_cache_requests_total{cache='result'}"]
+    S --> Q["gt_queue_jobs{state} and gt_queue_oldest_queued_seconds<br/>(read from the database by the API)"]
+    Q --> W["Worker: data, engine, record"] --> D["gt_stage_duration_seconds{stage}"]
+    W --> O{"Outcome"}
+    O -->|completed| R1["gt_runs_finished_total{outcome='completed'}"]
+    O -->|refused, a correct answer| R2["gt_runs_finished_total{outcome='refused'}"]
+    O -->|errored or failed, a malfunction| R3["gt_runs_finished_total{outcome='errored' or 'failed'}"]
 ```
+
+| Question | Metric | Labels (fixed lists only) |
+|---|---|---|
+| How long does each stage take? | `gt_stage_duration_seconds` (histogram) | `stage`: data, engine, record |
+| How much work is waiting? | `gt_queue_jobs`, `gt_queue_oldest_queued_seconds`, `gt_queue_metrics_up` | `state`: queued, running |
+| How often does the engine refuse? | `gt_runs_finished_total`; the rate is `refused / (completed + refused)` | `outcome`: completed, refused, errored, failed, retried, cancelled; `path`: job, verify |
+| Is the cache doing its job? | `gt_cache_requests_total` | `cache`: result, reduction; `result`: hit, miss |
+| Is anyone over the submission budget? | `gt_submissions_rate_limited_total` | `path` |
+
+**No label carries a case, run, user, email or organization**: they would leak tenant data to
+anyone who can read the metrics. A value outside a label's list is recorded as `other`.
 
 ### 2.1 The Most Critical Metric: Refusal Rate
 > [!IMPORTANT]
@@ -87,6 +102,37 @@ flowchart LR
 > A refusal occurs when the causal engine correctly declines to estimate an effect due to poor cloud cover, missing donors, or unverified sensor calibration.
 > 
 > A sudden spike in the refusal rate indicates that upstream satellite imagery archives have degraded or that the project boundary has changed. **Do not page on-call engineers for refusals, and never tune causal gates to artificially lower the refusal rate.**
+>
+> A refusal rate of **zero** is more suspicious than a high one: it can mean the refusal gates
+> stopped running.
+
+### 2.2 Alerts and what to do
+
+Rules: `infrastructure/observability/alerts.yml`, loaded by Prometheus and unit-tested in CI by
+`promtool test rules alerts.test.yml`. **Page** means look now; **warning** means look during
+working hours. No refusal alert pages, and refusals never count towards the failure rate.
+
+| Alert | Fires when | Severity | What to do |
+|---|---|---|---|
+| `GroundTruthJobFailureRateHigh` | More than 10% of finished runs errored or failed over 15 minutes, on at least 5 runs, for 10 minutes | page | Read the worker logs for those runs (`run_id`, `stage`); check the database and data providers (3.1, 3.2). |
+| `GroundTruthQueueBacklog` | More than 50 runs queued for 15 minutes | page | Check that workers are running and claiming (`stage: claim` lines); add workers. |
+| `GroundTruthQueueStale` | The oldest queued run has waited over 30 minutes | page | As above: nothing is claiming work, even if the queue is short. |
+| `GroundTruthQueueMetricsMissing` | The queue depth cannot be read for 10 minutes | warning | The two alerts above are blind: check the API's metrics port and its database connection. |
+| `GroundTruthRefusalRateShift` | The last hour's refusal rate is 25 points from the last 7 days', on at least 20 runs, for 30 minutes | warning | Look for a change in input data or method. **Never** tune a gate to move the rate. |
+| `GroundTruthRefusalRateZero` | No refusals in 24 hours despite at least 50 answered runs, for 1 hour | warning | Check that the refusal gates still run. |
+
+Routing a page to a person (Alertmanager receivers) is deployment-specific and not part of
+this repository.
+
+### 2.3 Logs
+
+Both processes write one JSON object per line. Every line has `run_id`, `case_id` and `stage`
+(`null` outside an analysis, so queries can rely on the keys); API lines also carry
+`request_id`, the same id the client sees in `X-Request-ID`. Configured secrets, database
+passwords, bearer tokens and key material are removed from every part of a line before it is
+written; a line that cannot be redacted is withheld, never written as it was. On the `/verify`
+path the engine creates the run id, so lines logged inside the engine carry the case and stage,
+and the run id joins on the next line.
 
 ---
 

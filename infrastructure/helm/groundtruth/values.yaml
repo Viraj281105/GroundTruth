@@ -6,10 +6,13 @@ api:
   tag: latest
   replicas: 1
   port: 8000
+  # Prometheus metrics (#50): a container port only; no Service or Ingress routes to it.
+  metricsPort: 9464
 worker:
   image: groundtruth-worker
   tag: latest
   replicas: 1
+  metricsPort: 9465
 web:
   image: groundtruth-web
   tag: latest
@@ -19,6 +22,8 @@ config:
   # Sign-in is mandatory in every deployed profile (design spec section 4); a test pins this.
   AUTH_REQUIRED: "true"
   OTEL_SERVICE_NAME: groundtruth
+  # The metrics servers listen inside the pod network only (#50).
+  METRICS_BIND_ADDRESS: "0.0.0.0"
   # OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
 # Name of a pre-created Secret (e.g. DATABASE_URL). No secrets are stored in the chart.
 existingSecret: groundtruth-secrets
