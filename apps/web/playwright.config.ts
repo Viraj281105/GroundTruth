@@ -11,7 +11,8 @@ export default defineConfig({
   testDir: './e2e',
   // The pre-2.0 specs (app, task4a, visual) drive routes that now redirect; they are not part of this run.
   // csp: every page renders under the Content-Security-Policy (#51).
-  testMatch: /(personas|a11y|csp)\.spec\.ts/,
+  // runs: a run from the UI to the rendered result, refusal, cancel and failure included (#49).
+  testMatch: /(personas|a11y|csp|runs)\.spec\.ts/,
   globalSetup: './e2e/stack.ts',
   fullyParallel: true,
   // One API process serves every worker and the Kariba assessment is computed per request: keep the load modest.

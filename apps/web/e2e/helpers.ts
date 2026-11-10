@@ -13,6 +13,7 @@ export const ORG: Record<Persona, string> = {
   funder: 'demo-funder',
   auditor: 'demo-auditor',
   government: 'demo-government',
+  operator: 'reference',
 };
 
 /** Kariba's real Level-2 values need the git-ignored caches; without them the value assertions skip. */

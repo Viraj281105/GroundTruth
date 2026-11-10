@@ -36,13 +36,25 @@ def resolve_database_url(url: str | None = None) -> str:
     return resolved
 
 
+POSTGRES_CONNECT_TIMEOUT_S = 10
+"""Seconds to wait for PostgreSQL to accept a connection (#48)."""
+
+
 def create_db_engine(url: str | None = None, **kwargs: Any) -> Engine:
     """Create an engine for ``url`` (default: the configured database).
 
     SQLite ignores foreign keys unless asked per connection. They are switched on so
     the schema behaves the same in the SQLite test suite as on PostgreSQL.
     """
-    engine = sa.create_engine(resolve_database_url(url), **kwargs)
+    resolved = resolve_database_url(url)
+    if sa.engine.make_url(resolved).get_backend_name() == "postgresql":
+        # A database that does not answer must fail the request, not hang it (#48).
+        connect_args = {
+            "connect_timeout": POSTGRES_CONNECT_TIMEOUT_S,
+            **kwargs.get("connect_args", {}),
+        }
+        kwargs = {**kwargs, "connect_args": connect_args}
+    engine = sa.create_engine(resolved, **kwargs)
     if engine.dialect.name == "sqlite":
 
         @sa.event.listens_for(engine, "connect")

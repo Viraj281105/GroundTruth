@@ -60,7 +60,7 @@ describe("watchJob", () => {
     vi.useRealTimers();
   });
 
-  it("falls back on a timeout event and reports polling failures", async () => {
+  it("falls back on a timeout event and reports lost contact once the API stays silent", async () => {
     vi.useFakeTimers();
     const src = fakeSource();
     const h = handlers();
@@ -68,7 +68,26 @@ describe("watchJob", () => {
     watchJob("r1", h, { eventSourceFactory: () => src, fetchStatus: () => Promise.reject(boom) });
     src.emit("timeout");
     await vi.advanceTimersByTimeAsync(1500);
+    expect(h.onError).not.toHaveBeenCalled(); // one failed read is a blip, not lost contact
+    await vi.advanceTimersByTimeAsync(30_000);
     expect(h.onError).toHaveBeenCalledWith(boom);
+    vi.useRealTimers();
+  });
+
+  it("rides out a short outage and carries on when the API answers again", async () => {
+    vi.useFakeTimers();
+    const src = fakeSource();
+    const h = handlers();
+    let calls = 0;
+    const fetchStatus = vi.fn(() => {
+      calls += 1;
+      return calls <= 3 ? Promise.reject(new Error("blip")) : Promise.resolve(view({ terminal: true }));
+    });
+    watchJob("r1", h, { eventSourceFactory: () => src, fetchStatus });
+    src.emit("error");
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(h.onError).not.toHaveBeenCalled();
+    expect(h.onDone).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
 

@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import os
 import signal
+import time
 from collections.abc import Callable
 from types import FrameType
 from typing import Any
@@ -30,6 +31,8 @@ from typing import Any
 import sqlalchemy as sa
 
 from groundtruth.contracts.errors import ConfigurationError
+from groundtruth.contracts.ports import DataAccess
+from groundtruth.contracts.request import AnalysisRequest
 from groundtruth.engine import ENGINE_VERSION
 from groundtruth.logging import configure_logging, get_logger
 from groundtruth.platform.config import get_settings
@@ -37,6 +40,7 @@ from groundtruth.platform.jobs.queue import JobQueue
 from groundtruth.platform.jobs.worker import (
     DEFAULT_POLL_SECONDS,
     DEFAULT_TRUE_EFFECT,
+    ResolveAccess,
     Worker,
     default_resolve_access,
     engine_runner,
@@ -123,6 +127,24 @@ def seed_demo(extra: dict[str, str]) -> None:
     logger.info("demo seed complete", extra=extra)
 
 
+def paused(resolve: ResolveAccess, seconds: float) -> ResolveAccess:
+    """``resolve``, then a wait of ``seconds`` while the job is running (a testing aid, #49).
+
+    The wait sits in the data stage, after the data is ready: the job is claimed and its
+    heartbeat keeps running, so a cancel requested meanwhile is honoured at the next checkpoint,
+    before the engine starts, exactly as for a slow real job.
+    """
+    if seconds <= 0:
+        return resolve
+
+    def resolve_then_wait(request: AnalysisRequest) -> DataAccess:
+        access = resolve(request)
+        time.sleep(seconds)
+        return access
+
+    return resolve_then_wait
+
+
 def _env_int(name: str) -> int | None:
     """An integer from the environment, or ``None`` when unset or blank."""
     value = os.environ.get(name, "").strip()
@@ -159,6 +181,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--log-level", default=None, help="Override the configured log level.")
     parser.add_argument(
+        "--pause-before-engine",
+        type=float,
+        default=0.0,
+        metavar="SECONDS",
+        help="TESTING AID, off by default: hold each job this long after its data is ready and "
+        "before the engine starts, so an end-to-end test can cancel a running job (#49). "
+        "Refused when APP_ENV=production.",
+    )
+    parser.add_argument(
         "--batch-max-running",
         type=int,
         default=_env_int("WORKER_BATCH_MAX_RUNNING"),
@@ -175,6 +206,23 @@ def main(argv: list[str] | None = None) -> int:
     settings = get_settings()
     configure_logging(args.log_level or settings.log_level, json_output=True, redact=redact_secrets)
     startup = {"stage": "startup"}
+
+    if args.pause_before_engine:
+        if args.pause_before_engine < 0:
+            logger.error("cannot start: --pause-before-engine must not be negative", extra=startup)
+            return EXIT_STARTUP_REFUSED
+        if settings.app_env == "production":
+            logger.error(
+                "cannot start: --pause-before-engine is a testing aid and is refused when "
+                "APP_ENV=production",
+                extra=startup,
+            )
+            return EXIT_STARTUP_REFUSED
+        logger.warning(
+            "TESTING AID: every job pauses %.1f s before the engine starts",
+            args.pause_before_engine,
+            extra=startup,
+        )
 
     try:
         url = resolve_database_url()
@@ -214,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
     queue = JobQueue(create_session_factory(db), batch_max_running=args.batch_max_running)
     worker = Worker(
         queue,
-        resolve_access=default_resolve_access(args.true_effect),
+        resolve_access=paused(default_resolve_access(args.true_effect), args.pause_before_engine),
         run=engine_runner(settings.git_sha),
         poll_interval=args.poll_seconds,
     )

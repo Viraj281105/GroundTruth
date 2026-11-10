@@ -13,6 +13,11 @@ So the worst case for a persistent outage is bounded (attempts here x attempts
 there), and neither layer hides a permanent failure: an error classified as
 permanent is raised at once, without a second try.
 
+A third piece keeps a long outage from turning into a retry storm (#48): a
+:class:`CircuitBreaker` per provider. After five calls in a row fail (each after its
+retries), calls fail at once for a minute without touching the provider, then one
+trial call decides whether it is back.
+
 Waits are fixed, not jittered, so a retry schedule reads the same in tests and
 in logs (as :func:`groundtruth.platform.jobs.lifecycle.backoff_delay`).
 """
@@ -116,6 +121,155 @@ class RateLimiter:
         return wait
 
 
+class CircuitOpenError(Exception):
+    """A call refused at once because its provider is known to be down (#48).
+
+    Callers turn it into their own "unavailable" error, exactly as they do for a provider that
+    failed after its retries: an Earth Engine call into ``DataUnavailableError`` (so a job reports
+    ``data_unavailable``, never a fixture), a narration into ``narration_failed``.
+    """
+
+    def __init__(self, provider: str, retry_after_s: float) -> None:
+        self.provider = provider
+        self.retry_after_s = retry_after_s
+        super().__init__(
+            f"{provider} is unavailable (circuit open after repeated failures); "
+            f"not calling it again for {retry_after_s:.0f} s"
+        )
+
+
+class CircuitBreaker:
+    """Stop calling a provider that keeps failing, so an outage cannot become a retry storm.
+
+    **Closed** (normal): calls go through. ``failure_threshold`` calls in a row that fail (each
+    after its own retries) open the circuit. **Open**: every call fails at once with
+    :class:`CircuitOpenError`, without touching the provider, for ``cooldown_s``. **Half-open**:
+    after the cool-down, one trial call goes through; success closes the circuit, failure opens
+    it again for another cool-down.
+
+    Only outages count. A :class:`PermanentError` (bad credentials, a malformed request) says
+    nothing about whether the provider is up, so it passes through without counting. Process
+    local, like :class:`RateLimiter`: each worker or API process judges for itself.
+    """
+
+    def __init__(
+        self,
+        provider: str,
+        *,
+        failure_threshold: int = 5,
+        cooldown_s: float = 60.0,
+        clock: Callable[[], float] = time.monotonic,
+        on_open: Callable[[str], None] | None = None,
+    ) -> None:
+        if failure_threshold < 1:
+            raise ValueError("failure_threshold must be at least 1")
+        if cooldown_s <= 0:
+            raise ValueError("cooldown_s must be positive")
+        self.provider = provider
+        self.failure_threshold = failure_threshold
+        self.cooldown_s = cooldown_s
+        self._clock = clock
+        self._on_open = on_open
+        self._lock = threading.Lock()
+        self._failures = 0
+        self._opened_at: float | None = None
+        self._trial_in_flight = False
+
+    @property
+    def state(self) -> str:
+        """``closed``, ``open`` or ``half_open``."""
+        with self._lock:
+            return self._state_locked()
+
+    def _state_locked(self) -> str:
+        if self._opened_at is None:
+            return "closed"
+        if self._clock() - self._opened_at >= self.cooldown_s:
+            return "half_open"
+        return "open"
+
+    def _admit(self) -> None:
+        with self._lock:
+            state = self._state_locked()
+            if state == "closed":
+                return
+            if state == "half_open" and not self._trial_in_flight:
+                self._trial_in_flight = True  # exactly one trial call
+                return
+            assert self._opened_at is not None
+            remaining = max(0.0, self.cooldown_s - (self._clock() - self._opened_at))
+            raise CircuitOpenError(self.provider, remaining or self.cooldown_s)
+
+    def _record(self, *, success: bool) -> None:
+        opened = False
+        with self._lock:
+            was_trial = self._trial_in_flight
+            self._trial_in_flight = False
+            if success:
+                self._failures = 0
+                self._opened_at = None
+                return
+            self._failures += 1
+            if was_trial or self._failures >= self.failure_threshold:
+                self._opened_at = self._clock()
+                opened = True
+        if opened and self._on_open is not None:
+            self._on_open(self.provider)
+
+    def call(
+        self, call: Callable[[], T], *, counts: Callable[[Exception], bool] | None = None
+    ) -> T:
+        """Run ``call`` through the breaker.
+
+        Args:
+            call: The provider call, with its own retries already inside it.
+            counts: Whether an exception is an outage that counts against the provider.
+                Default: anything but a :class:`PermanentError`.
+
+        Raises:
+            CircuitOpenError: the circuit is open; the provider was not called.
+        """
+        self._admit()
+        try:
+            result = call()
+        except Exception as exc:
+            outage = counts(exc) if counts is not None else not isinstance(exc, PermanentError)
+            if outage:
+                self._record(success=False)
+            else:
+                with self._lock:
+                    self._trial_in_flight = False  # not an outage: neither opens nor closes
+            raise
+        self._record(success=True)
+        return result
+
+
+BREAKER_PROVIDERS: tuple[str, ...] = ("earth_engine", "gemini", "anthropic")
+"""Providers with a shared breaker; also the only values of the ``provider`` metric label."""
+
+_shared_breakers: dict[str, CircuitBreaker] = {}
+_breaker_lock = threading.Lock()
+
+
+def shared_breaker(provider: str) -> CircuitBreaker:
+    """The process-wide breaker for ``provider``: 5 failures in a row, 60 s cool-down (#48)."""
+    with _breaker_lock:
+        breaker = _shared_breakers.get(provider)
+        if breaker is None:
+            from groundtruth.platform.metrics import record_circuit_open
+
+            breaker = _shared_breakers[provider] = CircuitBreaker(
+                provider, on_open=record_circuit_open
+            )
+        return breaker
+
+
+def reset_breakers() -> None:
+    """Forget every breaker's state. For tests."""
+    with _breaker_lock:
+        _shared_breakers.clear()
+
+
 _shared_limiters: dict[int, RateLimiter] = {}
 _shared_lock = threading.Lock()
 
@@ -130,10 +284,15 @@ def shared_rate_limiter(per_minute: int) -> RateLimiter:
 
 
 __all__ = [
+    "BREAKER_PROVIDERS",
+    "CircuitBreaker",
+    "CircuitOpenError",
     "PermanentError",
     "RateLimiter",
     "RetryPolicy",
     "TransientError",
     "call_with_retry",
+    "reset_breakers",
+    "shared_breaker",
     "shared_rate_limiter",
 ]

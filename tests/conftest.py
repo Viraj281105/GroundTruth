@@ -81,6 +81,17 @@ def _fresh_submission_budget():
     reset_submission_limits()
 
 
+@pytest.fixture(autouse=True)
+def _closed_circuit_breakers():
+    """Each test starts with every provider's circuit breaker closed (#48), so failures a test
+    provokes on purpose can never open a breaker for the next test."""
+    from groundtruth.platform.datasets.resilience import reset_breakers
+
+    reset_breakers()
+    yield
+    reset_breakers()
+
+
 @pytest.fixture
 def tenant_world(tmp_path, monkeypatch):
     """A seeded multi-tenant world with signed-in HTTP clients (see ``tests/tenancy/world.py``).

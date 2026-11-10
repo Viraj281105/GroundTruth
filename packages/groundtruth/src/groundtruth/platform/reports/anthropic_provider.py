@@ -13,6 +13,7 @@ from typing import Any
 import httpx
 
 from groundtruth.contracts.errors import ConfigurationError
+from groundtruth.platform.datasets.resilience import shared_breaker
 
 ANTHROPIC_VERSION = "2023-06-01"
 TOOL_NAME = "write_report"
@@ -39,6 +40,17 @@ def sections_to_markdown(data: dict[str, Any]) -> str:
     if caveats:
         lines += ["## How to read this report", "", *[f"- {c}" for c in caveats], ""]
     return "\n".join(lines)
+
+
+def is_provider_outage(exc: Exception) -> bool:
+    """Whether a failed request says the provider is down: no connection, a timeout, a 5xx or
+    a 429. A 4xx (a bad key, a bad request) is our problem, not an outage (#48)."""
+    if isinstance(exc, httpx.TransportError):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+        return status >= 500 or status == 429
+    return False
 
 
 class AnthropicNarrator:
@@ -94,13 +106,19 @@ class AnthropicNarrator:
             "anthropic-version": ANTHROPIC_VERSION,
             "content-type": "application/json",
         }
-        client = self._client or httpx.Client(timeout=self.timeout)
-        try:
-            response = client.post(f"{self.base_url}/messages", json=payload, headers=headers)
-        finally:
-            if self._client is None:
-                client.close()
-        response.raise_for_status()
+
+        def post() -> httpx.Response:
+            client = self._client or httpx.Client(timeout=self.timeout)
+            try:
+                response = client.post(f"{self.base_url}/messages", json=payload, headers=headers)
+            finally:
+                if self._client is None:
+                    client.close()
+            response.raise_for_status()
+            return response
+
+        # While Anthropic keeps failing, fail at once rather than make every report wait (#48).
+        response = shared_breaker("anthropic").call(post, counts=is_provider_outage)
         for block in response.json().get("content", []):
             if block.get("type") == "tool_use" and block.get("name") == TOOL_NAME:
                 data = block.get("input")

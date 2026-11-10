@@ -187,6 +187,20 @@ to N - 1 to keep one worker for interactive work.
   2. Implement exponential backoff on the worker by setting `STAC_REQUEST_BACKOFF_SECONDS=10`.
   3. Rotate provider API credentials in `.env` and restart worker containers: `docker compose restart worker`.
 
+### 3.1a Scenario: A Provider Is Down (Earth Engine, Gemini, Anthropic)
+- **Symptom**: `gt_circuit_open_total{provider=...}` rises; logs say `circuit opened for <provider>`.
+- **What the system does** (#48): after five calls in a row fail (each after its own retries), the
+  provider's circuit breaker opens and calls fail at once for 60 s without touching the provider; then one
+  trial call decides whether it is back. Bad credentials never open it.
+  * Earth Engine: a job gets `data_unavailable` and is retried later with backoff; it is **never** given
+    simulated data under a real-data label.
+  * Gemini or Anthropic: the inline report falls back to the deterministic one, labelled; a narrated export
+    answers `502 narration_failed`.
+- **Action**: check the provider's status page. Nothing needs restarting: the breaker closes by itself when a
+  trial call succeeds. Breakers are per process, so each worker and API process finds out on its own.
+- **Timeouts**: Earth Engine 360 s per request, GenAI 60 s, PostgreSQL connect 10 s, Redis 5 s, S3 5 s to
+  connect and 30 s to read.
+
 ### 3.2 Scenario: Worker Process Crash or Kernel OOM
 - **Symptom**: A worker terminates abruptly during a massive raster mosaic reduction.
 - **Action**:

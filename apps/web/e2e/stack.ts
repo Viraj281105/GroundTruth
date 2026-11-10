@@ -13,6 +13,8 @@ import { migrateAndSeed, REPO_ROOT, venvBin } from './seed';
  *   E2E_TMP_DIR      parent for the temp dir holding the DB, logs and the passwords file
  *   E2E_EXTERNAL_STACK=1  use a stack you already run (needs GT_DEMO_PASSWORDS_FILE); starts nothing
  *   E2E_SKIP_BUILD=1      reuse the existing apps/web/.next build
+ *   E2E_WORKER_PAUSE_S    seconds each job waits before its engine starts (default 6), so a test can
+ *                         cancel a running job; a testing aid the worker refuses in production
  */
 const WEB = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
 const API = process.env.E2E_API_URL ?? 'http://localhost:8000';
@@ -101,6 +103,14 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       PYTHONUNBUFFERED: '1',
     };
     start(venvBin('uvicorn'), ['groundtruth.platform.api.app:app', '--port', String(apiPort)], REPO_ROOT, apiEnv, path.join(tmp, 'api.log'));
+    // A worker on the same database, so a run started in the UI is computed, stored and shown (#49).
+    start(
+      venvBin('python'),
+      ['-m', 'apps.worker.main', '--poll-seconds', '0.5', '--pause-before-engine', process.env.E2E_WORKER_PAUSE_S ?? '6'],
+      REPO_ROOT,
+      { ...apiEnv, WORKER_METRICS_PORT: '0', APP_ENV: 'development' },
+      path.join(tmp, 'worker.log'),
+    );
 
     const webEnv = {
       ...process.env,

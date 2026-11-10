@@ -22,9 +22,11 @@ import httpx
 
 from groundtruth.contracts.errors import ConfigurationError
 from groundtruth.platform.config import Settings
+from groundtruth.platform.datasets.resilience import shared_breaker
 from groundtruth.platform.reports.anthropic_provider import (
     REPORT_SCHEMA,
     AnthropicNarrator,
+    is_provider_outage,
     sections_to_markdown,
 )
 
@@ -168,14 +170,18 @@ class GeminiNarrator:
                 "parts": [{"text": system}],
             }
 
-        client = self._client or httpx.Client(timeout=self.timeout)
-        try:
-            response = client.post(url, json=payload, params=params, headers=headers)
-        finally:
-            if self._client is None:
-                client.close()
+        def post() -> httpx.Response:
+            client = self._client or httpx.Client(timeout=self.timeout)
+            try:
+                response = client.post(url, json=payload, params=params, headers=headers)
+            finally:
+                if self._client is None:
+                    client.close()
+            response.raise_for_status()
+            return response
 
-        response.raise_for_status()
+        # While Gemini keeps failing, fail at once rather than make every report wait (#48).
+        response = shared_breaker("gemini").call(post, counts=is_provider_outage)
         data = response.json()
 
         # Handle direct response adhering to REPORT_SCHEMA
