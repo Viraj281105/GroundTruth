@@ -15,6 +15,7 @@ from groundtruth.platform.datasets.access import (
     SyntheticFixtureObservationAccess,
     SyntheticObservationAccess,
     earth_engine_access,
+    earth_engine_observations,
     real_observation_cases,
     synthetic_access,
     synthetic_fixture_access,
@@ -32,12 +33,14 @@ from groundtruth.platform.datasets.evidence_registry import (
     assert_dataset_allowed_for_production,
     get_global_evidence_registry,
 )
+from groundtruth.platform.datasets.observation import EarthEngineObservationAccess
 from groundtruth.platform.datasets.synthetic import SYNTHETIC_MARKER, is_synthetic
 
 __all__ = [
     "PLANETARY_COMPUTER_S2_DATASET",
     "SYNTHETIC_KARIBA_FIXTURE_DATASET",
     "SYNTHETIC_MARKER",
+    "EarthEngineObservationAccess",
     "EvidenceRegistry",
     "EvidenceSource",
     "IngestionMode",
@@ -55,6 +58,7 @@ __all__ = [
     "ValidationStatus",
     "assert_dataset_allowed_for_production",
     "earth_engine_access",
+    "earth_engine_observations",
     "get_global_evidence_registry",
     "is_synthetic",
     "real_observation_cases",

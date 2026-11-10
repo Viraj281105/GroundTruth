@@ -9,6 +9,7 @@ snapshot.
 
 from __future__ import annotations
 
+import copy
 import json
 import pathlib
 from typing import Any
@@ -21,6 +22,7 @@ from groundtruth.contracts.types import VerdictLabel
 from groundtruth.platform.api.app import app
 from groundtruth.platform.api.openapi_schema import (
     FRAMEWORK_SCHEMAS,
+    VALIDATION_ENVELOPE_PROPERTIES,
     _refs,
     request_schema_names,
     require_response_fields,
@@ -100,7 +102,13 @@ class TestTheOneAdjustment:
     def test_fastapis_own_validation_schemas_are_untouched(self, served):
         raw = _raw()["components"]["schemas"]
         for name in FRAMEWORK_SCHEMAS:
-            assert served["components"]["schemas"][name] == raw[name], name
+            schema = copy.deepcopy(served["components"]["schemas"][name])
+            if name == "HTTPValidationError":
+                # The one thing added: the error envelope's members (#39), all optional.
+                added = {k: schema["properties"].pop(k) for k in VALIDATION_ENVELOPE_PROPERTIES}
+                assert added == VALIDATION_ENVELOPE_PROPERTIES
+                assert not set(added) & set(schema.get("required", []))
+            assert schema == raw[name], name
         assert "ctx" not in served["components"]["schemas"]["ValidationError"]["required"]
 
     def test_fields_with_defaults_in_responses_are_required(self, served):
@@ -184,6 +192,8 @@ class TestDocumentedErrorsMatchWhatIsSent:
             "anyOf": [
                 {"$ref": "#/components/schemas/HTTPValidationError"},
                 {"$ref": "#/components/schemas/EngineFailureBody"},
+                # A min_donors below the case's floor is refused with the structured body.
+                {"$ref": "#/components/schemas/ApiErrorBody"},
             ]
         }
 

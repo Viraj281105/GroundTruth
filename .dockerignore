@@ -8,7 +8,21 @@
 **/node_modules
 **/.next
 **/*.tsbuildinfo
-.env
+# Secrets never enter an image: environment files, keys, certificates, and Earth
+# Engine service-account keys (#22). They reach containers at runtime only.
+**/.env*
+!.env.example
+!apps/web/.env.example
+**/*.pem
+**/*.key
+**/*.p12
+secrets/
+.secrets/
+**/*service-account*.json
+**/*service_account*.json
+**/gee-key*.json
+**/*-credentials.json
+**/credentials*.json
 data/raw
 data/interim
 data/processed

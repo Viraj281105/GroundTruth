@@ -135,3 +135,20 @@ jobs:
       # See issue #58.
       - name: No silent fixture fallback in api.ts
         run: npm run check:fixture-fallback
+
+  alert-rules:
+    name: Alert rules (promtool)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The same Prometheus release the observability stack runs. `check` validates the
+      # rules; `test` proves the alerts fire when they should and stay quiet when they should,
+      # including that refusals never page (#50).
+      - name: Check and test the alert rules
+        run: |
+          for cmd in "check rules alerts.yml" "test rules alerts.test.yml"; do
+            docker run --rm --entrypoint promtool \
+              -v "$PWD/infrastructure/observability:/rules:ro" -w /rules \
+              prom/prometheus:v2.53.0 $cmd
+          done

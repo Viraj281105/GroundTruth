@@ -69,7 +69,9 @@ def test_switch_active_org_requires_membership(client):
     r = client.post("/orgs/active", json={"slug": "other"}, headers=H)
     assert r.status_code == 404
     unknown = client.post("/orgs/active", json={"slug": "nope"}, headers=H)
-    assert unknown.status_code == 404 and unknown.json() == r.json()
+    assert unknown.status_code == 404
+    # The same body for an org that exists and one that does not, bar the per-request id.
+    assert {**unknown.json(), "request_id": None} == {**r.json(), "request_id": None}
 
 
 def test_switch_active_org_is_audited(client, sessions):

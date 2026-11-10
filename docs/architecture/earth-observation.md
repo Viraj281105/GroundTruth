@@ -175,3 +175,23 @@ Under no circumstances does GroundTruth 2.0 convert a spectral vegetation index 
 This invariant is programmatically enforced in `groundtruth.contracts.units`:
 - Any comparison between an index (dimensionless, $[-1.0, +1.0]$) and a carbon credit claim ($\text{tCO}_2\text{e}$) triggers a typed `IncompatibleUnitsError`.
 - Spectral indices represent **photosynthetic canopy greenness and water absorption**, not timber volume or underground carbon storage.
+
+---
+
+## 6. The Earth Engine Client (#22, #23)
+
+A parallel real-data path to the STAC caches, built behind the same `ObservationAccess` and
+`CovariateAccess` ports. It is tested offline against a fake backend and has never been run
+on real data.
+
+| Piece | Where |
+| --- | --- |
+| Observations: the engine's reduction spec translated into Earth Engine calls | `platform/datasets/observation.py`, `earthengine.py` |
+| Shared sign-in, retries, rate limiting and key redaction | `platform/datasets/session.py`, `resilience.py` |
+| Disk cache keyed by pinned dataset, geometry, year and reduction spec | `platform/datasets/cache.py` |
+| Covariates over the ADR-011 masked unit | `platform/datasets/covariates.py`, `ee_units.py` |
+| ADR-011 unit construction and the raster mask | `platform/units/provider.py`, `platform/datasets/ee_mask.py` |
+| Unit-set generation (names-only listing, timing trial, ladder) | `experiments/kariba_benchmark/generate_unit_set.py` |
+
+Every failure raises `DataUnavailableError`; nothing on this path imports the synthetic
+provider. Network tests are opt-in: `pytest -m network --run-network`.

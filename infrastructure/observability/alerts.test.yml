@@ -1,0 +1,173 @@
+# Unit tests for alerts.yml (#50): `promtool test rules alerts.test.yml`, run in CI.
+# Values use promtool's series notation: 'a+bxn' is a, a+b, ..., a+n*b, one per interval.
+
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # Failures page; refusals in the same window do not count towards the rate.
+  - interval: 1m
+    input_series:
+      - series: 'gt_runs_finished_total{outcome="failed",path="job"}'
+        values: "0+1x60"
+      - series: 'gt_runs_finished_total{outcome="completed",path="job"}'
+        values: "0+2x60"
+      - series: 'gt_runs_finished_total{outcome="refused",path="job"}'
+        values: "0+1x60"
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: GroundTruthJobFailureRateHigh
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: GroundTruthJobFailureRateHigh
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: More than 10% of analysis runs are failing.
+              description: Runs are erroring or failing, not refusing. Refusals are excluded from this rate.
+              runbook: docs/operations/README.md#22-alerts-and-what-to-do
+
+  # Many refusals and no malfunctions: nobody is paged.
+  - interval: 1m
+    input_series:
+      - series: 'gt_runs_finished_total{outcome="refused",path="job"}'
+        values: "0+5x60"
+      - series: 'gt_runs_finished_total{outcome="completed",path="job"}'
+        values: "0+1x60"
+      - series: 'gt_runs_finished_total{outcome="failed",path="job"}'
+        values: "0x60"
+      - series: 'gt_runs_finished_total{outcome="errored",path="job"}'
+        values: "0x60"
+    alert_rule_test:
+      - eval_time: 45m
+        alertname: GroundTruthJobFailureRateHigh
+        exp_alerts: []
+
+  # Too few runs to judge: one failure out of two is not a page.
+  - interval: 1m
+    input_series:
+      - series: 'gt_runs_finished_total{outcome="failed",path="job"}'
+        values: "0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+      - series: 'gt_runs_finished_total{outcome="completed",path="job"}'
+        values: "0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: GroundTruthJobFailureRateHigh
+        exp_alerts: []
+
+  # A long queue pages after 15 minutes, not before.
+  - interval: 1m
+    input_series:
+      - series: 'gt_queue_jobs{state="queued"}'
+        values: "60x40"
+      - series: "gt_queue_metrics_up"
+        values: "1x40"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: GroundTruthQueueBacklog
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: GroundTruthQueueBacklog
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: More than 50 analysis runs have been queued for 15 minutes.
+              description: Workers are not keeping up, or none are running.
+              runbook: docs/operations/README.md#22-alerts-and-what-to-do
+
+  # A short queue whose oldest run has waited over 30 minutes still pages.
+  - interval: 1m
+    input_series:
+      - series: 'gt_queue_jobs{state="queued"}'
+        values: "1x20"
+      - series: "gt_queue_oldest_queued_seconds"
+        values: "2000x20"
+      - series: "gt_queue_metrics_up"
+        values: "1x20"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: GroundTruthQueueStale
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: An analysis run has waited in the queue for over 30 minutes.
+              description: Nothing is claiming queued work, even if the queue is short.
+              runbook: docs/operations/README.md#22-alerts-and-what-to-do
+      - eval_time: 10m
+        alertname: GroundTruthQueueBacklog
+        exp_alerts: []
+
+  # No queue metrics at all: say the backlog alerts are blind.
+  - interval: 1m
+    input_series:
+      - series: 'gt_runs_finished_total{outcome="completed",path="job"}'
+        values: "0+1x20"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: GroundTruthQueueMetricsMissing
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: The queue depth cannot be read.
+              description: The backlog alerts are blind until the API's metrics can read the database again.
+              runbook: docs/operations/README.md#22-alerts-and-what-to-do
+
+  # Zero refusals over a busy day is a warning, never a page.
+  - interval: 5m
+    input_series:
+      - series: 'gt_runs_finished_total{outcome="completed",path="job"}'
+        values: "0+1x400"
+      - series: 'gt_runs_finished_total{outcome="refused",path="job"}'
+        values: "0x400"
+    alert_rule_test:
+      - eval_time: 26h
+        alertname: GroundTruthRefusalRateZero
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: No analysis has been refused in 24 hours despite at least 50 answered runs.
+              description: Check that the refusal gates still run. A refusal rate of zero is suspicious, not reassuring.
+              runbook: docs/operations/README.md#22-alerts-and-what-to-do
+
+  # Some refusals: the zero-refusal warning stays quiet.
+  - interval: 5m
+    input_series:
+      - series: 'gt_runs_finished_total{outcome="completed",path="job"}'
+        values: "0+1x400"
+      - series: 'gt_runs_finished_total{outcome="refused",path="job"}'
+        values: "0+0.1x400"
+    alert_rule_test:
+      - eval_time: 26h
+        alertname: GroundTruthRefusalRateZero
+        exp_alerts: []
+
+  # A week at a 10% refusal rate, then hours at 60%: a warning, not a page.
+  - interval: 10m
+    input_series:
+      - series: 'gt_runs_finished_total{outcome="refused",path="job"}'
+        values: "0+1x1008 1014+6x23"
+      - series: 'gt_runs_finished_total{outcome="completed",path="job"}'
+        values: "0+9x1008 9076+4x23"
+    alert_rule_test:
+      - eval_time: 10070m
+        alertname: GroundTruthRefusalRateShift
+        exp_alerts: []
+      - eval_time: 10320m
+        alertname: GroundTruthRefusalRateShift
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: The refusal rate has changed sharply against the last 7 days.
+              description: Investigate a change in input data or method. Never tune the causal gates to move this rate.
+              runbook: docs/operations/README.md#22-alerts-and-what-to-do
+      - eval_time: 10320m
+        alertname: GroundTruthJobFailureRateHigh
+        exp_alerts: []

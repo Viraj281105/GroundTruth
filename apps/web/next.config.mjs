@@ -1,7 +1,22 @@
+import { securityHeaders } from './security-headers.mjs';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Security headers on every page (#51); what the CSP allows and why: security-headers.mjs.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: securityHeaders({
+          apiUrl: process.env.NEXT_PUBLIC_API_URL,
+          isDev: process.env.NODE_ENV !== 'production',
+          siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL,
+        }),
+      },
+    ];
+  },
   async redirects() {
     return [
       // Common alternate names for the auth pages. Next keeps the query string, so ?next=... survives.

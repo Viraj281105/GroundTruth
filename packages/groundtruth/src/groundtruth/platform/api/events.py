@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from groundtruth.platform.api.dependencies import get_jobs, store_errors
+from groundtruth.platform.api.error_envelope import scrub_text
 from groundtruth.platform.api.errors import ApiErrorBody, ApiErrorCode, api_error
 from groundtruth.platform.api.schemas import JobView
 from groundtruth.platform.api.scope import authorize_filed
@@ -73,7 +74,7 @@ async def _stream(jobs: JobControl, job_id: str, first: JobView) -> AsyncIterato
         try:
             current = await asyncio.to_thread(_view, jobs, job_id)
         except Exception as exc:
-            detail = getattr(exc, "detail", None) or {"message": str(exc)}
+            detail = getattr(exc, "detail", None) or {"message": scrub_text(str(exc))}
             yield f"event: error\ndata: {json.dumps(detail, default=str)}\n\n"
             return
         if current is None:

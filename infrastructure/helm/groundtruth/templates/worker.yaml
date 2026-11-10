@@ -11,12 +11,22 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-worker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.worker.metricsPort }}"
+        prometheus.io/path: /metrics
     spec:
       containers:
         - name: worker
           image: {{ include "gt.image" (dict "root" . "name" .Values.worker.image "tag" .Values.worker.tag) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["python", "-m", "apps.worker.main"]
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.worker.metricsPort }}
+          env:
+            - name: WORKER_METRICS_PORT
+              value: "{{ .Values.worker.metricsPort }}"
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000

@@ -23,6 +23,7 @@ from groundtruth.contracts.result import (
     RunMetrics,
 )
 from groundtruth.contracts.types import VerdictLabel
+from groundtruth.platform.api.error_envelope import scrub_optional, scrub_text
 from groundtruth.platform.compare.comparison import Comparison, NotComparable
 from groundtruth.platform.compare.diff import BundleDiff
 from groundtruth.platform.jobs.interface import LIVE_STAGES, JobStatus
@@ -113,6 +114,15 @@ class CreateCaseRequest(BaseModel):
     post_end: int = Field(default=2022)
     boundary_geojson: dict[str, Any] | None = None
     case_id: str | None = None
+    status: str | None = Field(
+        default=None,
+        description=(
+            "Not settable. Cases created here are always 'scaffolded'; omit this field. "
+            "Sending 'analysed' is refused with `case_status_requires_review`, because that "
+            "status needs a run reviewed by both owners (C7, #4), and any other value is "
+            "refused with `invalid_case`."
+        ),
+    )
 
 
 class DataSourceMode(StrEnum):
@@ -142,7 +152,14 @@ class VerificationRequest(BaseModel):
     true_effect: float = Field(
         default=0.06, description="Effect injected into the simulated treated unit."
     )
-    min_donors: int = Field(default=10, ge=2)
+    min_donors: int | None = Field(
+        default=None,
+        ge=2,
+        description=(
+            "Omit to use the case's own floor. A larger value makes the run stricter; a "
+            "value below the case's floor is refused with `min_donors_below_case_floor`."
+        ),
+    )
     include_report: bool = True
 
 
@@ -171,9 +188,17 @@ class VerificationResponse(BaseModel):
 
 
 class MessageErrorBody(BaseModel):
-    """An error whose ``detail`` is a plain message, e.g. an unknown case (404)."""
+    """An error whose ``detail`` is a plain message, e.g. an unknown case (404).
+
+    ``code`` (``http_<status>``), ``is_refusal`` and ``request_id`` are added to it by the
+    error envelope, so a client can read the same fields from every error.
+    """
 
     detail: str
+    code: str
+    message: str
+    is_refusal: bool = False
+    request_id: str | None = None
 
 
 class EngineFailureDetail(BaseModel):
@@ -195,6 +220,10 @@ class EngineFailureBody(BaseModel):
     """The body ``/verify`` returns when the engine refused or could not run."""
 
     detail: EngineFailureDetail
+    is_refusal: bool = Field(
+        default=False, description="The same value as `detail.is_refusal`, at the top level."
+    )
+    request_id: str | None = None
 
 
 class ErrorResponse(BaseModel):
@@ -275,7 +304,7 @@ class RunItem(BaseModel):
             created_at=summary.created_at,
             error_code=summary.error_code,
             is_refusal=_is_refusal(summary.error_code),
-            failure_reason=summary.failure_reason,
+            failure_reason=scrub_optional(summary.failure_reason),
         )
 
 
@@ -304,10 +333,10 @@ class RunError(BaseModel):
     def from_error(cls, error: AnalysisError) -> RunError:
         return cls(
             code=error.code.value,
-            message=error.message,
+            message=scrub_text(error.message),
             stage=error.stage,
             detail=error.detail,
-            remediation=error.remediation,
+            remediation=scrub_optional(error.remediation),
             is_refusal=error.is_refusal,
         )
 
@@ -653,7 +682,7 @@ class JobView(BaseModel):
                 else None
             ),
             error=RunError.from_error(job.error) if job.error else None,
-            failure_reason=job.failure_reason,
+            failure_reason=scrub_optional(job.failure_reason),
             status_url=f"/jobs/{job.run_id}",
             result_url=f"/runs/{job.run_id}" if job.engine_status is not None else None,
         )
@@ -670,7 +699,14 @@ class SubmitJobRequest(BaseModel):
         description="Must be true until real Earth-observation providers are implemented. "
         "false is refused with 501, never silently simulated.",
     )
-    min_donors: int = Field(default=10, ge=2)
+    min_donors: int | None = Field(
+        default=None,
+        ge=2,
+        description=(
+            "Omit to use the case's own floor. A larger value makes the run stricter; a "
+            "value below the case's floor is refused with `min_donors_below_case_floor`."
+        ),
+    )
 
 
 class JobSubmission(BaseModel):

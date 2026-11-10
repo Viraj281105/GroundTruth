@@ -498,6 +498,7 @@ def test_startup_is_quiet_when_auth_is_on(monkeypatch, caplog) -> None:
     assert not any("AUTH_REQUIRED is false" in m for m in caplog.messages)
 
 
+@pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
 def test_the_quarantined_landsat_cache_is_never_searched(tmp_path, monkeypatch) -> None:
     from groundtruth.contracts.errors import DataUnavailableError
     from groundtruth.platform.datasets import access

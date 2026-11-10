@@ -22,6 +22,11 @@ from groundtruth.engine import run_analysis
 from groundtruth.logging import get_logger, log_context
 from groundtruth.platform.jobs.lifecycle import JobCancelledError, LeaseLostError
 from groundtruth.platform.jobs.queue import ClaimedJob, JobQueue
+from groundtruth.platform.metrics import (
+    outcome_of_engine_status,
+    record_outcome,
+    stage_timer,
+)
 from groundtruth.platform.store.interface import StoreError
 
 ResolveAccess = Callable[[AnalysisRequest], DataAccess]
@@ -80,32 +85,47 @@ def process(
             the worker should log this and move on.
     """
     try:
-        with log_context(stage="data"):
+        with log_context(stage="data"), stage_timer("data"):
             queue.checkpoint(job, "before-data", begins="data")
             try:
                 data = resolve_access(job.request)
             except DataUnavailableError as exc:
                 logger.warning("data unavailable; the job will be retried if attempts remain")
-                return queue.fail(job, f"data unavailable: {exc}", retryable=True)
+                return _failed(queue.fail(job, f"data unavailable: {exc}", retryable=True))
             logger.info("data access ready (%s data)", job.request.data_mode)
-        with log_context(stage="engine"):
+        with log_context(stage="engine"), stage_timer("engine"):
             queue.checkpoint(job, "before-engine", begins="engine")
             logger.info("engine started")
             result = run(job.request, data)
             logger.info("engine finished with status %s", result.status.value)
-        with log_context(stage="record"):
+        with log_context(stage="record"), stage_timer("record"):
             try:
                 status = queue.complete(job, result)
             except StoreError as exc:
                 logger.error("result could not be stored: %s", exc)
-                return queue.fail(job, f"result could not be stored: {exc}", retryable=False)
+                return _failed(
+                    queue.fail(job, f"result could not be stored: {exc}", retryable=False)
+                )
             logger.info("outcome recorded; the job is %s", status.value)
+            record_outcome(
+                "cancelled"
+                if status is AnalysisStatus.CANCELLED
+                else outcome_of_engine_status(result.status.value)
+            )
             return status
     except JobCancelledError:
         logger.info("cancelled at a checkpoint")
+        record_outcome("cancelled")
         return AnalysisStatus.CANCELLED
     except LeaseLostError:
-        raise
+        raise  # another attempt owns the job and will count its outcome
     except Exception as exc:
+        record_outcome("failed")
         queue.fail(job, f"{type(exc).__name__}: {exc}", retryable=False)
         raise
+
+
+def _failed(status: AnalysisStatus) -> AnalysisStatus:
+    """Count a failed job: ``retried`` if it went back to the queue, else ``failed``."""
+    record_outcome("failed" if status is AnalysisStatus.FAILED else "retried")
+    return status

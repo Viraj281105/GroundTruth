@@ -108,6 +108,20 @@ With $J = 28$ core donors and $T_0 = 11$ pre-treatment years, the linear system 
 
 ---
 
+### The placebo's real p-value floor can be higher than it looks
+
+With J donors the smallest possible placebo p-value is 1/(J+1): 0.032 at J=30, the Kariba
+case's `min_donors`, and 0.020 at J=50. The in-space placebo drops any donor whose pre-fit
+RMSPE is worse than 5x the treated unit's (`max_pre_rmspe_multiple`), so J means the donors
+that survive that filter. The real floor can be higher than 1/(admitted+1).
+
+### Earth Engine covariates are not all clean pre-treatment measurements (#23 path)
+
+On the Earth Engine path, road distance uses gROADS v1, which spans 1980-2010 with a vintage
+that varies by place, and population uses WorldPop 2000, a modelled estimate from an asset now
+deprecated in the Earth Engine catalog. Because the ADR-011 mask keeps only forest pixels,
+population density there measures rural settlement pressure, not district population.
+
 ## 3. Remote Sensing & Measurement Limitations
 
 ```mermaid

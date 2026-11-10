@@ -184,6 +184,7 @@ flowchart TD
 ```
 
 - **Git-Ignored Local Data**: All content in `data/` is excluded from git version control via `.gitignore`, preventing large binary blobs from bloating the repository.
+- **Committed Exception, `data/manifests/`**: generated ADR-011 unit-set manifests are committed, not ignored, so a unit set is reviewable and pinned as a `DatasetRef` (ADR-009, ADR-011). None exists yet; see `data/manifests/README.md`.
 - **DVC Tracking**: Large production assets are managed via Data Version Control (`dvc`).
 - **Atomic File Operations**: All cache writes utilize atomic temporary file replacement (`os.replace`) to prevent corrupted cache reads during concurrent process execution.
 

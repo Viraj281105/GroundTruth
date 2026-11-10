@@ -40,6 +40,7 @@ addopts = "-q --strict-markers"
 markers = [
   "slow: long-running tests",
   "network: requires network / external Earth-observation APIs",
+  "requires_local_data(*paths): needs repo-relative data files that are not in git; skipped with the missing path named when absent",
 ]
 
 [tool.coverage.run]

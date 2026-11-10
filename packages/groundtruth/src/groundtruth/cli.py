@@ -116,7 +116,7 @@ def _cmd_verify(args: argparse.Namespace) -> int:
         request = case.to_request(
             data_mode="simulated",
             seed=settings.random_seed,
-            min_donors=args.min_donors,
+            min_donors=case.resolve_min_donors(args.min_donors),
             datasets=(SYNTHETIC_KARIBA_FIXTURE_DATASET,),
         )
         try:
@@ -127,7 +127,9 @@ def _cmd_verify(args: argparse.Namespace) -> int:
         result = run_analysis(request, data)
     elif not args.synthetic:
         request = case.to_request(
-            data_mode="observed", seed=settings.random_seed, min_donors=args.min_donors
+            data_mode="observed",
+            seed=settings.random_seed,
+            min_donors=case.resolve_min_donors(args.min_donors),
         )
         try:
             data = earth_engine_access(request)
@@ -144,7 +146,9 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     else:
         print(SYNTHETIC_BANNER, file=sys.stderr)
         request = case.to_request(
-            data_mode="simulated", seed=settings.random_seed, min_donors=args.min_donors
+            data_mode="simulated",
+            seed=settings.random_seed,
+            min_donors=case.resolve_min_donors(args.min_donors),
         )
         result = run_analysis(request, synthetic_access(request, true_effect=args.true_effect))
 
@@ -227,7 +231,9 @@ def _cmd_submit(args: argparse.Namespace) -> int:
     print(SYNTHETIC_BANNER, file=sys.stderr)
     SqlEvidenceStore(sessions).upsert_case(case)
     request = case.to_request(
-        data_mode="simulated", seed=settings.random_seed, min_donors=args.min_donors
+        data_mode="simulated",
+        seed=settings.random_seed,
+        min_donors=case.resolve_min_donors(args.min_donors),
     )
     submission = JobQueue(sessions).submit(request, requested_by=args.requested_by)
 
@@ -498,7 +504,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.06,
         help="Effect injected into the simulated treated unit, for testing recovery.",
     )
-    verify.add_argument("--min-donors", type=int, default=10)
+    verify.add_argument(
+        "--min-donors",
+        type=int,
+        default=None,
+        help="Omit to use the case's own floor; a higher value is stricter, a lower one is refused.",
+    )
     verify.add_argument("--json", action="store_true", help="Emit the full AnalysisResult as JSON.")
     verify.add_argument("--out", help="Write the report and bundle to this path.")
     verify.set_defaults(func=_cmd_verify)
@@ -512,7 +523,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Queue a simulated run. Required until real providers are implemented.",
     )
-    submit.add_argument("--min-donors", type=int, default=10)
+    submit.add_argument(
+        "--min-donors",
+        type=int,
+        default=None,
+        help="Omit to use the case's own floor; a higher value is stricter, a lower one is refused.",
+    )
     submit.add_argument("--requested-by", default=None)
     submit.add_argument("--json", action="store_true")
     submit.set_defaults(func=_cmd_submit)

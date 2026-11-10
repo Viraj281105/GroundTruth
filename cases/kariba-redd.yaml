@@ -55,7 +55,17 @@ analysis:
   donor_search_region: >-
     Zimbabwe, Zambia and Mozambique miombo woodland outside any registered
     REDD+ or protected-area boundary
+  # pool_size, min_donors and max_donors, agreed with Viraj (C4), 2026-11-05, and
+  # fixed before any candidate count was seen (ADR-011).
+  #
+  # What they mean for inference: the smallest placebo p-value J donors can give
+  # is 1/(J+1), so 0.032 at J=30 and 0.020 at J=50. The real floor can be higher
+  # than 1/(admitted+1), because the in-space placebo drops any donor whose pre-fit
+  # RMSPE is worse than 5x the treated unit's (max_pre_rmspe_multiple). J there is
+  # the donors that survive that filter, not the donors admitted.
   donor_pool_size: 80
+  min_donors: 30
+  max_donors: 50
   donor_boundaries_path: cases/boundaries/kariba-donors.geojson
   donor_provenance_path: cases/boundaries/kariba-donors.provenance.json
   leakage_belt_km: 10.0

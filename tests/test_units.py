@@ -502,7 +502,7 @@ class TestGenerationRefusesWithoutRealData:
 
     @pytest.mark.skipif(not KARIBA_BOUNDARY.exists(), reason="boundary not obtained (#2)")
     def test_the_earth_engine_provider_refuses(self):
-        with pytest.raises(DataUnavailableError, match="not implemented"):
+        with pytest.raises(DataUnavailableError, match="without an Earth Engine session"):
             generate_unit_set(
                 boundary_path=KARIBA_BOUNDARY,
                 service=EarthEngineUnitConstruction(),
@@ -531,4 +531,5 @@ class TestGenerationRefusesWithoutRealData:
     def test_an_unpinned_wdpa_release_is_visible_not_invented(self):
         refs = EarthEngineUnitConstruction().dataset_refs(_parameters(wdpa_release="x"))
         wdpa = next(r for r in refs if r.dataset_id == "wdpa")
-        assert wdpa.version == "x"
+        assert wdpa.version.startswith("x;ref=")
+        assert wdpa.asset == "WCMC/WDPA/x/polygons"

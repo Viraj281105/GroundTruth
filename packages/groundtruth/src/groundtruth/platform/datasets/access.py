@@ -657,3 +657,86 @@ def get_data_access(
     if synthetic_fixture_available(request.case_id):
         return synthetic_fixture_access(request)
     return synthetic_access(request, true_effect=true_effect)
+
+
+# --- Earth Engine services (#22 observations, #23 covariates and units) ---------
+# A parallel real-data path to the STAC one above. Not used by get_data_access():
+# these build the Earth Engine ports for the unit-set generation script and tests.
+
+
+def earth_engine_cache(settings: Any = None) -> Any:
+    """The reduction cache all Earth Engine services share (gitignored)."""
+    from groundtruth.platform.config import get_settings
+    from groundtruth.platform.datasets.cache import ReductionCache
+
+    s = settings or get_settings()
+    return ReductionCache(s.earth_engine_cache_dir or s.data_dir / "interim" / "earthengine")
+
+
+def earth_engine_session(settings: Any = None, *, backend: Any = None) -> tuple[Any, Any]:
+    """One session and its backend, shared by every Earth Engine service in a process.
+
+    Nothing is read or contacted here: the key is loaded, and Earth Engine signed in
+    to, on the first call.
+    """
+    from groundtruth.platform.config import get_settings
+    from groundtruth.platform.datasets.ee_units import EarthEngineUnitApiBackend
+    from groundtruth.platform.datasets.resilience import shared_rate_limiter
+    from groundtruth.platform.datasets.session import EarthEngineSession
+
+    s = settings or get_settings()
+    client = backend if backend is not None else EarthEngineUnitApiBackend()
+    session = EarthEngineSession(
+        credentials=s.gee_service_account_json,
+        project=s.google_cloud_project,
+        backend=client,
+        rate_limiter=shared_rate_limiter(s.earth_engine_max_requests_per_minute),
+    )
+    return session, client
+
+
+def earth_engine_observations(
+    settings: Any = None, *, session: Any = None, backend: Any = None
+) -> Any:
+    """The Earth Engine observation port (#22), configured from the environment.
+
+    Raises:
+        ConfigurationError: if ``EARTH_ENGINE_SENSOR`` is unset or names a sensor
+            not agreed under C3.
+    """
+    from groundtruth.platform.config import get_settings
+    from groundtruth.platform.datasets.observation import EarthEngineObservationAccess
+
+    s = settings or get_settings()
+    if session is None:
+        session, backend = earth_engine_session(s, backend=backend)
+    return EarthEngineObservationAccess(
+        sensor=s.earth_engine_sensor,
+        cache=earth_engine_cache(s),
+        backend=backend,
+        session=session,
+    )
+
+
+def earth_engine_covariates(
+    settings: Any = None,
+    *,
+    road: Any,
+    mask_rule: str,
+    session: Any = None,
+    backend: Any = None,
+) -> Any:
+    """The Earth Engine covariate port (#23). ``road`` and ``mask_rule`` have no defaults."""
+    from groundtruth.platform.config import get_settings
+    from groundtruth.platform.datasets.covariates import EarthEngineCovariateAccess
+
+    s = settings or get_settings()
+    if session is None:
+        session, backend = earth_engine_session(s, backend=backend)
+    return EarthEngineCovariateAccess(
+        session=session,
+        backend=backend,
+        road=road,
+        mask_rule=mask_rule,
+        cache=earth_engine_cache(s),
+    )

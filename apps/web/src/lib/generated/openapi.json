@@ -481,6 +481,33 @@
               }
             }
           },
+          "422": {
+            "description": "The body is invalid (a validation error), or `min_donors` is below the case's floor (`min_donors_below_case_floor`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorBody"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-user analysis submission limit (`too_many_submissions`, shared with `/verify`). See `Retry-After`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
+                }
+              }
+            }
+          },
           "501": {
             "description": "Observed data is not implemented.",
             "content": {
@@ -517,16 +544,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiErrorBody"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -5821,7 +5838,7 @@
           "cases"
         ],
         "summary": "Create Case",
-        "description": "Create, calibrate and register a new project case.",
+        "description": "Create, calibrate and register a new project case.\n\nEverything is validated before anything is written. A rejected case answers a structured\n422 (`invalid_case`, with the field named, or `case_status_requires_review`) and leaves\nno file behind. Cases are always created as `scaffolded`. Sign-in is always required, and\nthe creation is audited (`case.create`).",
         "operationId": "create_case_cases_post",
         "requestBody": {
           "content": {
@@ -5845,11 +5862,18 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "The body is invalid (a validation error), or the case is refused with a structured code and the offending field: `invalid_case` or `case_status_requires_review`.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/HTTPValidationError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorBody"
+                    }
+                  ]
                 }
               }
             }
@@ -5981,8 +6005,21 @@
                     },
                     {
                       "$ref": "#/components/schemas/EngineFailureBody"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ApiErrorBody"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Over the per-user analysis submission limit (`too_many_submissions`, shared with `POST /jobs`). See `Retry-After`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorBody"
                 }
               }
             }
@@ -6143,14 +6180,32 @@
         "properties": {
           "detail": {
             "$ref": "#/components/schemas/ApiErrorDetail"
+          },
+          "is_refusal": {
+            "type": "boolean",
+            "title": "Is Refusal",
+            "default": false
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
           }
         },
         "type": "object",
         "required": [
-          "detail"
+          "detail",
+          "is_refusal",
+          "request_id"
         ],
         "title": "ApiErrorBody",
-        "description": "The JSON body of an error response, for the OpenAPI schema."
+        "description": "The JSON body of an error response, for the OpenAPI schema.\n\n``is_refusal`` and ``request_id`` are added to every error response by\n:class:`~groundtruth.platform.api.error_envelope.ErrorEnvelopeMiddleware`."
       },
       "ApiErrorDetail": {
         "properties": {
@@ -6172,13 +6227,19 @@
               }
             ],
             "title": "Hint"
+          },
+          "is_refusal": {
+            "type": "boolean",
+            "title": "Is Refusal",
+            "default": false
           }
         },
         "type": "object",
         "required": [
           "code",
           "message",
-          "hint"
+          "hint",
+          "is_refusal"
         ],
         "title": "ApiErrorDetail"
       },
@@ -8040,6 +8101,18 @@
               }
             ],
             "title": "Case Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "Not settable. Cases created here are always 'scaffolded'; omit this field. Sending 'analysed' is refused with `case_status_requires_review`, because that status needs a run reviewed by both owners (C7, #4), and any other value is refused with `invalid_case`."
           }
         },
         "type": "object",
@@ -8581,11 +8654,30 @@
         "properties": {
           "detail": {
             "$ref": "#/components/schemas/EngineFailureDetail"
+          },
+          "is_refusal": {
+            "type": "boolean",
+            "title": "Is Refusal",
+            "description": "The same value as `detail.is_refusal`, at the top level.",
+            "default": false
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
           }
         },
         "type": "object",
         "required": [
-          "detail"
+          "detail",
+          "is_refusal",
+          "request_id"
         ],
         "title": "EngineFailureBody",
         "description": "The body ``/verify`` returns when the engine refused or could not run."
@@ -9710,6 +9802,33 @@
             },
             "type": "array",
             "title": "Detail"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Always `validation_error`."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "A one-line summary."
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "title": "Fields",
+            "description": "The dotted name of every offending field, e.g. `body.area_ha`."
+          },
+          "is_refusal": {
+            "type": "boolean",
+            "title": "Is Refusal",
+            "description": "Always false."
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
           }
         },
         "type": "object",
@@ -11371,14 +11490,42 @@
           "detail": {
             "type": "string",
             "title": "Detail"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "is_refusal": {
+            "type": "boolean",
+            "title": "Is Refusal",
+            "default": false
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
           }
         },
         "type": "object",
         "required": [
-          "detail"
+          "detail",
+          "code",
+          "message",
+          "is_refusal",
+          "request_id"
         ],
         "title": "MessageErrorBody",
-        "description": "An error whose ``detail`` is a plain message, e.g. an unknown case (404)."
+        "description": "An error whose ``detail`` is a plain message, e.g. an unknown case (404).\n\n``code`` (``http_<status>``), ``is_refusal`` and ``request_id`` are added to it by the\nerror envelope, so a client can read the same fields from every error."
       },
       "NotComparable": {
         "properties": {
@@ -13416,10 +13563,17 @@
             "default": true
           },
           "min_donors": {
-            "type": "integer",
-            "minimum": 2.0,
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 2.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Min Donors",
-            "default": 10
+            "description": "Omit to use the case's own floor. A larger value makes the run stricter; a value below the case's floor is refused with `min_donors_below_case_floor`."
           }
         },
         "additionalProperties": false,
@@ -13703,10 +13857,17 @@
             "default": 0.06
           },
           "min_donors": {
-            "type": "integer",
-            "minimum": 2.0,
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 2.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Min Donors",
-            "default": 10
+            "description": "Omit to use the case's own floor. A larger value makes the run stricter; a value below the case's floor is refused with `min_donors_below_case_floor`."
           },
           "include_report": {
             "type": "boolean",

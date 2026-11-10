@@ -149,7 +149,7 @@ function refusalFrom(detail: Record<string, unknown>, fallback: string): Refusal
  */
 export async function verifyCase(
   caseId: string,
-  options: VerificationRequest = { synthetic: true, true_effect: 0.06, min_donors: 10, include_report: true }
+  options: VerificationRequest = { synthetic: true, true_effect: 0.06, include_report: true }
 ): Promise<{
   success: boolean;
   data?: VerificationResponse;

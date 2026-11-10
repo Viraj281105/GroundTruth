@@ -11,6 +11,10 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.api.metricsPort }}"
+        prometheus.io/path: /metrics
     spec:
       containers:
         - name: api
@@ -23,6 +27,11 @@ spec:
             capabilities: { drop: [ALL] }
           ports:
             - containerPort: {{ .Values.api.port }}
+            - name: metrics
+              containerPort: {{ .Values.api.metricsPort }}
+          env:
+            - name: API_METRICS_PORT
+              value: "{{ .Values.api.metricsPort }}"
           livenessProbe:
             httpGet:
               path: /health

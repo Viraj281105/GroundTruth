@@ -25,15 +25,22 @@ from fastapi import APIRouter, Depends, Request, Response
 from groundtruth.contracts.errors import CaseDefinitionError
 from groundtruth.contracts.result import AnalysisStatus
 from groundtruth.platform.api.dependencies import get_jobs, store_errors
-from groundtruth.platform.api.errors import ApiErrorBody, ApiErrorCode, api_error
+from groundtruth.platform.api.errors import (
+    ApiErrorBody,
+    ApiErrorCode,
+    api_error,
+    case_validation_error,
+)
+from groundtruth.platform.api.rate_limits import spend_submission
 from groundtruth.platform.api.schemas import JobSubmission, JobView, SubmitJobRequest
 from groundtruth.platform.api.scope import audit, authorize_case, authorize_filed
 from groundtruth.platform.auth.authz import Action, Capability, Context
 from groundtruth.platform.auth.deps import require_role
-from groundtruth.platform.cases.registry import get_case
+from groundtruth.platform.cases.registry import CaseValidationError, get_case
 from groundtruth.platform.config import get_settings
 from groundtruth.platform.jobs.interface import JobControl
 from groundtruth.platform.jobs.lifecycle import IllegalTransitionError, JobNotFoundError
+from groundtruth.platform.metrics import record_cache
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -62,6 +69,25 @@ def _not_found(run_id: str):  # type: ignore[no-untyped-def]
     responses={
         200: {"model": JobSubmission, "description": "An existing result or job answers it."},
         404: {"model": ApiErrorBody, "description": "Unknown case, or no access to its project."},
+        422: {
+            "description": "The body is invalid (a validation error), or `min_donors` is below "
+            "the case's floor (`min_donors_below_case_floor`).",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "anyOf": [
+                            {"$ref": "#/components/schemas/HTTPValidationError"},
+                            {"$ref": "#/components/schemas/ApiErrorBody"},
+                        ]
+                    }
+                }
+            },
+        },
+        429: {
+            "model": ApiErrorBody,
+            "description": "Over the per-user analysis submission limit "
+            "(`too_many_submissions`, shared with `/verify`). See `Retry-After`.",
+        },
         501: {"model": ApiErrorBody, "description": "Observed data is not implemented."},
         **_UNAVAILABLE,
     },
@@ -99,8 +125,15 @@ def submit_job(
     except CaseDefinitionError as exc:
         raise api_error(ApiErrorCode.CASE_NOT_FOUND, str(exc)) from exc
 
+    try:
+        min_donors = case.resolve_min_donors(body.min_donors)
+    except CaseValidationError as exc:
+        raise case_validation_error(exc) from exc
     analysis_request = case.to_request(
-        data_mode="simulated", seed=get_settings().random_seed, min_donors=body.min_donors
+        data_mode="simulated", seed=get_settings().random_seed, min_donors=min_donors
+    )
+    spend_submission(
+        request, user_id=ctx.user_id, organization_id=ctx.org_id, path="job", case_id=body.case_id
     )
     with store_errors():
         submission = jobs.submit(
@@ -108,6 +141,7 @@ def submit_job(
         )
         job = jobs.status(submission.run_id)
     assert job is not None  # it was just created, or found
+    record_cache("result", hit=submission.from_cache)
     audit(
         request,
         ctx,

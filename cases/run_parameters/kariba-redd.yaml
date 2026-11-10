@@ -1,0 +1,88 @@
+# Run settings for the Kariba REDD+ unit set: ADR-011's open parameters and the
+# covariate settings, fixed and committed BEFORE any candidate count is seen.
+# Setting one after a count is known is a protocol violation, not a tuning step.
+#
+# `null` means NOT YET DECIDED. It is never replaced by a guess: the generation
+# script (experiments/kariba_benchmark/generate_unit_set.py) refuses while any
+# value here is null, and names each one.
+#
+# pool_size, min_donors and max_donors live in cases/kariba-redd.yaml.
+
+case_id: kariba-redd
+
+# --- Decisions recorded here (agreed with Viraj (C4), 2026-11-05) --------------
+# V2 Population: WorldPop/GP/100m/pop, year 2000. Deprecated asset; the listing
+#    network test confirms the 2000 image still exists. Fixed in code.
+# V3 Rainfall: CHIRPS daily, mean annual total, calendar 2001-2010, at native
+#    scale (~5.5 km), not 30 m. Fixed in code.
+# V4 Statistics: every covariate over the MASKED unit at the dataset's native
+#    scale. Mean for rainfall, elevation, slope, road distance; slope per pixel
+#    first. population_density = summed population / eligible area. Fixed in code.
+# V7 WDPA "Adopted": not subtracted. Fixed in code.
+# V9(b) Leakage-belt exclusions are recorded in the unit-set manifest.
+
+# --- ADR-011 open parameters ---------------------------------------------------
+# The equal-area CRS for every buffer and area, as an EPSG code or WKT.
+# OPEN. Proposed: Africa Albers Equal Area. Decide before any candidate count.
+projection: null
+
+# V6, agreed with Viraj (C4), 2026-11-05: 30 m, so the 300 m erosion is 10 pixels.
+raster_scale_m: 30
+
+# How rasters resample onto the mask's grid. OPEN. Implemented: nearest.
+raster_reducer: null
+
+# maxError for the leakage-belt buffer, in metres. OPEN.
+simplification_max_error_m: null
+
+# V5, agreed with Viraj (C4), 2026-11-05: literal strings, REQUIRED, no default.
+# Copy them from the names-only listing, not from ADR prose:
+#   python experiments/kariba_benchmark/generate_unit_set.py --list
+# Two traps: the ladder says "Zambezian-Mopane woodlands" but the RESOLVE string may
+# be "Zambezian and Mopane woodlands"; and RESOLVE 2017 may have merged Southern and
+# Eastern miombo into "Dry miombo woodlands". Rung 3 is rung 2's ecoregions in more
+# countries (MWI, TZA), so its list should match rung 2's.
+ecoregion_names:
+  rung1: null
+  rung2: null
+  rung3: null
+
+# QUESTION FOR VIRAJ, not in V1-V9: which rung's ecoregions define the TREATED
+# unit's mask? ADR-011 measures its area once, before the ladder, so it cannot follow
+# the rung. One of: rung1, rung2, rung3.
+treated_ecoregion_rung: null
+
+# B6: the dated WDPA snapshot (YYYYMM), never "current". Pick it from --list.
+wdpa_release: null
+
+# B3: the committed registry snapshot. Format: cases/carbon_projects/README.md.
+carbon_project_snapshot: null
+
+# --- Roads (V1, agreed with Viraj (C4), 2026-11-05) -----------------------------
+# Named explicitly. gROADS v1 (CIESIN, 1980-2010), uploaded as our own Earth Engine
+# asset: docs/data/groads-upload.md has the steps.
+road_source: groads-v1
+road_asset: null
+road_source_sha256: null
+road_upload_date: null
+# Only if road_source is osm-current: why the gROADS upload proved impossible. That
+# fallback must also be recorded in docs/science/limitations.md.
+road_fallback_reason: null
+
+# QUESTIONS FOR VIRAJ, not in V1-V9. V4 says native scale, but a vector road layer
+# has none: the distance raster's pixel size, in metres.
+road_distance_scale_m: null
+# How far to look for a road. A pixel beyond this makes the unit refuse.
+road_search_radius_km: null
+
+# QUESTION FOR VIRAJ, not in V1-V9. V4 fixes the native scale but not how a 30 m mask
+# meets a coarser pixel (a CHIRPS pixel is ~5.5 km). One of:
+#   fraction-weighted  weight each coarse pixel by the eligible share of its area
+#   pixel-centre       keep a coarse pixel only if the mask is set at its centre
+native_scale_mask_rule: null
+
+# --- V9(a), Viraj's #3 --------------------------------------------------------
+# run.py does not apply engineer_covariates yet, so the ladder would match on a
+# different scale than the run. The script refuses until the engine reports it,
+# or until this is set to true by the person who has checked.
+engine_transforms_confirmed: null

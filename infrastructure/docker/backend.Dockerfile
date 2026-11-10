@@ -11,10 +11,14 @@ COPY packages/groundtruth/src packages/groundtruth/src
 # observation request (it fails on the first import). rasterio's wheel bundles GDAL but links the
 # system libexpat, which the slim base image does not ship. The import check fails the build,
 # not a user's request, if either goes missing again.
-RUN apt-get update && apt-get install -y --no-install-recommends libexpat1     && rm -rf /var/lib/apt/lists/*
-RUN pip install "./packages/groundtruth[api,db,genai,ingest]" psycopg[binary]     && python -c "import rasterio, pystac_client, planetary_computer"
+RUN apt-get update && apt-get install -y --no-install-recommends libexpat1 \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install "./packages/groundtruth[api,db,genai,ingest]" psycopg[binary] \
+    && python -c "import rasterio, pystac_client, planetary_computer"
 
-COPY apps ./apps
+# Only the two backend entrypoints. apps/web is a separate image and does not belong here.
+COPY apps/api ./apps/api
+COPY apps/worker ./apps/worker
 COPY cases ./cases
 COPY configs ./configs
 COPY data ./data

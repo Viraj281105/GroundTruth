@@ -42,11 +42,16 @@ flowchart TD
 
 | Variable | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `AUTH_REQUIRED` | `bool` | `true` | Enforces authentication on all mutating endpoints (`/jobs`, `/cases/{id}/verify`). |
+| `AUTH_REQUIRED` | `bool` | `false` (every shipped profile sets `true`) | Enforces sign-in on the role-gated endpoints. The API refuses to start with `APP_ENV=production` and this `false` (#51). `POST /cases`, analysis runs and project routes require sign-in regardless. |
 | `AUTH_ALLOW_REGISTRATION` | `bool` | `false` | When `false`, only signed-in administrators can register new tenant accounts. |
 | `AUTH_COOKIE_SECURE` | `bool` | `true` | Enforces `Secure` flag on session cookies (must be `true` in production HTTPS). |
 | `AUTH_SESSION_DAYS` | `int` | `7` | Active session and cookie lifetime in days. |
 | `CORS_ALLOWED_ORIGINS` | `str` | `http://localhost:3000` | Comma-separated list of exact allowed browser origins (scheme, host, port). |
+| `ANALYSIS_RATE_LIMIT` | `int` | `20` | Analysis submissions one user may make per window, `POST /jobs` and `/verify` together (#51). |
+| `ANALYSIS_RATE_WINDOW_SECONDS` | `int` | `600` | The window for `ANALYSIS_RATE_LIMIT`. |
+| `API_METRICS_PORT` | `int` | `9464` | Internal port for the API's Prometheus metrics; `0` turns them off (#50). |
+| `WORKER_METRICS_PORT` | `int` | `9465` | Internal port for a worker's Prometheus metrics; `0` turns them off. |
+| `METRICS_BIND_ADDRESS` | `str` | `127.0.0.1` | Address the metrics servers listen on; containers set `0.0.0.0` and never publish the port. |
 
 ### 2.2 Storage & Persistence
 
