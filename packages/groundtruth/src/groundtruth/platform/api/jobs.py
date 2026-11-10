@@ -38,8 +38,10 @@ from groundtruth.platform.auth.authz import Action, Capability, Context
 from groundtruth.platform.auth.deps import require_role
 from groundtruth.platform.cases.registry import CaseValidationError, get_case
 from groundtruth.platform.config import get_settings
+from groundtruth.platform.datasets.synthetic import simulation_pin
 from groundtruth.platform.jobs.interface import JobControl
 from groundtruth.platform.jobs.lifecycle import IllegalTransitionError, JobNotFoundError
+from groundtruth.platform.jobs.worker import DEFAULT_TRUE_EFFECT
 from groundtruth.platform.metrics import record_cache
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -130,14 +132,23 @@ def submit_job(
     except CaseValidationError as exc:
         raise case_validation_error(exc) from exc
     analysis_request = case.to_request(
-        data_mode="simulated", seed=get_settings().random_seed, min_donors=min_donors
+        data_mode="simulated",
+        seed=get_settings().random_seed,
+        min_donors=min_donors,
+        # The simulation and its effect are part of the specification, so the cache and the
+        # replay harness see exactly what will be computed (#42, #47).
+        datasets=(simulation_pin(DEFAULT_TRUE_EFFECT),),
     )
     spend_submission(
         request, user_id=ctx.user_id, organization_id=ctx.org_id, path="job", case_id=body.case_id
     )
     with store_errors():
         submission = jobs.submit(
-            case, analysis_request, requested_by=ctx.user_id, project_id=access.project.id
+            case,
+            analysis_request,
+            requested_by=ctx.user_id,
+            project_id=access.project.id,
+            lane="interactive",  # a person is waiting for this one (#47)
         )
         job = jobs.status(submission.run_id)
     assert job is not None  # it was just created, or found

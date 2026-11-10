@@ -10,7 +10,7 @@ re-exports ``Submission`` and ``JobStatus`` so earlier imports keep working.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict
 
@@ -21,6 +21,10 @@ from groundtruth.platform.store.interface import ResultState, result_state_of
 
 LIVE_STAGES: tuple[str, ...] = ("claim", "data", "engine", "record")
 """The stages a worker moves a job through, in order. The names the worker logs."""
+
+Lane = Literal["interactive", "batch"]
+"""``interactive``: a person is waiting for the result (POST /jobs). ``batch``: anything else.
+Workers take interactive jobs first (#47)."""
 
 
 class Submission(BaseModel):
@@ -98,8 +102,11 @@ class JobControl(Protocol):
         *,
         requested_by: str | None = None,
         project_id: str | None = None,
+        lane: Lane = "batch",
     ) -> Submission:
         """Queue ``request`` for ``case``, or return the existing result or in-flight job.
+
+        ``lane`` is ``interactive`` when a person is waiting for the result, else ``batch``.
 
         The case is stored first, because a run must belong to a stored case.
         ``requested_by`` (a user id) and ``project_id`` are recorded on the run and job.

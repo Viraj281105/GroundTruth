@@ -544,8 +544,10 @@ class TestIndexesServeTheListing:
                 {"engine_version": ENGINE_VERSION},
                 "ix_analysis_runs_engine_version_created_at_run_id",
             ),
-            ({}, "ix_analysis_runs_created_at_run_id"),
-            ({"created_after": iso(T0)}, "ix_analysis_runs_created_at_run_id"),
+            # Every API listing is scoped to the caller's projects (#47, revision 0008), so
+            # with no narrower filter the project index serves it.
+            ({}, "ix_analysis_runs_project_id_created_at_run_id"),
+            ({"created_after": iso(T0)}, "ix_analysis_runs_project_id_created_at_run_id"),
         ],
         ids=["case", "status", "engine_version", "no-filter", "date"],
     )
@@ -558,7 +560,12 @@ class TestIndexesServeTheListing:
         for page_params in ({"limit": 1}, {"limit": 1, "cursor": cursor}):
             (plan,) = _plans(sessions, lambda p=page_params: _get(client, "/runs", **p, **params))
             assert index in plan, plan
-            assert "TEMP B-TREE" not in plan, f"the database has to sort: {plan}"
+            if "project_id" in index:
+                # Several projects: one indexed range per project, then a sort of the caller's
+                # own runs only. Never a walk through every other organization's runs.
+                assert "SCAN analysis_runs" not in plan, plan
+            else:
+                assert "TEMP B-TREE" not in plan, f"the database has to sort: {plan}"
 
 
 # --- one run --------------------------------------------------------------------
@@ -1153,7 +1160,7 @@ class TestMigration0004:
     def test_the_upgrade_adds_exactly_the_new_indexes(self, tmp_path):
         old, new = f"sqlite:///{tmp_path / 'old.db'}", f"sqlite:///{tmp_path / 'new.db'}"
         migrate.upgrade(old, "0003")
-        migrate.upgrade(new)
+        migrate.upgrade(new, "0004")  # 0004 itself, not whatever later revisions add
         before, after = self._indexes(old)["analysis_runs"], self._indexes(new)["analysis_runs"]
         assert {i[0] for i in before - after} == {
             "ix_analysis_runs_case_id_created_at",

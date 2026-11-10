@@ -35,6 +35,7 @@ from groundtruth.contracts.result import AnalysisResult, AnalysisStatus
 from groundtruth.engine import run_analysis
 from groundtruth.logging import current_log_context, get_logger, log_context
 from groundtruth.platform.datasets.access import earth_engine_access, synthetic_access
+from groundtruth.platform.datasets.synthetic import pinned_true_effect
 from groundtruth.platform.jobs.lifecycle import LeaseLostError
 from groundtruth.platform.jobs.queue import ClaimedJob, JobQueue
 from groundtruth.platform.jobs.runner import ResolveAccess, RunEngine, process
@@ -63,11 +64,16 @@ def default_resolve_access(true_effect: float = DEFAULT_TRUE_EFFECT) -> ResolveA
     Simulated requests get the synthetic fixture, whose provenance marks every value as
     simulated. Observed requests get the Earth Engine path, which raises until it is
     implemented (#22): never a fixture under a real-data label (R7).
+
+    A simulated request that pins its simulation carries its own effect, and that is what
+    runs. ``true_effect`` applies only to a request without the pin (one submitted before
+    #42, or by the CLI).
     """
 
     def resolve(request: AnalysisRequest) -> DataAccess:
         if request.data_mode == "simulated":
-            return synthetic_access(request, true_effect=true_effect)
+            pinned = pinned_true_effect(request) is not None
+            return synthetic_access(request, true_effect=None if pinned else true_effect)
         return earth_engine_access(request)
 
     return resolve

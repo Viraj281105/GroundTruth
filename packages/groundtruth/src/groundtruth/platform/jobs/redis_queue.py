@@ -35,7 +35,7 @@ from groundtruth.contracts.request import AnalysisRequest
 from groundtruth.contracts.result import AnalysisResult, AnalysisStatus
 from groundtruth.engine import run_analysis
 from groundtruth.platform.cases.registry import CaseDefinition
-from groundtruth.platform.jobs.interface import LIVE_STAGES, JobStatus, Submission
+from groundtruth.platform.jobs.interface import LIVE_STAGES, JobStatus, Lane, Submission
 from groundtruth.platform.jobs.lifecycle import (
     IllegalTransitionError,
     JobCancelledError,
@@ -140,8 +140,13 @@ class RedisJobQueue:
         *,
         requested_by: str | None = None,
         project_id: str | None = None,
+        lane: Lane = "batch",
     ) -> Submission:
-        """Queue ``request``, or return its cached result or the identical in-flight job."""
+        """Queue ``request``, or return its cached result or the identical in-flight job.
+
+        This queue has no lanes: ``lane`` is accepted for the common interface and every job
+        is first in, first out. Lanes are a feature of the SQL queue (#47).
+        """
         spec_key = SPEC_PREFIX + request.spec_hash
         run_id = new_run_id()
         if not self._r.set(spec_key, run_id, nx=True):

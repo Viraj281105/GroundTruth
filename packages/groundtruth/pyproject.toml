@@ -69,6 +69,7 @@ all = ["groundtruth[api,db,geo,earthengine,genai,dev,eo,pipelines,compute,queue,
 
 [project.scripts]
 groundtruth = "groundtruth.cli:main"
+groundtruth-replay = "groundtruth.platform.replay:main"
 
 [project.urls]
 Homepage = "https://github.com/Viraj281105/GroundTruth"

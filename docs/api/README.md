@@ -491,7 +491,7 @@ x-request-id: <request_id>
 {
   "run_id": "<run_id_1>",
   "case_id": "kariba-redd",
-  "spec_hash": "edc22e4aba4c5c57164282d7b5141f0e",
+  "spec_hash": "7d88978d78ddbf8ece5578fb88eebfc4",
   "status": "succeeded",
   "result_state": "measured",
   "engine_status": "completed",
@@ -512,7 +512,16 @@ x-request-id: <request_id>
     "git_sha": null
   },
   "seed": 20260101,
-  "datasets": [],
+  "datasets": [
+    {
+      "dataset_id": "groundtruth-synthetic-simulation",
+      "version": "v1;true_effect=0.06",
+      "provider": "synthetic",
+      "asset": null,
+      "source_uri": null,
+      "retrieved_at": null
+    }
+  ],
   "started_at": "<timestamp>",
   "finished_at": "<timestamp>",
   "metrics": {
@@ -662,7 +671,7 @@ x-request-id: <request_id>
   "baseline": {
     "run_id": "<run_id_1>",
     "case_id": "kariba-redd",
-    "spec_hash": "edc22e4aba4c5c57164282d7b5141f0e",
+    "spec_hash": "7d88978d78ddbf8ece5578fb88eebfc4",
     "status": "succeeded",
     "result_state": "measured",
     "engine_status": "completed",
@@ -680,7 +689,7 @@ x-request-id: <request_id>
   "candidate": {
     "run_id": "<run_id_4>",
     "case_id": "kariba-redd",
-    "spec_hash": "41179059ce113ed564da37a123725370",
+    "spec_hash": "f6f0834f3cf5a00e61a09da90539e14b",
     "status": "succeeded",
     "result_state": "measured",
     "engine_status": "completed",
@@ -745,7 +754,7 @@ x-request-id: <request_id>
   "baseline": {
     "run_id": "<run_id_1>",
     "case_id": "kariba-redd",
-    "spec_hash": "edc22e4aba4c5c57164282d7b5141f0e",
+    "spec_hash": "7d88978d78ddbf8ece5578fb88eebfc4",
     "status": "succeeded",
     "result_state": "measured",
     "engine_status": "completed",
@@ -763,7 +772,7 @@ x-request-id: <request_id>
   "candidate": {
     "run_id": "<run_id_2>",
     "case_id": "kariba-redd",
-    "spec_hash": "d34fdd55f7b54c5698c99da5d0973121",
+    "spec_hash": "65496c3c8795dab6a0be477a8b25d257",
     "status": "succeeded",
     "result_state": "refused",
     "engine_status": "refused",
@@ -922,7 +931,7 @@ x-request-id: <request_id>
 {
   "run_id": "<run_id_2>",
   "case_id": "kariba-redd",
-  "spec_hash": "d34fdd55f7b54c5698c99da5d0973121",
+  "spec_hash": "65496c3c8795dab6a0be477a8b25d257",
   "status": "succeeded",
   "result_state": "refused",
   "engine_status": "refused",
@@ -943,7 +952,16 @@ x-request-id: <request_id>
     "git_sha": null
   },
   "seed": 20260101,
-  "datasets": [],
+  "datasets": [
+    {
+      "dataset_id": "groundtruth-synthetic-simulation",
+      "version": "v1;true_effect=0.06",
+      "provider": "synthetic",
+      "asset": null,
+      "source_uri": null,
+      "retrieved_at": null
+    }
+  ],
   "started_at": "<timestamp>",
   "finished_at": "<timestamp>",
   "metrics": {
@@ -1202,6 +1220,14 @@ Every run records its `spec_hash` (a hash of the full analysis specification), i
 contract versions, its random `seed` and every dataset it read. Two runs with the same
 `spec_hash` and engine version give the same numbers, which is why `POST /jobs` can answer from a
 stored result. To reproduce a result, keep those four values with it.
+
+For simulated data the specification includes the simulation itself and the effect it injects,
+pinned as the dataset `groundtruth-synthetic-simulation` (its version reads
+`v1;true_effect=0.06`). Two simulated runs with different effects therefore have different
+`spec_hash`es. On `/cases/{case_id}/verify` the `true_effect` you send is pinned the same way.
+
+Stored runs are replayed daily, and a run that no longer reproduces under its own engine version
+fails the check (see `docs/operations/README.md`, section 2.4).
 
 ---
 

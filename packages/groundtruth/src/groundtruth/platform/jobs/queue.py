@@ -44,7 +44,7 @@ from groundtruth.contracts.result import (
     RunMetrics,
 )
 from groundtruth.engine import ENGINE_VERSION
-from groundtruth.platform.jobs.interface import JobStatus, Submission
+from groundtruth.platform.jobs.interface import JobStatus, Lane, Submission
 from groundtruth.platform.jobs.lifecycle import (
     CANCELLED,
     DEFAULT_BACKOFF_BASE,
@@ -66,6 +66,30 @@ from groundtruth.platform.jobs.lifecycle import (
 from groundtruth.platform.store.interface import StoreError, UnknownCaseError
 from groundtruth.platform.store.models import AnalysisRunRow, CaseRow, JobRow
 from groundtruth.platform.store.sql import SqlEvidenceStore, failure_reason_for, record_result
+
+
+def stored_request(run: AnalysisRunRow) -> AnalysisRequest:
+    """Rebuild a run's stored request and prove it is the one its ``spec_hash`` names.
+
+    Used by the worker before it runs a job and by the replay harness (#42) before it replays
+    one: both must compute exactly what was submitted, never a request rebuilt from the case.
+
+    Raises:
+        StoreError: no request was stored, it does not validate, or it hashes differently.
+    """
+    if run.request is None:
+        raise StoreError(f"run {run.run_id!r} has no stored request")
+    try:
+        request = AnalysisRequest.model_validate(run.request)
+    except ValidationError as exc:
+        raise StoreError(f"run {run.run_id!r} has an invalid stored request: {exc}") from exc
+    if request.spec_hash != run.spec_hash:
+        raise StoreError(
+            f"run {run.run_id!r}: stored request hashes to {request.spec_hash}, "
+            f"but the run is for {run.spec_hash}"
+        )
+    return request
+
 
 _CLAIM_SCAN_LIMIT = 10
 """How many unusable jobs one claim may skip (failing each) before giving up."""
@@ -106,6 +130,9 @@ class JobQueue:
         backoff_base: First retry delay; doubles each attempt.
         backoff_cap: Longest retry delay.
         max_attempts: Claims allowed per job before it fails for good.
+        batch_max_running: At most this many ``batch`` jobs run at once, across every
+            worker, so the rest stay free for interactive work (#47). ``None``: no limit.
+            Interactive jobs are always claimed first either way.
     """
 
     def __init__(
@@ -118,9 +145,13 @@ class JobQueue:
         backoff_base: timedelta = DEFAULT_BACKOFF_BASE,
         backoff_cap: timedelta = DEFAULT_BACKOFF_CAP,
         max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+        batch_max_running: int | None = None,
     ) -> None:
         if max_attempts < 1:
             raise ValueError("max_attempts must be at least 1")
+        if batch_max_running is not None and batch_max_running < 0:
+            raise ValueError("batch_max_running must not be negative")
+        self._batch_max_running = batch_max_running
         self._sessions = session_factory
         self._store = SqlEvidenceStore(session_factory, clock=clock)
         self._engine_version = engine_version
@@ -143,6 +174,7 @@ class JobQueue:
         *,
         requested_by: str | None = None,
         project_id: str | None = None,
+        lane: Lane = "batch",
     ) -> Submission:
         """Queue a request, unless a result or an identical job already exists.
 
@@ -156,7 +188,8 @@ class JobQueue:
            stored with the run, so it executes exactly as submitted.
 
         ``requested_by`` and ``project_id`` are recorded on a new run (and the job carries
-        the project too). When an existing run answers instead, it is filed under
+        the project too). ``lane`` is ``interactive`` when a person is waiting for the result
+        (``POST /jobs``) and ``batch`` otherwise; workers take interactive jobs first. When an existing run answers instead, it is filed under
         ``project_id`` if it had none, so a legacy run the same caller asks for again becomes
         readable; a run already filed elsewhere is never moved.
 
@@ -221,6 +254,7 @@ class JobQueue:
                     project_id=project_id,
                     attempts=0,
                     max_attempts=self._max_attempts,
+                    lane=lane,
                     available_at=now,
                     created_at=now,
                     updated_at=now,
@@ -261,17 +295,37 @@ class JobQueue:
         return None
 
     def _candidate(self, now: datetime) -> sa.ScalarSelect[Any]:
-        """The next claimable job id, as a subquery of the claim statement."""
+        """The next claimable job id, as a subquery of the claim statement.
+
+        Interactive jobs first, then batch, oldest first within a lane (#47). With
+        ``batch_max_running`` set, a batch job is taken only while fewer than that many batch
+        jobs are running; two workers claiming at the same instant can overshoot by one,
+        which a cap meant to keep capacity free tolerates.
+        """
         run = aliased(AnalysisRunRow)  # aliased so it cannot correlate with the UPDATE
+        conditions = [
+            run.status == QUEUED.value,
+            JobRow.available_at <= now,
+            JobRow.cancel_requested_at.is_(None),
+        ]
+        if self._batch_max_running is not None:
+            other_job, other_run = aliased(JobRow), aliased(AnalysisRunRow)
+            running_batch = (
+                sa.select(sa.func.count())
+                .select_from(other_job)
+                .join(other_run, other_run.run_id == other_job.run_id)
+                .where(other_job.lane == "batch", other_run.status == RUNNING.value)
+                .scalar_subquery()
+            )
+            conditions.append(
+                sa.or_(JobRow.lane == "interactive", running_batch < self._batch_max_running)
+            )
+        interactive_first = sa.case((JobRow.lane == "interactive", 0), else_=1)
         return (
             sa.select(JobRow.run_id)
             .join(run, run.run_id == JobRow.run_id)
-            .where(
-                run.status == QUEUED.value,
-                JobRow.available_at <= now,
-                JobRow.cancel_requested_at.is_(None),
-            )
-            .order_by(JobRow.available_at, JobRow.run_id)
+            .where(*conditions)
+            .order_by(interactive_first, JobRow.available_at, JobRow.run_id)
             .limit(1)
             .with_for_update(of=JobRow, skip_locked=True)  # PostgreSQL; SQLite ignores it
             .correlate(None)
@@ -328,18 +382,7 @@ class JobQueue:
     @staticmethod
     def _stored_request(run: AnalysisRunRow) -> AnalysisRequest:
         """Rebuild the run's request and prove it is the one its ``spec_hash`` names."""
-        if run.request is None:
-            raise StoreError(f"run {run.run_id!r} has no stored request")
-        try:
-            request = AnalysisRequest.model_validate(run.request)
-        except ValidationError as exc:
-            raise StoreError(f"run {run.run_id!r} has an invalid stored request: {exc}") from exc
-        if request.spec_hash != run.spec_hash:
-            raise StoreError(
-                f"run {run.run_id!r}: stored request hashes to {request.spec_hash}, "
-                f"but the run is for {run.spec_hash}"
-            )
-        return request
+        return stored_request(run)
 
     # --- while running ---------------------------------------------------------
 

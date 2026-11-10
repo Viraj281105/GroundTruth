@@ -51,6 +51,7 @@ flowchart TD
 | `ANALYSIS_RATE_WINDOW_SECONDS` | `int` | `600` | The window for `ANALYSIS_RATE_LIMIT`. |
 | `API_METRICS_PORT` | `int` | `9464` | Internal port for the API's Prometheus metrics; `0` turns them off (#50). |
 | `WORKER_METRICS_PORT` | `int` | `9465` | Internal port for a worker's Prometheus metrics; `0` turns them off. |
+| `WORKER_BATCH_MAX_RUNNING` | `int` | unset (no cap) | Batch jobs allowed to run at once across all workers, keeping the rest for interactive work (#47). Read by the worker process. |
 | `METRICS_BIND_ADDRESS` | `str` | `127.0.0.1` | Address the metrics servers listen on; containers set `0.0.0.0` and never publish the port. |
 
 ### 2.2 Storage & Persistence

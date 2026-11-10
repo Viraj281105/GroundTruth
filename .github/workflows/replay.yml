@@ -1,0 +1,55 @@
+name: replay
+
+# Reproducibility replay (#42): every stored run is replayed from its own stored request and
+# compared with what was stored. A difference within one engine version is a bug and fails the
+# run; a difference across engine versions is reported as expected change. The golden stored
+# runs are also replayed by the normal test suite on every push (tests/test_replay.py); this
+# workflow adds a daily run on every supported Python, so drift from a new numpy or BLAS build
+# is caught even when nothing in the repository changed.
+
+on:
+  schedule:
+    - cron: "30 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    name: Replay stored runs (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: packages/groundtruth/pyproject.toml
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "packages/groundtruth[api,db,genai,dev]"
+
+      - name: Replay the golden stored runs
+        run: python -m groundtruth.platform.replay --golden tests/golden/stored_runs
+
+      # A real database, when the deployment provides one as a secret. Observed-data runs whose
+      # data is not available here are skipped with the reason, never replayed on simulated data.
+      - name: Replay a deployment's stored runs
+        if: matrix.python-version == '3.12'
+        env:
+          DATABASE_URL: ${{ secrets.REPLAY_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "No REPLAY_DATABASE_URL secret: database replay skipped." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python -m pip install "psycopg[binary]"
+          python -m groundtruth.platform.replay

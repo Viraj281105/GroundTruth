@@ -181,9 +181,18 @@ def queue_run(
     *,
     seed_value: int = 1,
     requested_by: str | None = None,
+    as_post_jobs: bool = False,
 ) -> str:
-    """A QUEUED simulated run for ``case_id``, filed under ``project_id`` (may be ``None``)."""
-    request = get_case(case_id).to_request(data_mode="simulated", seed=seed_value)
+    """A QUEUED simulated run for ``case_id``, filed under ``project_id`` (may be ``None``).
+
+    ``as_post_jobs``: the exact request ``POST /jobs`` submits, with the simulation pinned
+    (#42, #47), so a submission through the API is the same specification.
+    """
+    from groundtruth.platform.datasets.synthetic import simulation_pin
+    from groundtruth.platform.jobs.worker import DEFAULT_TRUE_EFFECT
+
+    pin = (simulation_pin(DEFAULT_TRUE_EFFECT),) if as_post_jobs else ()
+    request = get_case(case_id).to_request(data_mode="simulated", seed=seed_value, datasets=pin)
     run_id = JobQueue(sessions).submit(request, requested_by=requested_by).run_id
     with sessions() as db:
         db.execute(
