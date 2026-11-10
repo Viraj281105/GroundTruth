@@ -25,6 +25,11 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, Protocol
 
+S3_CONNECT_TIMEOUT_S = 5
+S3_READ_TIMEOUT_S = 30
+S3_MAX_ATTEMPTS = 3
+"""S3 call limits (#48)."""
+
 
 class StorageTier(StrEnum):
     """Hierarchical evidence and data separation tiers."""
@@ -209,12 +214,21 @@ class S3StorageBackend:
                 "S3StorageBackend requires 'boto3': pip install 'groundtruth[production]'"
             ) from exc
 
+        from botocore.config import Config
+
         return boto3.client(
             "s3",
             endpoint_url=self.endpoint_url,
             region_name=self.region_name,
             aws_access_key_id=self.access_key_id,
             aws_secret_access_key=self.secret_access_key,
+            # Explicit, not botocore's implicit 60 s (#48): 5 s to connect, 30 s to read, and
+            # three attempts in the standard retry mode.
+            config=Config(
+                connect_timeout=S3_CONNECT_TIMEOUT_S,
+                read_timeout=S3_READ_TIMEOUT_S,
+                retries={"max_attempts": S3_MAX_ATTEMPTS, "mode": "standard"},
+            ),
         )
 
     def _tier_prefix(self, tier: StorageTier, key: str) -> str:

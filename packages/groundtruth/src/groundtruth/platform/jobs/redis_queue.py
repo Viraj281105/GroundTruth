@@ -78,9 +78,19 @@ def _require(module: str) -> Any:
         ) from exc
 
 
+REDIS_TIMEOUT_S = 5.0
+"""Connecting to Redis, and each command, gives up after this long (#48): a Redis that stops
+answering must fail the request, not hang the API or a worker forever."""
+
+
 def connect(url: str) -> RedisLike:
-    """A synchronous Redis client that returns ``str`` values."""
-    client: RedisLike = _require("redis").Redis.from_url(url, decode_responses=True)
+    """A synchronous Redis client that returns ``str`` values, with timeouts."""
+    client: RedisLike = _require("redis").Redis.from_url(
+        url,
+        decode_responses=True,
+        socket_timeout=REDIS_TIMEOUT_S,
+        socket_connect_timeout=REDIS_TIMEOUT_S,
+    )
     return client
 
 

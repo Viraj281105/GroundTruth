@@ -124,6 +124,36 @@ The test runner captures high-fidelity light-mode application screenshots during
 
 ---
 
+## A Run From the UI (`runs.spec.ts`, #49)
+
+The stack started by `stack.ts` includes a **worker**, so these tests drive the whole path: browser,
+API, queue, worker, engine, store and the rendered result, on simulated data. Nothing mocks the API.
+
+| Test | What it proves |
+| :--- | :--- |
+| Happy path | A run started at `/app/<org>/projects/<project>/run` is computed, stored (`result_state: measured`) and shown, labelled simulated. |
+| Refusal | A stricter minimum (500 comparison areas) ends in the engine's refusal, shown as a designed outcome (`role="status"`, the engine's own reason), never as an error; the stored run is `refused`. |
+| Below the floor | A minimum lower than the case allows is refused before anything runs (`min_donors_below_case_floor`). |
+| Cancel | A **running** job (confirmed through the API) is cancelled from the UI, ends `cancelled`, and stores no result. |
+| Failure | When the API goes away mid-run, the UI shows **Lost contact with the analysis service** with the run id after 30 s of silence, never a hang or a fake success. |
+
+Only the owning org's members may start a run, and the demo orgs hold only grants on Kariba, so the e2e seed
+adds an `operator` account: a plain member of the Reference org (which owns Kariba), with a random password
+written to the same passwords file as the demo accounts. It exists only in the e2e database.
+
+Each test asks for its own specification (its own minimum), so tests running side by side never answer one
+another from the cache. To make a running job cancellable on demand, the e2e worker waits a few seconds
+before its engine starts (`--pause-before-engine`, `E2E_WORKER_PAUSE_S`, default 6): a testing aid that
+every worker refuses when `APP_ENV=production`.
+
+## In CI (`.github/workflows/e2e.yml`)
+
+Every pull request runs the suite in Chromium against a local stack (API, worker and web app on a fresh
+SQLite database). It adds roughly 6 to 9 minutes, in parallel with the other CI jobs. Run the workflow by hand
+with `base_url` and `api_url` to test a deployed environment instead (#45): no stack is started, and the
+demo accounts' passwords come from the `E2E_DEMO_PASSWORDS` secret. The cancel test runs there only when
+`E2E_WORKER_PAUSES=1` says the deployment's worker pauses before its engine.
+
 ## Running the E2E Suite
 
 ### Prerequisites
@@ -166,3 +196,5 @@ E2E_EXTERNAL_STACK=1 E2E_BASE_URL=http://localhost:3000 E2E_API_URL=http://local
 | `E2E_EXTERNAL_STACK`| Set to `1` to run against externally managed services | `0` (spawns isolated local stack) |
 | `E2E_SKIP_BUILD` | Set to `1` to reuse existing Next.js build artifacts | `0` |
 | `E2E_SCREENSHOTS_DIR`| Output directory for documentation screenshots | `docs/product/screens` |
+| `E2E_WORKER_PAUSE_S` | Seconds the local stack's worker waits before each engine run, so a running job can be cancelled | `6` |
+| `E2E_WORKER_PAUSES` | Set to `1` when an external stack's worker pauses before its engine (enables the cancel test there) | unset |

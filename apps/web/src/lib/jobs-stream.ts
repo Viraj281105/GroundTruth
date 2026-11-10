@@ -9,7 +9,7 @@
  */
 
 import { API_BASE_URL } from "./api";
-import { createJobsApi, type JobView } from "./jobs";
+import { LOST_CONTACT_AFTER_MS, createJobsApi, type JobView } from "./jobs";
 
 export interface EventSourceLike {
   addEventListener(type: string, listener: (event: { data?: string }) => void): void;
@@ -27,6 +27,8 @@ export interface WatchStreamOptions {
   fetchStatus?: (runId: string) => Promise<JobView>;
   eventSourceFactory?: (url: string) => EventSourceLike;
   pollMs?: number;
+  /** Keep retrying a failed status read until the API has been silent this long. */
+  lostContactAfterMs?: number;
 }
 
 export const STREAM_POLL_MS = 1500;
@@ -45,6 +47,10 @@ function parseView(data: string | undefined): JobView | null {
 export function watchJob(runId: string, handlers: WatchHandlers, opts: WatchStreamOptions = {}): () => void {
   const baseUrl = opts.baseUrl ?? API_BASE_URL;
   const pollMs = opts.pollMs ?? STREAM_POLL_MS;
+  // A failed status read is retried until the API has been silent this long (#48, #49): a blip
+  // must not end the watch, and a real outage must end it, not hang it.
+  const lostContactAfterMs = opts.lostContactAfterMs ?? LOST_CONTACT_AFTER_MS;
+  let failingSince: number | null = null;
   const fetchStatus = opts.fetchStatus ?? ((id: string) => createJobsApi({ baseUrl }).status(id));
   const factory =
     opts.eventSourceFactory ??
@@ -81,9 +87,15 @@ export function watchJob(runId: string, handlers: WatchHandlers, opts: WatchStre
     try {
       const view = await fetchStatus(runId);
       if (stopped) return;
+      failingSince = null;
       emit(view);
     } catch (err) {
       if (stopped) return;
+      failingSince ??= Date.now();
+      if (Date.now() - failingSince < lostContactAfterMs) {
+        timer = setTimeout(poll, pollMs);
+        return;
+      }
       stop();
       handlers.onError(err);
       return;

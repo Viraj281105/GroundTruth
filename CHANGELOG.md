@@ -41,6 +41,24 @@ flowchart LR
   - Organization boundaries, project grants, Scrypt password hashing ($N=32768, r=8, p=1$), timing attack mitigation, and session cookies with HttpOnly, SameSite, and Secure flags.
   - Row-level tenant isolation returning `HTTP 403 Forbidden` on unauthorized cross-tenant queries.
 
+### Added on `bhumi-dev`: resilience and end-to-end runs (#48, #49)
+- **Circuit breakers (#48).** One `CircuitBreaker` in the existing resilience module, one per provider per
+  process (Earth Engine, Gemini, Anthropic): five failures in a row (each after its retries) open it for
+  60 s, then one trial call decides. Bad credentials never open it. An open Earth Engine circuit is
+  `data_unavailable`, never a fixture; an open GenAI circuit is a labelled deterministic fallback (inline) or
+  `narration_failed` (export). Counted in `gt_circuit_open_total{provider}`.
+- **Timeouts on every external call (#48).** Added: Redis 5 s, PostgreSQL connect 10 s, S3 5 s connect /
+  30 s read with 3 attempts. Already present: Earth Engine 360 s, GenAI 60 s. The offline STAC ingest
+  (PR #87's `data_access/stac.py`) has none yet; flagged.
+- **A run from the UI again (#49).** `/app/<org>/projects/<project>/run` renders the run flow, which no 2.0
+  page could reach (the legacy page redirected to a missing route). It gains an optional "Minimum comparison
+  areas" that can only make the test stricter, and an honest "Lost contact" outcome that keeps the run id
+  when the API goes away mid-run, after 30 s of silence instead of on the first failed read.
+- **End-to-end runs (#49).** The e2e stack starts a worker; `runs.spec.ts` covers the happy path, a refusal
+  shown as a designed outcome, a minimum below the floor, cancelling a running job, and a lost API, all on
+  the real stack. `.github/workflows/e2e.yml` runs the suite on every pull request, and by hand against a
+  deployed environment. The worker's `--pause-before-engine` (a testing aid) is refused in production.
+
 ### Added on `bhumi-dev`: replay harness, simulation pin and performance (#42, #47)
 - **Reproducibility replay (#42).** `groundtruth-replay` replays every stored run from its own
   stored request (proven to hash to its `spec_hash`), through `run_analysis` only, and compares

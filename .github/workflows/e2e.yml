@@ -1,0 +1,95 @@
+name: e2e
+
+# End-to-end tests (#49): a browser drives the real stack (API, worker and web app on a fresh
+# SQLite database, started by apps/web/e2e/stack.ts) on simulated data: a run from the UI to
+# its rendered result, a refusal shown as a legitimate outcome, a cancelled run, a lost API, and
+# the persona journeys. Nothing mocks the API.
+#
+# Run by hand with `base_url` and `api_url` to test a deployed environment instead (#45): no
+# local stack is started, and the demo accounts' passwords come from the E2E_DEMO_PASSWORDS
+# secret. The cancel test needs a worker that pauses before its engine (a testing aid every
+# worker refuses in production); against a deployment it runs only when its worker does.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Web app of a deployed environment (empty: start a local stack)"
+        required: false
+        default: ""
+      api_url:
+        description: "API of that environment"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: End-to-end (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      E2E_BASE_URL: ${{ inputs.base_url || 'http://localhost:3000' }}
+      E2E_API_URL: ${{ inputs.api_url || 'http://localhost:8000' }}
+      E2E_EXTERNAL_STACK: ${{ inputs.base_url && '1' || '' }}
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        if: ${{ !inputs.base_url }}
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: packages/groundtruth/pyproject.toml
+
+      # e2e/stack.ts runs the API, the worker and the seeding from the repository's .venv.
+      - name: Python environment
+        if: ${{ !inputs.base_url }}
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install -e "packages/groundtruth[api,db,genai,dev]"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install the web app
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
+      - name: Demo accounts of the deployed environment
+        if: ${{ inputs.base_url }}
+        env:
+          PASSWORDS: ${{ secrets.E2E_DEMO_PASSWORDS }}
+        run: |
+          printf '%s' "$PASSWORDS" > "$RUNNER_TEMP/demo-passwords.tsv"
+          echo "GT_DEMO_PASSWORDS_FILE=$RUNNER_TEMP/demo-passwords.tsv" >> "$GITHUB_ENV"
+
+      - name: End-to-end tests
+        working-directory: apps/web
+        run: npx playwright test --project=chromium
+
+      - name: Keep the traces of a failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: apps/web/test-results
+          if-no-files-found: ignore

@@ -29,6 +29,38 @@ export function migrateAndSeed(databaseUrl: string, passwordsFile: string): void
   );
   run(venvBin('groundtruth'), ['seed', '--demo', '--passwords-file', passwordsFile], env);
   grantBenchmark(env);
+  addReferenceOperator(env, passwordsFile);
+}
+
+/**
+ * The demo orgs only hold grants on Kariba, and a grant never lets a tenant start a run: only the
+ * owning org's members can. Add one plain member of the Reference org (which owns Kariba), so the run
+ * tests (#49) can start, cancel and watch runs. Its random password is appended to the passwords file
+ * and never printed. Test environment only.
+ */
+function addReferenceOperator(env: NodeJS.ProcessEnv, passwordsFile: string): void {
+  const code = [
+    'import os, secrets, uuid',
+    'from datetime import UTC, datetime',
+    'from sqlalchemy import select',
+    'from groundtruth.platform.auth.passwords import hash_password',
+    'from groundtruth.platform.store.database import create_db_engine, create_session_factory',
+    'from groundtruth.platform.store.models import MembershipRow, OrganizationRow, UserRow',
+    "email = 'operator@demo.groundtruth.local'",
+    'password = secrets.token_urlsafe(24)',
+    'now = datetime.now(UTC)',
+    'S = create_session_factory(create_db_engine())',
+    'with S() as db:',
+    "    org = db.execute(select(OrganizationRow).where(OrganizationRow.slug == 'reference')).scalar_one()",
+    '    user = UserRow(id=str(uuid.uuid4()), email=email, password_hash=hash_password(password), role="user", is_active=True, created_at=now)',
+    '    db.add(user)',
+    '    db.flush()',
+    "    db.add(MembershipRow(id=str(uuid.uuid4()), user_id=user.id, organization_id=org.id, role='member', created_at=now))",
+    '    db.commit()',
+    "with open(os.environ['GT_E2E_PASSWORDS_FILE'], 'a', encoding='utf-8') as f:",
+    "    f.write(email + chr(9) + password + chr(10))",
+  ].join('\n');
+  run(venvBin('python'), ['-c', code], { ...env, GT_E2E_PASSWORDS_FILE: passwordsFile });
 }
 
 /**
@@ -54,7 +86,8 @@ function grantBenchmark(env: NodeJS.ProcessEnv): void {
   run(venvBin('python'), ['-c', code], env);
 }
 
-export type Persona = 'ngo' | 'funder' | 'auditor' | 'government';
+/** The four demo personas, plus `operator`: an e2e-only member of the Reference org that may start runs. */
+export type Persona = 'ngo' | 'funder' | 'auditor' | 'government' | 'operator';
 
 /** Reads the credentials file named by GT_DEMO_PASSWORDS_FILE at test time. Never log the result. */
 export function credentialsFor(persona: Persona): { email: string; password: string } {

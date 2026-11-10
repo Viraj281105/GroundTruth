@@ -42,15 +42,28 @@ function Stepper({ index }: { index: number }) {
   );
 }
 
-function OutcomeCard({ outcome, caseId, onRetry }: { outcome: Outcome; caseId: string; onRetry: () => void }) {
+function OutcomeCard({
+  outcome,
+  runId,
+  onRetry,
+}: {
+  outcome: Outcome;
+  runId: string | null;
+  onRetry: () => void;
+}) {
   return (
-    <Card className={styles.outcome} role="status">
+    <Card className={styles.outcome} role="status" data-outcome={outcome.kind}>
       <h2>{outcome.title}</h2>
       <p>{outcome.reason}</p>
+      {outcome.kind === "lostContact" && runId && (
+        <p className={styles.stamps}>
+          Run id <code>{runId}</code>
+        </p>
+      )}
       <p className={styles.next}>{outcome.next}</p>
       <div className={styles.row}>
         <Button onClick={onRetry}>{runCopy.retry}</Button>
-        <LinkButton variant="ghost" href={`/cases/${caseId}/method`}>
+        <LinkButton variant="ghost" href="/method">
           Method
         </LinkButton>
       </div>
@@ -58,8 +71,20 @@ function OutcomeCard({ outcome, caseId, onRetry }: { outcome: Outcome; caseId: s
   );
 }
 
-export function RunFlow({ caseId }: { caseId: string }) {
+/** The minimum the field holds, or undefined when it is empty. Never a number below 2. */
+export function parseMinDonors(text: string): number | undefined | null {
+  const t = text.trim();
+  if (!t) return undefined;
+  const n = Number(t);
+  return Number.isInteger(n) && n >= 2 ? n : null;
+}
+
+export function RunFlow({ caseId, basePath }: { caseId: string; basePath?: string }) {
   const [state, dispatch] = useReducer(reduce, initialState);
+  const [minDonorsText, setMinDonorsText] = useState("");
+  const minDonors = parseMinDonors(minDonorsText);
+  const evidenceLink = basePath ? `${basePath}/evidence` : evidenceHref(caseId, state.runId);
+  const overviewLink = basePath ? `${basePath}/overview` : `/cases/${caseId}`;
   const [headline, setHeadline] = useState<string | null>(null);
   const [range, setRange] = useState<RangeFigure | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
@@ -71,12 +96,8 @@ export function RunFlow({ caseId }: { caseId: string }) {
     stopRef.current = watchJob(runId, {
       onProgress: (job: JobView) => dispatch({ type: "progress", job }),
       onDone: (job: JobView) => dispatch({ type: "done", job }),
-      onError: (err) =>
-        dispatch({
-          type: "submitFailed",
-          unreachable: err instanceof ApiUnreachableError,
-          reason: failureFrom(err).message,
-        }),
+      // The run was accepted; only its progress went missing. Say so, keeping its id.
+      onError: (err) => dispatch({ type: "lostContact", reason: failureFrom(err).message }),
     });
   }, []);
 
@@ -85,7 +106,11 @@ export function RunFlow({ caseId }: { caseId: string }) {
     setHeadline(null);
     setRange(null);
     try {
-      const sub = await jobsApi.submit({ case_id: caseId, synthetic: true });
+      const sub = await jobsApi.submit({
+        case_id: caseId,
+        synthetic: true,
+        ...(typeof minDonors === "number" ? { min_donors: minDonors } : {}),
+      });
       dispatch({ type: "submitted", job: sub.job });
       if (!sub.job.terminal) watch(sub.job.run_id);
     } catch (err) {
@@ -158,7 +183,26 @@ export function RunFlow({ caseId }: { caseId: string }) {
               <dd>Synthetic control, default specification</dd>
             </div>
           </dl>
-          <Button onClick={start} loading={state.submitting}>
+          <div className={styles.field}>
+            <label htmlFor="run-min-donors">{runCopy.configure.donors}</label>
+            <input
+              id="run-min-donors"
+              name="min_donors"
+              type="number"
+              inputMode="numeric"
+              min={2}
+              step={1}
+              placeholder="The case's own minimum"
+              value={minDonorsText}
+              onChange={(e) => setMinDonorsText(e.target.value)}
+              aria-describedby="run-min-donors-hint"
+              aria-invalid={minDonors === null}
+            />
+            <p id="run-min-donors-hint" className={styles.stamps}>
+              {runCopy.configure.donorsHint}
+            </p>
+          </div>
+          <Button onClick={start} loading={state.submitting} disabled={minDonors === null}>
             {state.submitting ? runCopy.configure.starting : runCopy.configure.start}
           </Button>
         </Card>
@@ -167,7 +211,7 @@ export function RunFlow({ caseId }: { caseId: string }) {
       {state.step === "run" && state.job && <Theatre job={state.job} cancelling={state.cancelling} onCancel={cancel} />}
 
       {state.step === "results" && state.outcome && (
-        <OutcomeCard outcome={state.outcome} caseId={caseId} onRetry={reset} />
+        <OutcomeCard outcome={state.outcome} runId={state.runId} onRetry={reset} />
       )}
 
       {state.step === "results" && !state.outcome && (
@@ -200,8 +244,8 @@ export function RunFlow({ caseId }: { caseId: string }) {
             </p>
           </Lens>
           <div className={styles.row}>
-            <LinkButton href={evidenceHref(caseId, state.runId)}>{runCopy.results.evidence}</LinkButton>
-            <LinkButton variant="secondary" href={`/cases/${caseId}`}>
+            <LinkButton href={evidenceLink}>{runCopy.results.evidence}</LinkButton>
+            <LinkButton variant="secondary" href={overviewLink}>
               {runCopy.results.overview}
             </LinkButton>
             <Button variant="ghost" onClick={reset}>

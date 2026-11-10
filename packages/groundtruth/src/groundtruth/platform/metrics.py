@@ -61,6 +61,8 @@ CACHES = ("result", "reduction")
 reduction answered from the reduction cache."""
 CACHE_RESULTS = ("hit", "miss")
 QUEUE_STATES = ("queued", "running")
+PROVIDERS = ("earth_engine", "gemini", "anthropic")
+"""External providers with a circuit breaker (#48)."""
 OTHER = "other"
 
 LABEL_VALUES: dict[str, tuple[str, ...]] = {
@@ -70,6 +72,7 @@ LABEL_VALUES: dict[str, tuple[str, ...]] = {
     "cache": CACHES,
     "result": CACHE_RESULTS,
     "state": QUEUE_STATES,
+    "provider": PROVIDERS,
 }
 """Every label any GroundTruth metric may carry, and every value it may take."""
 
@@ -104,6 +107,13 @@ SUBMISSIONS_RATE_LIMITED = Counter(
     registry=REGISTRY,
 )
 
+CIRCUIT_OPENED = Counter(
+    "gt_circuit_open",
+    "Times a provider's circuit breaker opened: it kept failing, so calls fail fast (#48).",
+    ["provider"],
+    registry=REGISTRY,
+)
+
 # Every series exists at zero from the start, so "no refusals in 24 hours" is a fact the
 # alert can see rather than a missing series.
 for _outcome in (*OUTCOMES, OTHER):
@@ -114,6 +124,8 @@ for _cache in CACHES:
         CACHE_REQUESTS.labels(cache=_cache, result=_result)
 for _path in PATHS:
     SUBMISSIONS_RATE_LIMITED.labels(path=_path)
+for _provider in PROVIDERS:
+    CIRCUIT_OPENED.labels(provider=_provider)
 
 
 def _allowed(label: str, value: str) -> str:
@@ -145,6 +157,12 @@ def outcome_of_engine_status(engine_status: str) -> str:
 def record_cache(cache: str, *, hit: bool) -> None:
     """Count one cache lookup."""
     CACHE_REQUESTS.labels(cache=_allowed("cache", cache), result="hit" if hit else "miss").inc()
+
+
+def record_circuit_open(provider: str) -> None:
+    """Count one opening of a provider's circuit breaker."""
+    CIRCUIT_OPENED.labels(provider=_allowed("provider", provider)).inc()
+    logger.warning("circuit opened for %s: it keeps failing; calls fail fast for a while", provider)
 
 
 def record_rate_limited(path: str) -> None:

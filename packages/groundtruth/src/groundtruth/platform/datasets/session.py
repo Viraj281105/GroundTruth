@@ -32,11 +32,14 @@ from groundtruth.platform.datasets.earthengine import (
     load_service_account_key,
 )
 from groundtruth.platform.datasets.resilience import (
+    CircuitBreaker,
+    CircuitOpenError,
     PermanentError,
     RateLimiter,
     RetryPolicy,
     TransientError,
     call_with_retry,
+    shared_breaker,
 )
 
 logger = get_logger("datasets.earthengine")
@@ -61,6 +64,9 @@ class EarthEngineSession:
         backend: The Earth Engine client to sign in.
         rate_limiter: Shared request budget; ``None`` means unlimited.
         retry_policy: Per-call retries for transient failures.
+        breaker: Stops calling Earth Engine while it keeps failing (#48). Defaults to the
+            process-wide ``earth_engine`` breaker; an open circuit is ``DataUnavailableError``,
+            exactly like an outage, so a job reports ``data_unavailable`` and never a fixture.
     """
 
     def __init__(
@@ -72,6 +78,7 @@ class EarthEngineSession:
         rate_limiter: RateLimiter | None = None,
         retry_policy: RetryPolicy | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        breaker: CircuitBreaker | None = None,
     ) -> None:
         self._credentials = credentials
         self._project = project.strip() if project and project.strip() else None
@@ -79,6 +86,7 @@ class EarthEngineSession:
         self._limiter = rate_limiter
         self._retry = retry_policy or RetryPolicy()
         self._sleep = sleep
+        self._breaker = breaker or shared_breaker("earth_engine")
         self._key: ServiceAccountKey | None = None
         self._init_lock = threading.Lock()
 
@@ -116,12 +124,19 @@ class EarthEngineSession:
         """One Earth Engine request: signed in, rate-limited, retried, redacted.
 
         Raises:
-            DataUnavailableError: if the call fails for good.
+            DataUnavailableError: if the call fails for good, or Earth Engine is known to be
+                down (its circuit is open: then it is not called at all).
             ConfigurationError: if signing in fails because of the credentials.
         """
-        self.ensure_initialized()
-        try:
+
+        def guarded() -> T:
+            self.ensure_initialized()
             return self._attempt(self._key, call)
+
+        try:
+            return self._breaker.call(guarded, counts=_is_outage)
+        except CircuitOpenError as exc:
+            raise DataUnavailableError(f"Earth Engine {what} not attempted: {exc}") from None
         except TransientError as exc:
             raise DataUnavailableError(
                 f"Earth Engine {what} failed after {self._retry.max_attempts} attempts: {exc}"
@@ -149,6 +164,12 @@ class EarthEngineSession:
             )
 
         return call_with_retry(once, policy=self._retry, sleep=self._sleep, on_retry=on_retry)
+
+
+def _is_outage(exc: Exception) -> bool:
+    """Whether a failed call says Earth Engine is down. Bad credentials or a bad request
+    (permanent, or a configuration error) say nothing about that, so they do not count."""
+    return isinstance(exc, TransientError | DataUnavailableError)
 
 
 __all__ = ["EarthEngineSession", "SignInBackend"]

@@ -11,6 +11,8 @@ export const runCopy = {
     seedNote: "Fixed by the server, so the same inputs give the same result.",
     spec: "Specification",
     donors: "Minimum comparison areas",
+    donorsHint:
+      "Optional. This can only make the test stricter: the case's own minimum always applies, and a lower number is refused. A stricter test may end in a refusal, which is a legitimate result.",
     start: "Start analysis",
     starting: "Starting",
   },
@@ -57,6 +59,12 @@ export const runCopy = {
       title: "The run was cancelled",
       fallback: "You stopped this run before it finished. No result was recorded.",
       next: "Start a new run whenever you are ready.",
+    },
+    lostContact: {
+      title: "Lost contact with the analysis service",
+      fallback:
+        "The run was submitted, but its progress could not be read. It may still finish; nothing is shown in its place.",
+      next: "Check the project's verification page later, or start the run again once the service is back.",
     },
     unreachable: {
       title: "The analysis service could not be reached",

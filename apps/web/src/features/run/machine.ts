@@ -3,7 +3,7 @@ import type { JobView } from "../../lib/jobs";
 import { runCopy } from "./copy";
 
 export type Step = "configure" | "run" | "results";
-export type OutcomeKind = "refused" | "failed" | "cancelled" | "unreachable";
+export type OutcomeKind = "refused" | "failed" | "cancelled" | "unreachable" | "lostContact";
 
 export interface Outcome {
   kind: OutcomeKind;
@@ -28,6 +28,8 @@ export type RunEvent =
   | { type: "progress"; job: JobView }
   | { type: "done"; job: JobView }
   | { type: "submitFailed"; reason?: string; unreachable?: boolean }
+  /** The run was submitted, then its progress could not be read for a while. */
+  | { type: "lostContact"; reason?: string }
   | { type: "cancel" }
   | { type: "reset" };
 
@@ -98,6 +100,15 @@ export function reduce(state: RunState, event: RunEvent): RunState {
         ...initialState,
         step: "results",
         outcome: outcomeFor(event.unreachable ? "unreachable" : "failed", event.reason),
+      };
+    case "lostContact":
+      // Not "unreachable": the run exists and may still finish, so its id is kept.
+      return {
+        ...state,
+        step: "results",
+        submitting: false,
+        cancelling: false,
+        outcome: outcomeFor("lostContact", event.reason),
       };
     case "cancel":
       return state.step === "run" ? { ...state, cancelling: true } : state;
