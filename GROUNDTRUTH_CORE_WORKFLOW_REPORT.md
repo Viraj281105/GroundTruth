@@ -1,6 +1,6 @@
 # GroundTruth: Core Workflow Completion Report
 
-Follows `GROUNDTRUTH_REMEDIATION_REPORT.md`. Branch `remediation/audit-fixes`, base `bdde7e1`.
+Follows `docs/audits/GROUNDTRUTH_REMEDIATION_REPORT_round1.md`. Branch `remediation/audit-fixes`, base `bdde7e1`.
 Methodology and provenance: `docs/science/observation-ingestion-methodology.md`.
 
 ## 1. Verdict

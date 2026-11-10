@@ -1,0 +1,82 @@
+{
+  "voice": "Microsoft David Desktop",
+  "scenes": [
+    {
+      "id": "s0",
+      "title": "The accountability problem",
+      "sentences": [
+        "Restoration and carbon projects are funded on claims: hectares restored, vegetation recovered, trees surviving.",
+        "Funders and auditors can rarely check those claims themselves, or see where each number came from.",
+        "GroundTruth is a screening tool for that gap. It lines up what a project claims against what can be observed, and states plainly what it cannot show.",
+        "It is not a fraud detector, and it does not replace an audit. A gap between claim and evidence is a reason to look closer, never a verdict.",
+        "The benchmark cases on this public page are simulated, and labelled. Everything after this uses a project created live, with real satellite data."
+      ]
+    },
+    {
+      "id": "s1",
+      "title": "The NGO: sign in and open a project",
+      "sentences": [
+        "Let's follow a restoration NGO, signing in with a demonstration account.",
+        "What this user can open or change is decided by the server, not the page. The dashboard also lists a shared reference project with no observations, so we open our own.",
+        "This demonstration project is in the Sahyadri foothills near Pune, India, created by uploading a hand-drawn boundary. It is not a registered project.",
+        "The progress bar shows what is done: boundary, document, satellite data, assessment and claims. Climate data is still missing."
+      ]
+    },
+    {
+      "id": "s2",
+      "title": "Boundary, documents and claim extraction",
+      "sentences": [
+        "The boundary is stored with a checksum, and measured on an equal-area projection: about two thousand and eighteen hectares.",
+        "On the Evidence tab the NGO uploads its design document, stored with a SHA-256 checksum so it cannot be changed unnoticed.",
+        "GroundTruth then lists the statements it recognises. This is plain pattern matching, not a language model, and these are candidates only. Nothing here is verified.",
+        "It found five: a restored area, a greenness change, sapling survival, a carbon figure, and a rise in bird species richness.",
+        "I have added all five as claims. Adding a claim does not verify it, and the original wording stays beside it."
+      ]
+    },
+    {
+      "id": "s3",
+      "title": "Real satellite observations",
+      "sentences": [
+        "To get satellite evidence, the NGO requests observations for the boundary. A background worker downloads Sentinel-2 images from Microsoft Planetary Computer, masks cloud, and reduces each year to one value.",
+        "This request covered 2021 to 2026, January to March, at most twenty percent cloud. It finished, with project-area coverage above ninety-five percent every year.",
+        "The satellite's reflectance measurements are observations. The indices computed from them, such as NDVI, are derived indicators, and each row is badged that way. A model estimate would carry a diamond. There are none here.",
+        "The table lists the exact scene identifiers behind each year, so anyone can repeat the calculation.",
+        "NDVI shows how green the land looks from space. It is not carbon, tree survival or biodiversity, and these values are not validated against field data.",
+        "The series is not a clean rise: greenness peaks in 2023, then falls back. The assessment reads this as no clear change."
+      ]
+    },
+    {
+      "id": "s4",
+      "title": "Claim assessment",
+      "sentences": [
+        "On the verification tab, each claim is judged on its own evidence.",
+        "The area claim is only partly consistent. The claimed nineteen hundred hectares fits inside the boundary, but a boundary shows where a project works, not how much land was restored.",
+        "The greenness claim, up 0.05, is consistent with the observed change of about 0.051. That describes greenness. It does not show the project caused it.",
+        "Three claims are marked not enough evidence to test: survival needs field surveys, carbon needs biomass measurement or a registry record, and bird species need wildlife surveys. Unverified does not mean false. It means the evidence has not been supplied.",
+        "Attribution is inconclusive: there are no observations from before treatment, no comparison areas and no climate series. So GroundTruth makes no causal claim."
+      ]
+    },
+    {
+      "id": "s5",
+      "title": "Evidence dossier and audit ledger",
+      "sentences": [
+        "Everything the platform knows can be exported as a technical dossier for an auditor.",
+        "The ZIP holds the assessment, claims, observations with scene identifiers, documents and provenance, with a checksum manifest.",
+        "Each download is sealed in an audit ledger. Records are chained to one another, and the page recomputes the chain every time it loads.",
+        "The new report-sealed record appears here. The ledger is not externally timestamped or signed, so it detects alteration, deletion and reordering, but cannot prove when a record was written.",
+        "In testing, altering one stored record in the database made the page report a failed integrity check. Restoring it returned the status to verified."
+      ]
+    },
+    {
+      "id": "s6",
+      "title": "Funder, auditor and what comes next",
+      "sentences": [
+        "The funder has view access. They can read claims, observations and the ledger, but see no upload or request controls, and the server refuses those actions even when attempted directly.",
+        "The auditor can download the dossier, and check any file they were given against the ledger record that sealed it.",
+        "Here, the file is confirmed byte-for-byte identical to the sealed report.",
+        "This is an early screening tool. Next: observations from before a project began, climate and comparison-area data so attribution becomes possible, and field validation of the satellite values.",
+        "GroundTruth. What was claimed, what was observed, and what cannot yet be shown."
+      ]
+    }
+  ]
+}

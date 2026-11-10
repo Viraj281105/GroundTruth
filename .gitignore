@@ -56,3 +56,6 @@ cases/boundaries/projects/
 
 # Isolated demo stack credentials (docker-compose.demo.yml)
 .demo-secrets/
+
+# Demonstration video (large binary deliverable; keep out of git)
+/GROUNDTRUTH_DEMO_VIDEO.mp4

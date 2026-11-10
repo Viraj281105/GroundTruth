@@ -5,7 +5,7 @@ export function buildFacts(caseCount: number | null): Fact[] {
   const facts: Fact[] = [];
   if (caseCount !== null) facts.push({ id: 'cases', value: caseCount, label: caseCount === 1 ? 'benchmark case' : 'benchmark cases', note: 'Simulated, for demonstration' });
   facts.push(
-    { id: 'real', value: 0, label: 'real projects analysed', note: 'Stated honestly: nothing real yet. Every result is simulated.' },
+    { id: 'real', value: 0, label: 'real projects analysed causally', note: 'Stated honestly: the benchmark results are simulated. A project you create gets real satellite observations, but no causal analysis yet.' },
     { id: 'rules', value: 10, label: 'written guardrail rules', note: 'Checked by automated tests' },
   );
   return facts;

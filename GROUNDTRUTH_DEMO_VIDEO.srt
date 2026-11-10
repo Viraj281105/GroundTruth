@@ -1,0 +1,279 @@
+1
+00:00:05,992 --> 00:00:14,505
+Restoration and carbon projects are funded on claims: hectares
+restored, vegetation recovered, trees surviving.
+
+2
+00:00:14,948 --> 00:00:21,536
+Funders and auditors can rarely check those claims themselves,
+or see where each number came from.
+
+3
+00:00:21,984 --> 00:00:29,940
+GroundTruth is a screening tool for that gap. It lines up what
+a project claims against what can be observed, and states
+
+4
+00:00:29,980 --> 00:00:31,821
+plainly what it cannot show.
+
+5
+00:00:32,261 --> 00:00:40,852
+It is not a fraud detector, and it does not replace an audit.
+A gap between claim and evidence is a reason to look closer,
+
+6
+00:00:40,892 --> 00:00:41,994
+never a verdict.
+
+7
+00:00:42,442 --> 00:00:51,068
+The benchmark cases on this public page are simulated, and
+labelled. Everything after this uses a project created live,
+
+8
+00:00:51,108 --> 00:00:52,904
+with real satellite data.
+
+9
+00:00:55,771 --> 00:01:01,159
+Let's follow a restoration NGO, signing in with a
+demonstration account.
+
+10
+00:01:04,001 --> 00:01:12,304
+What this user can open or change is decided by the server,
+not the page. The dashboard also lists a shared reference
+
+11
+00:01:12,344 --> 00:01:15,828
+project with no observations, so we open our own.
+
+12
+00:01:16,283 --> 00:01:25,183
+This demonstration project is in the Sahyadri foothills near
+Pune, India, created by uploading a hand-drawn boundary. It is
+
+13
+00:01:25,223 --> 00:01:27,015
+not a registered project.
+
+14
+00:01:27,469 --> 00:01:36,492
+The progress bar shows what is done: boundary, document,
+satellite data, assessment and claims. Climate data is still
+
+15
+00:01:36,532 --> 00:01:37,117
+missing.
+
+16
+00:01:42,791 --> 00:01:50,140
+The boundary is stored with a checksum, and measured on an
+equal-area projection: about two thousand and eighteen
+
+17
+00:01:50,180 --> 00:01:50,734
+hectares.
+
+18
+00:01:51,179 --> 00:01:59,387
+On the Evidence tab the NGO uploads its design document,
+stored with a SHA-256 checksum so it cannot be changed
+
+19
+00:01:59,427 --> 00:02:00,137
+unnoticed.
+
+20
+00:02:00,579 --> 00:02:09,377
+GroundTruth then lists the statements it recognises. This is
+plain pattern matching, not a language model, and these are
+
+21
+00:02:09,417 --> 00:02:12,496
+candidates only. Nothing here is verified.
+
+22
+00:02:12,945 --> 00:02:22,127
+It found five: a restored area, a greenness change, sapling
+survival, a carbon figure, and a rise in bird species
+
+23
+00:02:22,167 --> 00:02:22,868
+richness.
+
+24
+00:02:23,321 --> 00:02:31,354
+I have added all five as claims. Adding a claim does not
+verify it, and the original wording stays beside it.
+
+25
+00:02:34,417 --> 00:02:42,919
+To get satellite evidence, the NGO requests observations for
+the boundary. A background worker downloads Sentinel-2 images
+
+26
+00:02:42,959 --> 00:02:48,709
+from Microsoft Planetary Computer, masks cloud, and reduces
+each year to one value.
+
+27
+00:02:49,162 --> 00:02:59,485
+This request covered 2021 to 2026, January to March, at most
+twenty percent cloud. It finished, with project-area coverage
+
+28
+00:02:59,525 --> 00:03:02,654
+above ninety-five percent every year.
+
+29
+00:03:03,098 --> 00:03:11,742
+The satellite's reflectance measurements are observations. The
+indices computed from them, such as NDVI, are derived
+
+30
+00:03:11,782 --> 00:03:19,595
+indicators, and each row is badged that way. A model estimate
+would carry a diamond. There are none here.
+
+31
+00:03:20,051 --> 00:03:26,854
+The table lists the exact scene identifiers behind each year,
+so anyone can repeat the calculation.
+
+32
+00:03:27,297 --> 00:03:36,056
+NDVI shows how green the land looks from space. It is not
+carbon, tree survival or biodiversity, and these values are
+
+33
+00:03:36,096 --> 00:03:38,559
+not validated against field data.
+
+34
+00:03:39,013 --> 00:03:48,886
+The series is not a clean rise: greenness peaks in 2023, then
+falls back. The assessment reads this as no clear change.
+
+35
+00:03:51,929 --> 00:03:56,683
+On the verification tab, each claim is judged on its own
+evidence.
+
+36
+00:03:57,130 --> 00:04:05,378
+The area claim is only partly consistent. The claimed nineteen
+hundred hectares fits inside the boundary, but a boundary
+
+37
+00:04:05,418 --> 00:04:09,557
+shows where a project works, not how much land was restored.
+
+38
+00:04:10,000 --> 00:04:21,052
+The greenness claim, up 0.05, is consistent with the observed
+change of about 0.051. That describes greenness. It does not
+
+39
+00:04:21,092 --> 00:04:23,527
+show the project caused it.
+
+40
+00:04:23,982 --> 00:04:32,482
+Three claims are marked not enough evidence to test: survival
+needs field surveys, carbon needs biomass measurement or a
+
+41
+00:04:32,522 --> 00:04:40,878
+registry record, and bird species need wildlife surveys.
+Unverified does not mean false. It means the evidence has not
+
+42
+00:04:40,918 --> 00:04:41,883
+been supplied.
+
+43
+00:04:42,324 --> 00:04:51,092
+Attribution is inconclusive: there are no observations from
+before treatment, no comparison areas and no climate series.
+
+44
+00:04:51,132 --> 00:04:53,831
+So GroundTruth makes no causal claim.
+
+45
+00:04:56,870 --> 00:05:02,073
+Everything the platform knows can be exported as a technical
+dossier for an auditor.
+
+46
+00:05:02,520 --> 00:05:11,297
+The ZIP holds the assessment, claims, observations with scene
+identifiers, documents and provenance, with a checksum
+
+47
+00:05:11,337 --> 00:05:11,988
+manifest.
+
+48
+00:05:12,439 --> 00:05:19,826
+Each download is sealed in an audit ledger. Records are
+chained to one another, and the page recomputes the chain
+
+49
+00:05:19,866 --> 00:05:21,152
+every time it loads.
+
+50
+00:05:21,601 --> 00:05:29,767
+The new report-sealed record appears here. The ledger is not
+externally timestamped or signed, so it detects alteration,
+
+51
+00:05:29,807 --> 00:05:34,388
+deletion and reordering, but cannot prove when a record was
+written.
+
+52
+00:05:34,832 --> 00:05:42,568
+In testing, altering one stored record in the database made
+the page report a failed integrity check. Restoring it
+
+53
+00:05:42,608 --> 00:05:44,769
+returned the status to verified.
+
+54
+00:05:49,758 --> 00:05:58,450
+The funder has view access. They can read claims, observations
+and the ledger, but see no upload or request controls, and the
+
+55
+00:05:58,490 --> 00:06:02,535
+server refuses those actions even when attempted directly.
+
+56
+00:06:07,542 --> 00:06:14,230
+The auditor can download the dossier, and check any file they
+were given against the ledger record that sealed it.
+
+57
+00:06:14,684 --> 00:06:19,782
+Here, the file is confirmed byte-for-byte identical to the
+sealed report.
+
+58
+00:06:21,938 --> 00:06:30,436
+This is an early screening tool. Next: observations from
+before a project began, climate and comparison-area data so
+
+59
+00:06:30,476 --> 00:06:35,930
+attribution becomes possible, and field validation of the
+satellite values.
+
+60
+00:06:36,370 --> 00:06:42,998
+GroundTruth. What was claimed, what was observed, and what
+cannot yet be shown.

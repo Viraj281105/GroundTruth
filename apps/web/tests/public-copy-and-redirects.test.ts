@@ -33,6 +33,15 @@ describe('landing copy tells the truth about what exists', () => {
     expect(faq).toMatch(/Simulated data/);
   });
 
+  it('does not say that nothing real exists now that a created project ingests real observations', () => {
+    const real = buildFacts(3).find((f) => f.id === 'real')!;
+    expect(real.label).toBe('real projects analysed causally');
+    expect(real.note).not.toMatch(/nothing real yet|every result is simulated/i);
+    expect(real.note).toMatch(/real satellite observations/);
+    expect(real.note).toMatch(/no causal analysis yet/);
+    expect(homeCopy.promise).not.toMatch(/All data shown is simulated/);
+  });
+
   it('never reports benchmark cases as real projects', () => {
     for (const n of [null, 0, 3, 12]) expect(buildFacts(n).find((f) => f.id === 'real')?.value).toBe(0);
   });
