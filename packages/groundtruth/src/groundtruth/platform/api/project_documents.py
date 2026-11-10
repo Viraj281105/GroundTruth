@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated, Any, Literal
 from urllib.parse import quote
 
@@ -241,7 +242,13 @@ def document_extraction(doc_id: str, request: Request, access: Viewer) -> Extrac
         row = docs.get_document(db, access.project.id, doc_id)
         if row is None:
             raise _not_found()
-        status, detail, key, sha = row.status, row.status_detail, row.storage_key, row.sha256
+        status, detail, key, sha, orig_name = (
+            row.status,
+            row.status_detail,
+            row.storage_key,
+            row.sha256,
+            row.original_filename,
+        )
     if status != "text_extracted":
         from fastapi import HTTPException
 
@@ -259,7 +266,8 @@ def document_extraction(doc_id: str, request: Request, access: Viewer) -> Extrac
         raise auth_error("not_found", "The stored file is no longer available.") from exc
     if hashlib.sha256(data).hexdigest() != sha:
         raise auth_error("conflict", "The stored file no longer matches its recorded checksum.")
-    text = docs.extract_text(".txt", data).text or ""
+    ext = Path(orig_name).suffix.lower() or ".txt"
+    text = docs.extract_text(ext, data).text or ""
     candidates = docs.claim_candidates(text, doc_id)
     return ExtractionView(
         document_id=doc_id,

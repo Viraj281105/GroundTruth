@@ -19,6 +19,15 @@ Push-Location apps\web; npm ci; Pop-Location
 if ($Mode -eq 'setup') { Write-Host 'Setup complete.'; exit 0 }
 if ($Mode -eq 'test')  { & $py -m pytest; exit $LASTEXITCODE }
 
+$dbConfigured = [bool]$env:DATABASE_URL
+if (-not $dbConfigured -and (Test-Path .env)) {
+  $dbLine = Get-Content .env | Where-Object { $_ -match '^\s*DATABASE_URL\s*=\s*\S+' }
+  $dbConfigured = [bool]$dbLine
+}
+if (-not $dbConfigured) {
+  throw 'DATABASE_URL is empty in .env. Set e.g. DATABASE_URL=sqlite:///data/interim/groundtruth.db or postgresql+psycopg://... before running local mode.'
+}
+
 # Create/upgrade tables once, then run the API and the background worker. Without the worker,
 # a queued analysis stays "queued" forever and the Run page never completes.
 & $py -m apps.worker.main --migrate --exit-when-idle

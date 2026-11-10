@@ -19,6 +19,8 @@ web:
   replicas: 1
   port: 3000
 config:
+  # Enforce production mode so startup security checks and secure cookies activate.
+  APP_ENV: "production"
   # Sign-in is mandatory in every deployed profile (design spec section 4); a test pins this.
   AUTH_REQUIRED: "true"
   OTEL_SERVICE_NAME: groundtruth

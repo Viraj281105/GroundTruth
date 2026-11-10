@@ -54,8 +54,12 @@ export function MembersTable({ orgSlug, actorRole, actorUserId, initialMembers }
       () => api.POST('/orgs/{slug}/members', { params: { path: { slug: orgSlug } }, body: { email, role } }),
       () => {
         form.reset();
-        // The API returns no list; reload it so the new row carries its real id and date.
-        void api.GET('/orgs/{slug}/members', { params: { path: { slug: orgSlug } } }).then((r) => r.data && setMembers(r.data));
+        void api.GET('/orgs/{slug}/members', { params: { path: { slug: orgSlug } } }).then(
+          (r) => {
+            if (r.data) setMembers(r.data);
+          },
+          () => setError(apiErrorMessage(0)),
+        );
       },
     );
   }

@@ -29,12 +29,10 @@ pre-registered rules in :func:`classify_eligible_donor`:
 
 from __future__ import annotations
 
-import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -335,50 +333,37 @@ def classify_eligible_donor(props: Mapping[str, Any]) -> tuple[DonorCategory, st
     return DonorCategory.CORE_ELIGIBLE, None
 
 
-def _default_donor_geojson_path() -> Path:
-    from groundtruth.platform.config import REPO_ROOT
-
-    return REPO_ROOT / "cases" / "boundaries" / "kariba-donors.geojson"
-
-
 def _opt_float(value: Any) -> float | None:
     return None if value is None else float(value)
 
 
 def build_kariba_donor_eligibility_matrix(
     *,
-    climate_bundle: Any | None = None,
-    donor_geojson_path: Path | str | None = None,
+    donor_features: Sequence[Mapping[str, Any]],
+    climate_bundle: Any,
     pre_treatment_panel: Mapping[str, Sequence[float]] | None = None,
     treated_pre_series: Sequence[float] | None = None,
 ) -> DonorEligibilityAssessment:
-    """Build the Kariba REDD+ donor eligibility matrix from committed boundary data.
+    """Build the Kariba REDD+ donor eligibility matrix from pre-loaded boundary features.
 
-    Spatial classification, areas and distances come from the donor GeoJSON. Matrix
+    Spatial classification, areas and distances come from the donor GeoJSON features. Matrix
     diagnostics are computed **only** if a real pre-treatment outcome panel is supplied:
 
     Args:
-        climate_bundle: Real climate bundle (loaded from the default cache if ``None``).
-        donor_geojson_path: Override for ``cases/boundaries/kariba-donors.geojson``.
+        donor_features: Parsed GeoJSON feature mappings from ``kariba-donors.geojson``.
+        climate_bundle: Loaded real climate bundle with ``treated_summary`` and ``unit_summaries``.
         pre_treatment_panel: ``{donor_id: [T0 observed outcomes]}`` covering every core donor.
         treated_pre_series: ``[T0 observed outcomes]`` for the treated unit.
 
     Raises:
-        DataUnavailableError: if the donor GeoJSON is missing, or the supplied panel does
+        DataUnavailableError: if climate data or features are missing, or the supplied panel does
             not cover every core donor.
     """
     if climate_bundle is None:
-        from groundtruth.data_access.climate import (
-            DEFAULT_CLIMATE_CACHE_PATH,
-            load_kariba_climate_bundle,
-        )
-
-        climate_bundle = load_kariba_climate_bundle(DEFAULT_CLIMATE_CACHE_PATH)
-
-    geo_path = Path(donor_geojson_path) if donor_geojson_path else _default_donor_geojson_path()
-    if not geo_path.is_file():
-        raise DataUnavailableError(f"Donor boundary GeoJSON not found at {geo_path}")
-    features = json.loads(geo_path.read_text(encoding="utf-8")).get("features", [])
+        raise DataUnavailableError("Climate bundle is required to build donor eligibility matrix")
+    if not donor_features:
+        raise DataUnavailableError("Donor boundary features are empty")
+    features = donor_features
 
     kariba_rainfall = climate_bundle.treated_summary.pre_treatment_mean_rainfall_mm
     units_audit: list[DonorUnitAuditRecord] = []

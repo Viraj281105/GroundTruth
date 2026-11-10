@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from groundtruth.contracts.errors import CaseDefinitionError, ConfigurationError
 from groundtruth.contracts.evidence import EvidenceBundle
-from groundtruth.engine.run import run_analysis
+from groundtruth.engine import run_analysis
 from groundtruth.platform.api.errors import ApiErrorCode, api_error
 from groundtruth.platform.api.scope import audit, case_dependency
 from groundtruth.platform.auth.authz import Capability, ProjectAccess

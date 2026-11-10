@@ -1,15 +1,15 @@
 # Testing Guide & Quality Assurance Protocols
 
-**Backend Suite**: 1,120+ automated Python tests (`pytest`, `hypothesis`, `mutmut`)  
-**Frontend Suite**: 542 automated TypeScript tests (`vitest`, Playwright, React Testing Library)  
+**Backend Suite**: 2,130+ automated offline Python tests (`pytest`, `hypothesis`)  
+**Frontend Suite**: 746 automated TypeScript tests across 75 files (`vitest`, Playwright, React Testing Library)  
 **CI Gate**: Ruff, Mypy, AST Boundary Checker, OpenAPI Snapshot Verifier.
 
 ```mermaid
 graph TD
     subgraph TestExecution["Continuous Integration Test Matrix"]
-        Pytest["Backend Unit & Integration (1,120+ Tests)<br/>• Contract Boundaries (AST Check)<br/>• SCM Injected Effect Recovery<br/>• Units Guard (NDVI != Carbon)<br/>• GenAI Grounding Gate"]
+        Pytest["Backend Unit & Integration (2,130+ Offline Tests)<br/>• Contract Boundaries (AST Check)<br/>• SCM Injected Effect Recovery<br/>• Units Guard (NDVI != Carbon)<br/>• GenAI Grounding Gate"]
         Hypothesis["Hypothesis Property Suites<br/>• Simplex Constraint Preservation<br/>• Non-Negative Weight Bounds"]
-        FrontendVitest["Frontend Unit Suite (542 Tests)<br/>• Design System Components (ds/)<br/>• Persona Workspace Routing<br/>• Cross-Org Denial Guards"]
+        FrontendVitest["Frontend Unit Suite (746 Tests / 75 Files)<br/>• Design System Components (ds/)<br/>• Persona Workspace Routing<br/>• Cross-Org Denial Guards"]
         PlaywrightE2E["Playwright Visual Regression<br/>• Desktop (1280px) & Mobile (375px)"]
     end
 
@@ -23,41 +23,25 @@ graph TD
 
 ---
 
-## 1. Backend Python Testing (1,120+ Tests)
+## 1. Backend Python Testing (2,130+ Offline Tests)
 
 ```bash
-# Execute complete backend test suite
-PYTHONPATH=packages/groundtruth/src pytest tests
-
-# Run fast unit tests (skipping slow placebo permutations)
-pytest -m "not slow"
-
-# Run Hypothesis property-based tests
-pytest tests/properties/
+# Execute complete offline backend test suite (live network tests require --run-network)
+pytest
 
 # Verify golden Kariba reproducibility benchmark
 pytest tests/test_golden_reproducibility.py
 ```
 
-### 1.1 Mutation Testing (`mutmut`)
-Mutation testing evaluates test suite quality by programmatically mutating Python AST operators and verifying that tests fail:
-
-```bash
-pip install mutmut
-mutmut run --paths-to-mutate packages/groundtruth/src/groundtruth/engine \
-  --tests-dir tests --runner "pytest -x -q tests"
-mutmut results
-```
-
 ---
 
-## 2. Frontend Web Testing (542 Tests)
+## 2. Frontend Web Testing (746 Tests / 75 Files)
 
 From `apps/web/`:
 
 ```bash
-# Run 542 automated unit and component tests
-npm run test
+# Run 746 automated unit and component tests
+npm test -- --run
 
 # Validate TypeScript compilation without errors
 npm run typecheck

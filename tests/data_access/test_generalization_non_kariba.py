@@ -64,6 +64,7 @@ def test_kasigau_boundary_ingestion_and_validation():
     assert feature["properties"]["area_ha"] == 169741
 
 
+@pytest.mark.network
 def test_kasigau_planetary_computer_stac_discovery():
     """Verify live STAC query over Microsoft Planetary Computer finds signed S2 scenes over Kenya."""
     geojson_data = json.loads(KASIGAU_BOUNDARY_PATH.read_text(encoding="utf-8"))
@@ -101,6 +102,7 @@ def test_kasigau_planetary_computer_stac_discovery():
         )
 
 
+@pytest.mark.network
 def test_kasigau_end_to_end_imagery_retrieval_and_reduction(tmp_path: Path):
     """Execute live COG retrieval, SCL masking, and vegetation index reduction on Kasigau."""
     geojson_data = json.loads(KASIGAU_BOUNDARY_PATH.read_text(encoding="utf-8"))

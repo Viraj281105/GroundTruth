@@ -1,7 +1,7 @@
 # Testing Strategy & Verification Architecture
 
-**Backend Suite**: 1,120+ automated Python tests (`pytest`, `hypothesis`, `mutmut`)  
-**Frontend Suite**: 542 automated TypeScript tests (`vitest`, React Testing Library, Playwright)  
+**Backend Suite**: 2,130+ automated offline Python tests (`pytest`, `hypothesis`)  
+**Frontend Suite**: 746 automated TypeScript tests across 75 files (`vitest`, React Testing Library, Playwright)  
 **Philosophy**: Defending against plausible scientific falsehoods, mathematical drift, and cross-boundary coupling.
 
 In environmental verification software, the most dangerous defect is not an uncaught exception or crash. The fatal failure mode is a **scientifically invalid result that appears mathematically plausible**—a figure that renders cleanly, passes visual inspection, and presents an ungrounded carbon additionality claim.
@@ -10,7 +10,7 @@ In environmental verification software, the most dangerous defect is not an unca
 graph TD
     subgraph TestingPyramid["GroundTruth 2.0 Verification Pyramid"]
         E2E["End-to-End Visual Tests (Playwright)<br/>• 375px Phone & Desktop Viewports<br/>• Screenshot Diffing Regression Checks"]
-        FrontendUnit["Frontend Test Suite (542 Tests)<br/>• Design System ds/ Component Behavior<br/>• Multi-Tenant Isolation Guards<br/>• Non-Dismissible Simulated Banner Rules"]
+        FrontendUnit["Frontend Test Suite (746 Tests / 75 Files)<br/>• Design System ds/ Component Behavior<br/>• Multi-Tenant Isolation Guards<br/>• Non-Dismissible Simulated Banner Rules"]
         Integration["Contract & Integration Tests<br/>• OpenAPI Snapshot Drift Protection<br/>• Complete Job Queue & Worker Lifecycles<br/>• Multi-Tenant RBAC Endpoint Scoping"]
         Scientific["Scientific & Property Tests (Hypothesis)<br/>• Injected Effect Recovery on Factor Panels<br/>• False-Positive Rejection on Null Panels<br/>• Strict NDVI-to-Carbon IncompatibleUnits Guard"]
         UnitBoundary["Contract Boundary AST Tests<br/>• Python AST Parsing Across All Modules<br/>• Absolute Unidirectional Seam Enforcement"]
@@ -63,29 +63,23 @@ A test submits an adversarial LLM narrative containing an invented carbon figure
 
 ## 3. Running the Verification Suites
 
-### 3.1 Backend Test Execution (1,120+ Tests)
+### 3.1 Backend Test Execution (2,130+ Offline Tests)
 
 ```bash
-# Run full backend suite
+# Run full offline backend suite (live network tests require --run-network)
 pytest
-
-# Run fast unit and contract tests (skipping slow placebos)
-pytest -m "not slow"
 
 # Run with coverage report
 pytest --cov=groundtruth --cov-report=term-missing
-
-# Run property-based hypothesis tests
-pytest tests/properties/
 ```
 
-### 3.2 Frontend Test Execution (542 Tests)
+### 3.2 Frontend Test Execution (746 Tests / 75 Files)
 
 ```bash
 cd apps/web
 
-# Run all 542 unit and component tests
-npm run test
+# Run all 746 unit and component tests
+npm test -- --run
 
 # Run TypeScript typecheck
 npm run typecheck

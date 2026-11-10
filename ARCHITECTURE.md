@@ -38,9 +38,8 @@ flowchart TD
 
     subgraph Delivery["Multi-Tenant Platform & Persona Delivery"]
         API["FastAPI Backend (Session Auth, Scrypt, RBAC)"]
-        WEB["Next.js 14 App (542 Vitest Tests, 4 Personas)"]
-        MOBILE["Jetpack Compose Android Mobile Client"]
-        GENAI["Gemini Narrator + Grounding Regex Verifier"]
+        WEB["Next.js 14 App (746 Vitest Tests, 4 Personas)"]
+        GENAI["LLM Narrator + Grounding Regex Verifier"]
     end
 
     DataLayer --> Gateway
@@ -127,7 +126,7 @@ erDiagram
 
 | Persona | Primary Needs & Actions | UI / API Surface | Enforced Permissions |
 |---|---|---|---|
-| **Restoration NGO / Developer** | Boundary registration, seasonal index tracking (NDVI/EVI), ground truth photo uploads, climate baseline defense. | `/cases/{id}` (NGO view), `/projects/new`, mobile field app. | `contributor`: Read/write to own projects, register parcels. |
+| **Restoration NGO / Developer** | Boundary registration, seasonal index tracking (NDVI/EVI), project documents & claims, climate baseline defense. | `/app/{org}/projects/{id}`, `/app/{org}/projects/new`. | `contributor`: Read/write to own projects, register parcels. |
 | **CSR / Impact Funder** | Portfolio additionality screening, due diligence reports, accredited review flags, ESG risk metrics. | `/dashboard/funder`, portfolio summary tables, risk radar. | `viewer`: Read-only access across approved project portfolios. |
 | **Auditor / MRV Specialist** | STAC scene audit, sensor cross-calibration verification, cryptographic dossier download, fail-closed inspection. | `/dashboard/auditor`, `/cases/{id}/audit`, raw CSV/JSON export. | `auditor`: Cryptographic evidence verification and export. |
 | **Government / Regulator** | Territorial conservation tracking, administrative district leakage, SPI-12 drought emergency monitoring. | `/dashboard/government`, district choropleth maps, compliance view. | `regulator`: Cross-project regional jurisdiction oversight. |
@@ -195,9 +194,9 @@ classDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Stakeholder (Web or Mobile)
+    actor User as Stakeholder
     participant API as FastAPI Gateway
-    participant Worker as Background Worker (Celery/Postgres)
+    participant Worker as Background Worker (SQL Row-Lease)
     participant Gateway as Fail-Closed Data Accessor
     participant Engine as Causal Engine (Pure)
     participant Store as Evidence Store (Postgres)
@@ -297,37 +296,9 @@ GroundTruth 2.0 addresses this through **fail-closed architectural gates**:
 
 ---
 
-## 6. Native Mobile Architecture (Jetpack Compose)
+## 6. Responsive Mobile Web Support
 
-Field agents, community wardens, and on-ground auditors interact via an Android native client written in **Kotlin & Jetpack Compose**:
-
-```mermaid
-flowchart TD
-    subgraph MobileApp["Android Native Client (apps/mobile)"]
-        UI["Jetpack Compose UI (Material 3 Light/Dark)"]
-        VM["Architecture Components ViewModel & StateFlow"]
-        Repo["Offline-First Repository (Room SQLite DB)"]
-        Net["Retrofit2 / OkHttp3 Network Client"]
-    end
-
-    subgraph Sidecar["Compose Preview Sidecar (Testing & QA)"]
-        AuditorPreview["Compose Auditor Dashboard Preview"]
-        NGOPreview["Compose NGO Dashboard Preview"]
-    end
-
-    UI --> VM
-    VM --> Repo
-    Repo --> Net
-    Net <-->|HTTPS REST| API["GroundTruth FastAPI Gateway"]
-    UI -.-> Sidecar
-```
-
-### Mobile Views
-The native client provides full parity with the web interface for offline inspection:
-
-| Native Auditor Screen | Native NGO Screen |
-| :---: | :---: |
-| ![Native Auditor](docs/product/screens/compose-auditor-dashboard.png) | ![Native NGO](docs/product/screens/compose-ngo-dashboard.png) |
+Field auditors and community stakeholders access all multi-tenant dashboards and evidence panels through the responsive Next.js web application (`apps/web`), verified across 375 px mobile browser viewports via Playwright visual regression tests (`apps/web/e2e/visual.spec.ts`). No separate native mobile application is shipped in this repository.
 
 ---
 
@@ -352,17 +323,17 @@ flowchart LR
 
 ## 8. Frontend Engineering & Test Architecture
 
-The web application (`apps/web`) is built on **Next.js 14.2**, **TypeScript 5.5**, and **Tailwind CSS**, featuring **542 passing automated tests in Vitest across 57 test files**:
+The web application (`apps/web`) is built on **Next.js 14.2**, **TypeScript 5.7**, and **CSS Modules + semantic design tokens**, featuring **746 passing automated tests in Vitest across 75 test files**:
 
 - **Automated OpenAPI Type Generation:** `openapi-typescript` generates exact TypeScript types directly from FastAPI's `/openapi.json`. The frontend never hand-writes an API contract.
-- **Fail-Safe UI Gating:** Components automatically switch between simulation alerts, refusal states, and empirical evidence views based on the `EvidenceBundle.state` enum.
-- **Interactive Visualizations:** Pure Canvas/SVG rendering for synthetic control trajectory curves, donor weight distributions, specification multiverse curves, and SPI-12 drought timelines.
+- **Fail-Safe UI Gating:** Components automatically switch between simulation alerts, refusal states, and empirical evidence views based on the `EvidenceBundle` state and `data_mode`.
+- **Interactive Visualizations:** Pure Canvas/SVG rendering and MapLibre GL vector maps for synthetic control trajectory curves, donor weight distributions, specification multiverse curves, and SPI-12 drought timelines.
 
 ```bash
 # Frontend test verification
 cd apps/web
 npm test -- --run
-# Output: Test Files 57 passed (57) | Tests 542 passed (542)
+# Output: Test Files 75 passed (75) | Tests 746 passed (746)
 ```
 
 ---
@@ -372,11 +343,10 @@ npm test -- --run
 | Layer | Technologies | Key Architectural Attributes |
 |---|---|---|
 | **Engine** | Python 3.11+, NumPy, Shapely, PyProj | Zero I/O, FISTA convex optimizer, no CVXPY/SciPy overhead. |
-| **Platform** | FastAPI, Celery, SQLAlchemy 2.0, Alembic | Async jobs, keyset cursor pagination, Scrypt password security. |
-| **Database** | PostgreSQL 15+, Redis 7+ | Append-only audit logs, row-level tenant locking, job leases. |
-| **Frontend** | Next.js 14 (App Router), TypeScript, Tailwind CSS | 542 Vitest tests, auto-synced OpenAPI types, 4 persona views. |
-| **Mobile** | Kotlin, Jetpack Compose, Material 3, Room | Offline caching, Compose Preview sidecars, field data capture. |
-| **AI / Narration** | Google Gemini 1.5, Regex Numeric Verifier | Zero AI computation, strict numeric grounding and hallucination fallback. |
+| **Platform** | FastAPI, Worker (`apps/worker`), SQLAlchemy 2.0, Alembic (`0001`–`0012`) | SQL row-lease async jobs, optional `redis`/`arq` & `temporalio`, Scrypt password security. |
+| **Database** | PostgreSQL 15+ (production) / SQLite (local/test), Redis (optional) | Append-only audit logs, Merkle hash-chained reports, row-level tenant scoping, job leases. |
+| **Frontend** | Next.js 14 (App Router), TypeScript 5.7, CSS Modules, MapLibre GL | 746 Vitest tests across 75 files, auto-synced OpenAPI types, 4 persona views. |
+| **AI / Narration** | LLM REST (`httpx` for Gemini, OpenAI, Anthropic, NuGen, Groq), Regex Verifier | Zero AI computation, strict numeric grounding and deterministic fallback. |
 
 ---
 

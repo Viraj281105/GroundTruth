@@ -39,7 +39,7 @@ gantt
     Real Sentinel-2 (2021-2023)           :done, m2_3, 2026-10, 2026-11
     43-Yr CHIRPS & NASA POWER SPI-12      :done, m2_4, 2026-10, 2026-11
     Task 5/5B Audit & Fail-Closed Guard   :done, m2_5, 2026-11, 2026-11
-    542-Test Web & Jetpack Compose Native :done, m2_6, 2026-11, 2026-11
+    746-Test Responsive Next.js Web UI    :done, m2_6, 2026-11, 2026-11
     section Milestone 3
     Automated Multi-Tile Landsat Ingestion:active, m3_1, 2026-12, 2027-02
     Local Overpass Sensor Harmonization  :m3_2, 2027-01, 2027-03
@@ -77,7 +77,7 @@ flowchart LR
         P_D["8-Dimension Assessment Engine<br/>(Levels 0 through 5)"]
         P_R["Empirical Climate & S2 Layer<br/>(514-Mo CHIRPS · NASA POWER · S2 L2A)"]
         P_S["Fail-Closed Scientific Gateways<br/>(DataUnavailableError / 501)"]
-        P_T["542-Test Web & Compose Native<br/>(Next.js 14 · Vitest · Android)"]
+        P_T["746-Test Responsive Web UI<br/>(Next.js 14 · Vitest · TypeScript)"]
     end
 ```
 
@@ -92,7 +92,7 @@ flowchart LR
 4. **Empirical Climate Intelligence:** 43 years (1981–2023) of monthly CHIRPS precipitation (514/516 months) with honest missingness flags, NASA POWER temperature, and SPI-12 drought index across 50 districts.
 5. **Real Sentinel-2 L2A Earth Observation:** 10m surface reflectance indices (NDVI/EVI/NDMI/NBR) across 2021–2023 for Kariba's 784,987 ha parcel.
 6. **Task 5/5B Audit Remediation:** Quarantined fabricated Landsat caches; enforced fail-closed gateways that return `HTTP 501` rather than manufacturing unverified numbers in real mode.
-7. **Production Web & Mobile Clients:** Next.js 14 web app verified by **542 passing Vitest tests**, accompanied by an Android native client in Jetpack Compose.
+7. **Production Web Client:** Next.js 14 web app verified by **746 passing Vitest tests across 75 files**, including Playwright 375 px responsive mobile visual coverage.
 
 | Auditor Dashboard | Restoration NGO Dashboard |
 | :---: | :---: |
@@ -128,12 +128,12 @@ flowchart LR
 
 | Capability Area | Milestone 1 (Prototype) | Milestone 2 (GroundTruth 2.0) | Milestone 3 (Planned) | Milestone 4 (Planetary Scale) |
 |---|---|---|---|---|
-| **User Personas** | Single Generic View | 4 Tailored Personas (Web + Mobile) | Organization Workspaces | Self-Service Registry Integration |
+| **User Personas** | Single Generic View | 4 Tailored Personas (Responsive Web) | Organization Workspaces | Self-Service Registry Integration |
 | **Assessment Dimensions** | 1 (Causal Effect) | 8 Orthogonal Dimensions | 8 Dimensions with Live Data | Automated Continuous Scoring |
 | **Graduation Ladder** | Binary Pass/Fail | Levels 0 through 5 | Automated Level Transitions | Regulatory Compliance Audit |
 | **Earth Observation** | Synthetic Benchmark | Real S2 (2021-2023) + Fail-Closed | Automated Landsat 5/7/8/9 | Global Sentinel-1/2 + GEDI LiDAR |
 | **Climate Integration** | Simulated Covariates | 43-Yr CHIRPS + NASA POWER (SPI-12) | Automated Weather Residualization | Dynamic Microclimate Downscaling |
-| **Testing & QA** | 194 Backend Tests | 1,466 Backend + 542 Frontend Tests | Automated STAC E2E Rasters | Continuous Satellite Ingestion CI |
+| **Testing & QA** | 194 Backend Tests | 2,130+ Offline Backend + 746 Frontend Tests | Automated STAC E2E Rasters | Continuous Satellite Ingestion CI |
 
 ---
 

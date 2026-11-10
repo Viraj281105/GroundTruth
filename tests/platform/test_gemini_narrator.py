@@ -203,11 +203,13 @@ def test_selecting_gemini_without_key_is_an_error() -> None:
 
 
 def test_build_narrator_with_gemini_config() -> None:
+    from pydantic import SecretStr
+
     # _env_file=None: the developer's own .env (e.g. GENAI_MODEL) must not decide this test.
     settings = Settings(
         _env_file=None,  # type: ignore[call-arg]
         genai_provider="gemini",
-        gemini_api_key="my-gemini-key",
+        gemini_api_key=SecretStr("my-gemini-key"),
         gemini_model="gemini-2.5-flash",
     )
     narrator = build_narrator(settings)
@@ -223,11 +225,13 @@ def test_gemini_missing_key_in_complete_raises() -> None:
 
 
 def test_doctor_command_recognizes_gemini(capsys: Any, monkeypatch: Any) -> None:
+    from pydantic import SecretStr
+
     from groundtruth.platform.config import get_settings
 
     settings = get_settings()
     monkeypatch.setattr(settings, "genai_provider", "gemini")
-    monkeypatch.setattr(settings, "gemini_api_key", "mock-gemini-key")
+    monkeypatch.setattr(settings, "gemini_api_key", SecretStr("mock-gemini-key"))
 
     assert main(["doctor"]) == 0
     out = capsys.readouterr().out

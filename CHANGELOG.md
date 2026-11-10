@@ -6,7 +6,7 @@
 ```mermaid
 flowchart LR
     v0["v0.1.0 – v0.10.0<br/>Prototype Engine & Scaffolding"] --> v1["v1.0.0<br/>Causal Engine, FISTA & AST Guards"]
-    v1 --> v2["v2.0.0 (GroundTruth 2.0)<br/>4 Personas · 8 Dimensions · 542 Vitest Tests · Fail-Closed Gateways"]
+    v1 --> v2["v2.0.0 (GroundTruth 2.0)<br/>4 Personas · 8 Dimensions · 746 Vitest Tests · Fail-Closed Gateways"]
 ```
 
 ---
@@ -32,11 +32,9 @@ flowchart LR
   - Quarantined all fabricated Landsat caches generated in earlier tasks.
   - Implemented fail-closed gateways: when requested in `REAL_OBSERVATIONS` mode, if pre-treatment satellite rasters are incomplete, the engine raises `DataUnavailableError` and returns `HTTP 501`, refusing to guess or interpolate.
   - Honestly reported Kariba causal attribution as **`INCONCLUSIVE (Not Estimable from Real Data Alone)`** until complete multi-tile historical rasters are harmonized.
-- **Android Native Mobile Client (Jetpack Compose):**
-  - Full-featured offline-first mobile application in `apps/mobile` built with Kotlin, Jetpack Compose, Material 3, and Room SQLite, with verified Compose Previews.
 - **Expanded Test Suites:**
-  - **542 passing automated tests** in `apps/web` across 57 Vitest test files.
-  - **1,466 collected backend tests** in Pytest covering causal models, AST boundary enforcement, Scrypt auth, and fail-closed gateways.
+  - **746 passing automated tests** in `apps/web` across 75 Vitest test files, including responsive 375 px viewport E2E coverage.
+  - **2,130+ offline backend tests** in Pytest covering causal models, AST boundary enforcement, Scrypt auth, multi-tenancy, and fail-closed gateways.
 - **Enterprise Multi-Tenant Security & RBAC:**
   - Organization boundaries, project grants, Scrypt password hashing ($N=32768, r=8, p=1$), timing attack mitigation, and session cookies with HttpOnly, SameSite, and Secure flags.
   - Row-level tenant isolation returning `HTTP 403 Forbidden` on unauthorized cross-tenant queries.

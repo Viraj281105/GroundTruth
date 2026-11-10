@@ -1,7 +1,7 @@
 # Worker Architecture
 
 **Owner**: Platform & Compute (`apps/worker/` & `groundtruth.platform.jobs`)  
-**Runtime**: Python 3.12, Celery / Redis Queue, PostgreSQL Row-Lease Queue, ProcessPoolExecutor, Temporal Workflows.
+**Runtime**: Python 3.11+, SQL Row-Lease Queue (default), optional Redis/arq & Temporal helpers (`platform.jobs`).
 
 The worker subsystem executes compute-intensive geospatial reductions, econometric optimization algorithms, and permutation inference suites off the HTTP request-response path. It ensures that API gateways remain responsive while analytical workloads scale horizontally across compute nodes.
 
@@ -135,15 +135,15 @@ flowchart TD
 
 ---
 
-## 5. Supported Queue Backends
+## 5. Queue Backends & Adapters
 
-GroundTruth 2.0 provides three interchangeable queue engines (see [queue-backends.md](../queue-backends.md)):
+`apps/worker/main.py` runs `JobQueue` (SQL row leases) alongside `IngestionPoller`. GroundTruth also ships optional `redis_queue` and `temporal_workflow` modules in `groundtruth.platform.jobs` (see [queue-backends.md](../queue-backends.md)):
 
-| Backend | Selection Mechanism | Module | Concurrency Model |
+| Backend | Status in Default Worker | Module | Concurrency Model |
 | :--- | :--- | :--- | :--- |
-| **PostgreSQL Leasing Queue** | Default (zero external dependencies) | `platform.jobs.queue` | Database table row leases with SELECT FOR UPDATE SKIP LOCKED |
-| **Redis + Celery / Arq** | `REDIS_URL` defined in environment | `platform.jobs.redis_queue` | In-memory distributed task streaming with pub/sub progress |
-| **Temporal Durable Execution** | Temporal worker enabled | `platform.jobs.temporal_workflow` | Event-sourced durable state machines with replay guarantees |
+| **SQL Leasing Queue** | Default active | `platform.jobs.queue` | Database table row leases with lease expiration reaping |
+| **Redis + Arq Adapter** | Optional wire-in helper | `platform.jobs.redis_queue` | Redis hashes + Arq workers (`redis`, `arq` extras) |
+| **Temporal Durable Execution** | Optional wrapper over SQL queue | `platform.jobs.temporal_workflow` | Event-sourced activity wrapping `process()` (`temporalio` extra) |
 
 ---
 

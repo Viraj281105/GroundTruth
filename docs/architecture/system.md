@@ -15,12 +15,12 @@ graph TB
         APIGateway["FastAPI HTTP Gateway<br/>• OpenAPI 3.1 / Pydantic v2<br/>• RBAC Scopes (view, audit, contribute)<br/>• Session & CSRF Security"]
         TenancySvc["Multi-Tenant Service<br/>• Organizations & Projects<br/>• User Grants & Role Scopes"]
         AuditLogSvc["Append-Only Audit Log<br/>• Actor, Action, Target, IP<br/>• Cryptographic Hash Chaining"]
-        JobSvc["Job Orchestrator<br/>• PostgreSQL Leasing Queue<br/>• Redis / Celery Streamer<br/>• Spec-Hash Idempotency"]
+        JobSvc["Job Orchestrator<br/>• SQL Row-Leasing Queue (Default)<br/>• Optional Redis/Arq & Temporal Adapters<br/>• Spec-Hash Idempotency"]
     end
 
     subgraph WorkerTier["Asynchronous Worker Tier"]
         direction TB
-        WorkerNodes["GroundTruth Compute Workers<br/>• Celery / Redis / Postgres Workers<br/>• 8-Core ProcessPool Concurrency<br/>• Atomic Job Heartbeating"]
+        WorkerNodes["GroundTruth Compute Workers<br/>• SQL Row-Lease Worker Process<br/>• Observation Ingestion Poller<br/>• Atomic Job Heartbeating"]
     end
 
     subgraph AnalyticalEngineTier["Deterministic Analytical Engine (Pure Python / NumPy)"]
@@ -196,7 +196,7 @@ GroundTruth/
 │   │       │   ├── (app)/     Multi-tenant authenticated workspaces (Auditor, Funder, etc.)
 │   │       │   ├── (public)/  Public marketing, landing, methodology pages
 │   │       │   └── (legacy)/  Backward-compatible case views
-│   │       ├── components/ds/ GroundTruth Design System components (542 tests)
+│   │       ├── components/ds/ GroundTruth Design System components (746 Web Vitest tests)
 │   │       └── lib/           Typed API client & generated OpenAPI types
 │   └── worker/                Background job consumer entrypoint (apps.worker.main)
 ├── packages/
@@ -214,11 +214,11 @@ GroundTruth/
 │       │   │   ├── tenancy/   Organization, project, and grant service
 │       │   │   ├── auth/      Session, RBAC, CSRF, rate-limiting services
 │       │   │   ├── audit/     Append-only cryptographic audit logging
-│       │   │   ├── jobs/      PostgreSQL leasing & Redis/Celery queue backends
+│       │   │   ├── jobs/      SQL row-lease queue & optional Redis/Arq, Temporal backends
 │       │   │   └── storage/   Tiered blob storage (LocalStorage, S3Storage)
 │       │   ├── provenance/    SHA-256 bundle verification and Sigstore cosign signing
 │       │   └── observability/ OpenTelemetry spans, metrics, and trace telemetry
-└── tests/                     1,120+ backend tests and scientific property suites
+└── tests/                     2,130+ offline backend tests and scientific property suites
 ```
 
 ### 3.1 Unidirectional Dependency Invariant
@@ -229,10 +229,10 @@ graph LR
     Apps["apps/ (api, web, worker)"] --> Platform["groundtruth.platform"]
     Platform --> Contracts["groundtruth.contracts"]
     Engine["groundtruth.engine"] --> Contracts
-    Platform -.->|Imports 4 Entrypoint Functions Only| Engine
+    Platform -.->|Imports Approved Public APIs Only| Engine
 ```
 
-The platform imports exactly four entrypoint symbols from the engine: `run_analysis`, `describe_engine`, `engine_ref`, and `ENGINE_VERSION`. The engine is strictly forbidden from importing platform code, database drivers, network sockets, or filesystem routines. This invariant is enforced on every commit by `tests/test_contract_boundary.py`, which parses the Python AST across all modules.
+The platform imports only the approved public API exported by `groundtruth.engine` (`run_analysis`, `describe_engine`, `engine_ref`, `ENGINE_VERSION`, `CausalCriterionResult`, `CausalReadinessState`, `assess_causal_readiness`, `run_independent_benchmark_suite`). The engine is strictly forbidden from importing platform code, database drivers, network sockets, or filesystem routines. This invariant is enforced on every commit by `tests/test_contract_boundary.py`, which parses the Python AST across all modules.
 
 ---
 
@@ -312,11 +312,11 @@ sequenceDiagram
 
 ### 6.1 Epistemological Evidence States
 Every measurement or statistic is tagged with an `EvidenceState`:
-- `RAW_OBSERVED`: Uncalibrated, direct sensor measurements.
-- `DERIVED`: Cloud-masked, harmonized spectral indices.
+- `OBSERVED`: Verified empirical observations from sensors, climate archives, or boundaries.
+- `DERIVED`: Cloud-masked, reduced spectral indices or deterministic statistics.
 - `MODEL_ESTIMATED`: Econometrically fitted counterfactuals and weights.
 - `INFERRED`: Confidence intervals, permutation p-values.
-- `UNAVAILABLE` / `INSUFFICIENT_EVIDENCE`: Missing observations.
+- `UNAVAILABLE` / `INSUFFICIENT_EVIDENCE`: Missing observations or fail-closed refusals.
 
 ### 6.2 Fail-Closed Principle & Audit Findings
 Following independent audits (Task 5/5B), GroundTruth 2.0 enforces a **fail-closed data gateway**:

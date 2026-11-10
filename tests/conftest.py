@@ -2,25 +2,38 @@
 
 from __future__ import annotations
 
+import importlib.util
+import os
 from pathlib import Path
 
-import numpy as np
-import pytest
+# Point PROJ_DATA / PROJ_LIB at bundled rasterio/pyproj data before any geospatial
+# library initializes so host PostGIS installations never shadow compatible proj.db.
+for _pkg, _rel in (("rasterio", ("proj_data",)), ("pyproj", ("proj_dir", "share", "proj"))):
+    _spec = importlib.util.find_spec(_pkg)
+    if _spec is not None and _spec.origin is not None:
+        _proj_dir = Path(_spec.origin).parent.joinpath(*_rel)
+        if _proj_dir.is_dir():
+            os.environ["PROJ_DATA"] = str(_proj_dir)
+            os.environ["PROJ_LIB"] = str(_proj_dir)
+            break
 
-from groundtruth.contracts.evidence import Evidence, EvidenceBundle
-from groundtruth.contracts.provenance import Provenance
-from groundtruth.contracts.types import (
+import numpy as np  # noqa: E402
+import pytest  # noqa: E402
+
+from groundtruth.contracts.evidence import Evidence, EvidenceBundle  # noqa: E402
+from groundtruth.contracts.provenance import Provenance  # noqa: E402
+from groundtruth.contracts.types import (  # noqa: E402
     STANDARD_CAVEATS,
     DonorMatch,
     VerdictLabel,
     VerificationVerdict,
 )
-from groundtruth.engine.assembler import AssemblyInputs
-from groundtruth.engine.causal.synthetic_control import fit_synthetic_control
-from groundtruth.engine.matching.donors import DonorPool
-from groundtruth.engine.uncertainty.placebo import in_space_placebo
-from groundtruth.engine.uncertainty.robustness import leave_one_out
-from groundtruth.platform.cases.registry import get_case
+from groundtruth.engine.assembler import AssemblyInputs  # noqa: E402
+from groundtruth.engine.causal.synthetic_control import fit_synthetic_control  # noqa: E402
+from groundtruth.engine.matching.donors import DonorPool  # noqa: E402
+from groundtruth.engine.uncertainty.placebo import in_space_placebo  # noqa: E402
+from groundtruth.engine.uncertainty.robustness import leave_one_out  # noqa: E402
+from groundtruth.platform.cases.registry import get_case  # noqa: E402
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

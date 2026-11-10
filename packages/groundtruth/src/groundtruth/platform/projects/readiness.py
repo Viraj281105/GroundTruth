@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from groundtruth.data_access.aoi_pipeline import AnnualObservationRecord
-from groundtruth.engine.causal.readiness import CausalCriterionResult, assess_causal_readiness
+from groundtruth.engine import CausalCriterionResult, assess_causal_readiness
 from groundtruth.platform.config import get_settings
 from groundtruth.platform.projects.data import (
     load_climate,

@@ -15,7 +15,7 @@ However, unlike typical software projects where functionality is valued above al
 flowchart TD
     PR["Incoming Pull Request"] --> AST["1. AST Contract Boundary Test<br/>(tests/test_contract_boundary.py)"]
     AST --> Lint["2. Lint & Typecheck<br/>(ruff, mypy, tsc)"]
-    Lint --> Tests["3. Automated Test Suites<br/>(1,466 Pytest + 542 Vitest)"]
+    Lint --> Tests["3. Automated Test Suites<br/>(2,130+ Pytest + 746 Vitest)"]
     Tests --> ScienceAudit["4. Non-Negotiable Scientific Rules Check"]
     
     ScienceAudit --> Pass["Merge Approved!"]
@@ -47,8 +47,8 @@ Language models are strictly isolated downstream of the analytical engine. Gemin
 ### Rule 6: Never Fabricate or Synthesize Real-Data Values
 Following the Task 5/5B independent audit, all fabricated Landsat caches were quarantined. Any real-data accessor encountering missing pre-treatment rasters must raise `DataUnavailableError` and return `HTTP 501`. Never hardcode plausible numbers or substitute synthetic series under a real label.
 
-### Rule 7: Respect the 5 Evidence States
-Every data point must carry its correct state: `RAW_OBSERVED`, `PREPROCESSED_OBSERVED`, `HARMONIZED_OBSERVED`, `MODEL_ESTIMATED`, or `SYNTHETIC_SIMULATED`.
+### Rule 7: Respect the 6 Evidence States
+Every data point must carry its correct `EvidenceState`: `OBSERVED`, `DERIVED`, `MODEL_ESTIMATED`, `INFERRED`, `UNAVAILABLE`, or `INSUFFICIENT_EVIDENCE`.
 
 ---
 
@@ -64,13 +64,13 @@ ruff check packages tests --fix
 # 2. Static type checking
 mypy
 
-# 3. Backend test suite (1,466 tests)
+# 3. Backend test suite (2,130+ offline tests)
 pytest
 
 # 4. AST architectural boundary enforcement
 pytest tests/test_contract_boundary.py
 
-# 5. Frontend test suite (542 tests)
+# 5. Frontend test suite (746 tests across 75 files)
 cd apps/web
 npm test -- --run
 npm run check:api-types
@@ -88,16 +88,14 @@ flowchart TD
     Q -- "API, database, auth, job queues" --> Platform["packages/groundtruth/src/groundtruth/platform/<br/>(I/O, persistence, accessors)"]
     Q -- "Shared types, evidence schemas, units" --> Contracts["packages/groundtruth/src/groundtruth/contracts/<br/>(Frozen versioned contracts)"]
     Q -- "User interface, persona dashboards" --> Web["apps/web/<br/>(Next.js 14 App Router)"]
-    Q -- "Mobile Android features" --> Mobile["apps/mobile/<br/>(Jetpack Compose Native)"]
 ```
 
 | Domain | Target Path | Governance |
 |---|---|---|
 | **Causal & Geospatial Math** | `packages/groundtruth/src/groundtruth/engine/` | Pure computation. No database, no network, no disk reads. |
-| **Data Ingestion & Jobs** | `packages/groundtruth/src/groundtruth/platform/` | Database access, Celery jobs, fail-closed accessors. |
+| **Data Ingestion & Jobs** | `packages/groundtruth/src/groundtruth/platform/` | Database access, SQL row-lease jobs, fail-closed accessors. |
 | **Shared Contracts** | `packages/groundtruth/src/groundtruth/contracts/` | Schema changes require mutual maintainer approval. |
-| **Web Frontend** | `apps/web/` | TypeScript, Tailwind, 542 Vitest tests. |
-| **Android Mobile** | `apps/mobile/` | Kotlin, Jetpack Compose, Material 3. |
+| **Web Frontend** | `apps/web/` | TypeScript, CSS Modules + design tokens, 746 Vitest tests across 75 files. |
 
 ---
 

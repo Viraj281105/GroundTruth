@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from groundtruth.claims.verification_engine import (
     verify_project_claims,
 )
-from groundtruth.engine.benchmark.suite import run_independent_benchmark_suite
+from groundtruth.engine import run_independent_benchmark_suite
 from groundtruth.platform.api.rate_limiting import RateLimiter
 from groundtruth.platform.auth.authz import (
     AccessContext,

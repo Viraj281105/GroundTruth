@@ -100,8 +100,11 @@ class LocalStorageBackend:
 
     def _resolve_path(self, tier: StorageTier, key: str) -> Path:
         clean_key = key.lstrip("/\\").replace("..", "_")
-        target_dir = self._tier_dirs[tier]
-        return target_dir / clean_key
+        target_dir = self._tier_dirs[tier].resolve()
+        resolved = (target_dir / clean_key).resolve()
+        if resolved == target_dir or not resolved.is_relative_to(target_dir):
+            raise ValueError(f"invalid storage key outside tier root: {key!r}")
+        return resolved
 
     def put_bytes(
         self,

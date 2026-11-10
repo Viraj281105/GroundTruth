@@ -36,7 +36,7 @@ import logging
 import os
 import subprocess
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -305,19 +305,26 @@ class AuditLedger:
     def durable(self) -> bool:
         return self._factory() is not None
 
-    def _load(self, project_id: str) -> list[AuditRecord]:
-        """All records of a project, v2 records ordered by sequence, legacy rows first."""
+    def _load_many(self, project_ids: Sequence[str]) -> dict[str, list[AuditRecord]]:
+        """Batch-load records across multiple projects in a single query."""
+        ids = list(dict.fromkeys(project_ids))
+        grouped: dict[str, list[AuditRecord]] = {pid: [] for pid in ids}
+        if not ids:
+            return grouped
         factory = self._factory()
         if factory is None:
-            return list(self._memory.get(project_id, []))
+            for pid in ids:
+                grouped[pid] = list(self._memory.get(pid, []))
+            return grouped
         from groundtruth.platform.store.models import AuditRecordRow
 
         with factory() as session:
             rows = (
                 session.execute(
                     sa.select(AuditRecordRow)
-                    .where(AuditRecordRow.project_id == project_id)
+                    .where(AuditRecordRow.project_id.in_(ids))
                     .order_by(
+                        AuditRecordRow.project_id.asc(),
                         sa.func.coalesce(AuditRecordRow.sequence, 0).asc(),
                         AuditRecordRow.timestamp.asc(),
                         AuditRecordRow.record_id.asc(),
@@ -326,7 +333,13 @@ class AuditLedger:
                 .scalars()
                 .all()
             )
-            return [_row_to_record(r) for r in rows]
+            for row in rows:
+                grouped.setdefault(row.project_id, []).append(_row_to_record(row))
+        return grouped
+
+    def _load(self, project_id: str) -> list[AuditRecord]:
+        """All records of a project, v2 records ordered by sequence, legacy rows first."""
+        return self._load_many([project_id])[project_id]
 
     # -- writing -------------------------------------------------------------
 
@@ -549,10 +562,29 @@ class AuditLedger:
 
     # -- verification ----------------------------------------------------------
 
+    def verify_projects(
+        self, project_ids: Sequence[str]
+    ) -> dict[str, tuple[LedgerVerification, list[AuditRecord]]]:
+        """Batch-verify multiple projects in one query; returns ``{id: (verification, records)}``."""
+        now = datetime.now(UTC).isoformat()
+        loaded = self._load_many(project_ids)
+        return {
+            pid: (self._verify_records(pid, recs, now=now), recs) for pid, recs in loaded.items()
+        }
+
     def verify_project(self, project_id: str) -> LedgerVerification:
         """Verify every record's root and the chain linking them."""
-        now = datetime.now(UTC).isoformat()
         records = self._load(project_id)
+        return self._verify_records(project_id, records)
+
+    def _verify_records(
+        self,
+        project_id: str,
+        records: list[AuditRecord],
+        *,
+        now: str | None = None,
+    ) -> LedgerVerification:
+        now = now or datetime.now(UTC).isoformat()
         legacy = [r for r in records if r.hash_scheme != HASH_SCHEME]
         chain = [r for r in records if r.hash_scheme == HASH_SCHEME]
         failures: list[LedgerFailure] = []

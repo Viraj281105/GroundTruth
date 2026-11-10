@@ -8,13 +8,17 @@ Provides:
 - Per-route dependency and middleware support.
 """
 
+import hashlib
 import logging
 import threading
 import time
+import uuid
 from abc import ABC, abstractmethod
 from typing import Any
 
 from fastapi import HTTPException, Request, Response, status
+
+from groundtruth.platform.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +36,23 @@ class RateLimitBackend(ABC):
 
 
 class MemoryRateLimitBackend(RateLimitBackend):
-    """Thread-safe in-memory sliding window rate limiter."""
+    """Thread-safe in-memory sliding window rate limiter with bounded key capacity."""
 
-    def __init__(self) -> None:
+    def __init__(self, max_keys: int = 10_000) -> None:
         self._hits: dict[str, list[float]] = {}
         self._lock = threading.Lock()
+        self._max_keys = max(1, max_keys)
+
+    def _evict_if_full(self, now: float, window_seconds: int) -> None:
+        if len(self._hits) < self._max_keys:
+            return
+        cutoff = now - window_seconds
+        stale = [k for k, ts in self._hits.items() if not ts or max(ts) <= cutoff]
+        for k in stale:
+            del self._hits[k]
+        while len(self._hits) >= self._max_keys:
+            oldest_key = min(self._hits, key=lambda k: self._hits[k][-1] if self._hits[k] else 0.0)
+            del self._hits[oldest_key]
 
     def hit(self, key: str, limit: int, window_seconds: int) -> tuple[bool, int, float]:
         now = time.monotonic()
@@ -44,6 +60,8 @@ class MemoryRateLimitBackend(RateLimitBackend):
 
         with self._lock:
             # Get existing timestamps and purge expired
+            if key not in self._hits:
+                self._evict_if_full(now, window_seconds)
             timestamps = self._hits.get(key, [])
             valid_timestamps = [t for t in timestamps if t > cutoff]
 
@@ -93,7 +111,7 @@ class RedisRateLimitBackend(RateLimitBackend):
                 return False, 0, reset_after
 
             pipe = self._redis.pipeline()
-            pipe.zadd(redis_key, {str(now): now})
+            pipe.zadd(redis_key, {f"{now}:{uuid.uuid4().hex[:8]}": now})
             pipe.expire(redis_key, window_seconds * 2)
             pipe.execute()
 
@@ -114,8 +132,10 @@ def get_default_backend() -> RateLimitBackend:
 
 
 def get_client_identifier(request: Request, prefix: str = "") -> str:
-    """Extract a unique client identifier based on Forwarded-For, IP, and session cookie."""
-    forwarded_for = request.headers.get("x-forwarded-for")
+    """Extract a stable client identifier using direct IP (or XFF if trusted) and session hash."""
+    forwarded_for = (
+        request.headers.get("x-forwarded-for") if get_settings().trust_proxy_headers else None
+    )
     if forwarded_for:
         client_ip = forwarded_for.split(",")[0].strip()
     elif request.client and request.client.host:
@@ -123,9 +143,13 @@ def get_client_identifier(request: Request, prefix: str = "") -> str:
     else:
         client_ip = "127.0.0.1"
 
-    # If the user has an active session cookie, include that to scope per authenticated user
+    # If the user has an active session cookie, include a deterministic SHA-256 prefix
     session_cookie = request.cookies.get("gt_session") or request.headers.get("authorization", "")
-    session_part = f":{hash(session_cookie) % 1000000}" if session_cookie else ""
+    session_part = (
+        f":{hashlib.sha256(session_cookie.encode('utf-8')).hexdigest()[:12]}"
+        if session_cookie
+        else ""
+    )
 
     return f"{prefix}:{client_ip}{session_part}"
 

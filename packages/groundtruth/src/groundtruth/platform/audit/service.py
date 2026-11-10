@@ -54,6 +54,7 @@ _counter_lock = threading.Lock()
 # Denied events are throttled to one per (user, action) per window, per process, so a
 # client hammering a forbidden endpoint cannot flood the log.
 DENIED_WINDOW_SECONDS = 1.0
+_MAX_DENIED_CACHE = 10_000
 _denied_last: dict[tuple[str | None, str], float] = {}
 _denied_lock = threading.Lock()
 
@@ -87,6 +88,12 @@ def audit_throttled(actor: str | None, action: str) -> bool:
         last = _denied_last.get(key)
         if last is not None and now - last < DENIED_WINDOW_SECONDS:
             return True
+        if len(_denied_last) >= _MAX_DENIED_CACHE:
+            expired = [k for k, ts in _denied_last.items() if now - ts >= DENIED_WINDOW_SECONDS]
+            for k in expired:
+                del _denied_last[k]
+            if len(_denied_last) >= _MAX_DENIED_CACHE:
+                _denied_last.clear()
         _denied_last[key] = now
         return False
 

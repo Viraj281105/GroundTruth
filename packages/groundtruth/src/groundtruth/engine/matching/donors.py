@@ -343,7 +343,7 @@ def _validate_donor_geometry_and_provenance(
     except (TypeError, ValueError, IndexError) as exc:
         return True, False, f"invalid donor geometry: malformed coordinates ({exc})", 0.0
 
-    from groundtruth.platform.units.geodesic import describe_multipolygon
+    from groundtruth.contracts.geodesic import describe_multipolygon
 
     report = describe_multipolygon(multipolygon, overlap_bands=200)
     if report.unclosed_rings:

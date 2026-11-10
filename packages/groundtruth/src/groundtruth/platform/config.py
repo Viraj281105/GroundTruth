@@ -110,8 +110,9 @@ class Settings(BaseSettings):
     genai_provider: Literal["none", "nugen", "openai", "anthropic", "gemini"] = "none"
     genai_model: str = "unset"
     genai_base_url: str | None = None
-    gemini_api_key: str | None = None
+    gemini_api_key: SecretStr | None = None
     gemini_model: str = "gemini-2.5-flash"
+    trust_proxy_headers: bool = False
     nugen_api_key: SecretStr | None = None
     groq_api_key: SecretStr | None = Field(
         default=None, description="Groq inference key (env GROQ_API_KEY); unset means unavailable."
@@ -277,6 +278,8 @@ class Settings(BaseSettings):
         val = keys.get(self.genai_provider)
         if val is None:
             return False
+        if isinstance(val, SecretStr):
+            return bool(val.get_secret_value().strip())
         if isinstance(val, str):
             return bool(val.strip())
         return True
@@ -290,8 +293,8 @@ class Settings(BaseSettings):
 
     @property
     def deployment_tenancy_mode(self) -> str:
-        """Honest tenancy mode: RBAC roles ('user', 'dev', 'admin') in single-tenant workspace."""
-        return "single-tenant"
+        """Multi-tenant organization workspace isolation with RBAC and project grants."""
+        return "multi-tenant"
 
     def validate_security_posture(self) -> list[str]:
         """Return a list of security and operational warnings for the current configuration."""

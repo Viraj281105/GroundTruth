@@ -18,6 +18,10 @@ case "$MODE" in
     (cd apps/web && npm ci)
     [ "$MODE" = setup ] && { echo "Setup complete."; exit 0; }
     if [ "$MODE" = test ]; then "$BIN/python" -m pytest; exit $?; fi
+    if [ -z "${DATABASE_URL:-}" ] && ! grep -Eq '^\s*DATABASE_URL\s*=\s*\S+' .env 2>/dev/null; then
+      echo "error: DATABASE_URL is empty in .env. Set e.g. DATABASE_URL=sqlite:///data/interim/groundtruth.db before running local mode." >&2
+      exit 1
+    fi
     # Migrate once, then run API and worker; without the worker a queued analysis never completes.
     "$BIN/python" -m apps.worker.main --migrate --exit-when-idle
     "$BIN/python" -m uvicorn apps.api.main:app --port 8000 &

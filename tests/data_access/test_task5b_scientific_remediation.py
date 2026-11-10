@@ -37,6 +37,7 @@ from groundtruth.data_access.aoi_pipeline import (
     SceneRasterChip,
     reduce_aoi_scenes_to_series,
 )
+from groundtruth.data_access.kariba_eligibility import load_kariba_donor_eligibility_matrix
 from groundtruth.data_access.stac import (
     SceneDescriptor,
     calculate_spatial_coverage,
@@ -47,7 +48,6 @@ from groundtruth.engine.causal.readiness import (
 )
 from groundtruth.engine.matching.eligibility import (
     DonorCategory,
-    build_kariba_donor_eligibility_matrix,
     classify_eligible_donor,
     compute_donor_matrix_diagnostics,
 )
@@ -307,7 +307,7 @@ def test_harmonization_leaves_oli_scenes_untouched_in_mixed_year() -> None:
 @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
 def test_kariba_donor_eligibility_counts_come_from_boundary_data(repo_root: Path) -> None:
     """Counts are derived from the committed donor GeoJSON, with no padded placeholder units."""
-    matrix = build_kariba_donor_eligibility_matrix()
+    matrix = load_kariba_donor_eligibility_matrix()
     geo = json.loads(
         (repo_root / "cases" / "boundaries" / "kariba-donors.geojson").read_text(encoding="utf-8")
     )
@@ -330,7 +330,7 @@ def test_kariba_donor_eligibility_counts_come_from_boundary_data(repo_root: Path
 
 @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
 def test_border_caveats_follow_preregistered_rules() -> None:
-    matrix = build_kariba_donor_eligibility_matrix()
+    matrix = load_kariba_donor_eligibility_matrix()
     border = {u.unit_id for u in matrix.units if u.category == DonorCategory.BORDER_LEAKAGE_CAVEAT}
     assert border == {
         "zw-gokwe-south",
@@ -378,7 +378,7 @@ def test_real_donor_access_returns_only_eligible_units(repo_root: Path) -> None:
 @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
 def test_donor_diagnostics_unavailable_without_real_panel() -> None:
     """No simulated diagnostics: without an observed panel nothing is reported."""
-    matrix = build_kariba_donor_eligibility_matrix()
+    matrix = load_kariba_donor_eligibility_matrix()
     assert matrix.diagnostics is None
     assert matrix.diagnostics_status.startswith("UNAVAILABLE")
     assert matrix.to_dict()["diagnostics"] is None
@@ -387,7 +387,7 @@ def test_donor_diagnostics_unavailable_without_real_panel() -> None:
 @pytest.mark.requires_local_data("data/processed/climate_cache/kariba_chirps_climate.json")
 def test_donor_panel_missing_core_donor_is_refused() -> None:
     with pytest.raises(DataUnavailableError, match="lacks"):
-        build_kariba_donor_eligibility_matrix(
+        load_kariba_donor_eligibility_matrix(
             pre_treatment_panel={"zw-hwange": [0.2] * 11},
             treated_pre_series=[0.2] * 11,
         )

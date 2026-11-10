@@ -1,7 +1,7 @@
 # Backend Architecture
 
 **Platform Core**: `packages/groundtruth/src/groundtruth/platform/` & `apps/api/`  
-**Runtime**: Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2.0, PostgreSQL 16 / SQLite, Redis, Celery.
+**Runtime**: Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy 2.0, PostgreSQL 16 / SQLite, optional Redis (`rate_limiting` / `arq`).
 
 The backend platform is the operational foundation of GroundTruth 2.0. It manages authentication, multi-tenant isolation, role-based access control, cryptographic audit logging, asynchronous compute scheduling, tiered blob persistence, and immutable evidence storage.
 
@@ -55,9 +55,9 @@ graph TD
 | :--- | :--- | :--- | :--- |
 | `api/` | `platform/api/` | FastAPI routers, OpenAPI schemas, error mapping, cursor pagination | Implemented & Snapshot Tested |
 | `tenancy/` | `platform/tenancy/` | Organizations, Projects, User Memberships, Grant Scoping | Implemented |
-| `auth/` | `platform/auth/` | Session management, password hashing (Argon2), CSRF guards, RBAC | Implemented |
-| `audit/` | `platform/audit/` | Append-only audit logging with cryptographic SHA-256 verification | Implemented |
-| `jobs/` | `platform/jobs/` | Job lifecycle: leasing queue, Redis/Celery queue, worker runner | Implemented |
+| `auth/` | `platform/auth/` | Session management, password hashing (Scrypt), CSRF guards, RBAC | Implemented |
+| `audit/` | `platform/audit/` | Append-only audit logging with cryptographic SHA-256 Merkle chain verification | Implemented |
+| `jobs/` | `platform/jobs/` | Job lifecycle: SQL row-lease queue, optional Redis/arq adapter, worker runner | Implemented |
 | `store/` | `platform/store/` | Immutable SQL evidence store, run versioning, trigger protection | Implemented |
 | `storage/`| `platform/storage/`| Tiered blob storage abstraction (`LocalStorageBackend`, `S3Storage`) | Implemented |
 | `cases/` | `platform/cases/` | Case registry, YAML parsing, translation to `AnalysisRequest` | Implemented |
@@ -182,12 +182,12 @@ No platform module may import from internal engine subpackages (`causal`, `obser
 
 ---
 
-## 4. Asynchronous Job Lifecycle & Dual-Queue Architecture
+## 4. Asynchronous Job Lifecycle & Queue Options
 
-Analytical verification tasks require high-dimensional matrix optimization, permutation tests across dozens of donor regions, and multi-temporal satellite raster processing. GroundTruth 2.0 provides a dual-queue architecture:
+Analytical verification tasks require high-dimensional matrix optimization, permutation tests across dozens of donor regions, and multi-temporal satellite raster processing. GroundTruth 2.0 defaults to the SQL leasing queue and provides optional queue adapters:
 
-1. **PostgreSQL Leasing Queue (`platform.jobs.queue`)**: Default zero-dependency queue using database table row leases with atomic heartbeating.
-2. **Redis + Celery Queue (`platform.jobs.redis_queue`)**: Production-scale distributed queue with asynchronous streaming and live progress updates.
+1. **SQL Leasing Queue (`platform.jobs.queue`)**: Default zero-dependency queue using database table row leases with atomic heartbeating.
+2. **Optional Redis + Arq Adapter (`platform.jobs.redis_queue`)**: Distributed queue adapter with per-stage hashes (requires `[queue]` extras and explicit wiring; `REDIS_URL` also enables shared Redis API rate limiting).
 
 ```mermaid
 sequenceDiagram

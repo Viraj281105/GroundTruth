@@ -1,6 +1,10 @@
 PY ?= python
 VENV = .venv
+ifeq ($(OS),Windows_NT)
 BIN = $(VENV)/Scripts
+else
+BIN = $(VENV)/bin
+endif
 
 .PHONY: help setup install lint format typecheck test test-cov check api worker api-types check-api-types cli clean
 

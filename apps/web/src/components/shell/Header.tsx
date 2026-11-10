@@ -11,6 +11,8 @@ import { OPEN_PALETTE_EVENT } from './ShellOverlays';
 import { t } from '../../lib/i18n';
 import styles from './Header.module.css';
 
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
 const NAV = [
   { href: '/app', key: 'nav.workspace' },
   { href: '/method', key: 'nav.method' },
@@ -45,7 +47,7 @@ export function Header() {
   }, []);
 
   // Slide the active indicator under the current link; recompute on resize and font load.
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const measure = () => {
       const nav = pill.current;
       const el = nav?.querySelector<HTMLElement>('[aria-current="page"]');

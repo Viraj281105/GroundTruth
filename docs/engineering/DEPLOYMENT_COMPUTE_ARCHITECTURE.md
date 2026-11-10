@@ -7,7 +7,7 @@
 
 GroundTruth 2.0 is architected for dual-environment deployment:
 1. **Local Developer Workstation**: Zero-external-dependency execution using local NVMe storage, multi-process CPU concurrency, and direct SQLite/PostgreSQL storage.
-2. **Production Cloud Deployment**: Horizontally scalable container topology (Docker Compose / Kubernetes), distributed Celery/Redis worker queues, managed PostgreSQL 16, and cloud object storage (AWS S3, Cloudflare R2, MinIO).
+2. **Production Cloud Deployment**: Horizontally scalable container topology (Docker Compose / Kubernetes / Helm), SQL row-lease workers (with optional Redis/arq and Temporal adapters), managed PostgreSQL 16, and cloud object storage (AWS S3, Cloudflare R2, MinIO).
 
 ```mermaid
 graph TB
@@ -21,7 +21,7 @@ graph TB
 
     subgraph AsyncQueue["Distributed Job Scheduling Tier"]
         SQLQueue["PostgreSQL Leasing Queue<br/>(SELECT FOR UPDATE SKIP LOCKED)"]
-        RedisQueue["Redis + Celery Queue<br/>(Distributed Streaming)"]
+        RedisQueue["Optional Redis + Arq Queue<br/>(Distributed Adapter)"]
     end
 
     subgraph ComputeWorkers["Worker Compute Tier (Python 3.12)"]
@@ -101,11 +101,11 @@ The factory function `get_storage_backend(profile)` returns the appropriate driv
 
 | Dimension | Workstation Development Profile | Cloud Production Profile |
 | :--- | :--- | :--- |
-| **Worker Concurrency** | 8 local worker processes (`ProcessPoolExecutor`) | Scale-out worker containers via Celery/Redis |
-| **Memory Allocation** | 24 GB workstation ceiling | 4 GB per worker container task; auto-scaling |
+| **Worker Concurrency** | Worker process (`apps/worker`) + `ProcessPoolExecutor` helpers | Scale-out worker replicas against shared DB / optional Redis+Arq |
+| **Memory Allocation** | Bounded stream / chunked raster windows | Container memory limits; horizontal worker scaling |
 | **Relational DB** | SQLite / Local PostgreSQL 16 container | High-availability managed PostgreSQL 16 (RDS) |
-| **Blob Persistence** | `LocalStorageBackend` (`./data/storage`) | `S3StorageBackend` (AWS S3 / Cloudflare R2) |
-| **Queue Backend** | PostgreSQL table row leases | Distributed Redis / Celery / Temporal |
+| **Blob Persistence** | `LocalStorageBackend` (`STORAGE_BACKEND=local`) | `S3StorageBackend` (AWS S3 / Cloudflare R2 / MinIO) |
+| **Queue Backend** | SQL table row leases (`JobQueue`) | SQL row leases (default) or optional Redis/Arq & Temporal |
 | **Telemetry** | Local logging (stdout / stderr) | OpenTelemetry Collector → Prometheus / Grafana |
 
 ![Kariba Overview](../product/screens/kariba-overview.png)

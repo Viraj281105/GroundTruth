@@ -15,7 +15,7 @@ flowchart TD
         Gateway["Strict RBAC Middleware & Tenant Router"]
         OrgService["Tenancy Service (Orgs, Projects, Grants)"]
         AuditLog["Append-Only Audit Log"]
-        JobService["Async Job Queue (Leasing & Redis/Celery)"]
+        JobService["Async Job Queue (SQL Row-Lease & Optional Redis/Arq)"]
         Store["Immutable Evidence Store"]
     end
 
@@ -107,22 +107,22 @@ graph LR
 
 ---
 
-## 5 Evidence States
+## 6 EvidenceStates
 
 Every numerical observation and intermediate result is tagged with an epistemological `EvidenceState`:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> RAW_OBSERVED: Satellite / Sensor Acquisition
-    RAW_OBSERVED --> DERIVED: QA Masking & Zonal Statistics
+    [*] --> OBSERVED: Verified Sensor Acquisition
+    OBSERVED --> DERIVED: QA Masking & Zonal Statistics
     DERIVED --> MODEL_ESTIMATED: Econometric / SCM Fitting
     MODEL_ESTIMATED --> INFERRED: Counterfactual Projection
     [*] --> UNAVAILABLE: Missing STAC / Pipeline Refusal
     UNAVAILABLE --> INSUFFICIENT_EVIDENCE: Fail-Closed Gate
 ```
 
-* **`RAW_OBSERVED`**: Direct, unaltered sensor telemetry (e.g., Level-2 surface reflectance DN).
-* **`DERIVED`**: Deterministically processed indices (e.g., QA-masked cloud-free zonal mean NDVI).
+* **`OBSERVED`**: Direct, verified empirical observations (e.g., masked satellite rasters, CHIRPS precipitation, geometry).
+* **`DERIVED`**: Deterministically computed indices and reductions (e.g., zonal mean NDVI, SPI-12).
 * **`MODEL_ESTIMATED`**: Values fitted through mathematical optimization (e.g., SCM weights, synthetic counterfactual).
 * **`INFERRED`**: Projections, confidence intervals, or permutation p-values derived under statistical models.
 * **`UNAVAILABLE` / `INSUFFICIENT_EVIDENCE`**: Unobserved periods or refused estimates where data gaps prevent sound inference.
@@ -135,8 +135,8 @@ stateDiagram-v2
 * [System Architecture (`architecture/system.md`)](architecture/system.md) — System C4 architecture, container topology, package seams.
 * [Engine/Platform Contract (`architecture/contract.md`)](architecture/contract.md) — The `AnalysisRequest` and `AnalysisResult` boundary.
 * [Backend Platform (`architecture/backend.md`)](architecture/backend.md) — FastAPI surface, multi-tenancy, RBAC middleware, PostgreSQL store.
-* [Frontend Architecture (`architecture/frontend.md`)](architecture/frontend.md) — Next.js 14 App Router layout restructuring (`(app)` workspaces, `(public)` marketing), Design System (`ds/`), 542 unit/component/integration tests.
-* [Worker & Job Execution (`architecture/worker.md`)](architecture/worker.md) — Asynchronous job lifecycle, PostgreSQL leases, Celery/Redis queue, Temporal durable execution.
+* [Frontend Architecture (`architecture/frontend.md`)](architecture/frontend.md) — Next.js 14 App Router layout (`(app)` workspaces, `(public)` marketing), Design System (`ds/`), 746 Vitest unit/component/integration tests across 75 files.
+* [Worker & Job Execution (`architecture/worker.md`)](architecture/worker.md) — Asynchronous job lifecycle, PostgreSQL SQL row leases, optional Redis/arq and Temporal adapters.
 * [Earth Observation (`architecture/earth-observation.md`)](architecture/earth-observation.md) — Ingestion chain, USGS Collection 2 L2 scaling, QA bit masking, Roy et al. sensor harmonization.
 * [Causal Inference (`architecture/causal.md`)](architecture/causal.md) — Simplex-constrained FISTA synthetic control solver, DiD cross-check, placebo permutation tests.
 * [Evidence & Provenance (`architecture/evidence.md`)](architecture/evidence.md) — Immutable `EvidenceBundle`, SHA-256 derivation chains, Sigstore signing.
@@ -147,7 +147,7 @@ stateDiagram-v2
 * [Deployment Compute Architecture (`engineering/DEPLOYMENT_COMPUTE_ARCHITECTURE.md`)](engineering/DEPLOYMENT_COMPUTE_ARCHITECTURE.md) — Tiered storage hierarchy, local workstation vs. production container topology.
 * [Local Compute Benchmarks (`engineering/LOCAL_COMPUTE_BENCHMARK.md`)](engineering/LOCAL_COMPUTE_BENCHMARK.md) — Measured multi-process scaling, 512×512 chunking benchmarks, RTX 5070 GPU optionality.
 * [Configuration Specification (`engineering/configuration.md`)](engineering/configuration.md) — Typed Pydantic settings, secrets isolation, environment overrides.
-* [Testing Strategy (`engineering/testing.md`)](engineering/testing.md) — 1,120+ backend tests, 542 web tests, AST boundary enforcement, property testing.
+* [Testing Strategy (`engineering/testing.md`)](engineering/testing.md) — 2,130+ offline backend tests, 746 web tests, AST boundary enforcement, property testing.
 
 ### 3. Architecture Decisions (ADRs)
 * [ADR Index (`decisions/README.md`)](decisions/README.md) — Complete registry of eleven binding architectural decision records.

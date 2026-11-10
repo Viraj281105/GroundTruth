@@ -390,8 +390,18 @@ def verify(
     settings = get_settings()
     # Check explicit data_mode or fallback to request.synthetic
     if request.data_mode is not None:
-        mode_str = str(request.data_mode).upper()
-        is_synthetic = mode_str not in ("REAL_OBSERVATIONS", "OBSERVED", "REAL")
+        mode_str = str(request.data_mode).strip().upper()
+        if mode_str in ("REAL_OBSERVATIONS", "OBSERVED", "REAL"):
+            is_synthetic = False
+        elif mode_str in ("SIMULATED", "SYNTHETIC"):
+            is_synthetic = True
+        else:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Unsupported data_mode {request.data_mode!r}; expected 'observed' or 'simulated'."
+                ),
+            )
     else:
         is_synthetic = request.synthetic
 

@@ -7,8 +7,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Next.js 14](https://img.shields.io/badge/Next.js-14.2-black.svg)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)](https://www.typescriptlang.org/)
-[![Frontend Tests](https://img.shields.io/badge/Vitest-542%20passing-brightgreen.svg)](apps/web)
-[![Backend Tests](https://img.shields.io/badge/Pytest-1466%20collected-success.svg)](tests)
+[![Frontend Tests](https://img.shields.io/badge/Vitest-746%20passing-brightgreen.svg)](apps/web)
+[![Backend Tests](https://img.shields.io/badge/Pytest-2130%2B%20offline-success.svg)](tests)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **PCCOE International Grand Challenge 2026 · Indradhanu**  
@@ -88,12 +88,8 @@ Environmental ministries and local governments track territorial conservation pe
 
 ![Government Dashboard](docs/product/screens/government-dashboard.png)
 
-### 5. Multi-Device Experience (Jetpack Compose Android Native)
-Field auditors and forest wardens access full dashboard capabilities offline or in remote field conditions via our Jetpack Compose Android client:
-
-| Field Auditor Native View | Forest Developer Native View |
-| :---: | :---: |
-| ![Compose Auditor Dashboard](docs/product/screens/compose-auditor-dashboard.png) | ![Compose NGO Dashboard](docs/product/screens/compose-ngo-dashboard.png) |
+### 5. Responsive Mobile Web Support
+Field auditors and forest wardens access dashboard workflows on 375 px mobile browser viewports via the responsive Next.js web application (`apps/web`).
 
 ---
 
@@ -222,7 +218,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Frontend["Apps Web (Next.js 14.2 & TypeScript)"]
-        UI["542 Vitest Tests Passing<br/>Tailwind CSS · Radix UI · Lucide"]
+        UI["746 Vitest Tests Passing<br/>CSS Modules · Design Tokens · Lucide"]
         PersonaUI["4 Personas: NGO · Funder · Auditor · Government"]
     end
 
@@ -239,8 +235,8 @@ flowchart TB
     end
 
     subgraph DB["Persistence & Storage"]
-        PG[("PostgreSQL 15+ (Alembic Migrations 0001-0006)")]
-        Redis[("Redis Background Queue & Lease Manager")]
+        PG[("PostgreSQL 15+ (Alembic Migrations 0001-0012)")]
+        WorkerQ[("SQL Row-Lease Queue (Optional Redis Rate Limiting / Arq)")]
     end
 
     Frontend <-->|REST & OpenAPI| API
@@ -249,9 +245,8 @@ flowchart TB
 ```
 
 - **Core Engine:** Python 3.11+, NumPy (custom FISTA solver without SciPy/CVXPY overhead), Shapely, PyProj.
-- **Web Frontend:** Next.js 14.2 App Router, TypeScript 5.5, Tailwind CSS, 542 unit/integration tests with Vitest.
-- **Mobile Client:** Android Native Jetpack Compose, Kotlin, Material 3 with Compose Previews.
-- **Security & Multi-Tenancy:** Scrypt password hashing with timing attack mitigation, HttpOnly/SameSite session cookies, CSRF protection, and multi-tenant organization isolation (returning HTTP 403 on cross-tenant access):
+- **Web Frontend:** Next.js 14.2 App Router, TypeScript 5.7, CSS Modules with semantic design tokens, 746 unit/integration tests across 75 test files with Vitest.
+- **Security & Multi-Tenancy:** Scrypt password hashing with timing attack mitigation, HttpOnly/SameSite session cookies, CSRF protection, and multi-tenant organization isolation (returning HTTP 404/403 on unauthorized cross-tenant access):
 
 ![Cross-Tenant Access Denied](docs/product/screens/cross-org-denied.png)
 
@@ -300,10 +295,10 @@ groundtruth verify kariba-redd --synthetic
 
 ### 3. Run Backend & Frontend Test Suites
 ```bash
-# Run backend pytest suite (1,466 collected tests)
+# Run backend pytest suite (2,130+ offline tests)
 pytest
 
-# Run frontend vitest suite (542 passing tests)
+# Run frontend vitest suite (746 passing tests across 75 files)
 cd apps/web
 npm install
 npm test -- --run
@@ -337,7 +332,7 @@ npm run dev
 | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Standards of intellectual honesty and ethical research in carbon markets. |
 | [`AGENTS.md`](AGENTS.md) | Operating manual for AI coding agents and automated contributors. |
 | [`CHANGELOG.md`](CHANGELOG.md) | Historical version tracking across package, engine, and contracts. |
-| [`TASK_3B_DEMO_READINESS.md`](../TASK_3B_DEMO_READINESS.md) | Master demo readiness and evaluation walkthrough for hackathon judges. |
+| [`docs/RELEASE_READINESS_REPORT.md`](docs/RELEASE_READINESS_REPORT.md) | Engineering release readiness and audit verification summary. |
 
 ---
 

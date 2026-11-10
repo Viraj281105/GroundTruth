@@ -37,7 +37,7 @@ def test_settings_honest_capability_properties(monkeypatch: pytest.MonkeyPatch) 
         global_forest_watch_api_key=None,
     )
     assert s_default.real_eo_ingestion_implemented is False
-    assert s_default.deployment_tenancy_mode == "single-tenant"
+    assert s_default.deployment_tenancy_mode == "multi-tenant"
     assert s_default.earth_observation_configured is False
 
     s_with_eo = Settings(
@@ -200,9 +200,18 @@ def test_alembic_migration_chain_integrity() -> None:
         "0005_job_stage.py",
         "0006_auth_users_and_sessions.py",
         "0007_tenancy.py",
+        "0008_audit_records.py",
+        "0009_audit_hash_chain.py",
+        "0010_project_documents.py",
+        "0011_observation_ingestions.py",
+        "0012_project_claims.py",
     ]
     for fname in expected_files:
         assert (versions_dir / fname).is_file(), f"Missing migration file: {fname}"
+
+    # Verify no stray un-listed migration files exist on disk.
+    actual_files = sorted(p.name for p in versions_dir.glob("*.py") if not p.name.startswith("__"))
+    assert actual_files == expected_files
 
     chain: list[tuple[str | None, str | None]] = [
         _extract_migration_metadata(versions_dir / fname) for fname in expected_files
@@ -219,8 +228,8 @@ def test_alembic_migration_chain_integrity() -> None:
 
     head_file_stem = Path(expected_files[-1]).stem
     head_revision = chain[-1][0]
-    assert head_file_stem == "0007_tenancy"
-    assert head_revision in {"0007", "0007_tenancy"}
+    assert head_file_stem == "0012_project_claims"
+    assert head_revision in {"0012", "0012_project_claims"}
 
 
 # ---------------------------------------------------------------------------

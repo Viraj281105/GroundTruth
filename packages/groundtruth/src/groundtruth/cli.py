@@ -416,11 +416,7 @@ def _cmd_doctor(_: argparse.Namespace) -> int:
     capabilities = describe_engine()
     real_cases = real_observation_cases()
     fixture_cases = [cid for cid in SYNTHETIC_FIXTURE_CASES if synthetic_fixture_available(cid)]
-    genai_configured = (
-        bool(settings.gemini_api_key)
-        if settings.genai_provider == "gemini"
-        else settings.genai_configured
-    )
+    genai_configured = settings.genai_configured
     genai_narration_implemented = (
         "yes"
         if settings.genai_provider in ("anthropic", "gemini")

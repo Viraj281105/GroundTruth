@@ -1,17 +1,15 @@
 """Independent Validation Benchmark Suite for GroundTruth 2.0.
 
-Provides rigorous scientific benchmarks with:
-1. Known historical environmental events (2018-2019 Zambezi basin drought).
-2. Verified positive intervention cases (Kasigau Corridor conservation).
-3. Negative controls (unprotected adjacent areas where no intervention occurred).
-4. Temporal placebo tests (pre-intervention periods confirming null recovery).
-5. Synthetic stress cases (clearly labelled as SYNTHETIC_BENCHMARK).
+Executes reproducible synthetic validation checks using the real causal engine
+(``fit_synthetic_control``, ``in_space_placebo``, ``in_time_placebo``) while failing
+closed (``UNAVAILABLE``) for empirical historical/literature benchmarks that require
+offline multi-tile satellite and climate panels outside the pure analytical engine.
 
-Evaluates:
-- False positive rate (must be 0.0% on negative controls).
-- False negative rate (must detect true interventions).
-- Uncertainty calibration (permutation placebos & confidence intervals).
-- Reproducibility across identical seeds.
+Scientific integrity guarantees (AGENTS.md R1, R5, R6, R7, R8):
+- Never fabricates real-world results or hardcoded p-values / ATTs.
+- Never converts spectral indices (NDVI) into carbon stocks (tC/ha).
+- Every computational synthetic check runs deterministically from seed ``20260101`` and
+  carries ``is_synthetic=True`` and ``data_origin="synthetic_simulated"``.
 """
 
 from __future__ import annotations
@@ -20,6 +18,13 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
+
+import numpy as np
+
+from groundtruth.engine.causal.synthetic_control import fit_synthetic_control
+from groundtruth.engine.uncertainty.placebo import in_space_placebo, in_time_placebo
+
+BENCHMARK_SEED = 20260101
 
 
 class BenchmarkCaseType(StrEnum):
@@ -38,6 +43,7 @@ class BenchmarkVerdict(StrEnum):
     PASSED = "PASSED"
     FAILED = "FAILED"
     WARNING = "WARNING"
+    UNAVAILABLE = "UNAVAILABLE"
 
 
 @dataclass(frozen=True)
@@ -67,7 +73,7 @@ class BenchmarkCaseResult:
     metrics: list[BenchmarkMetricEvaluation]
     verdict: BenchmarkVerdict
     scientific_rationale: str
-    data_origin: str = "internal_platform"
+    data_origin: str = "synthetic_simulated"
     literature_citation: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -98,9 +104,10 @@ class BenchmarkSuiteSummary:
     total_cases: int
     passed_cases: int
     failed_cases: int
-    false_positive_rate: float
-    false_negative_rate: float
-    uncertainty_calibration_score: float
+    unavailable_cases: int
+    false_positive_rate: float | None
+    false_negative_rate: float | None
+    uncertainty_calibration_score: float | None
     reproducibility_confirmed: bool
     results: list[BenchmarkCaseResult]
 
@@ -112,6 +119,7 @@ class BenchmarkSuiteSummary:
             "total_cases": self.total_cases,
             "passed_cases": self.passed_cases,
             "failed_cases": self.failed_cases,
+            "unavailable_cases": self.unavailable_cases,
             "false_positive_rate": self.false_positive_rate,
             "false_negative_rate": self.false_negative_rate,
             "uncertainty_calibration_score": self.uncertainty_calibration_score,
@@ -120,206 +128,279 @@ class BenchmarkSuiteSummary:
         }
 
 
+def _latent_factor_panel(
+    *,
+    seed: int,
+    n_donors: int = 15,
+    n_pre: int = 10,
+    n_post: int = 6,
+    noise_sd: float = 0.008,
+    injected_effect: float = 0.0,
+) -> tuple[np.ndarray, tuple[str, ...]]:
+    """Build a deterministic latent-factor panel: column 0 treated, rest donors."""
+    rng = np.random.default_rng(seed)
+    n_periods = n_pre + n_post
+    n_units = n_donors + 1
+    n_factors = 3
+    factors = rng.normal(0.0, 0.025, size=(n_factors, n_periods)).cumsum(axis=1) + 0.55
+    loadings = rng.dirichlet(np.ones(n_factors), size=n_units)
+    # Place treated unit inside the convex hull of donors (identifying assumption of SCM).
+    loadings[0] = loadings[1 : min(6, n_units)].mean(axis=0)
+    panel = (loadings @ factors).T + rng.normal(0.0, noise_sd, size=(n_periods, n_units))
+    if injected_effect != 0.0:
+        panel[n_pre:, 0] += injected_effect
+    unit_ids = tuple(["treated"] + [f"donor-{i:02d}" for i in range(1, n_units)])
+    return panel, unit_ids
+
+
+def _run_synthetic_stress_recovery(seed: int) -> tuple[float, float]:
+    n_pre = 10
+    injected_tau = 0.060
+    panel, unit_ids = _latent_factor_panel(
+        seed=seed, n_donors=15, n_pre=n_pre, n_post=6, noise_sd=0.008, injected_effect=injected_tau
+    )
+    fit = fit_synthetic_control(panel[:, 0], panel[:, 1:], unit_ids[1:], n_pre, min_pre_periods=5)
+    placebo = in_space_placebo(
+        panel, unit_ids, treated_index=0, n_pre_periods=n_pre, min_pre_periods=5
+    )
+    return float(fit.average_effect), float(placebo.p_value)
+
+
 def run_independent_benchmark_suite() -> BenchmarkSuiteSummary:
-    """Execute the full 5-case independent validation suite deterministically."""
+    """Execute real deterministic synthetic checks; report unrun empirical cases UNAVAILABLE."""
     timestamp = datetime.now(UTC).isoformat()
 
-    results: list[BenchmarkCaseResult] = [
-        # Case 1: Historical Environmental Event (2018-2019 Zambezi Drought)
-        BenchmarkCaseResult(
-            case_id="BM-01-HISTORICAL-DROUGHT",
-            case_name="Zambezi Basin 2018-2019 Severe Meteorological Drought",
-            case_type=BenchmarkCaseType.HISTORICAL_EVENT,
-            is_synthetic=False,
-            description=(
-                "Validates that GroundTruth correctly identifies the 2018-2019 canopy recession "
-                "in Kariba as driven by severe regional precipitation deficit (CHIRPS SPI-12 < -1.8 SD) "
-                "rather than local management failure."
-            ),
-            ground_truth_effect="Regional Climate Shock (SPI-12 = -1.84 SD)",
-            estimated_effect="Exogenous Climate Confirmed (ATT Residual = +0.024 NDVI)",
-            p_value=0.0014,
-            metrics=[
-                BenchmarkMetricEvaluation(
-                    metric_name="Climate Correlation r",
-                    target_value=0.85,
-                    observed_value=0.91,
-                    tolerance=0.10,
-                    passed=True,
-                    description="Correlation between regional precipitation anomaly and untreated donor greenness.",
-                ),
-                BenchmarkMetricEvaluation(
-                    metric_name="Disentanglement Precision",
-                    target_value=1.0,
-                    observed_value=1.0,
-                    tolerance=0.0,
-                    passed=True,
-                    description="Correctly prevents false negative attribution of drought to project failure.",
-                ),
-            ],
-            verdict=BenchmarkVerdict.PASSED,
-            scientific_rationale="GroundTruth successfully disentangled the exogenous climate shock from local conservation impact.",
+    # Case 1: Historical Environmental Event — requires external multi-tile raster + climate data.
+    bm_01 = BenchmarkCaseResult(
+        case_id="BM-01-HISTORICAL-DROUGHT",
+        case_name="Zambezi Basin 2018-2019 Severe Meteorological Drought",
+        case_type=BenchmarkCaseType.HISTORICAL_EVENT,
+        is_synthetic=False,
+        data_origin="unexecuted_external_benchmark",
+        literature_citation="CHIRPS v2.0 / Zambezi drought record",
+        description=(
+            "Offline historical drought confounding benchmark. Requires external multi-tile satellite "
+            "and CHIRPS climate panels staged outside the pure engine module; fail-closed in-process."
         ),
-        # Case 2: Positive Intervention Case (Kasigau Corridor)
-        BenchmarkCaseResult(
-            case_id="BM-02-POSITIVE-INTERVENTION",
-            case_name="Kasigau Corridor Dryland Forest Conservation (Phase II)",
-            case_type=BenchmarkCaseType.POSITIVE_INTERVENTION,
-            is_synthetic=False,
-            data_origin="published_literature_benchmark",
-            literature_citation="Verra VCS 612 / Guizar-Coutino et al. (2022); West et al. (2023)",
-            description=(
-                "Validates detection of true positive conservation impact in Kenya Acacia-Commiphora dryland. "
-                "Parallel pre-trends and post-treatment canopy preservation must be confirmed. "
-                "PROVENANCE: External published literature benchmark (Verra VCS 612 / Guizar-Coutino et al. 2022). "
-                "RECONCILIATION: True published ATT is +0.038 NDVI (p=0.0020); pre-trends parallelism p-value "
-                "is 0.082 (previously transposed as 'ATT +0.082, p=0.038' in informal summaries). "
-                "GroundTruth did not compute this from internal rasters; boundary file is scaffolded."
-            ),
-            ground_truth_effect="Significant Positive Conservation (Known additionality from VCS 612 literature)",
-            estimated_effect="ATT = +0.038 NDVI (+1.8 tC/ha)",
-            p_value=0.0020,
-            metrics=[
-                BenchmarkMetricEvaluation(
-                    metric_name="Pre-Trends Parallelism p-value",
-                    target_value=0.05,
-                    observed_value=0.082,
-                    tolerance=0.03,
-                    passed=True,
-                    description="Cannot reject null hypothesis of parallel pre-trends prior to crediting start (p=0.082).",
-                ),
-                BenchmarkMetricEvaluation(
-                    metric_name="True Positive Recovery",
-                    target_value=1.0,
-                    observed_value=1.0,
-                    tolerance=0.0,
-                    passed=True,
-                    description="Correctly recovered positive causal treatment effect with p < 0.01.",
-                ),
-            ],
-            verdict=BenchmarkVerdict.PASSED,
-            scientific_rationale="True positive additionality from external literature benchmark with robust pre-trends.",
+        ground_truth_effect="External meteorological drought shock (not evaluated in-process)",
+        estimated_effect="UNAVAILABLE — offline raster/climate benchmark panel required",
+        p_value=None,
+        metrics=[],
+        verdict=BenchmarkVerdict.UNAVAILABLE,
+        scientific_rationale=(
+            "Fail-closed per R5/R6: historical Zambezi drought metrics are not fabricated when "
+            "multi-tile observed panels are absent from the pure analytical engine."
         ),
-        # Case 3: Negative Control (Unmanaged Adjacent Tract - Must Identify NO Improvement)
-        BenchmarkCaseResult(
-            case_id="BM-03-NEGATIVE-CONTROL",
-            case_name="Unprotected Adjacent Savanna Tract (Negative Control)",
-            case_type=BenchmarkCaseType.NEGATIVE_CONTROL,
-            is_synthetic=False,
-            description=(
-                "CRITICAL BENCHMARK REQUIREMENT: Evaluates an untreated, unmanaged adjacent buffer polygon. "
-                "GroundTruth must correctly identify that NO intervention occurred and report a null effect "
-                "without generating false positive additionality."
-            ),
-            ground_truth_effect="Null Effect (tau = 0.000)",
-            estimated_effect="ATT = +0.0012 NDVI (95% CI: [-0.0068, +0.0092])",
-            p_value=0.74,
-            metrics=[
-                BenchmarkMetricEvaluation(
-                    metric_name="Estimated ATT Magnitude",
-                    target_value=0.000,
-                    observed_value=0.0012,
-                    tolerance=0.005,
-                    passed=True,
-                    description="Effect size must be indistinguishable from zero.",
-                ),
-                BenchmarkMetricEvaluation(
-                    metric_name="False Positive Avoidance",
-                    target_value=0.0,
-                    observed_value=0.0,
-                    tolerance=0.0,
-                    passed=True,
-                    description="Correctly reports Inconclusive / No Additionality. Zero false positive.",
-                ),
-            ],
-            verdict=BenchmarkVerdict.PASSED,
-            scientific_rationale="GroundTruth correctly determined that no causal restoration improvement occurred in the untreated control.",
-        ),
-        # Case 4: Temporal Placebo (In-Time Placebo 5 Years Prior)
-        BenchmarkCaseResult(
-            case_id="BM-04-TEMPORAL-PLACEBO",
-            case_name="Pre-Intervention Temporal Placebo (In-Time Test)",
-            case_type=BenchmarkCaseType.TEMPORAL_PLACEBO,
-            is_synthetic=False,
-            description=(
-                "Assigns synthetic treatment date 5 years prior to actual start (2006 instead of 2011). "
-                "Evaluates model false alarm rate in pre-treatment baseline."
-            ),
-            ground_truth_effect="Null Placebo (tau = 0.000)",
-            estimated_effect="Placebo ATT = -0.0018 NDVI",
-            p_value=0.88,
-            metrics=[
-                BenchmarkMetricEvaluation(
-                    metric_name="Placebo ATT Significance",
-                    target_value=0.0,
-                    observed_value=0.0,
-                    tolerance=0.05,
-                    passed=True,
-                    description="Placebo effect p-value must exceed 0.10 (cannot reject null).",
-                ),
-                BenchmarkMetricEvaluation(
-                    metric_name="Uncertainty Coverage",
-                    target_value=0.95,
-                    observed_value=0.96,
-                    tolerance=0.05,
-                    passed=True,
-                    description="95% confidence interval covers zero.",
-                ),
-            ],
-            verdict=BenchmarkVerdict.PASSED,
-            scientific_rationale="In-time placebo test confirms uncertainty intervals are properly calibrated and do not detect phantom effects.",
-        ),
-        # Case 5: Synthetic Overcrediting Stress Test (Labeled Explicitly as Synthetic)
-        BenchmarkCaseResult(
-            case_id="BM-05-SYNTHETIC-OVERCREDITING",
-            case_name="Calibrated Synthetic Overcrediting Stress Test",
-            case_type=BenchmarkCaseType.SYNTHETIC_STRESS_TEST,
-            is_synthetic=True,
-            description=(
-                "CLEARLY LABELLED AS SYNTHETIC BENCHMARK: Evaluates Kariba 22-year calibrated synthetic panel. "
-                "Developer claims +0.089 NDVI, whereas ground truth injected effect is +0.024 NDVI. "
-                "Verifies that GroundTruth flags the -73.0% overstatement discrepancy."
-            ),
-            ground_truth_effect="Injected True tau = +0.024 NDVI",
-            estimated_effect="Recovered tau = +0.0241 NDVI (-73.0% vs Claimed +0.089)",
-            p_value=0.0014,
-            metrics=[
-                BenchmarkMetricEvaluation(
-                    metric_name="Recovered tau vs True tau Error",
-                    target_value=0.0240,
-                    observed_value=0.0241,
-                    tolerance=0.002,
-                    passed=True,
-                    description="SCM recovers true injected treatment effect within 0.002 NDVI.",
-                ),
-                BenchmarkMetricEvaluation(
-                    metric_name="Overstatement Flag Accuracy",
-                    target_value=1.0,
-                    observed_value=1.0,
-                    tolerance=0.0,
-                    passed=True,
-                    description="Accurately identifies and flags developer claim discrepancy as CONTRADICTED.",
-                ),
-            ],
-            verdict=BenchmarkVerdict.PASSED,
-            scientific_rationale="Synthetic benchmark successfully recovers injected effect and flags overstatement without false negatives.",
-        ),
-    ]
+    )
 
+    # Case 2: External Literature Benchmark (Kasigau Corridor) — external reference only, not computed.
+    bm_02 = BenchmarkCaseResult(
+        case_id="BM-02-POSITIVE-INTERVENTION",
+        case_name="Kasigau Corridor Dryland Forest Conservation (Phase II)",
+        case_type=BenchmarkCaseType.POSITIVE_INTERVENTION,
+        is_synthetic=False,
+        data_origin="published_literature_benchmark",
+        literature_citation="Verra VCS 612 / Guizar-Coutino et al. (2022); West et al. (2023)",
+        description=(
+            "External published literature benchmark reference for VCS 612. "
+            "Full multi-year Kasigau causal donor panel is not ingested in-process; only external "
+            "literature context is cited without fabricated internal estimates or carbon conversion."
+        ),
+        ground_truth_effect="External literature reference (VCS 612; see cited studies)",
+        estimated_effect="UNAVAILABLE — Kasigau multi-year causal donor panel not ingested",
+        p_value=None,
+        metrics=[],
+        verdict=BenchmarkVerdict.UNAVAILABLE,
+        scientific_rationale=(
+            "Fail-closed per R1/R5/R6: GroundTruth does not emit unverified ATT or carbon-stock "
+            "figures for Kasigau without executing a full multi-year observed donor panel."
+        ),
+    )
+
+    # Case 3: Real Executed Synthetic Null Panel (Negative Control)
+    null_pre = 10
+    null_panel, null_ids = _latent_factor_panel(
+        seed=BENCHMARK_SEED + 1,
+        n_donors=15,
+        n_pre=null_pre,
+        n_post=6,
+        noise_sd=0.008,
+        injected_effect=0.0,
+    )
+    null_fit = fit_synthetic_control(
+        null_panel[:, 0], null_panel[:, 1:], null_ids[1:], null_pre, min_pre_periods=5
+    )
+    null_placebo = in_space_placebo(
+        null_panel, null_ids, treated_index=0, n_pre_periods=null_pre, min_pre_periods=5
+    )
+    null_att = float(null_fit.average_effect)
+    null_p = float(null_placebo.p_value)
+    null_magnitude_ok = abs(null_att) <= 0.020
+    null_non_rejection = null_p > 0.10
+    bm_03 = BenchmarkCaseResult(
+        case_id="BM-03-NEGATIVE-CONTROL",
+        case_name="Synthetic Null Latent-Factor Panel (Negative Control)",
+        case_type=BenchmarkCaseType.NEGATIVE_CONTROL,
+        is_synthetic=True,
+        data_origin="synthetic_simulated",
+        description=(
+            "SYNTHETIC BENCHMARK: Executes fit_synthetic_control and in_space_placebo live on a "
+            "15-donor latent-factor panel with zero injected effect (seed 20260102)."
+        ),
+        ground_truth_effect="Null Effect (injected tau = 0.000 NDVI)",
+        estimated_effect=f"ATT = {null_att:+.4f} NDVI (in-space permutation p = {null_p:.3f})",
+        p_value=round(null_p, 4),
+        metrics=[
+            BenchmarkMetricEvaluation(
+                metric_name="Estimated ATT Magnitude",
+                target_value=0.000,
+                observed_value=round(null_att, 6),
+                tolerance=0.020,
+                passed=null_magnitude_ok,
+                description="Estimated null gap remains near zero without false additionality.",
+            ),
+            BenchmarkMetricEvaluation(
+                metric_name="Null Non-Rejection (p > 0.10)",
+                target_value=0.10,
+                observed_value=round(null_p, 4),
+                tolerance=0.90,
+                passed=null_non_rejection,
+                description="In-space permutation p-value does not falsely reject null.",
+            ),
+        ],
+        verdict=(
+            BenchmarkVerdict.PASSED
+            if (null_magnitude_ok and null_non_rejection)
+            else BenchmarkVerdict.FAILED
+        ),
+        scientific_rationale=(
+            "Measured live from real solver execution on an explicitly badged synthetic null panel."
+        ),
+    )
+
+    # Case 4: Real Executed Synthetic In-Time Temporal Placebo
+    time_pre = 12
+    time_panel, time_ids = _latent_factor_panel(
+        seed=BENCHMARK_SEED + 2,
+        n_donors=15,
+        n_pre=time_pre,
+        n_post=4,
+        noise_sd=0.008,
+        injected_effect=0.060,
+    )
+    in_time = in_time_placebo(
+        time_panel[:, 0],
+        time_panel[:, 1:],
+        time_ids[1:],
+        n_pre_periods=time_pre,
+        fake_treatment_index=6,
+        true_effect=0.060,
+        min_pre_periods=4,
+    )
+    bm_04 = BenchmarkCaseResult(
+        case_id="BM-04-TEMPORAL-PLACEBO",
+        case_name="Synthetic Pre-Intervention In-Time Placebo",
+        case_type=BenchmarkCaseType.TEMPORAL_PLACEBO,
+        is_synthetic=True,
+        data_origin="synthetic_simulated",
+        description=(
+            "SYNTHETIC BENCHMARK: Executes in_time_placebo live inside the pre-treatment period "
+            "(fake treatment index 6 of 12 pre-periods) to verify no spurious pre-trend gap."
+        ),
+        ground_truth_effect="Pre-period Null Placebo (tau = 0.000 NDVI)",
+        estimated_effect=f"Placebo ATT = {in_time.fake_effect:+.4f} NDVI",
+        p_value=None,
+        metrics=[
+            BenchmarkMetricEvaluation(
+                metric_name="Fake Pre-Period ATT Magnitude",
+                target_value=0.0,
+                observed_value=round(float(in_time.fake_effect), 6),
+                tolerance=0.030,
+                passed=in_time.passes,
+                description="Pre-period placebo gap stays small relative to true post effect (< 50%).",
+            ),
+        ],
+        verdict=BenchmarkVerdict.PASSED if in_time.passes else BenchmarkVerdict.FAILED,
+        scientific_rationale=(
+            "Measured live from in_time_placebo on synthetic pre-period observations."
+        ),
+    )
+
+    # Case 5: Real Executed Synthetic Effect Recovery & Reproducibility Check
+    att_1, p_1 = _run_synthetic_stress_recovery(BENCHMARK_SEED)
+    att_2, p_2 = _run_synthetic_stress_recovery(BENCHMARK_SEED)
+    reproducible = (att_1 == att_2) and (p_1 == p_2)
+    recovery_err = abs(att_1 - 0.060)
+    recovery_ok = recovery_err <= 0.015 and p_1 <= 0.15 and reproducible
+    bm_05 = BenchmarkCaseResult(
+        case_id="BM-05-SYNTHETIC-OVERCREDITING",
+        case_name="Deterministic Synthetic Effect Recovery & Overstatement Stress Test",
+        case_type=BenchmarkCaseType.SYNTHETIC_STRESS_TEST,
+        is_synthetic=True,
+        data_origin="synthetic_simulated",
+        description=(
+            "SYNTHETIC BENCHMARK: Executes fit_synthetic_control and in_space_placebo live twice "
+            "from seed 20260101 on an injected +0.060 NDVI latent-factor panel vs hypothetical "
+            "inflated +0.089 NDVI claim, checking recovery error and exact determinism."
+        ),
+        ground_truth_effect="Injected True tau = +0.0600 NDVI (SYNTHETIC)",
+        estimated_effect=(
+            f"Recovered ATT = {att_1:+.4f} NDVI (in-space placebo p = {p_1:.3f}; error = {recovery_err:.4f})"
+        ),
+        p_value=round(p_1, 4),
+        metrics=[
+            BenchmarkMetricEvaluation(
+                metric_name="Recovered ATT vs Injected tau Error",
+                target_value=0.060,
+                observed_value=round(att_1, 6),
+                tolerance=0.015,
+                passed=recovery_err <= 0.015,
+                description="SCM recovers injected +0.060 NDVI within 0.015 NDVI.",
+            ),
+            BenchmarkMetricEvaluation(
+                metric_name="Seed Reproducibility Difference",
+                target_value=0.0,
+                observed_value=abs(att_1 - att_2),
+                tolerance=0.0,
+                passed=reproducible,
+                description="Repeat run with identical seed matches bitwise.",
+            ),
+        ],
+        verdict=BenchmarkVerdict.PASSED if recovery_ok else BenchmarkVerdict.FAILED,
+        scientific_rationale=(
+            "Recovered live from fit_synthetic_control and in_space_placebo with verified "
+            "deterministic replay."
+        ),
+    )
+
+    results = [bm_01, bm_02, bm_03, bm_04, bm_05]
     total = len(results)
     passed = sum(1 for r in results if r.verdict == BenchmarkVerdict.PASSED)
-    failed = total - passed
+    failed = sum(1 for r in results if r.verdict == BenchmarkVerdict.FAILED)
+    unavailable = sum(1 for r in results if r.verdict == BenchmarkVerdict.UNAVAILABLE)
+
+    executed_neg = (bm_03, bm_04)
+    fpr = sum(1 for r in executed_neg if r.verdict != BenchmarkVerdict.PASSED) / len(executed_neg)
+    fnr = 0.0 if bm_05.verdict == BenchmarkVerdict.PASSED else 1.0
+    executed_all = [r for r in results if r.verdict != BenchmarkVerdict.UNAVAILABLE]
+    cal_score = round(
+        100.0
+        * sum(1 for r in executed_all if r.verdict == BenchmarkVerdict.PASSED)
+        / len(executed_all),
+        2,
+    )
 
     return BenchmarkSuiteSummary(
-        suite_name="GroundTruth 2.0 Independent Scientific Benchmark Suite",
-        version="v2.0-certified",
+        suite_name="GroundTruth 2.0 Validation Benchmark Suite",
+        version="2.0.0",
         execution_timestamp=timestamp,
         total_cases=total,
         passed_cases=passed,
         failed_cases=failed,
-        false_positive_rate=0.0,  # Negative control yielded 0 false positives
-        false_negative_rate=0.0,  # Positive interventions detected
-        uncertainty_calibration_score=98.5,  # 98.5% coverage on placebos
-        reproducibility_confirmed=True,
+        unavailable_cases=unavailable,
+        false_positive_rate=fpr,
+        false_negative_rate=fnr,
+        uncertainty_calibration_score=cal_score,
+        reproducibility_confirmed=reproducible,
         results=results,
     )

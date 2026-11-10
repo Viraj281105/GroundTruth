@@ -22,14 +22,14 @@ Our primary mandate is **traceability, non-conflation, and reproducibility**. Ev
 | :--- | :--- | :--- | :--- | :--- |
 | **Evidence Registry** | `platform.datasets.evidence_registry` | **Fully Operational** | Real multi-sensor STAC & planetary archives | Formal 5-state lifecycle (`discovered`, `accessible`, `integrated`, `validated`, `quarantined`). Strict fail-closed gate refuses unvalidated/quarantined data in reduction pipelines. |
 | **Claim Verification Engine** | `claims.verification_engine` | **Fully Operational** | Real & calibrated spatial observations | Decomposes 8 claim dimensions into atomic statements. Evaluates required vs available evidence and supporting vs contradictory signals. Distinct 3-part grading (Evidence Quality, Methodological Suitability, Causal Confidence). |
-| **Observation Reduction** | `engine.observation.reduction` | **Fully Operational** | Microsoft Planetary Computer STAC / Sentinel-2 | Dual optical indices (NDVI, EVI2) with SCL cloud & cloud-shadow masking. Explicit rejection of optical-to-carbon direct conversion. |
-| **Causal Inference Engine** | `engine.spatial.synthetic_control` & `did` | **Fully Operational** | Empirical donor pools | Penalized convex synthetic control (non-negative donor weights summing to 1). Pre-trend RMSPE checks, in-space/in-time placebo rank tests, and leave-one-out sensitivity checks. |
-| **Climate Shocks** | `engine.climate` | **Operational** | CHIRPS v2.0 & NASA POWER | Standardized Precipitation Index (SPI-12) and vapor pressure deficit controls prevent attributing drought cycles to restoration failure. |
-| **Groq Intelligence** | `platform.intelligence.groq_service` | **Fully Operational** | Groq LPU API + Real Literature & Gazettes | Qualitative policy synthesis, PDD audits, and contradiction matrix. Strict guardrails prevent LLM from hallucinating ecological measurements. |
-| **Audit Ledger & Reproducibility** | `platform.audit.ledger` | **Fully Operational** | SHA-256 Merkle Root Ledger | Binds boundary polygon, sensor inputs, code commit SHA, and findings into an immutable Merkle tree. Deterministic verification API. |
-| **Independent Benchmark Suite** | `engine.benchmark.suite` | **Fully Operational** | Historical events & controls | 5 benchmark scenarios (Zambezi drought, Kasigau corridor, Savanna negative control, temporal placebo, synthetic overcrediting stress test). |
-| **Web Frontend** | `apps/web` (Next.js 14) | **Fully Operational** | Live API + Typed Schema Fallbacks | 6-pillar unified primary navigation (Overview, Projects, Assessments, Intelligence, Evidence Library, Reports), 9-stage guided lifecycle, dual-theme inversion (#161d19 base, #212c26 surfaces). |
-| **Earth Engine Cloud Pipelines** | `cli.py` & cloud reducers | **Roadmap Milestone (M1)** | Local/STAC cached tiles | Doctor command honestly declares `"earth observation ingestion implemented : no"` to ensure users are not misled about cloud reducer status. |
+| **Observation Reduction** | `engine.observation.reduction` | **Fully Operational** | Microsoft Planetary Computer STAC / Sentinel-2 | Multi-spectral optical indices (NDVI, EVI, EVI2, NDMI, NBR) with SCL cloud & cloud-shadow masking. Explicit rejection of optical-to-carbon direct conversion. |
+| **Causal Inference Engine** | `engine.causal.synthetic_control` & `engine.causal.did` | **Fully Operational** | Empirical / Synthetic panels | Penalized simplex synthetic control (FISTA, non-negative donor weights summing to 1). Pre-trend RMSPE checks, in-space/in-time placebo rank tests, and leave-one-out sensitivity checks. |
+| **Climate Confounding** | `engine.causal.climate_confounding` & `data_access.climate` | **Operational** | CHIRPS v2.0 & NASA POWER | Standardized Precipitation Index (SPI-12) and temperature covariates help separate drought shocks from intervention trends. |
+| **Groq Intelligence** | `platform.intelligence.groq_service` | **Fully Operational** | Groq LPU API (opt-in) | Qualitative policy synthesis and PDD audits grounded strictly in retrieved `ProjectContext` records; fail-closed if unconfigured. |
+| **Audit Ledger & Reproducibility** | `platform.audit.ledger` | **Fully Operational** | SHA-256 Merkle Root Ledger | Binds boundary polygon, sensor inputs, code commit SHA, and findings into an immutable Merkle chain (`gt-merkle-v2`). Deterministic verification API. |
+| **Independent Benchmark Suite** | `engine.benchmark.suite` | **Operational (Synthetic + Honest Literature N/A)** | Live FISTA synthetic panels + Literature citations | Runs live FISTA synthetic control on convex-hull synthetic test panels (`is_synthetic=True`) and marks historical real-data literature cases (`BM-01`, `BM-02`) as `UNAVAILABLE` until complete multi-tile rasters are ingested. |
+| **Web Frontend** | `apps/web` (Next.js 14) | **Fully Operational** | Live API + Typed OpenAPI Schemas | Multi-tenant persona workspaces, project documents & evidence views, CSS Modules with semantic light/dark design tokens. |
+| **Earth Engine Cloud Pipelines** | `cli.py` & `platform.datasets.observation` | **Optional / Fail-Closed** | Local/STAC cached tiles | Doctor command honestly declares `"earth observation ingestion implemented : no"` until automated cloud pipelines are configured and validated. |
 
 ---
 
@@ -45,20 +45,18 @@ Our primary mandate is **traceability, non-conflation, and reproducibility**. Ev
 3. **Claim Decomposition Engine**:
    - 8 dimensions: `area_restored`, `trees_planted`, `tree_survival`, `vegetation_improvement`, `biodiversity_improvement`, `carbon_sequestration`, `water_resource_improvement`, and `ecosystem_recovery`.
    - Projects are never condemned or approved on a single metric; claims are verified independently with granular status chips.
-4. **Multi-Sensor Optical & Radar Reductions**:
-   - Sentinel-2 Level-2A surface reflectance bottom-of-atmosphere correction with Scene Classification Layer (SCL) cloud/shadow masking.
-   - Dual-polarization Sentinel-1 SAR and ALOS PALSAR-2 backscatter cross-ratios for understory structural complexity.
-5. **UI/UX Dual-Theme Re-engineering**:
-   - Calibrated soft charcoal/deep slate dark theme (`#161d19` background, `#212c26` elevated cards, `#4fb383` emerald accent) replacing muddy voids.
-   - Clear 6-pillar primary navigation and persistent 9-stage lifecycle progress bar with contextual next actions.
+4. **Multi-Spectral Optical Reductions**:
+   - Sentinel-2 Level-2A surface reflectance with Scene Classification Layer (SCL) cloud/shadow masking across NDVI, EVI, NDMI, and NBR.
+5. **UI/UX Dual-Theme Engineering**:
+   - Semantic light and dark CSS design tokens (`apps/web/src/styles/themes.css`) with high-contrast WCAG AA typography and distinct simulated-data badging.
 
 ---
 
 ### 2.2 What is Partial or Scoped (Honest Disclosures)
-1. **Bioacoustic ARU Audio Processing**:
-   - Acoustic sensor loggers are supported in the claim ontology (`CLM-BIO-05`), but field SD-card retrieval pipelines require physical upload; unretrieved audio stays strictly labeled as `unverified`.
-2. **Localized Allometric Harvest Equations**:
-   - Biomass conversion uses GEDI LiDAR relative height metrics (RH50, RH75, RH98) combined with Chave et al. (2014) pan-tropical equations. Destructive harvest calibration for localized dry Miombo root-to-shoot ratios is acknowledged as a scientific limitation.
+1. **Calibrated Allometric Biomass / Carbon Conversion**:
+   - `engine.biomass.allometry` fails closed with `NotCalibratedError` across all ecozones (`DEFAULT_BIOMASS_PARAMETERS` carries `ndvi_to_agb_slope=None`). Spectral vegetation indices are never implicitly converted into tonnes of carbon without plot-calibrated allometry.
+2. **Real Multi-Tile Pre-Treatment Rasters & SAR / LiDAR**:
+   - Sentinel-1 SAR, ALOS PALSAR-2, bioacoustic ARUs, and GEDI LiDAR biomass pipelines are not implemented in the runtime engine; analyses missing complete pre-treatment optical rasters fail closed cleanly (`INCONCLUSIVE` / `DataUnavailableError`).
 
 ---
 

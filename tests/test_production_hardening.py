@@ -74,7 +74,6 @@ def cases_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     target = tmp_path / "cases"
     shutil.copytree(REPO_ROOT / "cases", target)
     monkeypatch.setattr(get_settings(), "cases_dir", target)
-    monkeypatch.setattr(creator, "_generate_and_store_fixture", lambda case: None)
     monkeypatch.setattr(creator, "_queue_initial_run", lambda case: None)
     return target
 

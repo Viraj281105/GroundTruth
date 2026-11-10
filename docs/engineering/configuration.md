@@ -53,40 +53,36 @@ flowchart TD
 | `WORKER_METRICS_PORT` | `int` | `9465` | Internal port for a worker's Prometheus metrics; `0` turns them off. |
 | `METRICS_BIND_ADDRESS` | `str` | `127.0.0.1` | Address the metrics servers listen on; containers set `0.0.0.0` and never publish the port. |
 
-### 2.2 Storage & Persistence
+### 2.2 Storage, Security & Persistence
 
 | Variable | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `DATABASE_URL` | `SecretStr` | — | PostgreSQL connection string (`postgresql+psycopg://user:pass@host/db`). |
-| `GROUNDTRUTH_STORAGE_BACKEND` | `str` | `development` | Storage driver selection: `development` (local POSIX) or `production` (S3). |
-| `GROUNDTRUTH_DEV_STORAGE_PATH` | `Path` | `./data/storage` | Local directory root for four-tier storage. |
-| `AWS_S3_BUCKET` | `str` | `groundtruth-evidence` | Target S3 bucket for cloud storage backend. |
+| `DATABASE_URL` | `str \| None` | `None` | PostgreSQL or SQLite connection string (`postgresql+psycopg://...`). Required by API/worker when persistence is enabled. |
+| `PROJECT_DOCUMENTS_DIR` | `Path` | `data/project_documents` | Local blob-store root for uploaded project documents when `STORAGE_BACKEND` is local. |
+| `PROJECT_DOCUMENT_MAX_BYTES` | `int` | `10485760` (10 MB) | Largest accepted project document upload in bytes. |
+| `STORAGE_BACKEND` | `str` | `local` | Blob storage driver selector (`local` via `LocalStorageBackend`, or `s3` via `S3StorageBackend`). |
+| `S3_BUCKET` | `str \| None` | `None` | Target S3/R2/MinIO bucket name when `STORAGE_BACKEND=s3`. |
+| `TRUST_PROXY_HEADERS` | `bool` | `false` | Trust `X-Forwarded-For` for rate-limiting client identification only behind a trusted reverse proxy. |
 
-### 2.3 Compute & Workstation Performance
+### 2.3 Ingestion, GenAI & Optional Redis
 
 | Variable | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `GROUNDTRUTH_WORKERS` | `int` | `8` | Number of concurrent worker processes (empirically tuned sweet spot). |
-| `GROUNDTRUTH_MAX_MEMORY_GB` | `int` | `24` | Memory allocation budget ceiling in gigabytes. |
-| `GROUNDTRUTH_CHUNK_WINDOW_SIZE`| `int` | `512` | Pixel window dimensions for COG raster reduction. |
-| `REDIS_URL` | `SecretStr` | — | Redis connection URL for distributed Celery/Arq worker queue. |
+| `OBSERVATION_INGESTION_ENABLED` | `bool` | `true` | Enable background Sentinel-2 observation ingestion polling in the worker process. |
+| `INGESTION_POLL_SECONDS` | `float` | `10.0` | Poll interval for queued observation ingestion jobs. |
+| `REDIS_URL` | `str \| None` | `None` | Optional Redis connection URL for shared `RedisRateLimitBackend` or optional `redis_queue` adapter. |
+| `GENAI_PROVIDER` | `str` | `none` | Narration backend (`none`, `nugen`, `openai`, `anthropic`, `gemini`). Defaults to deterministic rendering. |
+| `GEMINI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `NUGEN_API_KEY` | `SecretStr \| None` | `None` | Downstream narration keys (masked via `SecretStr`). |
+| `GROQ_API_KEY` | `SecretStr \| None` | `None` | Opt-in Groq inference key for qualitative `ProjectContext` narration (`status: "unavailable"` when unset). |
 
 ---
 
 ## 3. The `groundtruth doctor` Diagnostic Tool
 
-Developers and deployment operators verify runtime environment configuration using the CLI:
+Developers and deployment operators verify runtime environment configuration and scientific capabilities honestly using the CLI (`groundtruth.cli:main`):
 
 ```bash
 groundtruth doctor
 ```
 
-```
-[OK] Python Runtime: 3.12.3 (64-bit)
-[OK] Database Connection: postgresql+psycopg://... (PostgreSQL 16.2)
-[OK] Storage Backend: LocalStorageBackend (./data/storage)
-[OK] Worker Concurrency: 8 processes (Ceiling: 24 GB RAM)
-[OK] Authentication: Enabled (AUTH_REQUIRED=true, 7-day sessions)
-[OK] STAC Provider: Planetary Computer (API key present)
-[OK] GenAI Grounding: Downstream verification gate active
-```
+`groundtruth doctor` reports package/engine versions, whether optional extras (`fastapi`, `geopandas`, `httpx`) and credentials are present, explicitly flags `"earth observation ingestion implemented : no"` when no validated cloud ingestion registry entry is active, and reports biomass carbon conversion as `"NOT CALIBRATED"`.

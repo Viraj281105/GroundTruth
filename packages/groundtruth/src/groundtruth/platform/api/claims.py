@@ -83,9 +83,13 @@ class ClaimsResponse(BaseModel):
     unrecognised_sentences: list[ClaimSpan] = Field(default_factory=list)
 
 
+MAX_PDF_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_PDF_B64_CHARS = 15_000_000
+
+
 class PdfExtractRequest(BaseModel):
-    file_base64: str
-    filename: str = "uploaded.pdf"
+    file_base64: str = Field(min_length=1, max_length=MAX_PDF_B64_CHARS)
+    filename: str = Field(default="uploaded.pdf", max_length=255)
 
 
 class PdfExtractResponse(BaseModel):
@@ -102,13 +106,26 @@ class PdfExtractResponse(BaseModel):
 )
 def extract_pdf(body: PdfExtractRequest) -> PdfExtractResponse:
     """Extract plain text from base64 PDF bytes (PDD or monitoring report)."""
-    import pypdf
+    try:
+        import pypdf
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=501,
+            detail="PDF text extraction requires the optional 'pypdf' package, which is not installed in this build.",
+        ) from exc
 
     try:
         raw_b64 = body.file_base64
         if "," in raw_b64:
             raw_b64 = raw_b64.split(",", 1)[1]
-        contents = base64.b64decode(raw_b64)
+        contents = base64.b64decode(raw_b64, validate=True)
+        if len(contents) > MAX_PDF_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"PDF file exceeds maximum size of {MAX_PDF_UPLOAD_BYTES // (1024 * 1024)} MB.",
+            )
+        if not contents.lstrip().startswith(b"%PDF-"):
+            raise HTTPException(status_code=422, detail="Uploaded payload is not a valid PDF.")
         reader = pypdf.PdfReader(io.BytesIO(contents))
         extracted = []
         for page in reader.pages:
@@ -122,6 +139,8 @@ def extract_pdf(body: PdfExtractRequest) -> PdfExtractResponse:
             num_pages=len(reader.pages),
             filename=body.filename,
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Invalid PDF: {exc}") from exc
 

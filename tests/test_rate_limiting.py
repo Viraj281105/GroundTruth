@@ -88,7 +88,7 @@ def test_rate_limit_recovery_after_expiry() -> None:
     assert r_recovered.headers["X-RateLimit-Remaining"] == "1"
 
 
-def test_client_isolation_different_ips() -> None:
+def test_client_isolation_different_ips(monkeypatch: pytest.MonkeyPatch) -> None:
     backend = MemoryRateLimitBackend()
     limiter = RateLimiter(limit=2, window_seconds=10, scope_prefix="isolate", backend=backend)
 
@@ -100,14 +100,29 @@ def test_client_isolation_different_ips() -> None:
 
     client = TestClient(app)
 
-    # Client A exhausts their quota
+    # By default (trust_proxy_headers=False), spoofed X-Forwarded-For is ignored.
     headers_a = {"X-Forwarded-For": "198.51.100.1"}
+    headers_b = {"X-Forwarded-For": "203.0.113.42"}
+    assert client.get("/isolated", headers=headers_a).status_code == 200
+    assert client.get("/isolated", headers=headers_b).status_code == 200
+    assert client.get("/isolated", headers=headers_b).status_code == 429
+
+    # When behind a configured reverse proxy (trust_proxy_headers=True), client IPs isolate cleanly.
+    backend.clear()
+    monkeypatch.setattr(get_settings(), "trust_proxy_headers", True)
     assert client.get("/isolated", headers=headers_a).status_code == 200
     assert client.get("/isolated", headers=headers_a).status_code == 200
     assert client.get("/isolated", headers=headers_a).status_code == 429
 
     # Client B on a different IP must not be blocked
-    headers_b = {"X-Forwarded-For": "203.0.113.42"}
     r_b = client.get("/isolated", headers=headers_b)
     assert r_b.status_code == 200
     assert r_b.headers["X-RateLimit-Remaining"] == "1"
+
+
+def test_memory_rate_limit_backend_bounded_keys() -> None:
+    backend = MemoryRateLimitBackend(max_keys=3)
+    for i in range(10):
+        allowed, _, _ = backend.hit(f"k{i}", limit=2, window_seconds=60)
+        assert allowed is True
+    assert len(backend._hits) <= 3

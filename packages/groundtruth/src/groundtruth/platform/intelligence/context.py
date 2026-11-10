@@ -22,7 +22,9 @@ if TYPE_CHECKING:
 _log = logging.getLogger("groundtruth.intelligence")
 
 _MAX_TEXT = 320
-_PROCESSED_DOC_STATES = frozenset({"processed", "ready", "extracted", "indexed", "parsed"})
+_PROCESSED_DOC_STATES = frozenset(
+    {"processed", "ready", "extracted", "text_extracted", "indexed", "parsed"}
+)
 
 
 @dataclass(frozen=True)
@@ -63,32 +65,26 @@ def _clip(text: Any) -> str:
 
 
 def list_project_documents(project_id: str) -> list[dict[str, Any]]:
-    """Uploaded documents for the project, or ``[]`` when the documents module is unavailable.
-
-    The documents module is built separately; this integrates with it only if it exposes
-    ``list_project_documents(project_id)``. Any failure means "no documents", never an error.
-    """
+    """Uploaded documents for ``project_id``, or ``[]`` when no database is configured."""
+    engine = None
     try:
-        import importlib
+        from groundtruth.platform.config import get_settings
+        from groundtruth.platform.projects import documents as project_docs
+        from groundtruth.platform.store.database import create_db_engine, create_session_factory
 
-        mod = importlib.import_module("groundtruth.platform.documents")
-        fn: Callable[[str], Any] | None = getattr(mod, "list_project_documents", None)
-        if fn is None:
+        if not get_settings().database_url:
             return []
-        out: list[dict[str, Any]] = []
-        for d in fn(project_id) or []:
-            if isinstance(d, dict):
-                out.append(d)
-            else:
-                out.append(
-                    {
-                        k: getattr(d, k, None)
-                        for k in ("id", "filename", "status", "document_type", "kind")
-                    }
-                )
-        return out
+        engine = create_db_engine()
+        with create_session_factory(engine)() as db:
+            return [
+                project_docs.document_dict(row)
+                for row in project_docs.list_documents(db, project_id)
+            ]
     except Exception:
         return []
+    finally:
+        if engine is not None:
+            engine.dispose()
 
 
 def _safe(label: str, missing: list[str], build: Callable[[], dict[str, Any]]) -> dict[str, Any]:

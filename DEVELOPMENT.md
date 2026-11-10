@@ -32,7 +32,6 @@ GroundTruth provides unified startup scripts for Windows, macOS, and Linux:
 - **Node.js:** v18.0.0 or higher (v20+ LTS recommended)
 - **Git:** 2.40+
 - **Docker & Docker Compose:** (Optional, for containerized multi-service deployment)
-- **Android Studio / Android SDK:** (Optional, for `apps/mobile` Jetpack Compose development)
 
 ### Step-by-Step Installation
 
@@ -81,8 +80,11 @@ GroundTruth uses a modular dependency architecture. The core causal engine depen
 |---|---|---|
 | `core` | `numpy`, `pandas`, `pydantic>=2.0` | Pure deterministic causal engine and FISTA solver. Runs anywhere offline. |
 | `api` | `fastapi`, `uvicorn`, `httpx` | REST API, OpenAPI schema generation, and HTTP routing. |
-| `genai` | `google-genai` | Downstream Gemini narrative generation (strictly grounding-verified). |
-| `geo` | `geopandas`, `shapely`, `rasterio`, `pyproj` | STAC zonal statistics, polygon intersection, and coordinate projections. |
+| `genai` | `httpx>=0.27` | Downstream LLM REST narrative generation (Gemini, OpenAI, Anthropic, NuGen, Groq — strictly grounding-verified). |
+| `db` | `sqlalchemy>=2.0`, `alembic>=1.13` | Relational persistence, multi-tenancy tables, and Alembic migrations (`0001`–`0012`). |
+| `ingest` | `pystac-client`, `planetary-computer`, `rasterio` | Planetary Computer STAC scene discovery and windowed COG ingestion. |
+| `geo` | `geopandas`, `shapely`, `rasterio`, `xarray`, `rioxarray` | Zonal statistics, polygon intersection, and coordinate projections. |
+| `queue` | `redis>=5.0`, `arq>=0.26`, `temporalio>=1.5` | Optional Redis/arq and Temporal queue adapters, plus Redis rate limiting. |
 | `dev` | `pytest`, `ruff`, `mypy`, `hypothesis` | Complete testing, linting, and static analysis toolchain. |
 
 ---
@@ -106,9 +108,10 @@ npm run dev
 # Web application available at: http://localhost:3000
 ```
 
-### C. Background Worker (Celery & Database Queue)
+### C. Background Worker (SQL Row-Lease Queue)
 ```bash
-# Execute background analysis jobs with heartbeat and lease management
+# Execute background analysis jobs with heartbeat, lease management, and observation ingestion polling
+python -m apps.worker.main --migrate
 python -m apps.worker.main
 ```
 
@@ -134,8 +137,8 @@ GroundTruth maintains an exhaustive, multi-layered automated testing regime:
 ```mermaid
 flowchart TD
     subgraph TestSuites["Testing Architecture"]
-        Pytest["Backend Suite (Pytest)<br/>1,466 collected tests<br/>Contract boundaries · SCM · DiD · Auth · Gateways"]
-        Vitest["Frontend Suite (Vitest)<br/>542 passing tests across 57 files<br/>Personas · 8 Dimensions · State Gating · Types"]
+        Pytest["Backend Suite (Pytest)<br/>2,130+ offline tests<br/>Contract boundaries · SCM · DiD · Auth · Gateways"]
+        Vitest["Frontend Suite (Vitest)<br/>746 passing tests across 75 files<br/>Personas · 8 Dimensions · State Gating · Types"]
         E2E["Playwright Persona E2E<br/>Auditor · Funder · NGO · Gov flows"]
         AST["AST Static Boundary Guard<br/>tests/test_contract_boundary.py"]
     end
@@ -156,7 +159,7 @@ pytest tests/test_contract_boundary.py    # AST contract boundary enforcement
 ```
 
 ### Running Frontend Tests (Vitest)
-The web application features **542 passing automated tests across 57 test files**:
+The web application features **746 passing automated tests across 75 test files**:
 
 ```bash
 cd apps/web
@@ -164,9 +167,8 @@ npm test -- --run
 ```
 Output:
 ```
- Test Files  57 passed (57)
-      Tests  542 passed (542)
-   Duration  4.00s
+ Test Files  75 passed (75)
+      Tests  746 passed (746)
 ```
 
 ### Checking Contract Boundaries and API Types
@@ -183,30 +185,9 @@ make api-types
 
 ---
 
-## 6. Native Mobile Development (Jetpack Compose)
+## 6. Responsive Mobile Web Support
 
-Field auditors and project managers capture evidence and review dashboards on mobile via `apps/mobile`:
-
-```mermaid
-flowchart LR
-    A["Jetpack Compose UI<br/>(Material 3)"] --> B["ViewModel & StateFlow"]
-    B --> C["Room SQLite Offline Cache"]
-    C <-->|Retrofit2 Sync| D["FastAPI Backend (:8000)"]
-```
-
-### Mobile Views
-The native client provides full parity with the web interface for offline inspection:
-
-| Native Auditor Screen | Native NGO Screen |
-| :---: | :---: |
-| ![Native Auditor](docs/product/screens/compose-auditor-dashboard.png) | ![Native NGO](docs/product/screens/compose-ngo-dashboard.png) |
-
-To run the mobile test suite or previews:
-```bash
-cd apps/mobile
-./gradlew test
-./gradlew assembleDebug
-```
+Field auditors and project managers inspect dashboards on mobile viewports (`375 px`) through the responsive Next.js web application (`apps/web`). There is no separate native Android application in this repository; visual parity specs under `apps/web/e2e/visual.spec.ts` cover desktop and mobile browser viewports.
 
 ---
 

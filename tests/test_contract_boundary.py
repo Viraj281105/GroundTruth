@@ -22,7 +22,9 @@ from groundtruth.contracts.result import EngineStatus, ErrorCode
 from groundtruth.contracts.types import Indicator
 from groundtruth.contracts.version import is_compatible, parse_version
 
-SRC = pathlib.Path(__file__).resolve().parents[1] / "src" / "groundtruth"
+SRC = (
+    pathlib.Path(__file__).resolve().parents[1] / "packages" / "groundtruth" / "src" / "groundtruth"
+)
 
 # The only engine names the platform is allowed to import.
 ENGINE_PUBLIC_API = {
@@ -35,10 +37,14 @@ ENGINE_PUBLIC_API = {
     "assess",
     "Assessment",
     "AssessmentInputs",
+    "CausalCriterionResult",
+    "CausalReadinessState",
     "ClimateYear",
     "ReadinessSummary",
     "SeriesPoint",
     "SpreadPoint",
+    "assess_causal_readiness",
+    "run_independent_benchmark_suite",
 }
 
 

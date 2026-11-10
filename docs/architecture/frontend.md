@@ -1,8 +1,8 @@
 # Frontend Architecture
 
 **Owner**: Frontend Engineering (`apps/web/`)  
-**Stack**: Next.js 14 (App Router), TypeScript 5.4, TailwindCSS, Recharts, MapLibre GL, SWR, Headless UI.  
-**Test Suite**: 542 unit, component, and integration tests (`vitest` / React Testing Library), Playwright E2E.
+**Stack**: Next.js 14 (App Router), TypeScript 5.7, CSS Modules + design tokens, MapLibre GL, openapi-fetch, Lucide React.  
+**Test Suite**: 746 unit, component, and integration tests across 75 files (`vitest`), Playwright E2E.
 
 The GroundTruth 2.0 frontend is an enterprise web application designed for due-diligence professionals, portfolio managers, sovereign authorities, and ecosystem operators. It renders high-dimensional econometric counterfactuals, multi-temporal geospatial observations, and cryptographic evidence provenance with zero client-side data fabrication.
 
@@ -26,7 +26,7 @@ graph TD
         AppLayout --> ProjectDetail["Project & Evidence Explorer (/projects/[id])"]
     end
 
-    subgraph DesignSystem["Design System (components/ds/) • 542 Tests"]
+    subgraph DesignSystem["Design System (components/ds/) • 746 Vitest Tests"]
         Atoms["Primitives: Button, Input, Badge, Card, Stat, Table, Tabs, Select, Switch, Alert, Modal"]
         Charts["Visualization: CounterfactualChart, PlaceboHistogram, TrajectorySparkline"]
         Map["Geospatial: MapLibreBoundaryViewer, DonorDistrictsLayer"]
@@ -66,7 +66,7 @@ GroundTruth 2.0 provides dedicated, optimized views for each key stakeholder:
 * **Key Visuals**: Simplex synthetic control counterfactual trajectory, pre-treatment RMSPE fit curves, leave-one-out sensitivity bounds, in-space placebo distribution p-value ranking, and complete evidence provenance traces.
 * **Required Scope**: `audit` or `contribute`.
 
-![Auditor Dashboard](../product/screens/compose-auditor-dashboard.png)
+![Auditor Dashboard](../product/screens/auditor-dashboard.png)
 
 ### 2.2 Funder Persona (`/funder`)
 * **Primary Objective**: Portfolio-level capital allocation risk, credit over-issuance exposure, and delivery tracking.
@@ -93,7 +93,7 @@ GroundTruth 2.0 provides dedicated, optimized views for each key stakeholder:
 
 ## 3. GroundTruth Design System (`components/ds/`)
 
-The design system provides a comprehensive, accessible, and mathematically precise library of components, backed by **542 automated unit and component tests**:
+The design system provides a comprehensive, accessible, and mathematically precise library of components, backed by **746 automated tests across 75 Vitest files**:
 
 ```mermaid
 graph LR
@@ -120,7 +120,7 @@ graph LR
 
 ### 3.1 Component Highlights
 * **`ds/stat`**: Formats numerical values strictly with units and confidence intervals (e.g., `+0.042 NDVI (90% CI: +0.012 to +0.071, SCM In-Space Placebo)`).
-* **`ds/badge`**: Epistemological state tags (`RAW_OBSERVED`, `DERIVED`, `MODEL_ESTIMATED`, `INFERRED`, `INSUFFICIENT_EVIDENCE`).
+* **`ds/badge`**: Epistemological state tags (`OBSERVED`, `DERIVED`, `MODEL_ESTIMATED`, `INFERRED`, `UNAVAILABLE`, `INSUFFICIENT_EVIDENCE`).
 * **`ds/alert`**: Contextual scientific callouts for non-negotiable caveats.
 * **`ds/table`**: Paginated, sortable donor candidate comparison matrix displaying weights, geographic distances, and covariate balance.
 

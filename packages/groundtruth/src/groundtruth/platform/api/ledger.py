@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
 from groundtruth.platform.api.errors import ApiErrorBody
@@ -198,6 +198,34 @@ def get_project_ledger(request: Request, access: Reader) -> LedgerView:
     )
 
 
+MAX_REPORT_VERIFY_BYTES = 25 * 1024 * 1024
+_READ_CHUNK_BYTES = 1024 * 1024
+
+
+async def _read_bounded_upload(file: UploadFile, max_bytes: int | None = None) -> bytes:
+    limit = MAX_REPORT_VERIFY_BYTES if max_bytes is None else max_bytes
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(_READ_CHUNK_BYTES)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > limit:
+            raise HTTPException(
+                status_code=413,
+                detail={
+                    "code": "payload_too_large",
+                    "message": (
+                        f"Uploaded report exceeds maximum size of {limit // (1024 * 1024)} MB."
+                    ),
+                    "hint": None,
+                },
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 @router.post(
     "/projects/{project_id}/ledger/verify-report",
     response_model=VerifyReportResult,
@@ -219,7 +247,7 @@ async def verify_report(
             message="No sealing record with that id exists for this project.",
             record_id=record_id,
         )
-    content = await file.read()
+    content = await _read_bounded_upload(file)
     ok, message = ledger.verify_report(record_id, content)
     audit(
         request,
@@ -283,12 +311,11 @@ def list_reports(slug: str, request: Request, ctx: Viewer) -> ReportsView:
     entries: list[ReportEntry] = []
     with resolve_sessions(request)() as db:
         items = service.list_org_projects(db, ctx)
+    verified_by_project = ledger.verify_projects([p.id for p, _ in items])
     for project, level in items:
-        verification = ledger.verify_project(project.id)
+        verification, records = verified_by_project[project.id]
         sealed = [
-            r
-            for r in ledger.get_records(project.id)
-            if r.record_kind == KIND_REPORT_SEALED and r.hash_scheme is not None
+            r for r in records if r.record_kind == KIND_REPORT_SEALED and r.hash_scheme is not None
         ]
         last = sealed[-1] if sealed else None
         can_export = level_allows(level, Capability.DOSSIER_EXPORT)

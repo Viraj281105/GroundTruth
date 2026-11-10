@@ -11823,10 +11823,13 @@
         "properties": {
           "file_base64": {
             "type": "string",
+            "maxLength": 15000000,
+            "minLength": 1,
             "title": "File Base64"
           },
           "filename": {
             "type": "string",
+            "maxLength": 255,
             "title": "Filename",
             "default": "uploaded.pdf"
           }

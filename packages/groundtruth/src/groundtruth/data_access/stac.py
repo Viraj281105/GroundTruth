@@ -112,6 +112,9 @@ def _configure_proj_env() -> None:
             os.environ["PROJ_LIB"] = str(pyproj_dir)
 
 
+_configure_proj_env()
+
+
 @dataclass(frozen=True)
 class SceneDescriptor:
     """Minimal, typed description of one STAC item."""

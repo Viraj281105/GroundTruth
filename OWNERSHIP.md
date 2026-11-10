@@ -12,18 +12,17 @@ GroundTruth was developed for the **PCCOE International Grand Challenge 2026 (In
 ```mermaid
 flowchart TD
     subgraph Leadership["System Governance"]
-        Viraj["Viraj Jadhao<br/>Lead Architect · Scientific Engine · Full-Stack Web & Mobile Product"]
+        Viraj["Viraj Jadhao<br/>Lead Architect · Scientific Engine · Full-Stack Web Product"]
         Bhumi["Bhumi Sirvi<br/>Platform Engineer · Data Ingestion Pipelines · System Infrastructure"]
     end
 
     Viraj --> S1["Scientific Causal Engine (FISTA, DiD, Placebos)"]
     Viraj --> S2["8-Dimension Framework & Graduation Ladder"]
-    Viraj --> S3["Web Frontend (542 Vitest Tests, 4 Personas)"]
-    Viraj --> S4["Jetpack Compose Mobile Client"]
+    Viraj --> S3["Web Frontend (746 Vitest Tests, 4 Personas)"]
 
     Bhumi --> P1["FastAPI Backend & Asynchronous Job Worker"]
     Bhumi --> P2["Multi-Tenant Isolation & Scrypt Auth Subsystem"]
-    Bhumi --> P3["PostgreSQL 15 & Redis Queue Infrastructure"]
+    Bhumi --> P3["PostgreSQL 15 & Job Queue Infrastructure"]
     Bhumi --> P4["Docker Compose & Production Deployment Stack"]
 
     S1 & S2 & P1 & P2 --- Boundary["contracts/ (Shared Versioned Boundary)"]
@@ -37,10 +36,9 @@ The boundaries between subsystems are enforced mechanically in code and validate
 
 ```
 apps/
-  web/            Next.js 14 App Router, 4 Personas, 542 Vitest tests       Viraj   [Production Ready]
-  mobile/         Android Native Jetpack Compose, Material 3, Previews      Viraj   [Production Ready]
+  web/            Next.js 14 App Router, 4 Personas, 746 Vitest tests       Viraj   [Production Ready]
   api/            FastAPI ASGI REST endpoints, OpenAPI Schema               Bhumi   [Production Ready]
-  worker/         Celery & Postgres background analysis worker              Bhumi   [Production Ready]
+  worker/         SQL row-lease background analysis worker                  Bhumi   [Production Ready]
 
 packages/groundtruth/src/groundtruth/
   contracts/      Shared immutable contracts, evidence schema, units        Shared  [Frozen v1.0.0]
@@ -55,19 +53,19 @@ packages/groundtruth/src/groundtruth/
     cases/        Case registry and request transformers
     datasets/     Fail-closed data accessors, real S2 & CHIRPS loaders
     jobs/         Job queue, lease acquisition, cooperative cancellation
-    store/        PostgreSQL evidence persistence and run history
+    store/        PostgreSQL evidence persistence and run history (0001-0012)
     reports/      Deterministic report renderer and Gemini grounding
 
 cases/            20+ real-world project definitions and GeoJSON boundaries
 data/             Empirical data storage (S2 L2A, CHIRPS, NASA POWER, geoBoundaries)
-tests/            1,466 collected backend tests + AST boundary enforcement
+tests/            2,130+ offline backend tests + AST boundary enforcement
 ```
 
 ### AST Boundary Enforcement in CI
 `tests/test_contract_boundary.py` parses the Abstract Syntax Tree (AST) of the repository to prevent architectural drift:
 - `contracts/` cannot import from `engine/` or `platform/`.
 - `engine/` cannot import from `platform/` and cannot execute I/O (no sockets, no disk reads, no credentials).
-- `platform/` can only import approved entrypoints from `engine/` (`run_analysis`, `describe_engine`, `engine_ref`).
+- `platform/` can only import approved entrypoints from `groundtruth.engine` (`run_analysis`, `describe_engine`, `engine_ref`, `ENGINE_VERSION`, causal readiness, and benchmark suite APIs).
 
 ---
 
@@ -81,13 +79,12 @@ tests/            1,466 collected backend tests + AST boundary enforcement
 | **8-Dimension Assessment Framework** | **A** | R | Implementation of Trajectory, Spatial, Climate, Risk, Progress, Comparison, Quality, Attribution. |
 | **Graduation Ladder (Levels 0–5)** | **A** | R | Level gating logic, Kariba REDD+ graduation to Level 2 (Contextual Intelligence). |
 | **Task 5/5B Audit Remediation** | **A** | R | Quarantining fabricated caches, establishing fail-closed gates (`DataUnavailableError` / 501). |
-| **Web Frontend (Next.js 14)** | **A** | R | 542 Vitest tests passing across 57 files, Tailwind styling, interactive charts. |
-| **4-Persona Dashboard Experience** | **A** | R | Role-specific views for Restoration NGO, CSR Funder, Auditor, and Government. |
-| **Android Native App (Compose)** | **A** | R | Jetpack Compose UI, Material 3, Room offline cache, Compose Previews. |
+| **Web Frontend (Next.js 14)** | **A** | R | 746 Vitest tests passing across 75 files, CSS Modules & design tokens, interactive charts. |
+| **Responsive Mobile Web** | **A** | R | 375 px viewport compatibility tested via Playwright visual specs. |
 | **FastAPI REST API & OpenAPI** | R | **A** | Router endpoints, OpenAPI snapshot generation, TypeScript client synchronization. |
-| **Multi-Tenant RBAC & Security** | R | **A** | Scrypt password derivation, session cookies, cross-tenant 403 denial. |
+| **Multi-Tenant RBAC & Security** | R | **A** | Scrypt password derivation, session cookies, cross-tenant 404/403 denial. |
 | **Data Ingestion & Caching Layer** | R | **A** | CHIRPS 514-month rainfall, NASA POWER temperature, Sentinel-2 L2A rasters. |
-| **Database Schema & Migrations** | R | **A** | PostgreSQL 15, SQLAlchemy 2.0, Alembic migrations 0001–0006. |
+| **Database Schema & Migrations** | R | **A** | PostgreSQL 15, SQLAlchemy 2.0, Alembic migrations 0001–0012. |
 | **Docker & Infrastructure Stack** | R | **A** | Docker Compose multi-container configuration, Helm templates, local runners. |
 
 ---
@@ -121,7 +118,7 @@ stateDiagram-v2
 4. **Database Migration:** Any schema alteration must include both forward (`upgrade`) and backward (`downgrade`) Alembic migration scripts.
 
 ### C. DoD for Frontend & Persona Views
-1. **Vitest Coverage:** All UI features must maintain full test pass rates (542 passing tests).
+1. **Vitest Coverage:** All UI features must maintain full test pass rates (746 passing tests across 75 files).
 2. **Type Safety:** Automated check `npm run check:api-types` must report zero discrepancies against the backend OpenAPI contract.
 3. **Explicit Simulation Banners:** When displaying simulated benchmark runs, the UI must render high-visibility simulation warnings.
 4. **Cross-Persona Accessibility:** Dashboards must render cleanly in light mode across all four persona views.

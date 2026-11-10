@@ -3,9 +3,9 @@
 > **The definitive, verified source of truth for platform capabilities, analytical models, data access layers, and governance controls.**
 
 **Document Version:** 2.0.0  
-**Last Audited:** 2026-11-09  
-**Status Baseline:** Sub-project 1 (Kariba Vertical Slice) Complete & Verified in CI  
-**Test Suite Health:** 266 Tenancy Tests · 542 Web Vitest Specs · 1,121+ Core Platform Unit Tests  
+**Last Audited:** 2026-11-10  
+**Status Baseline:** Multi-Tenant Verification Platform Verified Locally  
+**Test Suite Health:** 2,130+ Offline Backend Tests · 746 Web Vitest Specs (75 Files)  
 
 ---
 
@@ -39,7 +39,7 @@ flowchart LR
 
 ## 2. Multi-Tenant Architecture & Governance Layer
 
-Implemented under Alembic migration `0007_tenancy.py` and enforced via `platform/auth/authz.py`.
+Implemented under Alembic migrations `0007`–`0012` and enforced via `platform/auth/authz.py`.
 
 ```mermaid
 classDiagram
@@ -108,8 +108,7 @@ Built using Next.js 14 App Router, CSS Modules, semantic design tokens, and MapL
 | **Government Regional Overview** | **Verified Live** | ![Government](screens/government-dashboard.png) | Regional 51-district drought monitoring (SPI-12), cross-project boundary distribution, jurisdictional conservation tracking. |
 | **Kariba REDD+ Flagship View** | **Verified Live** | ![Kariba](screens/kariba-overview.png) | 1,072,638 ha verified boundary, Level 2 assessment status, 2021–2023 Sentinel-2 indices, and explicit missing data requirements. |
 | **Fail-Closed Security Denial View** | **Verified Live** | ![Cross-Org](screens/cross-org-denied.png) | Clean 404 unauthorized card, zero information leakage, append-only security audit trail logging. |
-| **Responsive Mobile Shell** | **Verified Live** | ![Auditor Phone](screens/auditor-dashboard-phone.png)<br/>![NGO Phone](screens/ngo-dashboard-phone.png) | 375 px mobile viewports fully verified without horizontal scroll; collapsible navigation drawer, responsive metric grids. |
-| **Native Jetpack Compose Parity** | **Verified Live** | ![Compose Auditor](screens/compose-auditor-dashboard.png)<br/>![Compose NGO](screens/compose-ngo-dashboard.png) | Reference native mobile client with complete session authentication, dashboard rendering, and cryptographic verification. |
+| **Responsive Mobile Web** | **Verified Live** | ![Auditor Phone](screens/auditor-dashboard-phone.png)<br/>![NGO Phone](screens/ngo-dashboard-phone.png) | 375 px mobile viewports fully verified without horizontal scroll; collapsible navigation drawer, responsive metric grids. |
 
 ---
 
@@ -184,14 +183,14 @@ graph TD
 
 | Component | Status | Code Location | Scientific Notes & Audit Status |
 |---|:---:|---|---|
-| **Computed Readiness Engine** | **Verified Live** | `groundtruth.causal.readiness` | Evaluates 7 mathematical criteria from real disk artifacts. Returns `met`, `not_met`, or `unavailable`. No hardcoded values. |
-| **Synthetic Control (SCM) Solver** | **Verified (Simulated)** | `groundtruth.causal.synthetic_control` | Simplex-constrained FISTA solver with coordinate descent fallback. Recovers known effects on synthetic panels. |
-| **Difference-in-Differences (DiD)** | **Verified (Simulated)** | `groundtruth.causal.did` | Two-way fixed effects with cluster-robust standard errors and parallel trends pre-test. |
-| **In-Space Placebo Engine** | **Verified (Simulated)** | `groundtruth.causal.placebo` | Permutes synthetic control across donor units to construct exact empirical p-value distributions. |
-| **In-Time Placebo Engine** | **Verified (Simulated)** | `groundtruth.causal.placebo` | Injects fictitious pre-treatment intervention dates to test for anticipatory confounding. |
-| **Leave-One-Out Sensitivity** | **Verified (Simulated)** | `groundtruth.causal.sensitivity` | Iteratively drops top-weighted donors to assess counterfactual stability and weight concentration. |
-| **Weather Residualization** | **Verified (Simulated)** | `groundtruth.causal.climate_confounding` | Linear and spline-based weather residualization of vegetation indices against monthly SPI and temperature. |
-| **Live Causal Execution on Real Kariba** | **Quarantined / Fail-Closed** | `groundtruth.platform.api.cases` | Blocked until real pre-treatment Landsat and donor vegetation panels are unquarantined in Slice 2. |
+| **Computed Readiness Engine** | **Verified Live** | `groundtruth.engine.assessment` / `causal` | Evaluates 7 mathematical criteria from real disk artifacts. Returns `met`, `not_met`, or `unavailable`. No hardcoded values. |
+| **Synthetic Control (SCM) Solver** | **Verified (Simulated)** | `groundtruth.engine.causal.synthetic_control` | Simplex-constrained FISTA solver. Recovers known effects on synthetic panels. |
+| **Difference-in-Differences (DiD)** | **Verified (Simulated)** | `groundtruth.engine.causal.did` | Two-way fixed effects with cluster-robust standard errors and parallel trends pre-test. |
+| **In-Space Placebo Engine** | **Verified (Simulated)** | `groundtruth.engine.uncertainty.placebo` | Permutes synthetic control across donor units to construct exact empirical p-value distributions. |
+| **In-Time Placebo Engine** | **Verified (Simulated)** | `groundtruth.engine.uncertainty.placebo` | Injects fictitious pre-treatment intervention dates to test for anticipatory confounding. |
+| **Leave-One-Out Sensitivity** | **Verified (Simulated)** | `groundtruth.engine.uncertainty.sensitivity` | Iteratively drops top-weighted donors to assess counterfactual stability and weight concentration. |
+| **Weather Residualization** | **Verified (Simulated)** | `groundtruth.engine.causal.climate_confounding` | Linear and spline-based weather residualization of vegetation indices against monthly SPI and temperature. |
+| **Live Causal Execution on Real Kariba** | **Quarantined / Fail-Closed** | `groundtruth.platform.api.v2` / `app` | Blocked until real pre-treatment Landsat and donor vegetation panels are ingested and validated. |
 
 ---
 
@@ -215,14 +214,13 @@ graph TD
 GroundTruth 2.0 enforces 100% green builds across all automated test pipelines:
 
 ```
-============================= CI TEST EXECUTION SUMMARY =============================
-Backend Tenancy Test Suite:   266 passed in 32.4s (tests/tenancy/)
-Backend Core Platform Suite:  1,121 passed, 1 skipped (tests/)
-Frontend Web Vitest Suite:    542 passed across 57 test files (apps/web)
-Frontend Typecheck:           0 TypeScript errors (tsc --noEmit silent)
+============================= TEST VERIFICATION BASELINE ==============================
+Backend Offline Suite:        2,130+ passed (pytest)
+Frontend Web Vitest Suite:    746 passed across 75 test files (apps/web)
+Frontend Typecheck:           0 TypeScript errors (tsc --noEmit)
 Frontend Linting:             0 ESLint warnings or errors
-Fixture-Fallback Guard:       4/4 security assertions passed
-Api-Types Regeneration:       Synchronized with OpenAPI 3.1.0 snapshot
+Fixture-Fallback Guard:       4 catch blocks verified (check:fixture-fallback)
+Api-Types Synchronization:    Matches OpenAPI snapshot (check:api-types)
 =====================================================================================
 ```
 

@@ -595,7 +595,7 @@ def earth_engine_access(request: AnalysisRequest) -> DataAccess:
     - Never silently falls back to synthetic fixtures.
     - Preserves INCONCLUSIVE / PARTIALLY_READY verdict.
     """
-    from groundtruth.engine.causal.readiness import assess_causal_readiness
+    from groundtruth.engine import assess_causal_readiness
 
     readiness = assess_causal_readiness(
         case_id=request.case_id,

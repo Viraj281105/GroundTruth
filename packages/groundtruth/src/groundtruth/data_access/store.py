@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+_VALID_TABLE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 
 
 def _duckdb() -> Any:
@@ -24,7 +27,7 @@ class ParquetStore:
         self.root.mkdir(parents=True, exist_ok=True)
 
     def path(self, name: str) -> Path:
-        if not name or any(c in name for c in "/\\.") or name.startswith("_"):
+        if not _VALID_TABLE_NAME.fullmatch(name):
             raise ValueError(f"invalid table name: {name!r}")
         return self.root / f"{name}.parquet"
 

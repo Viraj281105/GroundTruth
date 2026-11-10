@@ -58,7 +58,8 @@ The complete set of runtime configuration parameters is detailed below:
 | `API_PORT` | Integer (1–65535) | `8000` | Binding port for FastAPI. |
 | `FRONTEND_URL` | Valid URL string | `http://localhost:3000` | Trusted frontend web origin for CORS and CSRF validation. |
 | `CORS_ALLOWED_ORIGINS`| Comma-separated URL list | `None` (uses `FRONTEND_URL`) | Whitelisted browser origins. **Wildcards (`*`) are explicitly rejected fail-closed.** |
-| `REDIS_URL` | Redis URL (`redis://...`) | `None` | Optional Redis broker for distributed Arq worker queues. |
+| `REDIS_URL` | Redis URL (`redis://...`) | `None` | Optional Redis connection URL for distributed rate limiting (`platform.api.rate_limiting`) or the optional arq backend (`platform.jobs.redis_queue`). |
+| `TRUST_PROXY_HEADERS` | Boolean | `false` | Trust `X-Forwarded-For` for client IP extraction only behind a trusted reverse proxy. |
 
 ### 2. Multi-Tenant Authentication & Session Security
 
@@ -73,18 +74,18 @@ The complete set of runtime configuration parameters is detailed below:
 
 | Variable | Type | Default | Purpose |
 | :--- | :--- | :--- | :--- |
-| `PLANETARY_COMPUTER_API_KEY` | SecretStr | `None` | Microsoft Planetary Computer STAC authentication for high-rate Landsat/Sentinel retrieval. |
+| `GOOGLE_CLOUD_PROJECT` | String | `None` | Google Cloud project identifier for Earth Engine requests. |
 | `SENTINEL_HUB_CLIENT_ID` | String | `None` | Copernicus Sentinel Hub client ID. |
 | `SENTINEL_HUB_CLIENT_SECRET` | SecretStr | `None` | Copernicus Sentinel Hub secret key. |
-| `GEE_SERVICE_ACCOUNT_JSON` | String (JSON filepath) | `None` | Google Earth Engine service account credentials. |
+| `GEE_SERVICE_ACCOUNT_JSON` | SecretStr | `None` | Google Earth Engine service account key JSON or path. |
 | `GLOBAL_FOREST_WATCH_API_KEY` | SecretStr | `None` | Global Forest Watch Hansen tree cover API token. |
 
 ### 4. GenAI Reporting & Narration Layer
 
 | Variable | Type / Constraints | Default | Purpose |
 | :--- | :--- | :--- | :--- |
-| `GENAI_PROVIDER` | `none` \| `gemini` \| `openai` \| `anthropic` | `none` | AI narrative generation backend. Default `none` renders deterministic templates. |
-| `GEMINI_API_KEY` | String | `None` | Google Gemini API key. |
+| `GENAI_PROVIDER` | `none` \| `gemini` \| `openai` \| `anthropic` \| `nugen` | `none` | AI narrative generation backend. Default `none` renders deterministic templates. |
+| `GEMINI_API_KEY` | SecretStr | `None` | Google Gemini API key. |
 | `GEMINI_MODEL` | String | `gemini-2.5-flash` | Gemini model identifier. |
 | `GENAI_TEMPERATURE` | Float | `0.0` | Sampling temperature. **Fixed at 0.0 for deterministic grounding.** |
 | `GENAI_MAX_OUTPUT_TOKENS` | Integer | `1200` | Maximum token ceiling for generated narrative sections. |

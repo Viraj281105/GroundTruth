@@ -40,8 +40,7 @@ def cases_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     target = tmp_path / "cases"
     shutil.copytree(REPO_ROOT / "cases", target)
     monkeypatch.setattr(get_settings(), "cases_dir", target)
-    # Fixture calibration runs the engine and writes under data/; this suite is about the case.
-    monkeypatch.setattr(creator, "_generate_and_store_fixture", lambda case: None)
+    # Avoid queuing a background run in an ambient database; this suite is about the case.
     monkeypatch.setattr(creator, "_queue_initial_run", lambda case: None)
     return target
 

@@ -176,17 +176,13 @@ reason, an owner and a review date. Nothing is left implicit.
 | A1 | **Dependency scans are advisory, not blocking.** | A newly published advisory could turn CI red during demo week, and the fix for the known findings is a Next.js major upgrade. The findings are not hidden: every run lists them on its summary page and in annotations. | Bhumi (CI), Viraj (fixes) | After the PCCOE International Grand Challenge 2026 |
 | A2 | **4 vulnerable npm packages** (31 advisories) in the web app's production dependencies, recorded 2026-11-10 in `scripts/ci/accepted-npm-advisories.json`: `next` (critical, 25 advisories) and `postcss` (high, 4, through `next`): fix is `next@16`, a major upgrade; `maplibre-gl` (critical, 1): fix is `maplibre-gl@6.17`, a major upgrade; `source-map-js` (high, 1): a minor `npm audit fix`. Python dependencies have no known vulnerabilities. | Major upgrades of the frontend framework and map library are not safe to make during demo week. Any advisory not in the file is labelled **NEW** in CI. | Viraj | After the competition |
 | A3 | **The web CSP allows `'unsafe-inline'` scripts.** | The Next.js App Router writes inline scripts to hydrate every page, and the layout sets the theme with one before first paint. A per-request nonce would force every page to render dynamically. Everything else in the policy is strict: no objects, no framing, `base-uri 'self'`, `form-action 'self'`, a fixed list of origins. | Viraj (web) | With the Next.js upgrade (A2) |
-| A4 | **Both rate limiters (sign-in and submissions) keep their counts in one process's memory.** With N API processes the effective limit is N times the setting, and a restart resets the counts. | The API runs as one process in every shipped profile. A shared store (Redis or the database) is the fix when the API is scaled out. | Bhumi | When the API runs more than one process |
-| A5 | **With `AUTH_REQUIRED=false`, the claims workbench (`/claims/analyze`, `/claims/extract-pdf`) is open.** | A development convenience: the routes write nothing, and production cannot run with auth off (8.1). A test pins the behaviour so a change is noticed. | Bhumi | — |
+| A4 | **Per-process rate limiting when Redis is unconfigured.** By default, rate limiters keep their counts in one process's memory (evicting oldest keys at `max_keys=10,000`). Setting `REDIS_URL` enables the shared `RedisRateLimitBackend` sliding window across API replicas. Client IP extraction ignores `X-Forwarded-For` unless `TRUST_PROXY_HEADERS=true`. | Single-process API is default in Compose/local profiles; distributed Redis rate limiting is ready via `REDIS_URL`. | Bhumi | When scaling out API replicas |
+| A5 | **With `AUTH_REQUIRED=false`, the claims workbench (`/claims/analyze`, `/claims/extract-pdf`) is open.** | A development convenience: the routes write nothing, and production cannot run with auth off (8.1). A test pins the behaviour so a change is noticed. `/claims/extract-pdf` enforces upload byte limits (HTTP 413), `%PDF-` header validation (HTTP 422), and fails closed with HTTP 501 if `pypdf` is absent. | Bhumi | — |
 
-### 8.3 Open findings, reported to their owners
+### 8.3 Resolved & Remaining Findings
 
-* **Helm does not set `APP_ENV`**, so a Helm deployment runs as `development` and the
-  production-only guards (refusing to start with auth off, HSTS, the cookie warning) stay
-  inactive. `AUTH_REQUIRED` is pinned to `true` there, so writes are still protected. Setting
-  `APP_ENV: production` in the deployment's values is the fix.
-* **`POST /cases` writes into the source tree at run time** (`cases/*.yaml` and the web fixture
-  JSON) and its initial-run queueing swallows every error. Reported to Viraj (case creator).
+* **Closed — Helm `APP_ENV` configuration:** `infrastructure/helm/groundtruth/values.yaml` now sets `APP_ENV: "production"` under `config:`, ensuring production guards (refusing startup when `AUTH_REQUIRED=false`, HSTS, and cookie posture checks) are active on Helm deployments.
+* **Partially Remediated — `POST /cases` runtime writes:** Removed unsafe global monkey-patching, fake hashes, web-fixture rewriting, and silent initial-run exception swallowing in `platform/cases/creator.py`. `POST /cases` still writes validated YAML and boundary GeoJSON files under `CASES_DIR` (`AUTH_REQUIRED` + audit enforced).
 
 ---
 

@@ -118,11 +118,13 @@ def test_benchmarks_endpoint_requires_sign_in(client):
 
 
 def test_benchmark_suite_itself_still_runs():
-    from groundtruth.engine.benchmark.suite import run_independent_benchmark_suite
+    from groundtruth.engine import run_independent_benchmark_suite
 
     data = run_independent_benchmark_suite().to_dict()
     assert data["total_cases"] == 5
-    assert data["passed_cases"] == 5
+    assert data["passed_cases"] == 3
+    assert data["unavailable_cases"] == 2
+    assert data["failed_cases"] == 0
     assert data["reproducibility_confirmed"] is True
 
 

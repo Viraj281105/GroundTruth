@@ -62,6 +62,7 @@ KARIBA_BOUNDARY_PATH = REPO_ROOT / "cases" / "boundaries" / "kariba-redd.geojson
 # --- 1. Catalogue Connectivity & Collection Discovery ------------------------------
 
 
+@pytest.mark.network
 def test_catalogue_connectivity_unauthenticated() -> None:
     """Verify connectivity to Microsoft Planetary Computer STAC API v1 without credentials."""
     info = check_catalog_connectivity(DEFAULT_STAC_URL)
@@ -73,6 +74,7 @@ def test_catalogue_connectivity_unauthenticated() -> None:
     assert len(info["conforms_to"]) > 0
 
 
+@pytest.mark.network
 def test_collection_discovery_unauthenticated() -> None:
     """Discover collections from Planetary Computer STAC catalog without credentials."""
     collections = discover_collections(DEFAULT_STAC_URL, limit=10)
@@ -125,6 +127,7 @@ def test_resolve_collection_id_aliases() -> None:
 # --- 2. Sentinel-2 L2A Search with Project Polygons --------------------------------
 
 
+@pytest.mark.network
 def test_sentinel2_l2a_search_with_uploaded_polygon() -> None:
     """Search Sentinel-2 L2A using an uploaded project polygon, date range, and cloud cover filter."""
     assert KARIBA_BOUNDARY_PATH.is_file()
@@ -157,6 +160,7 @@ def test_sentinel2_l2a_search_with_uploaded_polygon() -> None:
 # --- 3. Landsat Collection 2 Level-2 for Historical Observations -------------------
 
 
+@pytest.mark.network
 def test_landsat_c2_l2_search_historical() -> None:
     """Search Landsat Collection 2 Level-2 historical scenes over project boundary."""
     bbox = (28.5, -16.8, 28.9, -16.4)
@@ -181,6 +185,7 @@ def test_landsat_c2_l2_search_historical() -> None:
 # --- 4. Sentinel-1 RTC for Radar-Based Monitoring ----------------------------------
 
 
+@pytest.mark.network
 def test_sentinel1_rtc_search_radar() -> None:
     """Search Sentinel-1 RTC SAR radar scenes over project boundary (no cloud filter needed)."""
     assert KARIBA_BOUNDARY_PATH.is_file()
@@ -204,6 +209,7 @@ def test_sentinel1_rtc_search_radar() -> None:
 # --- 5. Pagination, Timeouts, Retries and Rate-Limit Handling -----------------------
 
 
+@pytest.mark.network
 def test_open_stac_client_configuration_and_retries() -> None:
     """Verify StacApiIO is configured with retries, backoff, and timeouts."""
     client = open_stac_client(DEFAULT_STAC_URL, timeout=25.0, max_retries=3, backoff_factor=0.5)
@@ -222,6 +228,7 @@ def test_invalid_catalog_url_raises_configuration_error() -> None:
 # --- 6. Asset Signing and SAS Token Expiration Handling ----------------------------
 
 
+@pytest.mark.network
 def test_sign_asset_url_and_expired_token_handling() -> None:
     """Test sign_asset_url strips expired tokens and obtains fresh valid SAS signatures."""
     raw_blob_url = (
@@ -355,6 +362,7 @@ def test_calculate_spatial_coverage_statistics() -> None:
 # --- 10. End-to-End Live Integration Test on Real Project Polygon ------------------
 
 
+@pytest.mark.network
 def test_live_planetary_computer_end_to_end_ingestion(tmp_path: Path) -> None:
     """Run an end-to-end test on a real project polygon, verifying discovery, download and processing."""
     # Real test sub-polygon in Kariba project area
